@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import 'inheritance_detail.dart';
-import 'top_level_helper.dart';
+import 'import_show_helper.dart' show ShownModel, shownConst, shownGreeting;
+import 'top_level_helper.dart' hide topLevelHidden;
 
 /// 函数语法 demo：局部函数、顶层函数、形参签名、方法 / 对象 tear-off。
 @PatchEntry('FunctionDetail')
@@ -70,6 +71,12 @@ class FunctionDetail extends StatelessWidget {
         '${counter.count} / ${topLevelNums().length}';
   }
 
+  /// import show / hide：只用组合子放行的符号（类 / 顶层常量 / 顶层函数）。
+  String _importCombinatorText() {
+    final model = ShownModel(3);
+    return 'import 组合子：$shownConst / ${shownGreeting()} / ${model.value}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -82,6 +89,7 @@ class FunctionDetail extends StatelessWidget {
         const SizedBox(height: 8),
         Text(_localFuncText()),
         Text(_topLevelText()),
+        Text(_importCombinatorText()),
         Text(_paramsText()),
         Text(_tearOffText()),
         Text(_objTearOffText()),

@@ -38,6 +38,8 @@ Map<String, String> resolveImportedComponentProducts(
     for (final decl in importUnit.declarations.whereType<ClassDeclaration>()) {
       final name = decl.name.lexeme;
       if (name.startsWith('_') || decl.abstractKeyword != null) continue;
+      // import 的 show / hide：被隐藏 / 未 show 的组件不进入可见组件表。
+      if (!importedSymbolVisible(unit, sourcePath, file, name)) continue;
       if (!isWidgetClassDecl(decl)) continue;
       // `@PatchIgnore(isComponent: true)` 的类不翻译，但**声明它的源文件产物**里
       // 有同名包装类，跨文件引用照常 `new X(...)` + import 该产物。

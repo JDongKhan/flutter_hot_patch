@@ -148,8 +148,17 @@ Map<String, Map<String, String>> extensionOperatorsInScope(
   };
   final out = <String, Map<String, String>>{};
   final ambiguous = <String>{};
-  void scan(CompilationUnit u) {
+  void scan(CompilationUnit u, String file, {required bool sameFile}) {
     for (final d in u.declarations.whereType<ExtensionDeclaration>()) {
+      // 具名 extension 被 hide / 未 show 时，其运算符不进入本文件的作用域；
+      // 无名 extension 没有名字可供组合子过滤，import 即生效。
+      final name = d.name?.lexeme;
+      if (!sameFile &&
+          name != null &&
+          name.isNotEmpty &&
+          !importedSymbolVisible(unit, sourcePath, file, name)) {
+        continue;
+      }
       final on = d.onClause?.extendedType;
       if (on == null) continue;
       final target = eraseType(on.toSource());
@@ -174,10 +183,10 @@ Map<String, Map<String, String>> extensionOperatorsInScope(
     }
   }
 
-  scan(unit);
+  scan(unit, sourcePath, sameFile: true);
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final u = parseUnitFile(file);
-    if (u != null) scan(u);
+    if (u != null) scan(u, file, sameFile: false);
   }
   return out;
 }
@@ -192,11 +201,15 @@ Map<String, ExtensionScope> extensionScopesInScope(
   String sourcePath,
 ) {
   final out = <String, ExtensionScope>{};
-  void scan(CompilationUnit u, String file, {required bool includePrivate}) {
+  void scan(CompilationUnit u, String file,
+      {required bool includePrivate, required bool sameFile}) {
     for (final d in u.declarations.whereType<ExtensionDeclaration>()) {
       final name = d.name?.lexeme;
       if (name == null || name.isEmpty) continue;
       if (!includePrivate && name.startsWith('_')) continue;
+      if (!sameFile && !importedSymbolVisible(unit, sourcePath, file, name)) {
+        continue;
+      }
       if (out.containsKey(name)) continue;
       final members = <String, Set<ExtensionMemberKind>>{};
       for (final m in d.members) {
@@ -217,10 +230,12 @@ Map<String, ExtensionScope> extensionScopesInScope(
     }
   }
 
-  scan(unit, sourcePath, includePrivate: true);
+  scan(unit, sourcePath, includePrivate: true, sameFile: true);
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final u = parseUnitFile(file);
-    if (u != null) scan(u, file, includePrivate: false);
+    if (u != null) {
+      scan(u, file, includePrivate: false, sameFile: false);
+    }
   }
   return out;
 }

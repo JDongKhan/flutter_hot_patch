@@ -62,9 +62,15 @@ CompilationUnit? parseUnitFile(String path) {
   final parsed = parseString(content: content);
   // 登记行号信息：构建期告警 / 报错按 AST 结点换算成 `文件:行 | 源码行`。
   registerSource(path, content, parsed.lineInfo);
+  // 重新解析过的文件可能改变 import / export 可见性（watch 模式）：让基于
+  // 文件命名空间的缓存整体失效，避免沿用旧符号表。
+  _parseGeneration++;
   _unitFileCache[path] = (mtime, parsed.unit);
   return parsed.unit;
 }
+
+/// 源文件重新解析计数：命名空间类缓存（[exportedSymbolsOf] 等）按它失效。
+int _parseGeneration = 0;
 
 /// 在注解列表里按**简单名**查找注解（支持 `@Foo` 与 `@a.Foo` 两种写法）。
 Annotation? findAnnotation(List<Annotation> metadata, String simpleName) {
@@ -129,19 +135,22 @@ Set<String> ignoredComponentClassNames(CompilationUnit unit) => {
 /// 跨文件只收 public 类（私有名不可能被别的文件引用）。
 Set<String> ignoredClassNamesInScope(CompilationUnit unit, String sourcePath) {
   final out = <String>{};
-  void collect(CompilationUnit u, {required bool onlyPublic}) {
+  void collect(CompilationUnit u, String file, {required bool onlyPublic}) {
     for (final d in u.declarations.whereType<ClassDeclaration>()) {
       final name = d.name.lexeme;
       if (onlyPublic && name.startsWith('_')) continue;
+      if (onlyPublic && !importedSymbolVisible(unit, sourcePath, file, name)) {
+        continue;
+      }
       if (isIgnoredComponentClass(d)) continue; // isComponent: true 有包装类
       if (findAnnotation(d.metadata, 'PatchIgnore') != null) out.add(name);
     }
   }
 
-  collect(unit, onlyPublic: false);
+  collect(unit, sourcePath, onlyPublic: false);
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final importUnit = parseUnitFile(file);
-    if (importUnit != null) collect(importUnit, onlyPublic: true);
+    if (importUnit != null) collect(importUnit, file, onlyPublic: true);
   }
   return out;
 }
@@ -177,7 +186,7 @@ List<(MixinDeclRef, String)> resolveMixinDeclRefs(
   final wc = decl.withClause;
   if (wc == null) return const [];
   final byName = <String, (MixinDeclRef, String)>{};
-  void collect(CompilationUnit u, String file) {
+  void collect(CompilationUnit u, String file, {required bool sameFile}) {
     for (final d in u.declarations) {
       final MixinDeclRef? ref;
       if (d is MixinDeclaration) {
@@ -188,15 +197,19 @@ List<(MixinDeclRef, String)> resolveMixinDeclRefs(
         ref = null;
       }
       if (ref == null) continue;
+      // import 的 show / hide：被隐藏的 mixin 无法出现在使用方的 with 子句里。
+      if (!sameFile && !importedSymbolVisible(unit, sourcePath, file, ref.name)) {
+        continue;
+      }
       final entry = (ref, file);
       byName.putIfAbsent(ref.name, () => entry);
     }
   }
 
-  collect(unit, sourcePath);
+  collect(unit, sourcePath, sameFile: true);
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final u = parseUnitFile(file);
-    if (u != null) collect(u, file);
+    if (u != null) collect(u, file, sameFile: false);
   }
   return [
     for (final t in wc.mixinTypes)
@@ -327,6 +340,146 @@ Set<String> importedPackageNames(CompilationUnit unit) => {
       for (final d in unit.directives)
         if (d is NamespaceDirective) ?packageNameOf(d.uri.stringValue ?? ''),
     };
+
+/// 一个源文件**导出**的公共顶层符号：名字 → 声明文件身份。
+///
+/// Dart 的库命名空间 = 本文件声明 + `export` 转发，转发逐层应用 `show` / `hide`
+/// （见 [directiveAllowsSymbol]）；私有名（`_x`）不导出。barrel 的转发目标会
+/// 归到**声明文件**，调用方据此判断符号真正来自哪个产物。
+Map<String, String> exportedSymbolsOf(String file, [CompilationUnit? unit]) {
+  final u = unit ?? parseUnitFile(file);
+  if (u == null) return const {};
+  final hit = _exportNamespaces[file];
+  if (hit != null && hit.$1 == _parseGeneration) return hit.$2;
+  final out = _exportNamespace(u, file, <String>{file});
+  _exportNamespaces[file] = (_parseGeneration, out);
+  return out;
+}
+
+/// 本文件经 **import** 可见的顶层符号：名字 → 声明文件身份。
+///
+/// 与 [resolveImportFiles] 的文件级可达性互补：这里回答「名字能不能用」。
+///   - 同文件声明不在表里（调用方本来就先扫同文件）；
+///   - 私有名不跨库可见；
+///   - `import ... show / hide` 按组合子过滤（[directiveAllowsSymbol]）；
+///   - barrel 的 `export ... show / hide` 逐层过滤，值落到声明文件；
+///   - `import ... as p` 的符号不进入未限定名表（调用点按 `p.name` 走模块
+///     命名空间，见 `component_builder` 的 prefixProducts）。
+Map<String, String> importedSymbolsOf(CompilationUnit unit, String sourcePath) {
+  final hit = _importedSymbols[sourcePath];
+  if (hit != null && hit.$1 == _parseGeneration) return hit.$2;
+  final out = <String, String>{};
+  for (final d in unit.directives.whereType<ImportDirective>()) {
+    if (d.prefix != null) continue;
+    final uri = d.uri.stringValue;
+    if (uri == null) continue;
+    final target = resolveDirectiveTarget(uri, sourcePath);
+    if (target == null) continue;
+    final targetUnit = parseUnitFile(target);
+    if (targetUnit == null) continue;
+    for (final e in exportedSymbolsOf(target, targetUnit).entries) {
+      if (!directiveAllowsSymbol(d.combinators, e.key)) continue;
+      out.putIfAbsent(e.key, () => e.value);
+    }
+  }
+  _importedSymbols[sourcePath] = (_parseGeneration, out);
+  return out;
+}
+
+/// [name] 是否经 import 对 [sourcePath] 可见，且声明在 [declaringFile]。
+///
+/// 同文件声明恒为 true（私有名由调用方自己按需过滤）；跨文件按
+/// [importedSymbolsOf] 的名字 → 声明文件映射判定。
+bool importedSymbolVisible(
+  CompilationUnit unit,
+  String sourcePath,
+  String declaringFile,
+  String name,
+) {
+  if (declaringFile == sourcePath) return true;
+  return importedSymbolsOf(unit, sourcePath)[name] == declaringFile;
+}
+
+/// `show` / `hide` 组合子是否放行 [name]（Dart 语义：show 是白名单，
+/// hide 是黑名单；两种情况都不看清单里的符号是否存在）。
+bool directiveAllowsSymbol(NodeList<Combinator> combinators, String name) {
+  for (final c in combinators) {
+    if (c is ShowCombinator) {
+      if (!c.shownNames.any((s) => s.name == name)) return false;
+    } else if (c is HideCombinator) {
+      if (c.hiddenNames.any((s) => s.name == name)) return false;
+    }
+  }
+  return true;
+}
+
+/// 每个源文件（含 export 转发链）的公共顶层符号：名字 → 声明文件身份。
+/// 随 [_parseGeneration] 失效，watch 模式下被改动的文件不会沿用旧命名空间。
+final Map<String, (int, Map<String, String>)> _exportNamespaces = {};
+
+/// 每个导入方文件的可见符号表，失效规则同 [_exportNamespaces]。
+final Map<String, (int, Map<String, String>)> _importedSymbols = {};
+
+/// 符号名缓存（单位 = 一份 AST，AST 变更即失效）。
+final Expando<Set<String>> _declaredNamesCache = Expando<Set<String>>();
+
+Set<String> _publicTopLevelNames(CompilationUnit unit) =>
+    _declaredNamesCache[unit] ??= {
+      for (final d in unit.declarations)
+        for (final n in _declaredNames(d))
+          if (!n.startsWith('_')) n,
+    };
+
+/// 一个顶层声明引入的名字（顶层变量可一次声明多个）。
+Iterable<String> _declaredNames(CompilationUnitMember d) sync* {
+  if (d is ClassDeclaration) {
+    yield d.name.lexeme;
+  } else if (d is MixinDeclaration) {
+    yield d.name.lexeme;
+  } else if (d is EnumDeclaration) {
+    yield d.name.lexeme;
+  } else if (d is ExtensionDeclaration) {
+    final n = d.name?.lexeme;
+    if (n != null && n.isNotEmpty) yield n;
+  } else if (d is TypeAlias) {
+    yield d.name.lexeme;
+  } else if (d is FunctionDeclaration) {
+    yield d.name.lexeme;
+  } else if (d is TopLevelVariableDeclaration) {
+    for (final v in d.variables.variables) {
+      yield v.name.lexeme;
+    }
+  }
+}
+
+/// 一个文件的导出命名空间：自身公共声明 + `export` 转发（逐层过滤）。
+///
+/// [visiting] 防 export 环；环上的文件只保留本层已收集的声明。
+Map<String, String> _exportNamespace(
+  CompilationUnit unit,
+  String file,
+  Set<String> visiting,
+) {
+  final out = <String, String>{
+    for (final n in _publicTopLevelNames(unit)) n: file,
+  };
+  for (final d in unit.directives.whereType<ExportDirective>()) {
+    final uri = d.uri.stringValue;
+    if (uri == null) continue;
+    final target = resolveDirectiveTarget(uri, file);
+    if (target == null || !visiting.add(target)) continue;
+    final targetUnit = parseUnitFile(target);
+    if (targetUnit != null) {
+      final ns = _exportNamespace(targetUnit, target, visiting);
+      for (final e in ns.entries) {
+        if (!directiveAllowsSymbol(d.combinators, e.key)) continue;
+        out.putIfAbsent(e.key, () => e.value);
+      }
+    }
+    visiting.remove(target);
+  }
+  return out;
+}
 
 /// 本文件的 import（[isExport] 为 false）或 export（true）目标 URI。
 List<String> _directiveUris(CompilationUnit unit, {required bool isExport}) {

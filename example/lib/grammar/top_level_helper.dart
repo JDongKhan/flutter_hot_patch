@@ -15,3 +15,6 @@ Iterable<int> topLevelNums() sync* {
   yield 1;
   yield 2;
 }
+
+/// `import ... hide` 覆盖：使用方把该函数 hide 掉，产物里不应引用它。
+String topLevelHidden() => 'hidden';

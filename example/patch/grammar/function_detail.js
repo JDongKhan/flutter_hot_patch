@@ -3,6 +3,8 @@
 // 重新生成：dart run build_runner build
 
 import { SportCar } from 'inheritance_detail.js';
+import { ShownModel } from 'import_show_helper.js';
+import { shownConst, shownGreeting } from 'import_show_helper.js';
 import { topLevelCounter, topLevelGreet, topLevelNums, topLevelPrefix } from 'top_level_helper.js';
 import { Column, CrossAxisAlignment, FontWeight, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
@@ -96,6 +98,10 @@ export class FunctionDetail extends StatelessWidget {
     const counter = topLevelCounter();
     return "顶层函数：" + topLevelPrefix("fn") + " / " + topLevelGreet({ "name": "Dart" }) + " / " + counter.count + " / " + topLevelNums().length;
   }
+  _importCombinatorText() {
+    const model = new ShownModel({value: 3});
+    return "import 组合子：" + shownConst + " / " + shownGreeting() + " / " + model.value;
+  }
   build(context) {
     return new Column({
       "crossAxisAlignment": CrossAxisAlignment.stretch,
@@ -115,6 +121,9 @@ export class FunctionDetail extends StatelessWidget {
         }),
         new Text({
           "data": this._topLevelText()
+        }),
+        new Text({
+          "data": this._importCombinatorText()
         }),
         new Text({
           "data": this._paramsText()

@@ -1462,7 +1462,7 @@ try {
 <!-- ================= 13 包与库管理 ================= -->
 <section id="packages-libraries">
 <h2><span class="sec-no">13</span>包与库管理</h2>
-<p class="h2-sub">import / export 按文件产物映射为 ESM；当前实现只按 URI 收集依赖，import 侧的 show / hide 尚未过滤。</p>
+<p class="h2-sub">import / export 按文件产物映射为 ESM；show / hide 按库命名空间过滤可见符号。</p>
 
 <table>
   <colgroup><col style="width:20%"><col style="width:24%"><col style="width:44%"><col style="width:12%"></colgroup>
@@ -1470,7 +1470,7 @@ try {
   <tbody>
     <tr><td><code>import 'x.dart'</code></td><td><code>import { A } from './x.js'</code></td><td>按 URI 解析目标文件产物；跨文件符号按类名 / 顶层常量加入可见表</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>import 'x.dart' as p</code></td><td><code>import * as p from './x.js'</code></td><td><code>p.Foo</code> 保留为模块命名空间引用；前缀不参与成员名改写</td><td><span class="st st-pass">通过</span></td></tr>
-    <tr><td><code>show A</code> / <code>hide B</code></td><td>无产物差异</td><td><b>import 侧未实现</b>：<code>resolveImportFiles</code> 只读 URI，不读 combinators；被 hide / 未 show 的符号仍可能进入类表</td><td><span class="st st-fail">不通过</span></td></tr>
+    <tr><td><code>show A</code> / <code>hide B</code></td><td>无产物差异</td><td>按<strong>库命名空间</strong>过滤可见符号：<code>source_index</code> 的 <code>exportedSymbolsOf</code>（本文件声明 + <code>export</code> 转发，逐层应用组合子，值归到声明文件）与 <code>importedSymbolsOf</code>（每个 import 的命名空间 + 该 import 的 <code>show</code> / <code>hide</code>）；<code>directiveAllowsSymbol</code> 是唯一的组合子判定。类表、顶层常量 / 枚举 / 函数、extension（具名）、mixin、跨文件组件、依赖闭包与 <code>@HostInjected</code> 顶层函数统一用 <code>importedSymbolVisible</code> 过滤；<code>import ... as p</code> 的符号不进入未限定名表（<code>p.Foo</code> 仍走模块命名空间）。<code>example/lib/grammar/function_detail.dart</code> 已覆盖 <code>show</code> 与 <code>hide</code>（类 / 常量 / 顶层函数）</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>export 'x.dart' show/hide</code></td><td><code>export { A } from './x.js'</code></td><td>barrel re-export 仅按 class / mixin / 具名 extension 过滤；顶层函数与常量不参与转发</td><td><span class="st st-fail">不通过</span></td></tr>
     <tr><td><code>import 'dart:...'</code></td><td>宿主模块 / <code>flutter.js</code></td><td>由宿主承接，不产出 ESM 文件</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>part</code> / <code>part of</code></td><td>无</td><td>当前只处理 import / export，part 文件不进入翻译范围</td><td><span class="st st-fail">不通过</span></td></tr>

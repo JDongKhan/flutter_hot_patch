@@ -77,10 +77,17 @@ TopLevelConstResolver buildTopLevelConstResolver(
   final importedFunctions = <String, String>{};
 
   void add(CompilationUnit u, String file, {required bool sameFile}) {
+    // import 的 show / hide：跨文件公共名必须真的经 import 可见；私有名不参与
+    // 过滤（它们本就只在声明文件内部被引用，跨文件侧另有 [foreignPrivate] 承接）。
+    bool visible(String name) =>
+        sameFile ||
+        name.startsWith('_') ||
+        importedSymbolVisible(unit, sourcePath, file, name);
     // 枚举 → JS 常量对象。可见性口径与顶层常量一致：同文件含私有名，
     // 跨文件只收公共名。枚举值不依赖其它常量，单独登记后并入 translated。
     for (final d in u.declarations.whereType<EnumDeclaration>()) {
       final name = d.name.lexeme;
+      if (!visible(name)) continue;
       if (!sameFile && name.startsWith('_')) continue;
       if (enumJs.containsKey(name)) continue;
       final js = _enumJs(d, file);
@@ -99,6 +106,7 @@ TopLevelConstResolver buildTopLevelConstResolver(
           exprs[name] = init;
           continue;
         }
+        if (!visible(name)) continue;
         if (exprs.containsKey(name)) continue;
         exprs[name] = init;
         if (!sameFile) importedOf[name] = file;
@@ -109,6 +117,7 @@ TopLevelConstResolver buildTopLevelConstResolver(
       // Dart 入口函数不参与补丁翻译（宿主已经启动；翻译它只会产出无效代码）。
       if (name == 'main') continue;
       if (!sameFile && name.startsWith('_')) continue;
+      if (!visible(name)) continue;
       if (exprs.containsKey(name) || enumJs.containsKey(name)) continue;
       if (sameFile) {
         sameFileFunctions.putIfAbsent(name, () => d);

@@ -110,17 +110,22 @@ String? hostChannelOf(MethodDeclaration m) {
 /// `_app_host_.invoke(通道, 载荷)`。
 Set<String> buildHostFunctions(CompilationUnit unit, String sourcePath) {
   final out = <String>{};
-  void scan(CompilationUnit u) {
+  void scan(CompilationUnit u, String file, {required bool sameFile}) {
     scanHostMethods(u, (h) {
-      if (h.usable && h.owner.isEmpty) out.add(h.name);
+      if (!h.usable || h.owner.isNotEmpty) return;
+      // import 的 show / hide：被隐藏的顶层函数在本文件里不可调用。
+      if (!sameFile && !importedSymbolVisible(unit, sourcePath, file, h.name)) {
+        return;
+      }
+      out.add(h.name);
     });
   }
 
-  scan(unit);
+  scan(unit, sourcePath, sameFile: true);
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final importUnit = parseUnitFile(file);
     if (importUnit == null) continue;
-    scan(importUnit);
+    scan(importUnit, file, sameFile: false);
   }
   return out;
 }

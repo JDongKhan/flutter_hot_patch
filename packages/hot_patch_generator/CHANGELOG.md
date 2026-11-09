@@ -10,6 +10,7 @@
 - **告警格式**：无定位时前缀落成 `<unknown source>`（不再出现 `[hot_patch_generator] :` 空文件前缀）；单行源码超过 120 字符截断，避免与并发 builder 日志交错。
 - **extension 静态成员外部访问**：`CounterLevel.v = 7` / `CounterLevel.v += 1` / `CounterLevel.bump()` 按扩展命名空间对象原样发射（`_extensionStaticTargetJs`），此前被当作「接收者不可解析」丢弃。静态字段赋值、复合赋值、空合并赋值与静态方法调用同一套判据。
 - **箭头体去重分号**：有返回值语义的箭头体（如 `static set v(int next) => _v = next;`）在包 `return` 前去掉语句形态的结尾分号，产物不再出现 `return CounterLevel._v = next;;`（`translateMethodBody` + `_statementValueJs`）。
+- **import `show` / `hide`**：新增库命名空间过滤（`source_index` 的 `exportedSymbolsOf` / `importedSymbolsOf` / `directiveAllowsSymbol` / `importedSymbolVisible`）。barrel 的 `export ... show/hide` 逐层应用并把符号归到声明文件；`import ... as p` 不进入未限定名表。类表、顶层常量 / 枚举 / 函数、具名 extension、mixin、跨文件组件、依赖闭包与 `@HostInjected` 顶层函数统一按可见性过滤，未 show / 被 hide 的符号不再进入产物。
 - 示例新增 `example/lib/grammar/top_level_helper.dart`，`function_detail.dart` 覆盖同文件 / 跨文件、具名参数、跨文件模型构造与生成器调用。
 
 ## 0.13.0

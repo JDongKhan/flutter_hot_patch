@@ -25,9 +25,23 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
   // 值里的 CompilationUnit 是类的声明单元（本类 / 所在 import 文件）——
   // 解析 with 子句的 mixin 声明需要它（resolveMixinDeclRefs）。
   final decls = <String, (ClassDeclaration, String, bool, CompilationUnit)>{};
-  void addFile(ClassDeclaration d, String file, CompilationUnit from) {
+  void addFile(
+    ClassDeclaration d,
+    String file,
+    CompilationUnit from, {
+    required bool sameFile,
+    CompilationUnit? importer,
+    String? importerPath,
+  }) {
     final name = d.name.lexeme;
     if (name.startsWith('_') || decls.containsKey(name)) return;
+    // import 的 show / hide：被隐藏 / 未 show 的类不进入可见类表。
+    if (!sameFile &&
+        importer != null &&
+        importerPath != null &&
+        !importedSymbolVisible(importer, importerPath, file, name)) {
+      return;
+    }
     // `@HostInjected` 类照常进表：类结构（含方法签名）在 JS 侧仍输出，只有被
     // 标注方法的**方法体**改为 `_app_host_.invoke`（见 ClassMethod.hostChannel），
     // 调用点是普通静态调用（`AppRouter.pop()`）。
@@ -35,13 +49,14 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
   }
 
   for (final d in unit.declarations.whereType<ClassDeclaration>()) {
-    addFile(d, sourcePath, unit);
+    addFile(d, sourcePath, unit, sameFile: true);
   }
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final importUnit = parseUnitFile(file);
     if (importUnit == null) continue;
     for (final d in importUnit.declarations.whereType<ClassDeclaration>()) {
-      addFile(d, file, importUnit);
+      addFile(d, file, importUnit,
+          sameFile: false, importer: unit, importerPath: sourcePath);
     }
   }
 
@@ -69,9 +84,13 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
             if (parseUnitFile(f) case final u?) (u, f),
         ];
         for (final (sourceUnit, sourceFile) in sources) {
+          final sameFile = sourceFile == mixinFile;
           for (final d in sourceUnit.declarations.whereType<ClassDeclaration>()) {
             if (decls.containsKey(d.name.lexeme)) continue;
-            addFile(d, sourceFile, sourceUnit);
+            addFile(d, sourceFile, sourceUnit,
+                sameFile: sameFile,
+                importer: sameFile ? null : mixinUnit,
+                importerPath: sameFile ? null : mixinFile);
             if (decls.containsKey(d.name.lexeme)) {
               pending.add((d, sourceFile, sourceUnit));
             }

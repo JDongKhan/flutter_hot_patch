@@ -202,19 +202,29 @@ Map<String, Set<String>> _neededClasses(
       if (unit == null) continue;
       for (final d in unit.declarations.whereType<ClassDeclaration>()) {
         final name = d.name.lexeme;
-        // 私有名不可能跨文件引用（与类表同口径）。
-        if (name.startsWith('_') || !_translatableDecl(d)) continue;
+        // 私有名不可能跨文件引用（与类表同口径）；import 的 show / hide 同样生效。
+        if (name.startsWith('_') ||
+            !_translatableDecl(d) ||
+            !importedSymbolVisible(e.value, file, imported, name)) {
+          continue;
+        }
         owners.putIfAbsent(name, () => imported);
       }
       for (final d in unit.declarations.whereType<MixinDeclaration>()) {
         final name = d.name.lexeme;
-        if (name.startsWith('_')) continue;
+        if (name.startsWith('_') ||
+            !importedSymbolVisible(e.value, file, imported, name)) {
+          continue;
+        }
         owners.putIfAbsent(name, () => imported);
       }
       for (final d in unit.declarations.whereType<ClassDeclaration>()) {
         if (d.mixinKeyword == null) continue;
         final name = d.name.lexeme;
-        if (name.startsWith('_')) continue;
+        if (name.startsWith('_') ||
+            !importedSymbolVisible(e.value, file, imported, name)) {
+          continue;
+        }
         owners.putIfAbsent(name, () => imported);
       }
     }
@@ -378,7 +388,10 @@ Map<String, Set<String>> _neededConsts(
       if (unit == null) continue;
       for (final d in unit.declarations.whereType<EnumDeclaration>()) {
         final name = d.name.lexeme;
-        if (name.startsWith('_')) continue;
+        if (name.startsWith('_') ||
+            !importedSymbolVisible(e.value, file, imported, name)) {
+          continue;
+        }
         visibleHere.putIfAbsent(name, () => (imported, null));
       }
       for (final d in unit.declarations.whereType<TopLevelVariableDeclaration>()) {
@@ -386,6 +399,7 @@ Map<String, Set<String>> _neededConsts(
           final init = v.initializer;
           final name = v.name.lexeme;
           if (init == null || name.startsWith('_')) continue;
+          if (!importedSymbolVisible(e.value, file, imported, name)) continue;
           visibleHere.putIfAbsent(name, () => (imported, init));
         }
       }
@@ -471,6 +485,7 @@ Map<String, Set<String>> _neededFunctions(
       for (final d in unit.declarations.whereType<FunctionDeclaration>()) {
         final n = d.name.lexeme;
         if (n.startsWith('_') || n == 'main') continue;
+        if (!importedSymbolVisible(e.value, file, imported, n)) continue;
         owners.putIfAbsent(n, () => (imported, d));
       }
     }
