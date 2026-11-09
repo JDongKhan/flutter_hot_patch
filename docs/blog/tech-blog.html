@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>flutter_hot_patch · 把 Flutter 组件翻译成 JS，在运行时执行</title>
-<meta name="description" content="flutter_hot_patch 技术博客：注解组件 → JS 热更框架。编译期静态翻译 Dart 源码，运行时由 JS 驱动逻辑，Flutter 负责原生渲染。包含架构图、能力目录、扩展指南与已知限制。">
+<title>flutter_hot_patch · 一份 Flutter 代码，两种执行形态</title>
+<meta name="description" content="flutter_hot_patch 技术博客：为 Flutter 装上第二个运行时。编译期把组件翻译成 JS，运行期由 JS 执行逻辑，Flutter 负责原生渲染。包含架构图、能力目录、扩展指南与已知限制。">
 <meta name="author" content="flutter_hot_patch">
 <meta name="theme-color" content="#f6f5f2">
 <meta name="color-scheme" content="light dark">
 <meta property="og:type" content="article">
-<meta property="og:title" content="flutter_hot_patch · 把 Flutter 组件翻译成 JS，在运行时执行">
-<meta property="og:description" content="注解组件 → JS 热更框架：编译期静态翻译 Dart，运行期由 JS 驱动逻辑，Flutter 负责原生渲染。">
+<meta property="og:title" content="flutter_hot_patch · 一份 Flutter 代码，两种执行形态">
+<meta property="og:description" content="为 Flutter 装上第二个运行时：编译期把组件翻译成 JS，运行期由 JS 执行逻辑，Flutter 负责原生渲染。">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M18 4 7 19h8l-1 9 11-15h-8l1-9z' fill='white'/%3E%3C/svg%3E">
 <style>
@@ -889,11 +889,11 @@ td code{font-size:11.5px}
       <div class="hero-grid">
         <div>
           <span class="eyebrow"><span class="pulse"></span>Framework Notes · 2026</span>
-          <h1 id="home-title">把 Flutter 组件<br>翻译成 JS，<br><span class="grad">在运行时执行。</span></h1>
+          <h1 id="home-title">一份 Flutter 代码<br>两种执行形态：<br><span class="grad">原生，或运行时 JS。</span></h1>
           <p class="hero-lead">
-            <strong>flutter_hot_patch</strong> 是一个「注解组件 → JS 热更」框架。编译期把
-            <code>@PatchEntry</code> 组件静态翻译为 JS 协议产物；运行期由 JS 驱动逻辑，
-            Flutter 继续负责原生渲染。被热更的类，始终是一个完全正常的 Flutter widget。
+            <strong>flutter_hot_patch</strong> 为 Flutter 装上第二个运行时：编译期把组件逐语法翻译成 JS，
+            运行期由 JS 接管逻辑与状态，渲染仍走 Flutter 自己的原生管线。同一份代码，
+            既能原生运行，也能在运行时被替换——而被替换的，始终是一个完全正常的 Flutter widget。
           </p>
           <div class="hero-actions">
             <a class="btn btn-primary" href="#home-arch">
@@ -910,7 +910,7 @@ td code{font-size:11.5px}
             </a>
           </div>
           <div class="hero-meta">
-            <span>runtime 0.4.0</span>
+            <span>runtime 0.4.1</span>
             <span>generator 0.13.0</span>
             <span>annotations 0.1.5</span>
             <span>Dart 3 / Flutter</span>
@@ -2878,7 +2878,7 @@ bash start_patch_server.sh
 
     <footer class="footer">
       <div>
-        <b>flutter_hot_patch</b> · 注解组件 → JS 热更<br>
+        <b>flutter_hot_patch</b> · 为 Flutter 装上第二个运行时<br>
         文档基于当前工作区 · protocol 0.13.0 · MIT License
       </div>
       <div class="footer-links">
