@@ -1,0 +1,3061 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>flutter_hot_patch · 把 Dart 组件翻译成 JS，在运行时热修复</title>
+<meta name="description" content="flutter_hot_patch 技术博客：注解组件 → JS 热更框架。编译期静态翻译 Dart 源码，运行时由 JS 驱动逻辑，Flutter 负责原生渲染。包含架构图、能力目录、扩展指南与已知限制。">
+<meta name="author" content="flutter_hot_patch">
+<meta name="theme-color" content="#f6f5f2">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="article">
+<meta property="og:title" content="flutter_hot_patch · 把 Dart 组件翻译成 JS，在运行时热修复">
+<meta property="og:description" content="注解组件 → JS 热更框架：编译期静态翻译 Dart，运行期由 JS 驱动逻辑，Flutter 负责原生渲染。">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M18 4 7 19h8l-1 9 11-15h-8l1-9z' fill='white'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   Design tokens
+   ============================================================ */
+:root{
+  --bg:#f6f5f2;
+  --surface:#ffffff;
+  --surface-2:#efeee9;
+  --surface-3:#e7e5df;
+  --ink:#15181e;
+  --ink-2:#343a45;
+  --muted:#6a7180;
+  --line:#e2e0da;
+  --line-strong:#cbc8bf;
+  --accent:#4f46e5;
+  --accent-2:#0e7490;
+  --accent-3:#b45309;
+  --accent-soft:rgba(79,70,229,.075);
+  --accent-line:rgba(79,70,229,.22);
+  --green:#047857;
+  --green-soft:#e7f6ef;
+  --amber:#a16207;
+  --amber-soft:#fdf4e3;
+  --red:#b42318;
+  --red-soft:#fdeceb;
+  --code-bg:#151820;
+  --code-ink:#e6e9f2;
+  --code-muted:#8b93a7;
+  --sidebar-w:288px;
+  --content-w:1000px;
+  --radius:16px;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 10px 30px rgba(16,24,40,.055);
+  --font-sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-mono:"SFMono-Regular","JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+}
+[data-theme="dark"]{
+  --bg:#0f1115;
+  --surface:#161920;
+  --surface-2:#1b1f28;
+  --surface-3:#232834;
+  --ink:#e9ebf1;
+  --ink-2:#c3c8d4;
+  --muted:#98a1b2;
+  --line:#282e3a;
+  --line-strong:#3b4352;
+  --accent:#8f97ff;
+  --accent-2:#38bdf8;
+  --accent-3:#fbbf24;
+  --accent-soft:rgba(143,151,255,.11);
+  --accent-line:rgba(143,151,255,.3);
+  --green:#34d399;
+  --green-soft:rgba(52,211,153,.1);
+  --amber:#fbbf24;
+  --amber-soft:rgba(251,191,36,.1);
+  --red:#fb7185;
+  --red-soft:rgba(251,113,133,.1);
+  --code-bg:#0b0d12;
+  --code-ink:#e6e9f2;
+  --code-muted:#8b93a7;
+  --shadow:0 1px 2px rgba(0,0,0,.25),0 18px 40px rgba(0,0,0,.28);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;color-scheme:light;overflow-x:hidden;overflow-x:clip}
+[data-theme="dark"]{color-scheme:dark}
+body{
+  margin:0;
+  overflow-x:hidden;
+  overflow-x:clip;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-sans);
+  font-size:15px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  accent-color:var(--accent);
+}
+body.menu-open{overflow:hidden}
+::selection{background:var(--accent-soft);color:var(--ink)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+img,svg{max-width:100%}
+code,kbd,pre{font-family:var(--font-mono)}
+code{font-size:.88em;background:var(--surface-2);border:1px solid var(--line);padding:.1em .38em;border-radius:5px;color:var(--ink-2);word-break:break-word}
+h1,h2,h3,h4{color:var(--ink);letter-spacing:-.02em;line-height:1.25;margin:0}
+p{margin:0 0 1em}
+ul,ol{margin:0 0 1em;padding-left:1.35em}
+li+li{margin-top:.3em}
+strong{font-weight:650;color:var(--ink)}
+hr{border:0;border-top:1px solid var(--line);margin:2.4em 0}
+table code{white-space:nowrap}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.skip-link{
+  position:fixed;left:16px;top:-100px;z-index:200;
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;
+  font-size:13px;transition:top .2s;
+}
+.skip-link:focus{top:16px}
+
+/* ============================================================
+   Reading progress + sidebar
+   ============================================================ */
+.progress-track{
+  position:fixed;inset:0 0 auto 0;height:2px;z-index:120;
+  background:transparent;pointer-events:none;
+}
+.progress-bar{
+  height:100%;width:100%;transform:scaleX(0);transform-origin:0 50%;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+}
+.sidebar{
+  position:fixed;inset:0 auto 0 0;width:var(--sidebar-w);z-index:90;
+  display:flex;flex-direction:column;
+  background:var(--surface);
+  border-right:1px solid var(--line);
+}
+.brand{
+  display:flex;align-items:center;gap:11px;
+  padding:22px 22px 14px;
+  color:var(--ink);text-decoration:none;
+}
+.brand:hover{text-decoration:none}
+.brand-mark{
+  width:34px;height:34px;border-radius:10px;flex:0 0 auto;
+  display:grid;place-items:center;
+  background:linear-gradient(140deg,var(--accent),var(--accent-2));
+  color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.28);
+}
+.brand-mark svg{width:19px;height:19px}
+.brand-name{display:block;font-size:14.5px;font-weight:750;letter-spacing:-.01em;line-height:1.2}
+.brand-sub{display:block;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.16em;color:var(--muted);margin-top:3px;text-transform:uppercase}
+.side-search{padding:6px 18px 10px}
+.side-search label{display:block;position:relative}
+.side-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--muted)}
+.side-search input{
+  width:100%;height:34px;
+  padding:0 10px 0 30px;
+  border:1px solid var(--line);border-radius:8px;
+  background:var(--surface-2);color:var(--ink);
+  font:12.5px var(--font-sans);
+  transition:border-color .15s,background .15s;
+}
+.side-search input::placeholder{color:var(--muted)}
+.side-search input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.side-search kbd{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  font-family:var(--font-mono);font-size:10px;color:var(--muted);
+  border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:var(--surface);
+}
+#toc{flex:1;overflow-y:auto;padding:2px 12px 18px;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
+#toc::-webkit-scrollbar{width:6px}
+#toc::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
+.nav-group{margin:16px 0 2px}
+.nav-label{
+  padding:0 10px;margin-bottom:5px;
+  font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);
+}
+.nav-link{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 10px;border-radius:7px;
+  color:var(--ink-2);font-size:13.2px;line-height:1.35;
+  text-decoration:none;position:relative;
+  transition:background .14s,color .14s;
+}
+.nav-link:hover{background:var(--surface-2);text-decoration:none;color:var(--ink)}
+.nav-link.active{background:var(--accent-soft);color:var(--accent);font-weight:650}
+.nav-link.active::before{
+  content:"";position:absolute;left:0;top:7px;bottom:7px;width:2px;
+  border-radius:2px;background:var(--accent);
+}
+.nav-link .idx{
+  font-family:var(--font-mono);font-size:10px;color:var(--muted);
+  min-width:16px;text-align:right;
+}
+.nav-link.active .idx{color:var(--accent)}
+.nav-sub .nav-link{padding-left:26px;font-size:12.6px;color:var(--muted)}
+.nav-sub .nav-link.active{color:var(--accent)}
+.nav-sub .nav-link .idx{display:none}
+.side-foot{
+  border-top:1px solid var(--line);
+  padding:13px 20px 15px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font-family:var(--font-mono);font-size:10px;color:var(--muted);
+}
+.side-foot .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green);margin-right:5px}
+.scrim{
+  position:fixed;inset:0;z-index:80;background:rgba(10,12,18,.46);
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.scrim.show{opacity:1;pointer-events:auto}
+
+/* ============================================================
+   Main / top bar
+   ============================================================ */
+.main{margin-left:var(--sidebar-w);min-height:100vh}
+.topbar{
+  position:sticky;top:0;z-index:70;
+  height:58px;display:flex;align-items:center;gap:14px;
+  padding:0 34px;
+  background:var(--bg);
+  background:color-mix(in srgb,var(--bg) 96%,transparent);
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.menu-btn{
+  display:none;width:34px;height:34px;border-radius:8px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  align-items:center;justify-content:center;cursor:pointer;
+}
+.crumb{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:.02em}
+.crumb b{color:var(--ink-2);font-weight:600}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:9px}
+.ver-badge{
+  font-family:var(--font-mono);font-size:10.5px;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:3px 9px;background:var(--surface);
+}
+.icon-btn{
+  width:32px;height:32px;border-radius:8px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink-2);
+  display:grid;place-items:center;cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;
+}
+.icon-btn:hover{border-color:var(--line-strong);color:var(--ink);background:var(--surface-2)}
+.icon-btn svg{width:15px;height:15px}
+[data-theme="light"] .icon-sun{display:none}
+[data-theme="dark"] .icon-moon{display:none}
+.wrap{max-width:var(--content-w);margin:0 auto;padding:0 54px 110px}
+
+/* ============================================================
+   Hero
+   ============================================================ */
+.hero{position:relative;padding:74px 0 30px;isolation:isolate}
+.hero::before{
+  content:"";position:absolute;z-index:-1;inset:-120px -120px -40px -120px;
+  background:
+    radial-gradient(600px 320px at 10% 8%,var(--accent-soft),transparent 70%),
+    radial-gradient(480px 280px at 92% 30%,rgba(14,116,144,.09),transparent 72%);
+  pointer-events:none;
+}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(300px,.82fr);gap:44px;align-items:center}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;
+}
+.eyebrow .pulse{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.hero h1{
+  margin:18px 0 20px;
+  font-size:clamp(35px,4vw,54px);
+  line-height:1.1;letter-spacing:-.045em;font-weight:820;
+}
+.hero h1 .grad{
+  background:linear-gradient(100deg,var(--accent) 10%,var(--accent-2) 95%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero-lead{
+  max-width:620px;font-size:16.5px;line-height:1.85;color:var(--ink-2);
+}
+.hero-lead strong{color:var(--ink)}
+.hero-actions{display:flex;flex-wrap:wrap;gap:11px;margin:26px 0 20px}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 17px;border-radius:9px;font-size:13.5px;font-weight:650;
+  border:1px solid transparent;cursor:pointer;text-decoration:none;
+  transition:transform .15s,box-shadow .15s,background .15s,border-color .15s;
+}
+.btn:hover{text-decoration:none;transform:translateY(-1px)}
+.btn-primary{background:var(--ink);color:var(--bg);box-shadow:0 6px 16px rgba(16,24,40,.14)}
+.btn-primary:hover{box-shadow:0 9px 22px rgba(16,24,40,.18)}
+.btn-ghost{background:var(--surface);color:var(--ink-2);border-color:var(--line)}
+.btn-ghost:hover{border-color:var(--line-strong);color:var(--ink)}
+.btn svg{width:14px;height:14px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:7px 16px;font-family:var(--font-mono);font-size:10.5px;color:var(--muted)}
+.hero-meta span{display:inline-flex;align-items:center;gap:6px}
+.hero-meta span::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--line-strong)}
+.terminal{
+  position:relative;border-radius:14px;overflow:hidden;
+  background:var(--code-bg);border:1px solid #2a2f3c;
+  box-shadow:0 24px 60px rgba(16,24,40,.22),0 2px 0 rgba(255,255,255,.04) inset;
+  transform:rotate(.35deg);
+}
+.terminal-bar{
+  display:flex;align-items:center;gap:7px;
+  padding:10px 13px;background:#1b1f29;border-bottom:1px solid #2a2f3c;
+}
+.terminal-bar i{width:8px;height:8px;border-radius:50%;background:#3d4352;display:block}
+.terminal-bar i:nth-child(1){background:#f26d6d}
+.terminal-bar i:nth-child(2){background:#f2c94c}
+.terminal-bar i:nth-child(3){background:#57c785}
+.terminal-bar span{margin-left:5px;font-family:var(--font-mono);font-size:9.5px;color:#7f879a;letter-spacing:.06em}
+.terminal pre{
+  margin:0;padding:17px 17px 19px;overflow-x:auto;
+  font-size:11.2px;line-height:1.85;color:#cfd5e3;
+}
+.terminal .c{color:#727b90}
+.terminal .g{color:#7ee2a8}
+.terminal .b{color:#8fb3ff}
+.terminal .y{color:#f2cd7a}
+.terminal .prompt{color:#7ee2a8}
+.terminal-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 14px;border-top:1px solid #262b36;
+  font-family:var(--font-mono);font-size:9.5px;color:#7f879a;
+}
+.terminal-foot .ok{color:#7ee2a8}
+.stats{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  margin:46px 0 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+}
+.stat{padding:19px 22px 19px 0;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0;padding-right:0}
+.stat:not(:first-child){padding-left:22px}
+.stat-num{display:block;font-size:30px;font-weight:800;letter-spacing:-.04em;line-height:1.1}
+.stat-num small{font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:2px}
+.stat-label{display:block;margin-top:4px;font-size:11.5px;color:var(--muted)}
+
+/* ============================================================
+   Sections & headings
+   ============================================================ */
+.doc-section{padding:60px 0 8px;border-top:1px solid var(--line);scroll-margin-top:78px}
+.doc-section:first-of-type{border-top:0}
+.section-head{max-width:760px;margin-bottom:26px}
+.section-kicker{
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--font-mono);font-size:10.5px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+  margin-bottom:10px;
+}
+.section-kicker .line{width:26px;height:1px;background:var(--accent-line)}
+h2{font-size:clamp(25px,3vw,33px);font-weight:780;letter-spacing:-.035em;margin-bottom:12px}
+.section-head p{font-size:15.2px;color:var(--muted);line-height:1.8;margin:0}
+h3{font-size:20px;font-weight:720;margin:38px 0 12px;letter-spacing:-.022em;scroll-margin-top:82px}
+h4{font-size:15px;font-weight:700;margin:24px 0 8px}
+.lead{font-size:16px;color:var(--ink-2);line-height:1.85}
+.subtle{color:var(--muted);font-size:13.5px}
+.small{font-size:12.5px}
+.center{text-align:center}
+.nowrap{white-space:nowrap}
+
+/* ============================================================
+   Cards / grids
+   ============================================================ */
+.grid{display:grid;gap:16px;margin:20px 0}
+.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px;box-shadow:var(--shadow);
+}
+.card h4{margin:0 0 7px;font-size:15.5px}
+.card p{margin:0;color:var(--muted);font-size:13.4px;line-height:1.75}
+.card-icon{
+  width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);margin-bottom:13px;
+}
+.card-icon svg{width:17px;height:17px}
+.card-num{
+  font-family:var(--font-mono);font-size:10px;color:var(--accent);
+  letter-spacing:.12em;display:block;margin-bottom:9px;
+}
+.card-link{
+  display:inline-flex;align-items:center;gap:5px;margin-top:13px;
+  font-size:12.5px;font-weight:600;color:var(--accent);
+}
+.card-link svg{width:12px;height:12px}
+.card-link:hover{text-decoration:none}
+.card-link:hover span{text-decoration:underline;text-underline-offset:3px}
+.law-card{position:relative;overflow:hidden}
+.law-card::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--accent),var(--accent-2));
+}
+.law-card .law-no{
+  font-family:var(--font-mono);font-size:11px;color:var(--accent);
+  letter-spacing:.1em;display:block;margin-bottom:8px;
+}
+.law-card h4{font-size:16px}
+.feature-card{border-top:2px solid var(--accent-line)}
+
+/* Capability map */
+.map-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:22px 0}
+.map-card{
+  position:relative;overflow:hidden;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:24px;box-shadow:var(--shadow);
+  transition:border-color .18s,transform .18s,box-shadow .18s;
+}
+.map-card:hover{transform:translateY(-2px);border-color:var(--accent-line);box-shadow:0 16px 38px rgba(16,24,40,.08)}
+.map-card::after{
+  content:"";position:absolute;right:-50px;top:-60px;width:150px;height:150px;border-radius:50%;
+  background:radial-gradient(circle,var(--accent-soft),transparent 68%);pointer-events:none;
+}
+.map-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.map-head h4{margin:0;font-size:16.5px}
+.map-en{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.08em}
+.map-card p{font-size:13.2px;color:var(--muted);margin-bottom:12px}
+.map-tags{display:flex;flex-wrap:wrap;gap:6px}
+.map-tags a{
+  font-size:11.5px;padding:3px 8px;border-radius:6px;
+  background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);
+  text-decoration:none;transition:background .14s,color .14s,border-color .14s;
+}
+.map-tags a:hover{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent);text-decoration:none}
+
+/* ============================================================
+   Callouts
+   ============================================================ */
+.callout{
+  display:flex;gap:13px;align-items:flex-start;
+  padding:17px 19px;border-radius:12px;margin:20px 0;
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);
+  box-shadow:var(--shadow);
+}
+.callout-icon{flex:0 0 auto;width:20px;height:20px;color:var(--accent);margin-top:2px}
+.callout-icon svg{width:20px;height:20px}
+.callout-body{min-width:0;flex:1}
+.callout-title{display:block;font-size:12.5px;font-weight:700;margin-bottom:3px}
+.callout p{margin:0;font-size:13.4px;line-height:1.75;color:var(--ink-2)}
+.callout p+p{margin-top:6px}
+.callout code{background:color-mix(in srgb,var(--surface-2) 70%,transparent)}
+.callout.warn{border-left-color:var(--amber);background:var(--amber-soft)}
+.callout.warn .callout-icon,.callout.warn .callout-title{color:var(--amber)}
+.callout.danger{border-left-color:var(--red);background:var(--red-soft)}
+.callout.danger .callout-icon,.callout.danger .callout-title{color:var(--red)}
+.callout.ok{border-left-color:var(--green);background:var(--green-soft)}
+.callout.ok .callout-icon,.callout.ok .callout-title{color:var(--green)}
+.callout.plain{background:var(--surface-2);box-shadow:none}
+.quote{
+  margin:34px 0;padding:26px 30px;
+  border-radius:14px;border:1px solid var(--line);
+  background:
+    linear-gradient(135deg,var(--accent-soft),transparent 55%),
+    var(--surface);
+  font-size:18px;line-height:1.65;font-weight:600;letter-spacing:-.015em;
+}
+.quote .q-mark{color:var(--accent);font-family:Georgia,serif;font-size:34px;line-height:0;vertical-align:-8px;margin-right:4px}
+.quote cite{display:block;margin-top:10px;font-size:11.5px;font-weight:500;color:var(--muted);font-style:normal;font-family:var(--font-mono)}
+
+/* ============================================================
+   Tags / badges / chips
+   ============================================================ */
+.tag{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:1px 7px;border-radius:999px;
+  font-family:var(--font-sans);font-size:10.5px;font-weight:650;line-height:1.7;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--muted);
+  white-space:nowrap;vertical-align:1px;
+}
+.tag.green{background:var(--green-soft);border-color:transparent;color:var(--green)}
+.tag.amber{background:var(--amber-soft);border-color:transparent;color:var(--amber)}
+.tag.red{background:var(--red-soft);border-color:transparent;color:var(--red)}
+.tag.violet{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.tag.cyan{background:rgba(14,116,144,.08);border-color:transparent;color:var(--accent-2)}
+[data-theme="dark"] .tag.cyan{background:rgba(56,189,248,.1)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:13px 0}
+.chip{
+  font-family:var(--font-mono);font-size:11.5px;line-height:1.5;
+  padding:3px 8px;border-radius:6px;
+  background:var(--surface);border:1px solid var(--line);color:var(--ink-2);
+}
+.chip.hot{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent)}
+.chip.dim{color:var(--muted);background:var(--surface-2)}
+
+/* ============================================================
+   Tables
+   ============================================================ */
+.table-wrap{
+  margin:18px 0;border:1px solid var(--line);border-radius:12px;
+  background:var(--surface);overflow-x:auto;box-shadow:var(--shadow);
+}
+table{width:100%;border-collapse:collapse;font-size:13.2px;line-height:1.6}
+thead th{
+  text-align:left;padding:10px 14px;
+  background:var(--surface-2);color:var(--ink-2);
+  font-size:11.5px;font-weight:700;letter-spacing:.03em;
+  border-bottom:1px solid var(--line);white-space:nowrap;
+}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
+td:first-child{color:var(--ink);font-weight:560}
+td code{font-size:11.5px}
+.table-note{font-size:11.5px;color:var(--muted);margin:-8px 0 22px}
+
+/* ============================================================
+   Code
+   ============================================================ */
+.code-block{
+  position:relative;margin:16px 0;border-radius:12px;overflow:hidden;
+  background:var(--code-bg);border:1px solid #262b36;
+  box-shadow:0 10px 28px rgba(16,24,40,.1);
+}
+.code-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 13px;background:#1b1f29;border-bottom:1px solid #262b36;
+}
+.code-lang{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#7f879a}
+.code-copy{
+  border:1px solid #333947;background:transparent;color:#98a1b4;
+  font:10px var(--font-mono);padding:3px 8px;border-radius:5px;cursor:pointer;
+  transition:color .15s,border-color .15s;
+}
+.code-copy:hover{color:#e6e9f2;border-color:#4b5366}
+.code-block pre{
+  margin:0;padding:17px 18px 19px;overflow-x:auto;
+  font-size:12.2px;line-height:1.75;color:var(--code-ink);
+  tab-size:2;
+}
+.code-block pre::-webkit-scrollbar{height:8px}
+.code-block pre::-webkit-scrollbar-thumb{background:#333947;border-radius:4px}
+.code-block .k{color:#c9a2ff}
+.code-block .s{color:#9ee6b8}
+.code-block .c{color:#727b90;font-style:italic}
+.code-block .n{color:#f0b37e}
+.code-block .t{color:#8fd8f2}
+.code-block .f{color:#d9def0}
+.code-block .p{color:#8b93a7}
+.code-block .hl{background:rgba(143,151,255,.14);border-radius:3px;padding:0 1px}
+.code-block code{background:none;border:0;padding:0;color:inherit;font-size:inherit}
+
+/* ============================================================
+   Architecture diagram
+   ============================================================ */
+.diagram-shell{
+  margin:22px 0 10px;background:var(--surface);border:1px solid var(--line);
+  border-radius:18px;padding:18px;box-shadow:var(--shadow);overflow-x:auto;
+}
+.diagram-shell svg{display:block;width:100%;min-width:900px;height:auto}
+.arch-band{fill:var(--surface);stroke:var(--line);stroke-width:1.1}
+.arch-band--gen{fill:var(--surface-2);stroke:var(--line-strong)}
+.arch-band--runtime{fill:var(--accent-soft);stroke:var(--accent-line)}
+.arch-band--host{fill:var(--surface-2);stroke:var(--line-strong)}
+.arch-title{fill:var(--ink);font-size:15.5px;font-weight:750;font-family:var(--font-sans)}
+.arch-sub{fill:var(--muted);font-size:10.5px;font-family:var(--font-mono);letter-spacing:.01em}
+.arch-node{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.arch-node--accent{fill:var(--surface);stroke:var(--accent-line)}
+.arch-node--dark{fill:var(--surface-3);stroke:var(--line-strong)}
+.arch-node-title{fill:var(--ink);font-size:12.6px;font-weight:650;font-family:var(--font-sans)}
+.arch-node-sub{fill:var(--muted);font-size:10.4px;font-family:var(--font-mono)}
+.arch-arrow{stroke:var(--line-strong);stroke-width:1.5;fill:none}
+.arch-arrow--accent{stroke:var(--accent);stroke-width:1.7;fill:none}
+.arch-label{fill:var(--muted);font-size:11px;font-family:var(--font-mono)}
+.arch-label--accent{fill:var(--accent);font-size:11px;font-family:var(--font-mono);font-weight:600}
+.arch-rail{fill:var(--surface-2);stroke:var(--line);stroke-width:1}
+.arch-rail-title{fill:var(--ink);font-size:13.5px;font-weight:750;font-family:var(--font-sans)}
+.arch-rail-key{fill:var(--accent);font-size:10.5px;font-family:var(--font-mono);font-weight:600}
+.arch-rail-val{fill:var(--muted);font-size:10.8px;font-family:var(--font-mono)}
+.arch-legend{fill:var(--muted);font-size:10.5px;font-family:var(--font-sans)}
+.arch-legend-box{fill:var(--surface-2);stroke:var(--line-strong);stroke-width:1}
+.arch-legend-box--accent{fill:var(--accent-soft);stroke:var(--accent-line)}
+.arch-rail-accent{fill:var(--accent);font-size:10px;font-family:var(--font-mono)}
+.marker-line{fill:var(--line-strong)}
+.marker-accent{fill:var(--accent)}
+.rail-stop-a{stop-color:#6366f1;stop-opacity:.16}
+.rail-stop-b{stop-color:#0e7490;stop-opacity:.05}
+.arch-chip{fill:var(--accent-soft);stroke:var(--accent-line);stroke-width:1}
+.diagram-cap{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 8px;font-size:12px;color:var(--muted)}
+.diagram-cap .legend{display:inline-flex;align-items:center;gap:5px}
+.diagram-cap .sw{width:9px;height:9px;border-radius:2px;display:inline-block;border:1px solid var(--line-strong);background:var(--surface)}
+.diagram-cap .sw.a{background:var(--accent-soft);border-color:var(--accent-line)}
+.diagram-cap .sw.b{background:var(--surface-2)}
+
+/* ============================================================
+   Flow / steps / timeline
+   ============================================================ */
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:22px 0}
+.step{
+  position:relative;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:16px 14px 14px;
+}
+.step::after{
+  content:"";position:absolute;right:-10px;top:50%;width:10px;height:1px;
+  background:var(--line-strong);
+}
+.step:last-child::after{display:none}
+.step-no{font-family:var(--font-mono);font-size:9.5px;color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:6px}
+.step b{display:block;font-size:13.5px;margin-bottom:4px}
+.step p{margin:0;font-size:11.8px;line-height:1.65;color:var(--muted)}
+.flow{
+  display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;
+  margin:20px 0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);
+}
+.flow-node{
+  flex:1 1 112px;min-width:104px;padding:11px 10px;border-radius:8px;
+  background:var(--surface-2);border:1px solid var(--line);
+  font-size:11.5px;line-height:1.45;text-align:center;color:var(--ink-2);
+}
+.flow-node b{display:block;font-size:11.5px;color:var(--ink);margin-bottom:2px}
+.flow-node.hot{background:var(--accent-soft);border-color:var(--accent-line)}
+.flow-node.hot b{color:var(--accent)}
+.flow-arrow{display:flex;align-items:center;color:var(--muted);font-size:12px;flex:0 0 auto;padding:0 1px}
+.timeline{position:relative;margin:22px 0 22px 7px;padding-left:26px;border-left:1.5px solid var(--line)}
+.tl-item{position:relative;padding-bottom:24px}
+.tl-item:last-child{padding-bottom:0}
+.tl-item::before{
+  content:"";position:absolute;left:-33px;top:5px;width:11px;height:11px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--accent);box-shadow:0 0 0 3px var(--bg);
+}
+.tl-time{font-family:var(--font-mono);font-size:10px;color:var(--accent);letter-spacing:.06em;display:block;margin-bottom:3px}
+.tl-item b{display:block;font-size:14px;margin-bottom:3px}
+.tl-item p{margin:0;font-size:13px;color:var(--muted);line-height:1.7}
+
+/* ============================================================
+   Capability blocks
+   ============================================================ */
+.cap-block{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:24px;margin:18px 0;box-shadow:var(--shadow);scroll-margin-top:82px;
+}
+.cap-block-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:4px}
+.cap-block h3{margin:0;font-size:19px}
+.cap-block .cap-intro{font-size:13.3px;color:var(--muted);margin:0 0 13px;line-height:1.75}
+.cap-block h4{margin:20px 0 8px;font-size:13.5px}
+.cap-block .table-wrap{margin:14px 0 4px;box-shadow:none}
+.cap-block .chips{margin:10px 0 4px}
+.note-list{margin:12px 0 0;padding:0;list-style:none}
+.note-list li{
+  position:relative;padding-left:16px;font-size:12.8px;color:var(--muted);line-height:1.7;
+}
+.note-list li::before{content:"";position:absolute;left:0;top:.72em;width:4px;height:4px;border-radius:50%;background:var(--accent-line)}
+.note-list li+li{margin-top:5px}
+.status-key{display:flex;flex-wrap:wrap;gap:8px 14px;margin:14px 0 4px;font-size:11.5px;color:var(--muted)}
+.status-key span{display:inline-flex;align-items:center;gap:6px}
+
+/* ============================================================
+   Misc
+   ============================================================ */
+.meta-strip{
+  display:flex;flex-wrap:wrap;gap:8px 20px;margin:16px 0;
+  padding:13px 16px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface-2);font-size:12px;color:var(--muted);
+}
+.meta-strip b{color:var(--ink-2);font-weight:650}
+.two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 30px;margin:18px 0}
+.two-col h4{margin-top:0}
+.check-list{list-style:none;padding:0;margin:14px 0}
+.check-list li{position:relative;padding-left:24px;font-size:13.2px;color:var(--ink-2);line-height:1.7}
+.check-list li+li{margin-top:7px}
+.check-list li::before{
+  content:"";position:absolute;left:2px;top:.48em;width:12px;height:7px;
+  border-left:1.8px solid var(--green);border-bottom:1.8px solid var(--green);
+  transform:rotate(-45deg);
+}
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 18px;font-size:13px;margin:14px 0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;color:var(--ink-2)}
+.file-path{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;word-break:break-all}
+.back-top{
+  position:fixed;right:22px;bottom:22px;z-index:60;
+  width:38px;height:38px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--line);color:var(--ink-2);
+  display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow);
+  opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .2s,transform .2s;
+}
+.back-top.show{opacity:1;transform:none;pointer-events:auto}
+.back-top svg{width:15px;height:15px}
+.footer{
+  margin-top:52px;padding:26px 0 0;border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:20px;
+  font-size:12px;color:var(--muted);
+}
+.footer b{color:var(--ink-2)}
+.footer-links{display:flex;flex-wrap:wrap;gap:14px}
+.footer-links a{color:var(--muted)}
+.footer-links a:hover{color:var(--accent)}
+
+/* Reveal */
+.js .reveal{opacity:0;transform:translateY(9px);transition:opacity .5s ease,transform .5s ease}
+.js .reveal.in{opacity:1;transform:none}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width:1180px){
+  :root{--content-w:920px}
+  .wrap{padding-left:40px;padding-right:40px}
+  .hero-grid{gap:30px}
+}
+@media (max-width:1100px){
+  .sidebar{transform:translateX(-102%);transition:transform .22s ease;box-shadow:0 0 40px rgba(0,0,0,.2)}
+  .sidebar.open{transform:none}
+  .main{margin-left:0}
+  .menu-btn{display:flex}
+  .wrap{padding:0 30px 90px}
+  .topbar{padding:0 22px}
+  .hero{padding-top:48px}
+  .hero-grid{grid-template-columns:1fr}
+  .terminal{max-width:520px;transform:none}
+  .grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  body{font-size:14.5px}
+  .wrap{padding:0 19px 70px}
+  .topbar{padding:0 15px;height:54px}
+  .crumb{font-size:10px}
+  .ver-badge{display:none}
+  .hero{padding-top:38px}
+  .hero h1{font-size:clamp(31px,9vw,42px);letter-spacing:-.04em}
+  .hero-lead{font-size:15px}
+  .stats{grid-template-columns:repeat(2,1fr);margin-top:34px}
+  .stat{padding:15px 0!important;border-right:0;border-bottom:1px solid var(--line)}
+  .stat:nth-child(odd){padding-right:14px!important;border-right:1px solid var(--line)}
+  .stat:nth-child(even){padding-left:16px!important}
+  .stat:nth-last-child(-n+2){border-bottom:0}
+  .grid-2,.grid-3,.grid-4,.map-grid,.two-col{grid-template-columns:1fr}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .step:nth-child(2)::after{display:none}
+  .doc-section{padding-top:46px}
+  .cap-block{padding:18px}
+  .table-wrap{border-radius:10px}
+  table{font-size:12.4px}
+  thead th,tbody td{padding:9px 11px}
+  .code-block pre{font-size:11.4px}
+  .quote{font-size:16px;padding:22px}
+  .back-top{right:14px;bottom:14px}
+  .diagram-shell{padding:10px;border-radius:12px}
+  .diagram-shell svg{min-width:820px}
+}
+@media (max-width:430px){
+  .hero-actions .btn{width:100%;justify-content:center}
+  .brand{padding-left:16px;padding-right:16px}
+}
+
+/* Print */
+@media print{
+  :root, html[data-theme="dark"]{
+    --bg:#fff; --surface:#fff; --surface-2:#f5f5f5; --surface-3:#ececec;
+    --ink:#111; --ink-2:#222; --muted:#555; --line:#ddd; --line-strong:#bbb;
+    --accent:#3730a3; --accent-2:#0e7490; --accent-soft:#efeffb; --accent-line:#c7c7f0;
+    --green:#065f46; --green-soft:#eefaf4; --amber:#78350f; --amber-soft:#fdf6e7;
+    --red:#991b1b; --red-soft:#fdeeee; --shadow:none;
+  }
+  .js .reveal{opacity:1!important;transform:none!important}
+  .code-block{background:#f6f6f6!important;border-color:#ddd!important}
+  .code-block pre,.code-block pre span{color:#111!important}
+  .code-bar{background:#ececec!important;border-bottom-color:#ddd!important}
+  .code-lang,.code-bg{color:#555!important}
+  .sidebar,.topbar,.progress-track,.back-top,.scrim,.code-copy,.side-search,.code-bar{display:none!important}
+  .main{margin:0}
+  .wrap{max-width:none;padding:0}
+  body{background:#fff;color:#000;font-size:11pt}
+  .doc-section{page-break-inside:avoid;border-top:1px solid #ddd;padding:20px 0}
+  .card,.cap-block,.table-wrap,.callout,.code-block{box-shadow:none;break-inside:avoid}
+  a{color:#000;text-decoration:underline}
+  .diagram-shell svg{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition:none!important;animation:none!important}
+  .js .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">跳到正文</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progressBar"></div></div>
+
+<aside class="sidebar" id="sidebar" aria-label="文档目录">
+  <a class="brand" href="#home" aria-label="flutter_hot_patch 首页">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+    </span>
+    <span>
+      <span class="brand-name">flutter_hot_patch</span>
+      <span class="brand-sub">Framework Notes</span>
+    </span>
+  </a>
+
+  <div class="side-search">
+    <label>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="navFilter" type="search" placeholder="筛选目录…" autocomplete="off" aria-label="筛选目录">
+      <kbd>/</kbd>
+    </label>
+  </div>
+
+  <nav id="toc" aria-label="章节目录">
+    <div class="nav-group">
+      <div class="nav-label">开始</div>
+      <a class="nav-link" href="#home"><span class="idx">00</span>首页 · 框架与架构图</a>
+      <a class="nav-link" href="#quickstart"><span class="idx">01</span>快速开始</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">架构</div>
+      <a class="nav-link" href="#laws"><span class="idx">02</span>五条设计定律</a>
+      <a class="nav-link" href="#layers"><span class="idx">03</span>分层与职责边界</a>
+      <a class="nav-link" href="#pipeline"><span class="idx">04</span>编译期翻译流水线</a>
+      <a class="nav-link" href="#runtime-loop"><span class="idx">05</span>运行时闭环</a>
+      <a class="nav-link" href="#protocol"><span class="idx">06</span>协议、句柄与版本</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">能力目录 · 按类型</div>
+      <a class="nav-link" href="#capabilities"><span class="idx">07</span>能力全景与阅读方式</a>
+    </div>
+
+    <div class="nav-group nav-sub">
+      <div class="nav-label">语言翻译能力</div>
+      <a class="nav-link" href="#lang">Dart → JS 总览</a>
+      <a class="nav-link" href="#lang-basic">基础语法与类型</a>
+      <a class="nav-link" href="#lang-flow">控制流与集合</a>
+      <a class="nav-link" href="#lang-func">函数与对象模型</a>
+      <a class="nav-link" href="#lang-async">异步、Stream 与运行时补齐</a>
+    </div>
+
+    <div class="nav-group nav-sub">
+      <div class="nav-label">UI 组件能力</div>
+      <a class="nav-link" href="#ui">组件支持总览</a>
+      <a class="nav-link" href="#ui-layout">布局、滚动与 Sliver</a>
+      <a class="nav-link" href="#ui-content">内容、按钮与交互</a>
+      <a class="nav-link" href="#ui-shell">页面骨架与响应式</a>
+      <a class="nav-link" href="#ui-motion">动画、弹层与绘制</a>
+    </div>
+
+    <div class="nav-group nav-sub">
+      <div class="nav-label">运行时能力</div>
+      <a class="nav-link" href="#runtime-caps">能力库总览</a>
+      <a class="nav-link" href="#cap-state">状态与响应式</a>
+      <a class="nav-link" href="#cap-controller">控制器与跨语言句柄</a>
+      <a class="nav-link" href="#cap-context">上下文与事件</a>
+      <a class="nav-link" href="#cap-third">三方库、懒加载与保活</a>
+    </div>
+
+    <div class="nav-group nav-sub">
+      <div class="nav-label">工程化能力</div>
+      <a class="nav-link" href="#eng-patch">补丁分发与版本切换</a>
+      <a class="nav-link" href="#eng-host">宿主注入与原生组件</a>
+      <a class="nav-link" href="#eng-log">日志、隔离与构建产物</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">扩展与附录</div>
+      <a class="nav-link" href="#extensions"><span class="idx">08</span>扩展点与正确姿势</a>
+      <a class="nav-link" href="#limits"><span class="idx">09</span>已知限制</a>
+      <a class="nav-link" href="#files"><span class="idx">10</span>关键文件索引</a>
+    </div>
+  </nav>
+
+  <div class="side-foot">
+    <span><span class="dot"></span>protocol 0.13.0</span>
+    <span>MIT</span>
+  </div>
+</aside>
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+
+<div class="main">
+  <header class="topbar">
+    <button class="menu-btn" id="menuBtn" aria-label="打开目录" aria-expanded="false" aria-controls="sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div class="crumb">docs / <b>技术博客</b> / v0.4.0</div>
+    <div class="top-actions">
+      <span class="ver-badge">protocol 0.13.0</span>
+      <button class="icon-btn" id="themeBtn" aria-label="切换深浅色主题" title="切换深浅色主题">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="wrap" id="main-content">
+    <!-- HOME -->
+    <section id="home" class="hero" aria-labelledby="home-title">
+      <div class="hero-grid">
+        <div>
+          <span class="eyebrow"><span class="pulse"></span>Framework Notes · 2026</span>
+          <h1 id="home-title">把 Dart 组件<br>翻译成 JS，<br><span class="grad">在运行时热修复。</span></h1>
+          <p class="hero-lead">
+            <strong>flutter_hot_patch</strong> 是一个「注解组件 → JS 热更」框架。编译期把
+            <code>@PatchEntry</code> 组件静态翻译为 JS 协议产物；运行期由 JS 驱动逻辑，
+            Flutter 继续负责原生渲染。被热更的类，始终是一个完全正常的 Flutter widget。
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#home-arch">
+              查看架构图
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+            </a>
+            <a class="btn btn-ghost" href="#capabilities">
+              浏览能力目录
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+          <div class="hero-meta">
+            <span>runtime 0.4.0</span>
+            <span>generator 0.13.0</span>
+            <span>annotations 0.1.5</span>
+            <span>Dart 3 / Flutter</span>
+            <span>MIT</span>
+          </div>
+        </div>
+
+        <div class="terminal" aria-label="示例构建输出">
+          <div class="terminal-bar" aria-hidden="true"><i></i><i></i><i></i><span>build · zsh</span></div>
+          <pre><span class="prompt">$</span> dart run build_runner build
+<span class="c"># 静态解析，不执行任何 Dart 代码</span>
+<span class="b">[01]</span> patch/components/counter.js   <span class="g">✓</span>
+<span class="b">[02]</span> patch/flutter.js              <span class="g">✓</span>
+<span class="b">[03]</span> patch/runtime.js              <span class="g">✓</span>
+<span class="b">[04]</span> patch/manifest.json           <span class="g">✓</span>
+<span class="c"># protocol 0.13.0 · resources hashed</span>
+<span class="y">→ 产物与 lib/ 路径一一对应</span>
+<span class="prompt">$</span> <span class="c"># 运行时按需加载，无需发版</span></pre>
+          <div class="terminal-foot"><span>illustrative build output</span><span class="ok">128 js files</span></div>
+        </div>
+      </div>
+
+      <div class="stats" role="list">
+        <div class="stat" role="listitem"><span class="stat-num">3</span><span class="stat-label">协作包 · 运行时 / 生成器 / 注解</span></div>
+        <div class="stat" role="listitem"><span class="stat-num">81</span><span class="stat-label">已注册的宿主组件类型</span></div>
+        <div class="stat" role="listitem"><span class="stat-num">26</span><span class="stat-label">可插拔运行时能力库</span></div>
+        <div class="stat" role="listitem"><span class="stat-num">1</span><span class="stat-label">条跨语言通道 · invoke</span></div>
+      </div>
+
+      <div style="margin-top:56px" id="home-intro">
+        <div class="section-head">
+          <div class="section-kicker"><span class="line"></span>00 / What &amp; Why</div>
+          <h2>它解决的不是“动态 UI”，而是线上修复</h2>
+          <p>面向「线上出 bug → 运行时切到 JS 补丁修复，无需发版」的场景。组件不需要做任何改造，注解只是构建期元数据；只有在需要热修复时，运行时才加载它的 JS 版本。</p>
+        </div>
+        <div class="grid grid-3">
+          <div class="card feature-card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9-4 3 4 3M16 9l4 3-4 3M13 5l-2 14"/></svg></div>
+            <h4>编译期：源码级翻译</h4>
+            <p>用 analyzer 静态解析 Dart，把类、方法、build 树一比一翻译成 JS。产物与 <code>lib/</code> 路径镜像，读 JS 等于读 Dart；禁止手改产物。</p>
+          </div>
+          <div class="card feature-card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg></div>
+            <h4>运行期：JS 逻辑闭环</h4>
+            <p><code>setState</code>、provider、订阅与重建全部发生在 JS 侧，最终归约为增量 patch ops。宿主不理解任何状态语义。</p>
+          </div>
+          <div class="card feature-card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg></div>
+            <h4>渲染：Flutter 只组装</h4>
+            <p>宿主只做两件事：把 JS 结点 <code>type</code> 映射成真实 widget，并应用增量补丁。原生与热更版本共用同一套属性协议。</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="home-arch" style="margin-top:56px;scroll-margin-top:80px">
+        <div class="section-head">
+          <div class="section-kicker"><span class="line"></span>Architecture at a glance</div>
+          <h2>一张图看懂数据流</h2>
+          <p>编译期只产出协议与产物；运行期只交换序列化的 patch 与事件。虚线以内是 JS 世界，之外是 Flutter 世界，二者通过唯一通道通信。</p>
+        </div>
+
+        <div class="diagram-shell">
+          <svg viewBox="0 0 1080 736" role="img" aria-labelledby="archSvgTitle archSvgDesc">
+            <title id="archSvgTitle">flutter_hot_patch 分层架构图</title>
+            <desc id="archSvgDesc">源层 Dart 源码经 build_runner 进入生成器，产出 runtime.js、flutter.js、组件 JS 与 manifest；JS 运行时由 mini-react、能力库与句柄调度组成；宿主 Flutter 侧由 JsUiWidget、JsUiStore、JsWidgetRegistry 与 JsRuntimeManager 组成。两侧通过 patch ops 与 _app_host_.invoke 通信。</desc>
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path class="marker-line" d="M0,0 L10,5 L0,10 z"/>
+              </marker>
+              <marker id="arrAccent" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path class="marker-accent" d="M0,0 L10,5 L0,10 z"/>
+              </marker>
+              <linearGradient id="railGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop class="rail-stop-a" offset="0"/>
+                <stop class="rail-stop-b" offset="1"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Source layer -->
+            <rect class="arch-band" x="16" y="16" width="804" height="88" rx="14"/>
+            <text class="arch-title" x="36" y="47">源层 · 唯一真相</text>
+            <text class="arch-sub" x="36" y="66">example/lib · Dart source</text>
+            <rect class="arch-node arch-node--accent" x="300" y="33" width="154" height="54" rx="9"/>
+            <text class="arch-node-title" x="314" y="56">@PatchEntry 组件</text>
+            <text class="arch-node-sub" x="314" y="73">Widget + State</text>
+            <rect class="arch-node" x="464" y="33" width="148" height="54" rx="9"/>
+            <text class="arch-node-title" x="478" y="56">模型 / 状态</text>
+            <text class="arch-node-sub" x="478" y="73">model · singleton</text>
+            <rect class="arch-node" x="622" y="33" width="186" height="54" rx="9"/>
+            <text class="arch-node-title" x="636" y="56">@HostInjected 方法</text>
+            <text class="arch-node-sub" x="636" y="73">host channel</text>
+
+            <line class="arch-arrow" x1="410" y1="104" x2="410" y2="128" marker-end="url(#arr)"/>
+            <text class="arch-label" x="422" y="122">build_runner · 静态解析，不执行 Dart</text>
+
+            <!-- Generator -->
+            <rect class="arch-band arch-band--gen" x="16" y="132" width="804" height="100" rx="14"/>
+            <text class="arch-title" x="36" y="164">生成器 · 编译期</text>
+            <text class="arch-sub" x="36" y="183">hot_patch_generator</text>
+            <rect class="arch-node" x="300" y="148" width="150" height="52" rx="9"/>
+            <text class="arch-node-title" x="314" y="169">收集</text>
+            <text class="arch-node-sub" x="314" y="186">analysis/</text>
+            <rect class="arch-node" x="460" y="148" width="150" height="52" rx="9"/>
+            <text class="arch-node-title" x="474" y="169">翻译</text>
+            <text class="arch-node-sub" x="474" y="186">translator/</text>
+            <rect class="arch-node arch-node--accent" x="620" y="148" width="188" height="52" rx="9"/>
+            <text class="arch-node-title" x="634" y="169">组装</text>
+            <text class="arch-node-sub" x="634" y="186">builders · 7 个 builder</text>
+
+            <line class="arch-arrow" x1="410" y1="232" x2="410" y2="260" marker-end="url(#arr)"/>
+            <text class="arch-label" x="422" y="250">GENERATED CODE · 路径镜像 lib/</text>
+
+            <!-- Artifacts -->
+            <rect class="arch-band" x="16" y="264" width="804" height="92" rx="14"/>
+            <text class="arch-title" x="36" y="296">产物层</text>
+            <text class="arch-sub" x="36" y="315">patch/</text>
+            <rect class="arch-node arch-node--dark" x="266" y="281" width="128" height="50" rx="8"/>
+            <text class="arch-node-title" x="278" y="302">runtime.js</text>
+            <text class="arch-node-sub" x="278" y="318">mini-react</text>
+            <rect class="arch-node arch-node--dark" x="404" y="281" width="128" height="50" rx="8"/>
+            <text class="arch-node-title" x="416" y="302">flutter.js</text>
+            <text class="arch-node-sub" x="416" y="318">__h · wrappers</text>
+            <rect class="arch-node arch-node--dark" x="542" y="281" width="136" height="50" rx="8"/>
+            <text class="arch-node-title" x="554" y="302">components/*.js</text>
+            <text class="arch-node-sub" x="554" y="318">组件产物</text>
+            <rect class="arch-node" x="688" y="281" width="120" height="50" rx="8"/>
+            <text class="arch-node-title" x="700" y="302">manifest.json</text>
+            <text class="arch-node-sub" x="700" y="318">hash · protocol</text>
+
+            <line class="arch-arrow" x1="410" y1="356" x2="410" y2="392" marker-end="url(#arr)"/>
+            <text class="arch-label" x="422" y="380">加载补丁 / 注入运行时 · JsRuntimeManager</text>
+
+            <!-- Runtime -->
+            <rect class="arch-band arch-band--runtime" x="16" y="396" width="804" height="104" rx="14"/>
+            <text class="arch-title" x="36" y="428">JS 运行时</text>
+            <text class="arch-sub" x="36" y="447">mini-react + capabilities</text>
+            <rect class="arch-node" x="300" y="412" width="160" height="56" rx="9"/>
+            <text class="arch-node-title" x="314" y="433">element / reconciler</text>
+            <text class="arch-node-sub" x="314" y="450">mount · patch · unmount</text>
+            <rect class="arch-node" x="470" y="412" width="150" height="56" rx="9"/>
+            <text class="arch-node-title" x="484" y="433">capabilities</text>
+            <text class="arch-node-sub" x="484" y="450">能力库 / 片段</text>
+            <rect class="arch-node" x="630" y="412" width="180" height="56" rx="9"/>
+            <text class="arch-node-title" x="644" y="433">句柄 · 调度 · 根事务</text>
+            <text class="arch-node-sub" x="644" y="450">flush · pageKey · handles</text>
+
+            <!-- Runtime <-> Host -->
+            <line class="arch-arrow arch-arrow--accent" x1="360" y1="500" x2="360" y2="556" marker-end="url(#arrAccent)"/>
+            <text class="arch-label--accent" x="372" y="523">patch ops ↓</text>
+            <text class="arch-label" x="372" y="538">jsuiCommit(ops)</text>
+            <line class="arch-arrow arch-arrow--accent" x1="690" y1="560" x2="690" y2="504" marker-end="url(#arrAccent)"/>
+            <text class="arch-label--accent" x="678" y="523" text-anchor="end">host methods ↑</text>
+            <text class="arch-label" x="678" y="538" text-anchor="end">_app_host_.invoke</text>
+
+            <!-- Host -->
+            <rect class="arch-band arch-band--host" x="16" y="560" width="804" height="132" rx="14"/>
+            <text class="arch-title" x="36" y="592">宿主层 · Flutter</text>
+            <text class="arch-sub" x="36" y="611">只组装 widget tree</text>
+            <rect class="arch-node arch-node--accent" x="266" y="576" width="124" height="56" rx="9"/>
+            <text class="arch-node-title" x="278" y="597">JsUiWidget</text>
+            <text class="arch-node-sub" x="278" y="614">生命周期入口</text>
+            <rect class="arch-node" x="400" y="576" width="124" height="56" rx="9"/>
+            <text class="arch-node-title" x="412" y="597">JsUiStore</text>
+            <text class="arch-node-sub" x="412" y="614">应用 patch ops</text>
+            <rect class="arch-node" x="534" y="576" width="146" height="56" rx="9"/>
+            <text class="arch-node-title" x="546" y="597">JsWidgetRegistry</text>
+            <text class="arch-node-sub" x="546" y="614">type → widget</text>
+            <rect class="arch-node" x="690" y="576" width="120" height="56" rx="9"/>
+            <text class="arch-node-title" x="702" y="597">RuntimeManager</text>
+            <text class="arch-node-sub" x="702" y="614">引擎 · 宿主方法</text>
+            <text class="arch-sub" x="266" y="662">宿主不理解状态语义 · 页面资源只由 disposeRoot 释放</text>
+            <text class="arch-sub" x="266" y="678">原生 widget 与 JS 组件共用同一套属性协议</text>
+
+            <!-- Right rail -->
+            <rect class="arch-rail" x="840" y="16" width="224" height="676" rx="14"/>
+            <rect x="841" y="17" width="222" height="674" rx="13" fill="url(#railGrad)"/>
+            <text class="arch-rail-title" x="860" y="47">跨语言契约</text>
+            <text class="arch-sub" x="860" y="64">contract · 只增不改</text>
+
+            <text class="arch-rail-key" x="860" y="98">element</text>
+            <text class="arch-rail-val" x="860" y="115">{ type, props,</text>
+            <text class="arch-rail-val" x="860" y="129">  children }</text>
+
+            <text class="arch-rail-key" x="860" y="166">patch ops</text>
+            <text class="arch-rail-val" x="860" y="183">add / remove / update</text>
+            <text class="arch-rail-val" x="860" y="197">按结点 id 增量应用</text>
+
+            <text class="arch-rail-key" x="860" y="234">handle</text>
+            <text class="arch-rail-val" x="860" y="251">&lt;端&gt;:&lt;kind&gt;#&lt;id&gt;</text>
+            <text class="arch-rail-val" x="860" y="265">真实对象只在拥有端</text>
+
+            <text class="arch-rail-key" x="860" y="302">event</text>
+            <text class="arch-rail-val" x="860" y="319">{ __fn: id }</text>
+            <text class="arch-rail-val" x="860" y="333">构建期锚定 + 捕获值</text>
+
+            <text class="arch-rail-key" x="860" y="370">manifest</text>
+            <text class="arch-rail-val" x="860" y="387">version · buildTime</text>
+            <text class="arch-rail-val" x="860" y="401">protocol · resources hash</text>
+
+            <rect class="arch-chip" x="856" y="440" width="192" height="118" rx="9"/>
+            <text class="arch-rail-key" x="870" y="462">唯一通道</text>
+            <text class="arch-rail-val" x="870" y="482">_app_host_.invoke</text>
+            <text class="arch-rail-val" x="870" y="499">↓ 宿主方法 / 事件回传</text>
+            <text class="arch-rail-val" x="870" y="516">↑ jsuiCommit / 日志</text>
+            <text class="arch-rail-val" x="870" y="536">禁止开平行通道</text>
+
+            <text class="arch-rail-key" x="860" y="596">稳定性目标</text>
+            <text class="arch-rail-val" x="860" y="613">同一语法 → 同一形态</text>
+            <text class="arch-rail-val" x="860" y="627">老路径行为不变</text>
+            <text class="arch-rail-val" x="860" y="641">扩展靠加法，不靠分支</text>
+
+            <text class="arch-rail-accent" x="860" y="672">Dart 单源 · JS 可热更 · 原生渲染</text>
+
+            <!-- Legend -->
+            <rect class="arch-legend-box" x="20" y="710" width="10" height="10" rx="2"/>
+            <text class="arch-legend" x="36" y="719">编译期 / 产物</text>
+            <rect class="arch-legend-box arch-legend-box--accent" x="150" y="710" width="10" height="10" rx="2"/>
+            <text class="arch-legend" x="166" y="719">运行期数据流</text>
+            <line class="arch-arrow arch-arrow--accent" x1="286" y1="715" x2="310" y2="715" marker-end="url(#arrAccent)"/>
+            <text class="arch-legend" x="318" y="719">唯一跨语言通道</text>
+          </svg>
+        </div>
+        <div class="diagram-cap">
+          <span class="legend"><span class="sw b"></span>编译期 / 产物</span>
+          <span class="legend"><span class="sw a"></span>运行期数据流</span>
+          <span>水平滚动可查看完整图表</span>
+        </div>
+
+        <div class="callout ok">
+          <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span>
+          <div class="callout-body">
+            <span class="callout-title">一句话概括</span>
+            <p>Dart 是唯一真相，JS 是编译产物；逻辑在 JS 闭环，渲染在 Flutter 收口；两端只交换 <strong>patch</strong> 与 <strong>事件</strong>。</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:52px">
+        <div class="section-head">
+          <div class="section-kicker"><span class="line"></span>From source to screen</div>
+          <h2>从源码到屏幕，只有四步</h2>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="step-no">STEP 01</span><b>注解</b><p>给普通 widget 加 <code>@PatchEntry</code>。类不改写、行为不变。</p></div>
+          <div class="step"><span class="step-no">STEP 02</span><b>构建翻译</b><p>build_runner 静态解析，产出与 <code>lib/</code> 镜像的 JS 模块与 manifest。</p></div>
+          <div class="step"><span class="step-no">STEP 03</span><b>加载补丁</b><p>asset、远程 zip 或已加载模块；运行时按身份版本决定是否切换。</p></div>
+          <div class="step"><span class="step-no">STEP 04</span><b>增量渲染</b><p>JS build → reconciler diff → patch ops → 宿主重建受影响结点。</p></div>
+        </div>
+      </div>
+
+      <div class="quote">
+        <span class="q-mark">“</span>同一条 Dart 语法，在任何组件、任何上下文、任何版本下，都产出同一形态的 JS。翻译规则是语法级的，不随特性演进增加分支。
+        <cite>— 项目稳定性目标</cite>
+      </div>
+    </section>
+
+    <!-- QUICKSTART -->
+    <section id="quickstart" class="doc-section" aria-labelledby="quickstart-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>01 / Getting started</div>
+        <h2 id="quickstart-title">四步接入，组件零改造</h2>
+        <p>接入只需要依赖、注解、构建、加载四步。被标注的类始终是普通 Flutter widget，在未加载补丁的地方照常原生渲染。</p>
+      </div>
+
+      <div class="meta-strip">
+        <span><b>适用</b> 已有 Flutter App</span>
+        <span><b>改动</b> 组件加注解 · 启动处注册</span>
+        <span><b>不改造</b> 业务逻辑 / 状态管理 / 布局</span>
+        <span><b>产物</b> patch/ 与 lib/ 路径镜像</span>
+      </div>
+
+      <h3>Step 01 · 添加依赖</h3>
+      <p>运行时与注解进 <code>dependencies</code>，生成器与 build_runner 只进 <code>dev_dependencies</code>。</p>
+      <div class="code-block" data-lang="yaml">
+<pre>dependencies:
+  hot_patch_annotations: <span class="s">^0.1.5</span>   <span class="c"># 注解</span>
+  hot_patch: <span class="s">^0.4.0</span>               <span class="c"># 运行时（JS 运行时 + 宿主渲染 + 能力桥）</span>
+
+dev_dependencies:
+  hot_patch_generator: <span class="s">^0.13.0</span>   <span class="c"># 编译期翻译（不进入包体）</span>
+  build_runner: <span class="s">^2.4.13</span></pre>
+      </div>
+
+      <h3>Step 02 · 给组件打注解</h3>
+      <p><code>@PatchEntry</code> 的收集口径是<strong>整个 widget</strong>：非 static 字段 → JS 状态；除 build / 生命周期外的方法 → JS 方法；<code>build()</code> → JS 渲染入口。没有字段级或方法级标注。</p>
+      <div class="code-block" data-lang="dart">
+<pre><span class="k">import</span> <span class="s">'package:flutter/material.dart'</span>;
+<span class="k">import</span> <span class="s">'package:hot_patch_annotations/hot_patch_annotations.dart'</span>;
+
+<span class="p">@PatchEntry(</span><span class="s">'Counter'</span><span class="p">)</span>
+<span class="k">class</span> <span class="t">Counter</span> <span class="k">extends</span> <span class="t">StatefulWidget</span> {
+  <span class="k">const</span> Counter({<span class="k">super</span>.key});
+
+  <span class="p">@override</span>
+  <span class="t">State</span>&lt;<span class="t">Counter</span>&gt; createState() =&gt; _CounterState();
+}
+
+<span class="k">class</span> _CounterState <span class="k">extends</span> <span class="t">State</span>&lt;<span class="t">Counter</span>&gt; {
+  <span class="k">int</span> _count = <span class="n">0</span>;                                  <span class="c">// → JS 实例状态</span>
+  <span class="k">void</span> _inc() =&gt; setState(() =&gt; _count++);          <span class="c">// → JS 方法</span>
+
+  <span class="p">@override</span>
+  <span class="t">Widget</span> build(<span class="t">BuildContext</span> context) =&gt; <span class="t">Column</span>(
+        children: [
+          <span class="t">Text</span>(<span class="s">'count = $_count'</span>),                        <span class="c">// 插值原样保留</span>
+          <span class="t">ElevatedButton</span>(onPressed: _inc, child: <span class="k">const</span> <span class="t">Text</span>(<span class="s">'+1'</span>)),
+        ],
+      );
+}</pre>
+      </div>
+
+      <h3>Step 03 · 生成 JS 产物</h3>
+      <div class="code-block" data-lang="bash">
+<pre><span class="c"># 项目根目录</span>
+dart run build_runner build --delete-conflicting-outputs
+
+<span class="c"># 产物与 lib/ 一一对应：</span>
+<span class="c"># lib/components/counter.dart → patch/components/counter.js</span>
+<span class="c"># 另有 runtime.js / flutter.js / manifest.json</span></pre>
+      </div>
+
+      <h3>Step 04 · 声明资源并加载</h3>
+      <p>Flutter 的目录 asset 声明<strong>不递归</strong>，需要逐目录或逐文件列出。加载时组件名通过 <code>?component=</code> 传入，运行时会在请求前剥离 query。</p>
+      <div class="two-col">
+        <div>
+          <div class="code-block" data-lang="yaml">
+<pre>flutter:
+  assets:
+    - patch/components/
+    - patch/flutter.js
+    - patch/runtime.js
+    - patch/manifest.json</pre>
+          </div>
+        </div>
+        <div>
+          <div class="code-block" data-lang="dart">
+<pre><span class="t">JsUiWidget</span>(
+  jsAsset: <span class="s">'assets/patch/components/counter.js'</span>
+           <span class="s">'?component=Counter'</span>,
+)</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 9v5M12 17.2v.1"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">三个容易踩的坑</span>
+          <p><code>assets:</code> 声明不递归；<code>?component=</code> 必填，且必须与入口模块注册的类名一致；同一进程内所有 <code>JsUiWidget</code> 应指向同一补丁包身份，混用不同版本会触发明确报错而不是反复切换。</p>
+        </div>
+      </div>
+
+      <h3>让 JS 调用原生能力</h3>
+      <p>网络、路由、WebView、原生 SDK 等只能由宿主执行的能力，用 <code>@HostInjected</code> 标注静态方法或顶层函数。类照常翻译，只有方法体换成通道调用，<strong>调用点与 Dart 一比一</strong>。</p>
+      <div class="code-block" data-lang="dart">
+<pre><span class="k">class</span> <span class="t">HostGreeter</span> {
+  <span class="p">@HostInjected()</span>
+  <span class="k">static</span> <span class="t">String</span> greet(<span class="t">String</span> name) =&gt; <span class="s">'Hi, $name'</span>;
+}
+
+<span class="k">void</span> main() {
+  registerHostMethods();   <span class="c">// 扫描注解生成的注册清单，一次注册全部通道</span>
+  runApp(<span class="k">const</span> App());
+}</pre>
+      </div>
+      <p class="subtle">通道名默认取方法名；参数载荷按实参形态给（纯位置 → 数组，纯具名 → 对象，混合 → 对象 + <code>"@args"</code>），宿主用 <code>Function.apply</code> 还原 Dart 调用语义。返回值是 Promise，可 <code>await</code>。</p>
+
+      <h3>本地联调</h3>
+      <div class="code-block" data-lang="bash">
+<pre><span class="c"># 仓库根：build_runner → 打包 patch.zip → 起本地服务（127.0.0.1:8765）</span>
+bash start_patch_server.sh
+
+<span class="c"># 运行示例 App</span>
+<span class="k">cd</span> example &amp;&amp; flutter run</pre>
+      </div>
+      <ul class="check-list">
+        <li>只改业务 Dart：重跑 <code>start_patch_server.sh</code>，在 App 里重进该页面即可看到新产物。</li>
+        <li>改运行时 Dart（<code>runtime_source.dart</code> 等）：随 App 注入，<strong>热重启不生效，必须完全重启 App</strong>。</li>
+        <li>改组件属性：生成侧与运行侧要同时更新，详见<a href="#ui">组件支持总览</a>。</li>
+      </ul>
+    </section>
+
+    <!-- LAWS -->
+    <section id="laws" class="doc-section" aria-labelledby="laws-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>02 / Design laws</div>
+        <h2 id="laws-title">五条设计定律</h2>
+        <p>它们不是实现细节，而是基座契约。任何新需求、重构、能力扩展都必须先对照这五条；与它们冲突的方案，宁可改业务代码，也不改基座设计。</p>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card law-card">
+          <span class="law-no">LAW 01</span>
+          <h4>源码级翻译：Dart 单源，JS 是编译产物</h4>
+          <p>类名、字段名、方法签名、方法体语句、build 树在 JS 侧保持 Dart 原貌，读 JS 产物等于读 Dart 源码。翻译器只做语言层映射，不做语义改写、不做优化裁剪。StatefulWidget 的 widget 类与 State 类合并为一个 JS 类，是唯一特例。</p>
+        </div>
+        <div class="card law-card">
+          <span class="law-no">LAW 02</span>
+          <h4>宿主注入补全：JS 没有的能力由 Flutter 补</h4>
+          <p>不存在的对象与方法由宿主注入，而不是让翻译器改写调用方。四种形态：能力桥、<code>@HostInjected</code> 通道、JS 内建原型补齐、原生组件注册。禁止在生成器里按方法名做映射改写。</p>
+        </div>
+        <div class="card law-card">
+          <span class="law-no">LAW 03</span>
+          <h4>逻辑全在 JS 端：JS 是唯一事实源</h4>
+          <p><code>setState</code>、provider、任何状态库的状态与重建都发生在 JS 侧的 mini-react 里，最终归约为「JS 重建子树 → 产出增量 patch ops → <code>jsuiCommit</code> 下发 → 宿主应用」。</p>
+        </div>
+        <div class="card law-card">
+          <span class="law-no">LAW 04</span>
+          <h4>Flutter 侧只组装 widget tree</h4>
+          <p>宿主只做两件事：把 JS 结点的 <code>type</code> 映射成真实 Flutter widget（<code>JsWidgetRegistry</code>），以及应用 JS 算好的增量补丁（<code>JsUiStore</code>）。新增 JS 组件、新增状态库都不改宿主代码。</p>
+        </div>
+        <div class="card law-card" style="grid-column:1/-1">
+          <span class="law-no">LAW 05</span>
+          <h4>Flutter 生命周期驱动 JS 方法</h4>
+          <p><code>JsUiWidget</code> 是宿主入口：<code>initState</code> 时准备运行时、注册能力桥、加载并 mount JS 根；<code>dispose</code> 时调用 <code>disposeRoot(pageKey)</code> 统一释放该页关联的句柄、控制器与订阅。JS 组件自身的生命周期（<code>initState</code> / <code>didChangeDependencies</code> / <code>didUpdateWidget</code> / <code>deactivate</code> / <code>dispose</code>）由 mini-react 统一派发，宿主不逐个转发。</p>
+        </div>
+      </div>
+
+      <h3>定律二落地：四种补全形态</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:18%">形态</th><th style="width:42%">场景</th><th>入口 / 约束</th></tr></thead>
+          <tbody>
+            <tr><td>能力桥</td><td>ScrollController、TabController、GlobalKey、BuildContext 等有真实原生对应物的对象；CustomPainter 的绘制录制重放；Canvas 图片句柄</td><td><code>packages/hot_patch/lib/src/js_ui/capabilities/</code>；一个能力一个目录，核心零改动</td></tr>
+            <tr><td><code>@HostInjected</code> 通道</td><td>网络、路由、WebView 等纯宿主方法调用</td><td>类照常产出 JS 类，被标注方法体改为 <code>_app_host_.invoke(通道名, 载荷)</code></td></tr>
+            <tr><td>JS 内建原型补齐</td><td>Dart 标准库方法在 JS 内建类型上不存在（如 <code>List.clear</code>）</td><td>运行时同名同义补齐，<code>enumerable:false</code> + 存在性守卫，禁止挂 <code>Object.prototype</code></td></tr>
+            <tr><td>原生组件注册</td><td>JS 无法 / 不应翻译的纯原生 widget</td><td><code>registerNativeComponent(name, build)</code>，全局一次注册，放在 <code>runApp</code> 之前</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>稳定性的三条底线</h3>
+      <div class="grid grid-3">
+        <div class="card">
+          <h4>一条语法一个规则</h4>
+          <p>同一语法现象只有一处实现；不存在 per-widget / per-class 的翻译器子类。组件与普通类共用同一条翻译路径。</p>
+        </div>
+        <div class="card">
+          <h4>协议只增不改</h4>
+          <p><code>__h</code>、element 形态、patch ops、句柄信封、颜色序列化、<code>lazyChildren</code> 等已发布协议只增不改语义；破坏性改动必须升主协议版本并给迁移方案。</p>
+        </div>
+        <div class="card">
+          <h4>设计变更即清理</h4>
+          <p>确认 L2 / L3 变更后，旧设计的代码、分支、注册项、配置表项、产物与文档必须在同一次变更内删除。验收标准是「旧设计已不存在」。</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.1"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">为什么强调“不要按名字判断”</span>
+          <p>生成器不带完整类型解析。若按方法名全局改写，<code>clear()</code> 既是 <code>List.clear()</code> 也是 <code>TextEditingController.clear()</code>，必然撞车。因此翻译判据只来自源码事实：构造签名、<code>extends</code> 链、import 链与文件 / package 归属；唯一例外是「JS 内建同名语义差异」的构建期固定映射表，且只在接收者静态类型可判定时生效。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- LAYERS -->
+    <section id="layers" class="doc-section" aria-labelledby="layers-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>03 / Layers</div>
+        <h2 id="layers-title">分层与职责边界</h2>
+        <p>整个仓库是一个 Dart pub workspace：三个包、一个示例 App、一个本地补丁服务。每层只做自己该做的事，跨层只通过协议与唯一通道交流。</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:15%">层</th><th style="width:43%">职责</th><th>关键实现</th></tr></thead>
+          <tbody>
+            <tr><td>源层</td><td>唯一真相：<code>@PatchEntry</code> 组件、模型、状态、<code>@HostInjected</code> 宿主方法</td><td><code>example/lib/</code>（或业务 App 的 <code>lib/</code>）</td></tr>
+            <tr><td>生成器层</td><td>静态收集 + 语法翻译 + 产物组装；不执行 Dart，不承载业务语义</td><td><code>packages/hot_patch_generator/</code></td></tr>
+            <tr><td>产物层</td><td>与 <code>lib/</code> 镜像的 JS 模块、运行时、manifest 与热更 zip</td><td><code>patch/</code>，全部标注 <code>GENERATED CODE</code></td></tr>
+            <tr><td>JS 运行时层</td><td>element / reconciler / 组件基类 / 作用域订阅 / 脏调度 / 能力片段，随补丁发布</td><td><code>patch/runtime.js</code>（构建期由生成器产出）</td></tr>
+            <tr><td>宿主层</td><td>加载补丁、映射 type → widget、应用 patch、持有真实原生对象</td><td><code>packages/hot_patch/lib/src/js_ui/</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>三个 package 的分工</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:24%">Package</th><th style="width:14%">版本</th><th>角色</th><th style="width:28%">关键约束</th></tr></thead>
+          <tbody>
+            <tr><td><code>hot_patch_annotations</code></td><td>0.1.5</td><td>注解定义：<code>@PatchEntry</code> / <code>@PatchIgnore</code> / <code>@HostInjected</code></td><td>纯注解，零逻辑</td></tr>
+            <tr><td><code>hot_patch_generator</code></td><td>0.13.0</td><td>编译期：Dart → JS 翻译与产物组装</td><td>单包，禁止拆多 package；不含业务</td></tr>
+            <tr><td><code>hot_patch</code></td><td>0.4.0</td><td>运行期：JS 运行时注入 + 宿主渲染 + 能力桥</td><td>不含业务；不理解状态语义</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>生成器的 7 个 builder</h3>
+      <p>所有产物由 build_runner 一次构建完成。组件与普通类走<strong>同一条</strong>翻译链路；其余 builder 各自独立，互不依赖实现细节。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:27%">Builder</th><th>产出</th><th style="width:30%">说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>patch_entry</code></td><td><code>patch/&lt;原路径&gt;.js</code></td><td>组件 / 模型 / 单例，与 <code>lib/</code> 镜像</td></tr>
+            <tr><td><code>ui_widget</code></td><td><code>patch/&lt;package&gt;.js</code></td><td>包级模块：<code>__h</code>、宿主包装类、builder 代理</td></tr>
+            <tr><td><code>ui_third_party_js</code></td><td><code>patch/packages/&lt;package&gt;.js</code></td><td>宿主 <code>js/**.js</code> 原样拷贝</td></tr>
+            <tr><td><code>ui_project_module</code></td><td><code>patch/&lt;package&gt;.js</code></td><td>本地依赖包中被引用到的类（跨包翻译）</td></tr>
+            <tr><td><code>ui_runtime</code></td><td><code>patch/runtime.js</code></td><td>整个 JS 运行时，一个文件</td></tr>
+            <tr><td><code>ui_host_register</code></td><td><code>lib/generated/host_methods.dart</code></td><td><code>@HostInjected</code> 注册清单（参与编译）</td></tr>
+            <tr><td><code>ui_patch_manifest</code></td><td><code>patch/manifest.json</code></td><td>基本信息 + protocol + 每个 JS 资源的 hash</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout plain">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">职责边界一句话</span>
+          <p>翻译器只做「语法 → 等价的 JS 协议」，不承载业务语义；运行时只做「按协议执行与渲染」，不理解业务状态。想加新能力，优先找扩展点，而不是改核心。</p>
+        </div>
+      </div>
+    </section>
+    <!-- PIPELINE -->
+    <section id="pipeline" class="doc-section" aria-labelledby="pipeline-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>04 / Compile time</div>
+        <h2 id="pipeline-title">编译期：一条路径、五个阶段</h2>
+        <p>翻译器全程使用 <code>analyzer</code> 静态解析，<strong>不执行任何 Dart 代码</strong>。组件与普通类共用同一个入口，差别只在“是否作为组件产物组装”。</p>
+      </div>
+
+      <div class="timeline">
+        <div class="tl-item">
+          <span class="tl-time">STAGE 01 · 根类收集</span>
+          <b>先按文件内容分流，再决定产出什么</b>
+          <p>含 <code>@PatchEntry</code> 的文件是根文件，产出这些组件；否则只产出<strong>可导出的普通类</strong>（模型 / 单例）；两者都没有（如 <code>main.dart</code>）则不产出。分流与目录结构无关。</p>
+        </div>
+        <div class="tl-item">
+          <span class="tl-time">STAGE 02 · 依赖发现</span>
+          <b>沿 import 链做符号级引用扫描</b>
+          <p>只有真正被可达类引用到的类才产出，未被引用的模型不翻译。<code>@HostInjected</code> 方法的方法体不参与引用扫描（JS 侧只有通道调用），因此只在宿主实现里用到的类型不会被连带翻译。</p>
+        </div>
+        <div class="tl-item">
+          <span class="tl-time">STAGE 03 · 类模型与语法翻译</span>
+          <b>收集与翻译共用中立类模型</b>
+          <p>识别 StatefulWidget 时合并同文件 State 类，是<strong>唯一</strong>分叉。字段 / 方法 / 控制流 / 表达式走 <code>js_translator.dart</code> 与 <code>dart2js.dart</code>；构造统一渲染为 <code>constructor(args)</code> + <code>__applyProps(args)</code>。</p>
+        </div>
+        <div class="tl-item">
+          <span class="tl-time">STAGE 04 · build 树翻译</span>
+          <b>没有 per-widget 实现，只有值形态分派</b>
+          <p><code>element_json.dart</code> 是统一入口，<code>value_forms.dart</code> 按值的形态（字面量 / 构造 / 静态工厂 / 常量引用 / 列表 / 闭包）分派，结构化样式由 <code>style_translators.dart</code> 转换。所有实参按原名进 props。</p>
+        </div>
+        <div class="tl-item">
+          <span class="tl-time">STAGE 05 · 产物组装</span>
+          <b>路径镜像 + 依赖 import + 清单 hash</b>
+          <p>产物与 <code>lib/</code> 路径一一对应；<code>flutter.js</code> 生成宿主包装类与 <code>__h</code>；最后 <code>ui_patch_manifest</code> 用 <code>findAssets('patch/**.js')</code> 列出全部 JS 并逐个算 hash。</p>
+        </div>
+      </div>
+
+      <h3>同一份源码，两种形态</h3>
+      <p>下面是<strong>形态示意</strong>（节选，非逐字产物）：类名、字段名、方法名、build 树结构保持 Dart 原貌；构造统一收一个 args 对象。</p>
+      <div class="two-col">
+        <div>
+          <div class="code-block" data-lang="dart">
+<pre><span class="p">@PatchEntry(</span><span class="s">'Counter'</span><span class="p">)</span>
+<span class="k">class</span> <span class="t">Counter</span> <span class="k">extends</span> <span class="t">StatefulWidget</span> {
+  <span class="k">const</span> Counter({<span class="k">super</span>.key});
+
+  <span class="p">@override</span>
+  <span class="t">State</span>&lt;<span class="t">Counter</span>&gt; createState() =&gt; _CounterState();
+}
+
+<span class="k">class</span> _CounterState <span class="k">extends</span> <span class="t">State</span>&lt;<span class="t">Counter</span>&gt; {
+  <span class="k">int</span> _count = <span class="n">0</span>;
+  <span class="k">void</span> _inc() =&gt; setState(() =&gt; _count++);
+
+  <span class="p">@override</span>
+  <span class="t">Widget</span> build(<span class="t">BuildContext</span> context) =&gt; <span class="t">Column</span>(
+        children: [
+          <span class="t">Text</span>(<span class="s">'count = $_count'</span>),
+          <span class="t">ElevatedButton</span>(onPressed: _inc, child: <span class="k">const</span> <span class="t">Text</span>(<span class="s">'+1'</span>)),
+        ],
+      );
+}</pre>
+          </div>
+        </div>
+        <div>
+          <div class="code-block" data-lang="javascript">
+<pre><span class="k">export class</span> <span class="t">Counter</span> <span class="k">extends</span> <span class="t">StatefulWidget</span> {
+  <span class="f">constructor</span>(args) {
+    <span class="k">super</span>(args);
+    <span class="k">this</span>._count = <span class="n">0</span>;
+  }
+  _inc() {
+    <span class="k">this</span>.setState(() =&gt; {
+      <span class="k">this</span>._count += <span class="n">1</span>;
+    });
+  }
+  <span class="f">build</span>(context) {
+    <span class="k">return new</span> <span class="t">Column</span>({
+      <span class="s">"children"</span>: [
+        <span class="k">new</span> <span class="t">Text</span>({
+          <span class="s">"data"</span>: <span class="s">"count = "</span> + <span class="k">this</span>._count
+        }),
+        <span class="k">new</span> <span class="t">ElevatedButton</span>({
+          <span class="s">"onPressed"</span>: () =&gt; <span class="k">this</span>._inc(),
+          <span class="s">"child"</span>: <span class="k">new</span> <span class="t">Text</span>({ <span class="s">"data"</span>: <span class="s">"+1"</span> })
+        })
+      ]
+    });
+  }
+}</pre>
+          </div>
+        </div>
+      </div>
+      <p class="table-note">产物中还会保留 Dart 的插值、三元、集合展开、类型实参等；上面只展示主干形态。</p>
+
+      <h3>五条翻译约束</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:22%">主题</th><th>规则</th></tr></thead>
+          <tbody>
+            <tr><td>构造翻译</td><td><code>A(args) → new A({...})</code>，<code>A.b(args) → A.b({...})</code>；位置实参由源码构造签名映射为形参名。未知签名 → 构建期告警并丢弃，不生成下标键或占位兜底。</td></tr>
+            <tr><td>属性原样下发</td><td>Dart 构造实参按原名进 props。<code>child</code> / <code>children</code> / <code>slivers</code> / <code>tabs</code> 都是普通具名实参，禁止特殊判断。</td></tr>
+            <tr><td>命名构造 / 静态工厂</td><td>一比一发射为 <code>X.b({...})</code>；JS 侧由同名静态方法把构造名写进 <code>props.factory</code>，宿主只按 <code>factory</code> 选原生工厂。</td></tr>
+            <tr><td>builder 形态</td><td>只认显式协议：命名构造由代理类展开到 <code>children.__items</code>；delegate 形态是 <code>{__delegate:'builder', builder, childCount}</code>。不得按类型名白名单或属性名猜测。</td></tr>
+            <tr><td>泛型</td><td>类型擦除；<code>&lt;T,...&gt;</code> 译为 <code>typeArguments</code> 元信息，随构造 props 或调用尾参对象下发。不生成运行时代码，不做 per-type 分支。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 9v5M12 17.2v.1"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">无静默原则</span>
+          <p>翻译失败、未覆盖语法、无法识别的引用都必须输出构建期告警，禁止静默丢弃或降级。产物里的占位结点是诊断兜底，不是长期方案。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- RUNTIME LOOP -->
+    <section id="runtime-loop" class="doc-section" aria-labelledby="runtime-loop-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>05 / Runtime</div>
+        <h2 id="runtime-loop-title">运行时：JS 侧的闭环</h2>
+        <p>宿主从不主动询问 JS 状态，JS 也从不直接触碰 Flutter widget。两端只交换序列化的 patch 与事件；状态变化终点永远是 JS 下发的 patch。</p>
+      </div>
+
+      <div class="flow" aria-label="运行时重建流程">
+        <div class="flow-node"><b>setState(fn)</b>修字段</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node"><b>__markDirty</b>标脏</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node"><b>flush</b>帧批处理</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node"><b>build</b>重新构建</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node"><b>reconciler</b>diff</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node hot"><b>patch ops</b>增量</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node"><b>JsUiStore</b>应用</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node"><b>宿主 setState</b>局部重建</div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h4>帧合并的调度</h4>
+          <p><code>setState</code> 只标脏，宿主在每帧 begin frame 调用 <code>__jsui.flushPending()</code> 统一重建。同一帧内来多少次 <code>setState</code>（如滚动通知逐条回传）都只 build 一次，与 Flutter 的调度粒度一致。</p>
+        </div>
+        <div class="card">
+          <h4>数据共享也在 JS 内闭环</h4>
+          <p><code>InheritedWidget</code> 与 <code>ChangeNotifierProvider</code> 都没有宿主 renderer。节点用 <code>__inheritedElements</code> 声明作用域，依赖登记在 <code>__dependencies</code> / <code>__dependents</code>；提供者变更时标脏依赖者，先 <code>didChangeDependencies</code> 再 build。</p>
+        </div>
+        <div class="card">
+          <h4>已挂载项照常 didUpdateWidget</h4>
+          <p>父级每次重建都会把新元素 patch 到已挂载子树，组件照常 <code>didUpdateWidget</code> → <code>build</code>，与原生一致。只有元素引用相同（const 站点缓存）才按 <code>el === oldInst.__el</code> 短路。</p>
+        </div>
+        <div class="card">
+          <h4>懒槽位与宿主 element 同寿</h4>
+          <p>宿主 inflate → <code>lazyMount</code>；滚出缓存 / 切走 Tab / 整页退出 → <code>lazyUnmount</code>。item 的 State 会被销毁，滚回来是新实例——与 Flutter 原生一致。跨滚动保留的数据应放父组件或模型层。</p>
+        </div>
+      </div>
+
+      <h3>生命周期只有一个入口</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:26%">对象</th><th>生命周期 / 释放规则</th></tr></thead>
+          <tbody>
+            <tr><td>页面（<code>JsUiWidget</code>）</td><td><code>initState</code>：准备运行时、注册能力桥、加载并 mount JS 根；<code>dispose</code>：只调用 <code>disposeRoot(pageKey)</code>，统一释放该页资源。</td></tr>
+            <tr><td>JS 组件</td><td>只由 mini-react 派发：<code>initState</code> / <code>didChangeDependencies</code> / <code>didUpdateWidget</code> / <code>deactivate</code> / <code>dispose</code>，宿主不逐个转发。</td></tr>
+            <tr><td>句柄</td><td>随持有它的组件实例释放（<code>__owns</code>）；无组件归属的随页面释放，<code>disposeRoot</code> 兜底。</td></tr>
+            <tr><td>弹层</td><td>命令式弹层有独立 root 与独立 <code>JsUiStore</code>；<code>builder</code> 只执行一次，弹层内 <code>setState</code> 只重建弹层子树。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout ok">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">这套闭环带来的直接结果</span>
+          <p>新增 JS 组件、新增状态库都不需要改宿主；只有新增「Flutter 侧不存在的视觉 widget」时，才往宿主注册表或能力库加一条。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROTOCOL -->
+    <section id="protocol" class="doc-section" aria-labelledby="protocol-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>06 / Contracts</div>
+        <h2 id="protocol-title">协议、句柄与版本</h2>
+        <p>已发布的 JS 协议与运行时策略只增不改。破坏性改动必须升主协议版本、给出兼容或迁移方案，并与开发确认。</p>
+      </div>
+
+      <h3>跨语言协议一览</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:22%">协议</th><th style="width:38%">形态</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>element 描述</td><td><code>{ type, props, children }</code></td><td>结点工厂 <code>__h(type, props)</code> 生成；宿主按 <code>type</code> 找 renderer</td></tr>
+            <tr><td>children 拆分</td><td>按<strong>值形态</strong>而非键名</td><td>值是 element 或 element 数组 / delegate 描述 → 按原名移入 <code>children</code>；其余留在 <code>props</code></td></tr>
+            <tr><td>factory</td><td><code>props.factory = 'separated'</code></td><td>命名构造 / 静态工厂的唯一信号；构造名不单独进 props</td></tr>
+            <tr><td>builder delegate</td><td><code>{ __delegate:'builder', builder, childCount }</code></td><td>懒容器 / 列表代理只消费这个显式协议</td></tr>
+            <tr><td>事件</td><td>宿主 widget：<code>{ __fn: id }</code>；JS 组件：可调用闭包</td><td>按最终消费方分流；构建期锚定，禁止运行时按事件名分发</td></tr>
+            <tr><td>句柄</td><td><code>{ __handle: id }</code>；id 形如 <code>&lt;端&gt;:&lt;kind&gt;#&lt;序号&gt;</code></td><td>真实对象只存在于拥有端，另一端只持 id</td></tr>
+            <tr><td>颜色</td><td><code>'#RRGGBB'</code> / <code>'#AARRGGBB'</code></td><td>Material 色板 shade 在构建期算出，运行时不查表</td></tr>
+            <tr><td>泛型元信息</td><td><code>typeArguments: { T: 'int' }</code></td><td>随构造 props 或调用尾参对象下发；不做泛型特化</td></tr>
+            <tr><td>懒容器</td><td><code>lazyChildren</code> / <code>__lazy</code> / <code>__items</code></td><td>是否懒由构建期表决定，运行时只认元素标记</td></tr>
+            <tr><td>manifest</td><td><code>version</code> · <code>buildTime</code> · <code>protocol</code> · <code>resources</code></td><td>协议主版本不一致时拒绝挂载；资源逐个 hash</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>句柄模型：真实对象只在一端</h3>
+      <p>Controller、函数、Key、Painter 都是同一种东西的不同 <code>kind</code>。拥有端持有真实对象，另一端只持有 id，所有操作按 id 转发；通用层提供 <code>create</code> / <code>call</code> / <code>set</code> / <code>release</code> 等 op，新能力只需注册自己的 kind 描述符。</p>
+      <div class="two-col">
+        <div>
+          <h4>归属与释放</h4>
+          <ul class="note-list">
+            <li>构造期、<code>initState</code>、<code>build</code>、事件执行期创建的句柄，记到该组件实例的 <code>__owns</code>。</li>
+            <li>组件从树上摘除时整份释放，与 Dart <code>State.dispose</code> 对齐。</li>
+            <li>无组件归属的随页面释放，<code>disposeRoot</code> 兜底。</li>
+            <li>全局 <code>handles</code> 是 id → 对象的唯一反查表。</li>
+          </ul>
+        </div>
+        <div>
+          <h4>唯一出口与唯一入口</h4>
+          <ul class="note-list">
+            <li>JS → 宿主：只有 <code>_app_host_.invoke(channel, args)</code>。</li>
+            <li>宿主侧：只有 <code>JsRuntimeManager.registerHostMethod</code>。</li>
+            <li>增量补丁 <code>jsuiCommit</code>、日志、<code>@HostInjected</code> 全部复用这一个入口。</li>
+            <li>禁止新开平行通道或恢复已删除的冗余注册入口。</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>补丁身份与版本切换</h3>
+      <p>运行时是<strong>全局唯一</strong>的。补丁包身份版本由 <code>manifest</code> 的 <code>version + buildTime + protocol</code> 组成，写入 <code>JsRuntimeManager</code> 内存；版本不一致即整体失效模块与运行时，<strong>只认版本差异</strong>，不因重复下载反复失效。</p>
+      <div class="timeline">
+        <div class="tl-item">
+          <span class="tl-time">STEP 01</span>
+          <b>加载新包</b>
+          <p>asset、远程 zip 或已加载模块完成加载；身份版本与当前内存不一致时，清空已加载模块并重新求值 <code>runtime.js</code>。</p>
+        </div>
+        <div class="tl-item">
+          <span class="tl-time">STEP 02</span>
+          <b>活跃页登记</b>
+          <p>所有仍 mounted 的 <code>JsUiWidget</code> 进入待重载集合（含 Navigator 栈下方离屏路由、同屏多实例）。判断由独立的 <code>JsRuntimeSwitchCoordinator</code> 维护，不扫 Navigator / Element 树。</p>
+        </div>
+        <div class="tl-item">
+          <span class="tl-time">STEP 03</span>
+          <b>可见页确认，离屏页静默</b>
+          <p>可见页弹一次原生 dialog；确认后全部执行页面级重载（重建 <code>JsUiStore</code> 与 JS root，保留 Flutter 路由与页面本身）。离屏页不弹窗，直接静默重载。</p>
+        </div>
+        <div class="tl-item">
+          <span class="tl-time">STEP 04</span>
+          <b>只加载当前身份版本</b>
+          <p>自动重载只加载当前运行时身份版本的产物；若某页补丁源版本不一致，明确报错，避免 A/B 页面来回切换。</p>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 9v5M12 17.2v.1"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">两个边界</span>
+          <p>同一进程内所有 <code>JsUiWidget</code> 必须指向同一补丁包身份；混用不同 zip / 不同批次会明确报错。命令式弹层的独立 root 目前不在活跃页注册表内，版本切换时若仍有弹层打开，弹层内容会随旧运行时失效。</p>
+        </div>
+      </div>
+    </section>
+    <!-- CAPABILITIES OVERVIEW -->
+    <section id="capabilities" class="doc-section" aria-labelledby="capabilities-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>07 / Capability catalog</div>
+        <h2 id="capabilities-title">能力目录：按类型读懂整个框架</h2>
+        <p>下面把框架能力拆成四类：<strong>语言翻译</strong>（Dart 怎么写）、<strong>UI 组件</strong>（能渲染什么）、<strong>运行时能力</strong>（JS 侧能做什么）、<strong>工程化能力</strong>（怎么发、怎么切换、怎么扩展）。</p>
+      </div>
+
+      <div class="map-grid">
+        <div class="map-card">
+          <div class="map-head"><h4>A · 语言翻译能力</h4><span class="map-en">Dart → JS</span></div>
+          <p>语法级、一比一翻译。以《Dart → JS 语法翻译手册》为唯一真相，覆盖基础语法、类型与空安全、控制流、集合、函数、对象模型、泛型、异常、异步与 Stream。</p>
+          <div class="map-tags">
+            <a href="#lang-basic">基础语法</a><a href="#lang-flow">控制流 / 集合</a><a href="#lang-func">函数 / 对象</a><a href="#lang-async">异步 / Stream</a>
+          </div>
+        </div>
+        <div class="map-card">
+          <div class="map-head"><h4>B · UI 组件能力</h4><span class="map-en">Widgets</span></div>
+          <p>81 个已注册宿主类型。布局、滚动、Sliver、内容、按钮、输入、手势、页面骨架、动画、弹层、浮层锚定、CustomPaint 与三方组件。</p>
+          <div class="map-tags">
+            <a href="#ui-layout">布局 / 滚动</a><a href="#ui-content">内容 / 交互</a><a href="#ui-shell">骨架 / 响应式</a><a href="#ui-motion">动画 / 弹层 / 绘制</a>
+          </div>
+        </div>
+        <div class="map-card">
+          <div class="map-head"><h4>C · 运行时能力</h4><span class="map-en">Runtime</span></div>
+          <p>26 个可插拔能力库：状态与订阅、控制器句柄、BuildContext / MediaQuery、布局阶段回调、事件桥、三方库、懒加载与保活。</p>
+          <div class="map-tags">
+            <a href="#cap-state">状态</a><a href="#cap-controller">控制器</a><a href="#cap-context">上下文 / 事件</a><a href="#cap-third">三方 / 懒加载</a>
+          </div>
+        </div>
+        <div class="map-card">
+          <div class="map-head"><h4>D · 工程化能力</h4><span class="map-en">Delivery</span></div>
+          <p>7 个 builder、三种补丁源、身份版本与页面级重载、<code>@HostInjected</code> 注册、原生组件注入、统一日志、多实例隔离。</p>
+          <div class="map-tags">
+            <a href="#eng-patch">补丁 / 版本</a><a href="#eng-host">宿主注入</a><a href="#eng-log">日志 / 构建</a><a href="#extensions">扩展点</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.1"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">阅读口径</span>
+          <p>语言翻译的判定沿用手册的四级标签：<strong>直译 / 注意 / 扩展 / 必须改写</strong>。本页只列已落地能力；未实现、未核对的能力不会写成“通过”。UI 与运行时能力的细节以对应源码目录与文档为准。</p>
+        </div>
+      </div>
+
+      <h3>状态标签</h3>
+      <div class="status-key">
+        <span><span class="tag green">直译</span> 与 Dart 同形</span>
+        <span><span class="tag amber">注意</span> 同形，但求值次数 / 类型语义需留意</span>
+        <span><span class="tag violet">扩展</span> 需要运行时或原型补齐</span>
+        <span><span class="tag cyan">必须改写</span> 产物形态必然不同</span>
+        <span><span class="tag red">不适用</span> 明确不翻译或构建期拒绝</span>
+      </div>
+    </section>
+
+    <!-- LANGUAGE -->
+    <section id="lang" class="doc-section" aria-labelledby="lang-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>07.A / Language translation</div>
+        <h2 id="lang-title">语言翻译能力：Dart 的每种写法，都有确定的 JS 形态</h2>
+        <p>所有 Dart → JS 的翻译规则、产物形态与边界判定，以 <code>dart2js-syntax-reference/Dart转JS语法翻译手册.html</code> 为唯一真相。代码与手册不一致时，以手册为准，并在同一次变更内让两者收敛。</p>
+      </div>
+
+      <div class="meta-strip">
+        <span><b>手册</b> 19 个编号章节（00–18）</span>
+        <span><b>引擎基线</b> ES2020 + 部分 ES2021</span>
+        <span><b>iOS</b> 15+ JavaScriptCore</span>
+        <span><b>Android</b> QuickJS 2021-03-27</span>
+        <span><b>入口</b> analyze_dart_class → translateClass</span>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 9v5M12 17.2v.1"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">引擎禁用 API</span>
+          <p>产物与运行时都禁止使用两端引擎未实现的 API：<code>Object.hasOwn</code>、<code>Array/String.prototype.at</code>、<code>findLast</code> / <code>findLastIndex</code>、class static block、top-level await、<code>structuredClone</code>、<code>WeakRef</code> / <code>FinalizationRegistry</code>。需要同等能力时在运行时补同名实现，或改用 ES2020 写法。</p>
+        </div>
+      </div>
+
+      <!-- LANG BASIC -->
+      <div class="cap-block" id="lang-basic">
+        <div class="cap-block-head">
+          <h3>01 · 基础语法与类型</h3>
+          <span class="tag violet">直译优先</span>
+        </div>
+        <p class="cap-intro">大部分表达式与值语义与 JS 同形；差异集中在空安全赋值、级联、Record 与运算符重载。</p>
+
+        <h4>声明、字面量与运算符</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:31%">Dart 写法</th><th>JS 产物 / 规则</th><th style="width:12%">口径</th></tr></thead>
+            <tbody>
+              <tr><td><code>var / final / const</code></td><td><code>let / const</code>；<code>const</code> 构造与集合按站点缓存，复用同一实例</td><td><span class="tag green">直译</span></td></tr>
+              <tr><td><code>int / double / num / String / bool</code></td><td>JS <code>number / string / boolean</code>；<code>int</code> 与 <code>double</code> 运行时不可区分，类型判定按 <code>typeof</code></td><td><span class="tag green">直译</span></td></tr>
+              <tr><td>字符串插值、相邻字符串</td><td>模板字符串或字符串拼接；插值表达式按同一套表达式翻译</td><td><span class="tag green">直译</span></td></tr>
+              <tr><td>算术 / 比较 / 位 / 移位运算</td><td>同名 JS 运算符；<code>~/</code> 展开为 <code>Math.trunc(a / b)</code>；复合赋值按需展开为「读 → 算 → 写」</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td>级联 <code>..</code> / <code>?..</code></td><td>返回 target 的 IIFE，target 只求值一次；空安全级联在入口加非空守卫，为空时整条短路</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td>三目、逻辑运算、<code>??</code></td><td>同形；逻辑运算返回值按 JS 口径，<code>??</code> 与其它运算组合时重建括号</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td>运算符重载</td><td>按 <code>__op$&lt;后缀&gt;</code> 成员发射；仅当操作数静态类型可判定时把调用点改写为成员调用</td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td>typedef / 函数类型</td><td>类型擦除，不生成运行时类型对象</td><td><span class="tag green">直译</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>类型、空安全与模式</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:31%">Dart 写法</th><th>JS 产物 / 规则</th><th style="width:12%">口径</th></tr></thead>
+            <tbody>
+              <tr><td><code>is / is! / as</code></td><td><code>typeof</code> / <code>instanceof</code> + 运行时类型表；<code>as</code> 失败抛 <code>TypeError</code></td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td>空安全读取 <code>a?.b</code> / <code>a?[i]</code> / <code>a?.m()</code></td><td>JS 原生可选链，与源码同形；接收者只求值一次，为空时整链短路</td><td><span class="tag green">直译</span></td></tr>
+              <tr><td>空安全赋值 <code>a?[i] = v</code> / <code>a?.b = v</code></td><td>接收者单次求值的守卫 IIFE；为空时整条赋值（含下标与右值）跳过，表达式值为 <code>null</code></td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td><code>??</code> / <code>??=</code></td><td>原样发射；<code>??</code> 作为子表达式时重建括号，避免优先级错误</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td><code>if (x case P)</code>、模式变量、<code>switch</code> guard</td><td>单次求值 + 分支绑定；支持常量 / 类型 / 关系 / 空检查 / 逻辑 / 对象 / 列表 / Record 模式</td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td>Record 字面量与字段访问</td><td>普通对象：位置字段 <code>{"$1":…}</code>、命名字段原名；<code>r.$1</code> / <code>r.x</code> 原样访问。结构相等不伪造</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td>泛型 <code>&lt;T&gt;</code></td><td>类型擦除；<code>typeArguments</code> 元信息随构造 props / 调用尾参下发；不做泛型特化</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td><code>Symbol</code> / mirrors / noSuchMethod</td><td>JS 没有同名语义；构建期告警并丢弃，改用字符串常量</td><td><span class="tag red">不适用</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="note-list">
+          <li><strong>求值次数是硬约束</strong>：空安全赋值、级联、运算符重载等改写必须保证接收者 / 下标 / 右值各只求值一次。</li>
+          <li><strong>Record 的结构相等不伪造</strong>：<code>==</code> 仍是 JS 同一性；需要按值比较时显式比较各字段或序列化。</li>
+          <li><strong>可空性</strong>是静态检查，运行时值仍是 <code>null</code> / <code>undefined</code>；<code>__nn</code> 在值位置把 <code>undefined</code> 归一为 <code>null</code>。</li>
+        </ul>
+      </div>
+
+      <!-- LANG FLOW -->
+      <div class="cap-block" id="lang-flow">
+        <div class="cap-block-head">
+          <h3>02 · 控制流与集合</h3>
+          <span class="tag amber">语义差异集中区</span>
+        </div>
+        <p class="cap-intro">控制流基本同形，<code>switch</code> 与集合 API 的差异由翻译器 / 运行时补齐；名字映射只对可判定的内建接收者生效。</p>
+
+        <h4>控制流</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:31%">Dart 写法</th><th>JS 产物 / 规则</th><th style="width:12%">口径</th></tr></thead>
+            <tbody>
+              <tr><td><code>if / else / while / do-while</code></td><td>同形发射</td><td><span class="tag green">直译</span></td></tr>
+              <tr><td>三段式 <code>for</code>、<code>for-in</code></td><td><code>for (…;…;…)</code> / <code>for (const x of …)</code></td><td><span class="tag green">直译</span></td></tr>
+              <tr><td><code>switch</code>（Dart 3 隐式 break）</td><td>每个 case 末尾自动补 <code>break</code>；模式 case 落成 <code>switch (true)</code> + 条件 IIFE，保持源码顺序与贯穿语义</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td><code>switch</code> 表达式</td><td>IIFE 内原生 <code>switch</code> 或 if 链；<code>default</code> 抛错兜底</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td>label / 带标签 <code>break</code> / <code>continue</code></td><td>JS 原生标签，一比一发射</td><td><span class="tag green">直译</span></td></tr>
+              <tr><td>collection-if / collection-for / <code>...</code> 展开</td><td><code>[a, ...(c ? [b] : []), ...xs, ...(xs).map(…)]</code>；<code>...?xs</code> 空安全展开为 <code>[]</code></td><td><span class="tag cyan">必须改写</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>List / Iterable</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:31%">Dart 写法</th><th>JS 产物 / 规则</th><th style="width:12%">口径</th></tr></thead>
+            <tbody>
+              <tr><td><code>List</code> → <code>Array</code></td><td>同名同义方法在 <code>Array.prototype</code> 补齐：<code>clear</code> / <code>first</code> / <code>last</code> / <code>where</code> / <code>toList</code> / <code>add</code> / <code>addAll</code> / <code>removeAt</code> / <code>insert</code> / <code>removeWhere</code> / <code>sublist</code> / <code>firstWhere</code> / <code>fold</code> / <code>take</code> / <code>skip</code> / <code>asMap</code> / <code>elementAt</code> 等</td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td>同名但语义不同的成员</td><td>构建期固定映射表：<code>(Array, map)</code> → <code>_map</code>、<code>sort</code> → <code>_sort</code>、<code>join</code> → <code>_join</code>、<code>indexOf</code> → <code>_indexOf</code>、<code>length</code> 写 → <code>_setLength</code>；仅接收者静态类型可判定为 List 时生效</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td><code>where</code> / <code>expand</code> / <code>take</code> / <code>skip</code></td><td>静态类型可判定为 List / Iterable / Set 时返回惰性 <code>LazyIterable</code>（调用零副作用、可重复迭代）</td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td>下标读取 <code>list[i]</code></td><td>原样下标访问；越界读得到 <code>undefined</code>，不模拟 <code>RangeError</code>（需校验时用 <code>elementAt</code>）</td><td><span class="tag red">接受差异</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>Map / Set</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:31%">Dart 写法</th><th>JS 产物 / 规则</th><th style="width:12%">口径</th></tr></thead>
+            <tbody>
+              <tr><td>Map 字面量 <code>{k: v}</code></td><td><code>new Map([[k, v], …])</code>，成员挂在 <code>Map.prototype</code>；宿主桥序列化时 <code>toJSON</code> 还原为普通对象</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td><code>m[k]</code> / <code>m[k] = v</code></td><td>接收者可判定为 Map 时改写为 <code>__idx(m, k)</code> / <code>__idxSet(m, k, v)</code>（兼容原生 Map 与宿主回包的普通对象）；未命中读归一为 <code>null</code></td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td><code>keys</code> / <code>values</code> / <code>entries</code></td><td>Dart 是属性、JS 是方法 → 改名为 <code>_keys</code> / <code>_values</code> / <code>_entries</code>，运行时挂同名 getter</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td><code>forEach((k, v) =&gt; …)</code></td><td>保持原生 JS <code>forEach</code>，调用点交换回调参数顺序，不覆盖原型</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td><code>length</code> / <code>remove</code> / <code>containsKey</code> / <code>putIfAbsent</code> / <code>update</code> / <code>addAll</code> / <code>removeWhere</code></td><td>在 <code>Map.prototype</code> 上补同名同义实现；<code>clear</code> 原生同义，不改动</td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td><code>Set</code></td><td>原生 <code>Set</code>；Dart 同名成员按需补齐；<code>Set</code> 自带 <code>clear</code></td><td><span class="tag amber">注意</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="note-list">
+          <li><strong>名字映射绝不全局替换</strong>：主键是「JS 内建接收者类型 + Dart 成员名」，自定义类 / 控制器上的同名方法一律原样。</li>
+          <li><strong>Map 的键相等</strong>按 JS <code>Map</code> 语义（SameValueZero）而不是 Dart 的结构相等；对象键尤其要注意。</li>
+          <li><strong>集合补齐三条硬要求</strong>：挂最具体的内建原型、<code>enumerable:false</code>、存在性守卫。</li>
+        </ul>
+      </div>
+
+      <!-- LANG FUNC -->
+      <div class="cap-block" id="lang-func">
+        <div class="cap-block-head">
+          <h3>03 · 函数与对象模型</h3>
+          <span class="tag cyan">形态差异最大</span>
+        </div>
+        <p class="cap-intro">Dart 的具名参数、命名构造、tear-off 在 JS 中没有直接对应物，统一由「尾参对象 + 静态方法 + bind」三种确定形态承接。</p>
+
+        <h4>函数、参数与闭包</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:31%">Dart 写法</th><th>JS 产物 / 规则</th><th style="width:12%">口径</th></tr></thead>
+            <tbody>
+              <tr><td>位置参数 / 可选位置参数</td><td>按原名进 JS 签名；可选位置缺省在函数体开头补默认值（无默认值为 <code>null</code>）</td><td><span class="tag green">直译</span></td></tr>
+              <tr><td>具名参数与默认值</td><td>调用点把具名实参合并成<strong>尾参对象</strong>，定义侧用 <code>__o</code> 接住并解构；省略参数走默认值</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td>泛型方法 <code>T f&lt;T&gt;(…)</code></td><td>类型实参与具名实参共用尾参对象 <code>typeArguments</code>；有位置实参且无具名实参时擦除并构建期告警</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td>方法 tear-off（值位置）</td><td>实例方法 → <code>this.m.bind(this)</code>；<code>obj.m</code> 简单接收者 → <code>obj.m.bind(obj)</code>；复杂表达式先绑定接收者；static → <code>ClassName.m</code></td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td>闭包、局部函数</td><td>箭头函数 / <code>var f = (…) =&gt; …</code>；保留 <code>this</code> 捕获，可递归；生成器形态与「先调用后声明」不覆盖</td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td>函数值调用 <code>(f)(args)</code></td><td>位置实参在前；具名实参合并尾参对象；闭包实参走同一条翻译</td><td><span class="tag amber">注意</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>类、构造与成员</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:31%">Dart 写法</th><th>JS 产物 / 规则</th><th style="width:12%">口径</th></tr></thead>
+            <tbody>
+              <tr><td><code>class C { … }</code></td><td>原生 JS <code>class</code>；构造统一收一个 args 对象并映射 <code>this.x</code></td><td><span class="tag green">直译</span></td></tr>
+              <tr><td>命名构造 <code>C.named(…)</code></td><td>发射为同名 <code>static named(args)</code>，调用点形态不变</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td><code>factory C.fromJson(…)</code></td><td>同样发射为静态方法</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td>初始化列表 <code>: super(x), this.a = a</code></td><td>在 <code>super()</code> 之后按序赋值；<code>super(...)</code> / <code>this.other(...)</code> 初始化项告警跳过</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td>getter / setter / static 成员</td><td>原生 <code>get</code> / <code>set</code> / <code>static</code>；私有字段 <code>_x</code> 原样保留，不转 JS <code>#</code></td><td><span class="tag green">直译</span></td></tr>
+              <tr><td><code>super.x</code></td><td>继承链字段 → <code>this.x</code>；父类 getter / 方法保持 <code>super.x</code>；基类无 JS 实现时告警</td><td><span class="tag amber">注意</span></td></tr>
+              <tr><td>extension / mixin</td><td>extension 成员通过 <code>registerExtension</code> 装到目标原型，随声明文件产物求值；mixin 用 <code>__mixinHard</code> 复制原型成员</td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td>简单枚举 / 增强枚举</td><td>简单枚举 → 常量对象（<code>E.member</code> / <code>values</code> / <code>name</code> / <code>index</code>）；增强枚举构建期告警跳过</td><td><span class="tag amber">注意</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="note-list">
+          <li><strong>tear-off 自带 this</strong>：Dart 的 <code>this.m</code> 具备接收者，JS 的 <code>this.m</code> 不带；因此必须 <code>bind</code>，且接收者只求值一次。</li>
+          <li><strong>泛型只在编译期</strong>：不生成运行时代码、不做 per-type 分支；类型身份只由 <code>typeArguments</code> 与运行时判定承接。</li>
+          <li><strong>跨库同名 extension</strong>：全局原型无法表达 import 可见性，隐式调用是已知边界；显式 <code>E(x).m()</code> 不受影响。</li>
+        </ul>
+      </div>
+
+      <!-- LANG ASYNC -->
+      <div class="cap-block" id="lang-async">
+        <div class="cap-block-head">
+          <h3>04 · 异步、Stream 与运行时补齐</h3>
+          <span class="tag green">已实现并有双端基线</span>
+        </div>
+        <p class="cap-intro">Future 直接落到 Promise；Stream 没有 JS 对应物，由运行时自建「推送 + 拉取」双形态状态机，并用行为探针与 Dart 逐字比对。</p>
+
+        <h4>异步与 Stream</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:31%">Dart 写法</th><th>JS 产物 / 规则</th><th style="width:12%">口径</th></tr></thead>
+            <tbody>
+              <tr><td><code>async</code> / <code>await</code></td><td>原生 <code>async function</code> / <code>await</code>，底层 Promise</td><td><span class="tag green">直译</span></td></tr>
+              <tr><td><code>Future</code></td><td>运行时类：<code>then</code> / <code>catchError</code> / <code>whenComplete</code> / <code>delayed</code> / <code>wait</code> / <code>value</code> / <code>error</code></td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td><code>Completer</code></td><td><code>future</code> / <code>complete</code> / <code>completeError</code> / <code>isCompleted</code>；重复完成抛 <code>StateError</code></td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td><code>Stream</code> / <code>StreamController</code> / <code>StreamSubscription</code></td><td>运行时自建：显式事件 + 订阅状态机，同时支持 <code>listen</code> 与 <code>[Symbol.asyncIterator]</code>；覆盖订阅前缓冲、暂停缓冲、背压、取消传播、广播、<code>close</code> 完成语义</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td><code>async*</code> / <code>yield</code> / <code>yield*</code></td><td>普通方法返回 <code>Stream.fromAsyncGenerator((async function* () { … }).bind(this)())</code></td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td><code>await for</code></td><td><code>for await (const x of it)</code>；<code>break</code> / <code>return</code> / 循环体抛错走 <code>iterator.return()</code></td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td><code>sync*</code> / <code>yield</code></td><td>JS generator function</td><td><span class="tag cyan">必须改写</span></td></tr>
+              <tr><td><code>Timer</code> / <code>Timer.periodic</code></td><td>句柄 + <code>cancel()</code>；宿主缺失时按取消标记兜底</td><td><span class="tag violet">扩展</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>dart:core 值类与静态命名空间</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:31%">Dart 写法</th><th>JS 产物 / 规则</th><th style="width:12%">口径</th></tr></thead>
+            <tbody>
+              <tr><td><code>DateTime</code> 全家桶</td><td>JS 侧同名类，内部以微秒为唯一状态；<code>toJSON</code> 产出 <code>{__dateTime, __utc}</code></td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td><code>RegExp</code> / <code>Match</code></td><td><code>new RegExp({source: …})</code> + 同形成员；类名遮蔽全局构造，内部用 <code>globalThis.RegExp</code></td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td><code>StringBuffer</code></td><td>JS 同名类：<code>write</code> / <code>writeln</code> / <code>toString</code> / <code>clear</code> / <code>length</code></td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td><code>int.parse</code> / <code>double.tryParse</code> / <code>double.infinity</code> 等</td><td>模块级小写命名空间（<code>export const int/double/num</code>），值本身仍是 JS number</td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td>Array / String / Number 的 Dart 同名成员</td><td>运行时在具体内建原型上补齐：<code>Array.clear/first/last/where/toList</code>、<code>String.isEmpty/compareTo/hashCode</code>、<code>Number.round/floor/truncate/clamp/hashCode</code> 等</td><td><span class="tag violet">扩展</span></td></tr>
+              <tr><td><code>Isolate</code> / <code>ReceivePort</code> / <code>SendPort</code></td><td>产物运行在单个 JS 引擎实例内，没有跨 isolate 协议；不翻译</td><td><span class="tag red">不适用</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout ok">
+          <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span>
+          <div class="callout-body">
+            <span class="callout-title">Stream 的验证方式</span>
+            <p>Stream 规则由 <code>example/tool/behavior_probe/stream_probe.dart</code> 与 <code>stream_probe.mjs</code> 双端输出逐字比对（A–S 用例），覆盖订阅前缓冲、暂停、取消、错误、<code>close</code>、广播与 <code>await for</code> 退出路径。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- UI -->
+    <section id="ui" class="doc-section" aria-labelledby="ui-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>07.B / UI components</div>
+        <h2 id="ui-title">UI 组件能力：统一翻译，按类型渲染</h2>
+        <p>内建、自定义、三方组件全部走同一条翻译路径。新增一个视觉 widget 时，翻译器通常不需要改；需要补的是宿主 renderer，以及产物形态不同时的构建期登记表。</p>
+      </div>
+
+      <div class="meta-strip">
+        <span><b>已注册类型</b> 81</span>
+        <span><b>翻译入口</b> element_json.dart</span>
+        <span><b>值形态</b> value_forms.dart</span>
+        <span><b>产物登记</b> js_widget_defs.dart</span>
+        <span><b>宿主注册</b> JsWidgetRegistry</span>
+      </div>
+      <p class="subtle">下列为按类型整理的代表组件，不是全量清单；完整属性、默认值与限制以 <code>docs/组件支持文档.md</code> 为准。</p>
+
+      <h3>五条通用约定</h3>
+      <div class="grid grid-2">
+        <div class="card">
+          <h4>实参按原名进 props</h4>
+          <p><code>child</code> / <code>children</code> / <code>slivers</code> / <code>tabs</code> 都是普通具名实参。<code>__h</code> 在运行时按<strong>值形态</strong>拆分：元素值、元素数组、delegate 描述进 <code>children</code>，其余留在 <code>props</code>，与键名无关。</p>
+        </div>
+        <div class="card">
+          <h4>命名构造只存在于调用形状</h4>
+          <p><code>ListView.separated</code> → <code>{factory:'separated', …}</code>；<code>Image.network</code> → <code>{factory:'network', src:…}</code>。宿主只按 <code>props.factory</code> 选原生工厂。</p>
+        </div>
+        <div class="card">
+          <h4>默认值与 Flutter 一致</h4>
+          <p>nullable 属性缺省保持 <code>null</code>，不默认成 <code>0</code> / <code>EdgeInsets.zero</code> 去覆盖 Flutter 主题默认。未传的参数由真实 Flutter 构造取默认值。</p>
+        </div>
+        <div class="card">
+          <h4>未注册类型不静默丢弃</h4>
+          <p>产物保留<strong>具体类型名</strong>，运行时未命中 renderer 时走默认 builder：按类型名找 <code>registerNativeComponent</code> 注入的原生实现，否则显示可见占位。后续补 renderer，同一份产物无需重出。</p>
+        </div>
+      </div>
+
+      <!-- UI LAYOUT -->
+      <div class="cap-block" id="ui-layout">
+        <div class="cap-block-head">
+          <h3>01 · 布局、滚动与 Sliver</h3>
+          <span class="tag violet">含懒容器</span>
+        </div>
+        <p class="cap-intro">布局组件走通用翻译即可；滚动容器的差异在「子项组织方式」——builder / separated / delegate 由代理类展开成显式协议。</p>
+
+        <h4>布局基础</h4>
+        <div class="chips">
+          <span class="chip">Column</span><span class="chip">Row</span><span class="chip">Expanded</span><span class="chip">Flexible</span><span class="chip">Spacer</span><span class="chip">Center</span><span class="chip">Padding</span><span class="chip">Align</span><span class="chip">Stack</span><span class="chip">IndexedStack</span><span class="chip">Positioned</span><span class="chip">SizedBox</span><span class="chip">Wrap</span><span class="chip">SafeArea</span><span class="chip">Opacity</span><span class="chip">Visibility</span><span class="chip">Offstage</span><span class="chip">ConstrainedBox</span><span class="chip">AspectRatio</span><span class="chip">FractionallySizedBox</span><span class="chip">Transform.translate</span><span class="chip">IntrinsicWidth</span><span class="chip">IntrinsicHeight</span><span class="chip">LimitedBox</span><span class="chip">FittedBox</span><span class="chip">RotatedBox</span><span class="chip">Baseline</span><span class="chip">IgnorePointer</span><span class="chip">AbsorbPointer</span><span class="chip">RepaintBoundary</span>
+        </div>
+        <ul class="note-list">
+          <li><code>Positioned</code> 支持 <code>fill(...)</code>；<code>Positioned.directional</code> / <code>fromRect</code> / <code>fromRelativeRect</code> 暂不支持。</li>
+          <li><code>Transform</code> 仅支持 <code>Transform.translate(offset:)</code>；<code>rotate</code> / <code>scale</code> 工厂与 <code>Container.transform</code> 属性不参与翻译。</li>
+          <li><code>Visibility</code> 的断言链由调用方保证；<code>Offstage</code> 退出布局 / 绘制 / 命中测试但保活 State。</li>
+        </ul>
+
+        <h4>滚动与 Sliver</h4>
+        <div class="chips">
+          <span class="chip">SingleChildScrollView</span><span class="chip">ListView</span><span class="chip">ListView.builder</span><span class="chip">ListView.separated</span><span class="chip">GridView</span><span class="chip">GridView.builder</span><span class="chip">GridView.count</span><span class="chip">GridView.extent</span><span class="chip">ReorderableListView</span><span class="chip">CustomScrollView</span><span class="chip">NestedScrollView</span><span class="chip">PageView</span><span class="chip">TabBarView</span><span class="chip">SliverList</span><span class="chip">SliverGrid</span><span class="chip">SliverFixedExtentList</span><span class="chip">SliverFillViewport</span><span class="chip">SliverFillRemaining</span><span class="chip">SliverAppBar</span><span class="chip">SliverPadding</span><span class="chip">SliverToBoxAdapter</span><span class="chip">SliverPersistentHeader</span><span class="chip">SliverOpacity</span><span class="chip">SliverOffstage</span><span class="chip">SliverSafeArea</span><span class="chip">SliverIgnorePointer</span><span class="chip">SliverVisibility</span>
+        </div>
+        <ul class="note-list">
+          <li><code>SliverList</code> / <code>SliverGrid</code> 的 delegate 支持 <code>SliverChildListDelegate</code> 与 <code>SliverChildBuilderDelegate</code>；<code>.builder</code> / <code>.separated</code> 同样展开为代理协议。</li>
+          <li><code>PageView</code> 支持 <code>.builder</code> 与 <code>PageController</code> id-bridge（<code>jumpToPage</code> / <code>animateToPage</code> / <code>nextPage</code> / <code>previousPage</code>）。</li>
+          <li><code>SliverPersistentHeader</code> 的 <code>delegate.build</code> 在<strong>布局阶段</strong>同步执行；JS 侧先执行并以 patch 回填子树，宿主用上一次的子树承载首帧。</li>
+          <li><code>LayoutBuilder</code> / <code>OrientationBuilder</code> 同理：父约束按值去重后回调 JS，JS 执行 builder 后下发新子树。</li>
+        </ul>
+
+        <h4>懒容器：是否懒只在构建期决定</h4>
+        <p>唯一事实源是生成器的 <code>lazyChildHostTypes</code>。生成器把它写进 <code>flutter.js</code>，<code>__h</code> 给元素打 <code>lazyChildren: true</code>；运行时只认这个元素标记，不认识具体类型。只有「子项尺寸由容器强制、不由内容决定」的容器才能懒。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:32%">可以懒</th><th>不要懒</th></tr></thead>
+            <tbody>
+              <tr><td><code>PageView</code> / <code>TabBarView</code> / <code>GridView</code> / <code>SliverGrid</code> / <code>SliverFixedExtentList</code> / <code>SliverFillViewport</code> / 带 <code>itemExtent</code> 的 <code>ListView</code></td><td>无 <code>itemExtent</code> 的 <code>ListView</code>、<code>SliverList</code>、<code>ReorderableListView</code>、<code>Column</code>：零尺寸占位会让视口把所有 item 判为可见，懒加载反而失效</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="note-list">
+          <li><strong>懒槽位生命周期与宿主 element 同寿</strong>：inflate → <code>lazyMount</code>；滚出缓存 / 切走 Tab / 整页退出 → <code>lazyUnmount</code>。item 的 State 会被销毁，滚回来是新实例。</li>
+          <li><strong>跨滚动保留数据放父组件或模型层</strong>；item 内创建的控制器 / Key 句柄随 item 实例释放，不要跨 item 共享。</li>
+          <li><strong>保活</strong>：子树中任一组件声明 <code>wantKeepAlive =&gt; true</code> 时，JS 把声明经 <code>__keepAlive</code> 下发，宿主注册真实 <code>KeepAlive</code>；切走 Tab 不再销毁 element，也就不会 <code>lazyUnmount</code>。保活只看子树，不越过嵌套懒槽位。</li>
+        </ul>
+      </div>
+
+      <!-- UI CONTENT -->
+      <div class="cap-block" id="ui-content">
+        <div class="cap-block-head">
+          <h3>02 · 内容、按钮与交互</h3>
+          <span class="tag amber">事件是句柄</span>
+        </div>
+        <p class="cap-intro">内容组件与按钮走通用 props；事件按最终消费方分流：宿主 widget 下发事件句柄，JS 组件下发可调用闭包。</p>
+
+        <h4>内容与容器</h4>
+        <div class="chips">
+          <span class="chip">Text</span><span class="chip">Icon</span><span class="chip">Image</span><span class="chip">Image.asset</span><span class="chip">Image.network</span><span class="chip">FadeInImage</span><span class="chip">ImageIcon</span><span class="chip">CircleAvatar</span><span class="chip">CachedNetworkImage</span><span class="chip">Chip</span><span class="chip">ListTile</span><span class="chip">Divider</span><span class="chip">Card</span><span class="chip">Container</span><span class="chip">DecoratedBox</span><span class="chip">ClipRRect</span><span class="chip">ClipOval</span><span class="chip">Material</span><span class="chip">Tooltip</span><span class="chip">Hero</span><span class="chip">PreferredSize</span>
+        </div>
+        <ul class="note-list">
+          <li><code>Text</code> 支持 <code>TextScaler.noScaling</code> / <code>TextScaler.linear(n)</code>；废弃的 <code>textScaleFactor</code> 不支持。主题取值（<code>Theme.of(context).textTheme</code>）尚未支持，需要时显式写 <code>TextStyle</code>。</li>
+          <li><code>Image</code> 支持 asset / network 静态路径与 <code>AssetImage</code> / <code>NetworkImage</code>；不支持 <code>Image.memory</code> 与动态字节。</li>
+          <li><code>InputDecoration</code> / <code>BottomNavigationBarItem</code> / <code>DropdownMenuItem</code> 等是<strong>值对象</strong>：普通 JS 类，携带的 Widget 由父 renderer 用 <code>c.element(...)</code> 就地还原，不进 reconciler，不挂载、无 diff。</li>
+        </ul>
+
+        <h4>按钮</h4>
+        <div class="chips">
+          <span class="chip">ElevatedButton</span><span class="chip">FilledButton</span><span class="chip">TextButton</span><span class="chip">OutlinedButton</span><span class="chip">IconButton</span><span class="chip">FloatingActionButton</span>
+        </div>
+        <p class="subtle">四类按钮各自保留真实类型名，不归一；<code>onPressed: null</code> → 禁用态；<code>ButtonStyle</code> / <code>styleFrom</code> 支持颜色、elevation、padding、shape、textStyle、visualDensity 等。</p>
+
+        <h4>输入与选择</h4>
+        <div class="chips">
+          <span class="chip">TextField</span><span class="chip">Switch</span><span class="chip">Checkbox</span><span class="chip">Slider</span><span class="chip">Radio</span><span class="chip">DropdownButton</span><span class="chip">DropdownMenuItem</span>
+        </div>
+        <ul class="note-list">
+          <li><code>TextField</code> 是受控协议：下发 <code>value</code> 时受控，props 变化回写 controller；不下发时为非受控。原生侧用真实 controller。</li>
+          <li>带值事件（<code>onChanged</code> / <code>onTap(index)</code> / <code>onPageChanged</code>）的新值作为闭包形参传入，与 Dart 签名逐字对应。</li>
+          <li><code>RadioGroup</code>（Flutter 3.32+ 成组 API）暂不支持；旧 <code>Radio</code> 仍可用。</li>
+        </ul>
+
+        <h4>手势、拖拽与通知</h4>
+        <div class="chips">
+          <span class="chip">InkWell</span><span class="chip">GestureDetector</span><span class="chip">Dismissible</span><span class="chip">InteractiveViewer</span><span class="chip">Draggable</span><span class="chip">LongPressDraggable</span><span class="chip">DragTarget</span><span class="chip">Focus</span><span class="chip">KeyboardListener</span><span class="chip">NotificationListener</span><span class="chip">PopScope</span>
+        </div>
+        <ul class="note-list">
+          <li><strong>拖拽负载可以是任意 JS 值</strong>：<code>data</code> 在元素构造时换成身份 id 下发，事件回到 JS 再换回原引用——<code>details.data</code> 与 Dart 里 <code>draggable.data</code> 是同一个对象，身份比较、方法调用都成立。</li>
+          <li><code>DragTarget.builder</code> 在 JS 侧执行，结果以 <code>child</code> 插槽随 patch 回填；<code>onWillAccept*</code> 需要同步返回 bool，跨语言只能异步，因此不参与翻译（目标恒接受）。</li>
+          <li><code>KeyboardListener</code> 的 <code>KeyEvent</code> 由宿主归一成 JSON，JS 侧还原成实例；<code>LogicalKeyboardKey</code> 按 keyId 对齐。</li>
+          <li><code>NotificationListener</code> 把 <code>ScrollNotification</code> 的 metrics 快照回传，JS 里 <code>n.metrics.pixels</code> 等属性访问原样可用。</li>
+        </ul>
+      </div>
+
+      <!-- UI SHELL -->
+      <div class="cap-block" id="ui-shell">
+        <div class="cap-block-head">
+          <h3>03 · 页面骨架、响应式与动画</h3>
+          <span class="tag cyan">状态全在 JS</span>
+        </div>
+        <p class="cap-intro">页面骨架只是宿主组件的组合；响应式与动画的订阅、插值、重建全部在 JS 侧闭环，宿主不感知。</p>
+
+        <h4>页面骨架</h4>
+        <div class="chips">
+          <span class="chip">Scaffold</span><span class="chip">AppBar</span><span class="chip">BottomNavigationBar</span><span class="chip">BottomNavigationBarItem</span><span class="chip">DefaultTabController</span><span class="chip">TabBar</span><span class="chip">Tab</span><span class="chip">TabBarView</span><span class="chip">Drawer</span><span class="chip">DrawerHeader</span><span class="chip">Overlay</span><span class="chip">OverlayEntry</span>
+        </div>
+        <ul class="note-list">
+          <li><code>Scaffold</code> 的 appBar / body / FAB / 底部导航 / drawer 都是按原名进 <code>children</code> 的 slot，宿主按名读取，不依赖 children 顺序。</li>
+          <li><code>Overlay.of(context)</code> 沿祖先取<strong>最近</strong>的本实例，只作用于该 Overlay 子树，不是 App 根部；要拿后代 context 需用 <code>Builder</code> 包裹。</li>
+          <li><code>BottomNavigationBarItem</code> 是值对象：<code>icon</code> / <code>activeIcon</code> 以元素描述下发，父 renderer 就地还原。</li>
+        </ul>
+
+        <h4>响应式与数据共享</h4>
+        <div class="chips">
+          <span class="chip">ListenableBuilder</span><span class="chip">ValueListenableBuilder</span><span class="chip">TweenAnimationBuilder</span><span class="chip">Builder</span><span class="chip">InheritedWidget</span><span class="chip">ChangeNotifierProvider</span><span class="chip">MultiProvider</span><span class="chip">Consumer</span>
+        </div>
+        <ul class="note-list">
+          <li><code>ListenableBuilder</code> / <code>ValueListenableBuilder</code> 做「仅此节点」局部重建，不全量 <code>setState</code>；<code>builder</code> 返回的子树抽为组件方法。</li>
+          <li><code>InheritedWidget</code> 是纯 JS 数据共享结点，没有宿主 renderer；<code>updateShouldNotify</code> 为 true 时依赖者先 <code>didChangeDependencies</code> 再重建。</li>
+          <li><code>ChangeNotifierProvider&lt;T&gt;</code> / <code>MultiProvider</code> / <code>Consumer&lt;T&gt;</code> 的类型参数参与运行时查找；provider 的 JS 由宿主维护在 <code>js/provider.js</code>，构建拷贝到 <code>patch/packages/provider.js</code>，<strong>无宿主结点</strong>。</li>
+        </ul>
+
+        <h4>动画</h4>
+        <div class="chips">
+          <span class="chip">AnimatedContainer</span><span class="chip">AnimatedSwitcher</span><span class="chip">AnimatedCrossFade</span><span class="chip">AnimatedDefaultTextStyle</span><span class="chip">AnimatedList</span><span class="chip">FadeTransition</span><span class="chip">ScaleTransition</span><span class="chip">RotationTransition</span><span class="chip">SizeTransition</span><span class="chip">TweenAnimationBuilder</span><span class="chip">AnimationController</span><span class="chip">AnimatedBuilder</span>
+        </div>
+        <div class="two-col">
+          <div>
+            <h4>隐式 / 过渡动画</h4>
+            <p class="subtle">完全是宿主组件：由 Flutter 自己的 AnimationController 插值，JS 只下发 props（duration / curve / 目标值）。插值不逐帧过桥。</p>
+          </div>
+          <div>
+            <h4>显式动画</h4>
+            <p class="subtle">真实控制器带 Ticker 跑在宿主，JS 侧是镜像 + 句柄（<code>ctrl/Flash</code>）。每帧把 value 回传 JS 镜像，触发 <code>AnimatedBuilder</code> 等逻辑组件只重建自己的子树。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- UI MOTION -->
+      <div class="cap-block" id="ui-motion">
+        <div class="cap-block-head">
+          <h3>04 · 弹层、浮层锚定与绘制</h3>
+          <span class="tag violet">独立 root / 录制重放</span>
+        </div>
+        <p class="cap-intro">弹层与绘制都不是普通 Widget 的“属性传递”：前者是独立 root，后者是「JS 录制 → 宿主重放」。</p>
+
+        <h4>命令式弹层</h4>
+        <div class="chips">
+          <span class="chip">showDialog</span><span class="chip">showAdaptiveDialog</span><span class="chip">showGeneralDialog</span><span class="chip">showModalBottomSheet</span><span class="chip">showCupertinoDialog</span><span class="chip">showCupertinoModalPopup</span><span class="chip">Navigator.pop</span><span class="chip">AlertDialog</span><span class="chip">SimpleDialog</span><span class="chip">Dialog</span><span class="chip">CupertinoAlertDialog</span><span class="chip">CupertinoDialogAction</span><span class="chip">CupertinoActionSheet</span><span class="chip">CupertinoActionSheetAction</span>
+        </div>
+        <ul class="note-list">
+          <li>弹层内容是<strong>独立 root</strong>：JS 侧 <code>builder</code> 执行一次，挂在独立 <code>pageKey</code> 与独立 <code>JsUiStore</code> 上；跨桥只传面板 key 与标量参数。弹层内 <code>setState</code> 只重建弹层自己的子树。</li>
+          <li><code>showDialog</code> 返回 Promise，值为 <code>Navigator.pop</code> 传出的结果（barrier / 返回键关闭为 <code>null</code>）。</li>
+          <li><code>Navigator.of(ctx).pop(result)</code> 只对本端打开的弹层生效；页面级路由栈在 Dart，JS 侧不越权，未命中弹层时出声。</li>
+        </ul>
+        <div class="callout warn">
+          <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 9v5M12 17.2v.1"/></svg></span>
+          <div class="callout-body">
+            <span class="callout-title">暂不支持的命令式弹层</span>
+            <p><code>showMenu</code>、<code>showSearch</code>、<code>showDatePicker</code> / <code>showTimePicker</code> / <code>showDateRangePicker</code>、<code>showAboutDialog</code>、<code>ScaffoldMessenger.showSnackBar</code> 等。它们的内容由框架自绘或需要额外数据载体，不属于「builder 建树 + 独立路由」模型。</p>
+          </div>
+        </div>
+
+        <h4>浮层挂载与锚定</h4>
+        <div class="chips">
+          <span class="chip">OverlayPortal</span><span class="chip">OverlayPortalController</span><span class="chip">CompositedTransformTarget</span><span class="chip">CompositedTransformFollower</span><span class="chip">LayerLink</span>
+        </div>
+        <p>适合引导气泡、跟随下拉菜单、气泡提示这类「跟随某个子组件的悬浮层」。<code>overlayChildBuilder</code> 是 JS 闭包，因此由 JS 侧先执行，结果以 <code>overlayChild</code> 插槽随 patch 下发；锚点几何计算完全由 Flutter 图层合成完成。</p>
+        <div class="code-block" data-lang="dart">
+<pre><span class="k">final</span> controller = <span class="t">OverlayPortalController</span>();
+<span class="k">final</span> link = <span class="t">LayerLink</span>();
+
+<span class="t">OverlayPortal</span>(
+  controller: controller,
+  overlayChildBuilder: (context) =&gt; <span class="t">CompositedTransformFollower</span>(
+    link: link,
+    targetAnchor: <span class="t">Alignment</span>.bottomCenter,
+    followerAnchor: <span class="t">Alignment</span>.topCenter,
+    offset: <span class="k">const</span> <span class="t">Offset</span>(<span class="n">0</span>, <span class="n">8</span>),
+    child: <span class="t">MyBubble</span>(),
+  ),
+  child: <span class="t">CompositedTransformTarget</span>(link: link, child: button),
+)</pre>
+        </div>
+        <ul class="note-list">
+          <li><code>OverlayPortalController.show()</code> / <code>hide()</code> / <code>toggle()</code> 是命令式调用，可在 <code>initState</code> 直接调用；<code>isShowing</code> 是 JS 侧镜像（命令发出即时更新，不是宿主回读）。</li>
+          <li><code>overlayLocation</code> 只认 <code>nearestOverlay</code>（默认）与 <code>rootOverlay</code>。</li>
+          <li><code>LayerLink</code> 是跨语言<strong>身份对象</strong>：JS 一个句柄、宿主同一个 <code>LayerLink()</code> 实例，两端共享锚点，不传几何数据。</li>
+        </ul>
+
+        <h4>CustomPaint：JS 录制，宿主重放</h4>
+        <p>绘制阶段是同步的，跨语言没有异步桥，因此 <code>CustomPainter.paint</code> 在宿主 <code>paint(canvas, size)</code> 里同步求值 <code>__record(size)</code>：新建录制型 Canvas 调用用户 <code>paint</code>，返回 <code>{v:1, ops:[…]}</code>，宿主再用 dart:ui 的 Canvas 逐条重放，并按尺寸缓存。</p>
+        <div class="two-col">
+          <div>
+            <h4>支持</h4>
+            <ul class="note-list">
+              <li>Canvas 指令：<code>save</code> / <code>restore</code> / <code>saveLayer</code> / <code>translate</code> / <code>scale</code> / <code>rotate</code> / <code>clipRect</code> / <code>clipRRect</code> / <code>clipPath</code>、<code>drawRect</code> / <code>drawRRect</code> / <code>drawPath</code> / <code>drawLine</code> / <code>drawCircle</code> / <code>drawOval</code> / <code>drawArc</code> / <code>drawPaint</code> / <code>drawImage</code> / <code>drawImageRect</code></li>
+              <li><code>Path</code>、<code>Paint</code>、<code>TextPainter</code>、渐变 shader、图片句柄</li>
+              <li><code>TextPainter</code> 只录制 span 与 layout 约束，排版由宿主真实 TextPainter 完成</li>
+            </ul>
+          </div>
+          <div>
+            <h4>边界</h4>
+            <ul class="note-list">
+              <li><code>drawImageNine</code> / <code>drawAtlas</code> / <code>drawVertices</code> / <code>drawPoints</code> / <code>drawParagraph</code> / <code>drawPicture</code> / <code>drawShadow</code> / <code>drawColor</code> / <code>toImage*</code> / <code>getTransform</code> 在 JS 侧直接抛错</li>
+              <li><code>CustomPainter.repaint</code>（Listenable）暂不支持，组件重建即重新录制</li>
+              <li><code>TextPainter.width</code> / <code>height</code> / <code>size</code> 需要同步测量，JS 侧访问即抛错</li>
+            </ul>
+          </div>
+        </div>
+
+        <h4>三方视觉组件</h4>
+        <div class="chips">
+          <span class="chip hot">EasyRefresh</span><span class="chip hot">CachedNetworkImage</span><span class="chip">flutter_easy_refresh</span><span class="chip">cached_network_image</span>
+        </div>
+        <ul class="note-list">
+          <li><code>EasyRefresh</code>：下拉刷新 / 上拉加载容器。<code>onRefresh</code> / <code>onLoad</code> 是<strong>可等待事件</strong>：宿主触发 JS 方法，等其 Future 完成后才收起指示器；<code>EasyRefreshController</code> 走 id-bridge。</li>
+          <li><code>CachedNetworkImage</code>：磁盘缓存网络图，纯宿主组件；<code>imageUrl</code> 翻译为 <code>source</code>。<code>placeholder</code> / <code>errorWidget</code> / 缓存策略 / fade 参数不参与翻译，统一用包内默认行为。</li>
+        </ul>
+      </div>
+    </section>
+    <!-- RUNTIME CAPS -->
+    <section id="runtime-caps" class="doc-section" aria-labelledby="runtime-caps-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>07.C / Runtime capabilities</div>
+        <h2 id="runtime-caps-title">运行时能力：一个能力一个目录，核心零改动</h2>
+        <p>能力库是这个框架唯一的运行时扩展缝。内建能力与三方库走完全相同的模板：Dart 桥 + kind 描述符 + JS 片段 + <code>JsUiLibrary</code> 子类注册。</p>
+      </div>
+
+      <div class="meta-strip">
+        <span><b>已注册能力库</b> 26</span>
+        <span><b>模板</b> JsUiLibrary</span>
+        <span><b>钩子</b> jsFragments / ensureChannels / registerWidgets</span>
+        <span><b>目录</b> capabilities/&lt;name&gt;/</span>
+        <span><b>核心改动</b> 0</span>
+      </div>
+      <p class="subtle">下列为能力域地图；完整注册表见 <code>packages/hot_patch/lib/src/js_ui/capabilities/js_ui_library.dart</code> 的 <code>_seedBuiltins</code>。</p>
+
+      <h3>接入模板</h3>
+      <p>一个能力在宿主侧的落点无非三类，模板各留一个可重写钩子。内建能力的 JS 已随 <code>patch/runtime.js</code> 发布；外部库还可以在 App 的 <code>main()</code> 里注册自己的 <code>JsUiLibrary</code>，完全不改 <code>hot_patch</code>。</p>
+      <div class="code-block" data-lang="dart">
+<pre><span class="k">class</span> <span class="t">MyLibrary</span> <span class="k">extends</span> <span class="t">JsUiLibrary</span> {
+  <span class="k">const</span> MyLibrary();
+
+  <span class="p">@override</span>
+  <span class="t">String</span> <span class="k">get</span> id =&gt; <span class="s">'my-lib'</span>;             <span class="c">// 幂等去重键</span>
+
+  <span class="p">@override</span>
+  <span class="t">List</span>&lt;<span class="t">String</span>&gt; <span class="k">get</span> jsModuleAssets =&gt; [];   <span class="c">// 随补丁发布的独立模块</span>
+
+  <span class="p">@override</span>
+  <span class="k">void</span> ensureChannels() {                    <span class="c">// 幂等登记句柄 kind / context op</span>
+    <span class="c">// registerContextOp('myOp', onOp: ...);</span>
+  }
+
+  <span class="p">@override</span>
+  <span class="k">void</span> registerWidgets(<span class="t">JsWidgetRegistry</span> r) { <span class="c">// type → 真实 Flutter widget</span>
+    <span class="c">// r.register('MyWidget', (c) =&gt; MyWidget(...));</span>
+  }
+}</pre>
+      </div>
+      <p class="subtle">注册顺序 = <code>ensureChannels</code> / <code>registerWidgets</code> 的遍历顺序。内建能力先注入，外部库的片段可以安全引用内建片段里的东西。</p>
+
+      <h3>能力库地图</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:20%">能力域</th><th style="width:44%">能力库</th><th>提供什么</th></tr></thead>
+          <tbody>
+            <tr><td>状态与响应式</td><td><code>change-notifier</code></td><td><code>ChangeNotifier</code> / <code>ValueNotifier</code> 基类 + <code>ListenableBuilder</code> / <code>ValueListenableBuilder</code> 宿主边界</td></tr>
+            <tr><td>控制器与句柄</td><td><code>scroll-controller</code> · <code>tab</code> · <code>text-editing-controller</code> · <code>key</code> · <code>focus</code> · <code>animation</code> · <code>overlay_portal</code></td><td>JS 代理对象 ↔ 宿主真实对象；通用 create / call / set / release</td></tr>
+            <tr><td>上下文</td><td><code>build-context</code> · <code>media_query</code></td><td><code>this.context</code> 代理、<code>context.*</code> op、MediaQuery 同步读值</td></tr>
+            <tr><td>布局阶段回调</td><td><code>layout_builder</code> · <code>sliver_persistent_header</code></td><td>父约束 / shrinkOffset 回传 JS，JS 执行 builder 后 patch 回填</td></tr>
+            <tr><td>事件桥</td><td><code>notification-listener</code> · <code>keyboard_listener</code> · <code>pop_scope</code> · <code>dismissible</code> · <code>drag</code></td><td>滚动通知、按键、返回拦截、滑动删除、任意 JS 负载拖拽</td></tr>
+            <tr><td>视觉与绘制</td><td><code>canvas</code> · <code>color</code> · <code>dart-values</code> · <code>dart-errors</code></td><td>绘制录制重放、Color 类族、Duration / Size / Offset / Radius、Dart 内置异常</td></tr>
+            <tr><td>弹层与抽屉</td><td><code>dialog</code> · <code>drawer</code> · <code>overlay_portal</code></td><td>独立 root 弹层、Drawer 关闭作用域、浮层挂载与锚定</td></tr>
+            <tr><td>动画</td><td><code>animation</code></td><td>隐式 / 过渡动画组件；显式 AnimationController 镜像与逐帧回传；<code>AnimatedList</code></td></tr>
+            <tr><td>三方库</td><td><code>easy-refresh</code> · <code>cached-network-image</code></td><td>可等待刷新事件 + 指示器；磁盘缓存网络图</td></tr>
+            <tr><td>焦点与键盘</td><td><code>focus</code> · <code>keyboard_listener</code></td><td>FocusNode 句柄、焦点镜像、KeyEvent 还原</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- CAP STATE -->
+      <div class="cap-block" id="cap-state">
+        <div class="cap-block-head">
+          <h3>01 · 状态与响应式</h3>
+          <span class="tag green">JS 闭环</span>
+        </div>
+        <p class="cap-intro">所有状态语义都在 JS：JS 侧实现 ChangeNotifier / ValueNotifier / provider，宿主只接收 patch，不理解“为什么变”。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:26%">能力</th><th>行为</th><th style="width:24%">宿主参与</th></tr></thead>
+            <tbody>
+              <tr><td><code>setState</code></td><td>只标脏；每帧统一 flush，重建组件子树并 diff 出 patch ops</td><td>应用 ops</td></tr>
+              <tr><td><code>ChangeNotifier</code> / <code>ValueNotifier</code></td><td>JS 基类，<code>addListener</code> / <code>removeListener</code> / <code>notifyListeners</code> 与 Dart 同义</td><td>通用镜像句柄，供需要监听的能力使用；不参与状态语义</td></tr>
+              <tr><td><code>ListenableBuilder</code> / <code>ValueListenableBuilder</code></td><td>监听模型，仅重建该结点子树，不全量 <code>setState</code></td><td>宿主监听边界</td></tr>
+              <tr><td><code>InheritedWidget</code></td><td>JS 侧作用域 + 依赖登记；提供者变更时标脏依赖者，先 <code>didChangeDependencies</code> 再 build</td><td>无 renderer</td></tr>
+              <tr><td><code>ChangeNotifierProvider</code> / <code>MultiProvider</code> / <code>Consumer</code></td><td>provider 包 JS 模块；<code>create</code> 由 provider 持有生命周期，<code>.value</code> 复用既有实例不释放</td><td>无结点；模块拷贝到 <code>patch/packages/provider.js</code></td></tr>
+              <tr><td><code>context.watch&lt;T&gt;()</code> / <code>read&lt;T&gt;()</code></td><td>取值与订阅全部在 JS 内闭环；<code>read</code> 只取值不建立依赖</td><td>不注册宿主 op</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block" data-lang="dart">
+<pre><span class="c">// 与 Dart / provider 的调用面完全一致</span>
+<span class="t">ChangeNotifierProvider</span>&lt;<span class="t">CartModel</span>&gt;(
+  create: () =&gt; <span class="t">CartModel</span>(),
+  child: <span class="t">Consumer</span>&lt;<span class="t">CartModel</span>&gt;(
+    builder: (context, cart, child) =&gt; <span class="t">Text</span>(<span class="s">'items: ${cart.count}'</span>),
+  ),
+)</pre>
+        </div>
+        <ul class="note-list">
+          <li><strong>类型参数是运行时查找键</strong>：<code>ChangeNotifierProvider&lt;CartModel&gt;</code> / <code>Consumer&lt;CartModel&gt;</code> 的 <code>typeArguments</code> 参与匹配，不可省略。</li>
+          <li><strong>模型生命周期</strong>：<code>create</code> 创建的实例归 provider 所有；<code>.value</code> 复用调用方实例，provider 不释放。</li>
+          <li><strong>宿主无感</strong>：新增状态库不需要改宿主代码；只有确实需要宿主真值的 <code>context.xxx</code> 扩展才经 <code>registerContextOp</code>。</li>
+        </ul>
+      </div>
+
+      <!-- CAP CONTROLLER -->
+      <div class="cap-block" id="cap-controller">
+        <div class="cap-block-head">
+          <h3>02 · 控制器与跨语言句柄</h3>
+          <span class="tag cyan">真实对象只在一端</span>
+        </div>
+        <p class="cap-intro">Controller、Key、Painter、LayerLink 都是同一种东西的不同 <code>kind</code>。拥有端持有真实对象，另一端只持 id，操作按 id 转发。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:23%">对象</th><th>JS 侧可用能力</th><th style="width:21%">宿主侧</th></tr></thead>
+            <tbody>
+              <tr><td><code>ScrollController</code></td><td><code>offset</code> / <code>position</code> / <code>jumpTo</code> / <code>animateTo</code> / <code>addListener</code></td><td>真实 controller；滚动经转发句柄回传</td></tr>
+              <tr><td><code>TabController</code></td><td><code>index</code> / <code>animateTo</code> / <code>addListener</code></td><td>真实 controller；也可由 <code>DefaultTabController</code> 提供</td></tr>
+              <tr><td><code>TextEditingController</code></td><td><code>text</code> / <code>selection</code> / <code>clear</code> / <code>setText</code> / <code>setSelection</code></td><td>真实 controller；输入经 textFn 回传 JS 镜像</td></tr>
+              <tr><td><code>PageController</code></td><td><code>jumpToPage</code> / <code>animateToPage</code> / <code>nextPage</code> / <code>previousPage</code></td><td>真实 controller；与 Scroll 共用同一套桥</td></tr>
+              <tr><td><code>EasyRefreshController</code></td><td><code>callRefresh</code> / <code>callLoad</code> / <code>finishRefresh</code> / <code>finishLoad</code> / <code>resetHeader</code> / <code>open*Secondary</code></td><td>真实 controller；刷新事件可等待</td></tr>
+              <tr><td><code>FocusNode</code></td><td><code>requestFocus</code> / <code>unfocus</code> / <code>hasFocus</code> / <code>addListener</code></td><td>真实 FocusNode；焦点变化回传镜像</td></tr>
+              <tr><td><code>AnimationController</code></td><td><code>forward</code> / <code>reverse</code> / <code>stop</code> / <code>value</code> / <code>duration</code> / listener</td><td>真实控制器带 Ticker；每帧 value 回传</td></tr>
+              <tr><td><code>Key</code> / <code>GlobalKey</code></td><td><code>ValueKey</code> / <code>ObjectKey</code> / <code>UniqueKey</code>；<code>GlobalKey.currentState</code></td><td>真实 Key；state op 经 key 桥接入</td></tr>
+              <tr><td><code>LayerLink</code> / <code>OverlayPortalController</code></td><td>锚点身份 / <code>show</code> / <code>hide</code> / <code>toggle</code> / <code>isShowing</code></td><td>真实对象实例</td></tr>
+              <tr><td><code>CustomPainter</code></td><td><code>paint</code> / <code>shouldRepaint</code>；绘制指令录制</td><td><code>canvasPainter</code> 句柄，<code>sync:false</code>，宿主不创建真实对象</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="note-list">
+          <li><strong>通用 op</strong>：<code>create</code> / <code>call</code> / <code>set</code> / <code>release</code> 等由通用句柄层提供；新增能力只注册 kind，不改桥与注册表。</li>
+          <li><strong>释放</strong>：句柄随持有它的组件实例释放；无归属的随页面释放，<code>disposeRoot</code> 兜底。全局 <code>handles</code> 是 id → 对象的唯一反查表。</li>
+          <li><strong>Controller 构造</strong>：字段初始化、<code>initState</code>、内联构造都能被翻译；与 Scroll / Tab / Page / EasyRefresh 共用同一套代理类构造翻译。</li>
+        </ul>
+      </div>
+
+      <!-- CAP CONTEXT -->
+      <div class="cap-block" id="cap-context">
+        <div class="cap-block-head">
+          <h3>03 · 上下文与事件</h3>
+          <span class="tag violet">同步约束决定形态</span>
+        </div>
+        <p class="cap-intro">JS 的 <code>build</code> 里读值必须同步，而 JS → 宿主只有异步桥。因此上下文类能力采用「首次调用同步缓存 + 后续刷新」或「布局阶段回传」两种形态。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:23%">能力</th><th>机制</th><th style="width:25%">典型用法</th></tr></thead>
+            <tbody>
+              <tr><td><code>BuildContext</code> 代理</td><td><code>this.context</code> 与宿主真值 BuildContext 1:1 绑定（ctx 句柄）；<code>context.*</code> op 由通用缝 <code>registerContextOp</code> 分发</td><td><code>context.measure</code> / <code>showOnScreen</code> / 自定义 op</td></tr>
+              <tr><td><code>MediaQuery</code></td><td><code>of</code> / <code>sizeOf</code> / <code>orientationOf</code> / <code>textScalerOf</code> 等按 ctx 句柄调用 Flutter 对应静态方法；首次调用异步取值并缓存，后续同步读</td><td><code>MediaQuery.sizeOf(context)</code></td></tr>
+              <tr><td><code>LayoutBuilder</code></td><td>真实 LayoutBuilder 在布局阶段执行 <code>builder(ctx, constraints)</code>，把约束 JSON 交给 JS 句柄；JS 执行后 patch 回填 <code>child</code></td><td>响应式布局 / <code>OrientationBuilder</code></td></tr>
+              <tr><td><code>SliverPersistentHeader</code></td><td><code>delegate.build</code> 在布局阶段同步执行；按 <code>{shrinkOffset, overlapsContent}</code> 去重回传，宿主返回上一次的子树</td><td>折叠 / 浮出头部</td></tr>
+              <tr><td><code>NotificationListener</code></td><td>宿主抓 <code>ScrollNotification</code>，把 metrics 快照经 invoke 回传；固定 <code>return false</code>，不拦截冒泡</td><td>滚动位置监听</td></tr>
+              <tr><td><code>KeyboardListener</code></td><td>宿主把 <code>KeyEvent</code> 归一成 JSON，JS 侧 <code>__keyEvent</code> 还原成实例；<code>LogicalKeyboardKey</code> 按 keyId 对齐</td><td>快捷键 / 游戏输入</td></tr>
+              <tr><td><code>Focus</code></td><td>宿主组件挂真实 FocusNode 并监听 <code>onFocusChange</code>，回传 <code>hasFocus</code>；JS 的 <code>node.addListener(fn)</code> 与 ChangeNotifier 同语义</td><td>焦点管理</td></tr>
+              <tr><td><code>PopScope</code></td><td>纯宿主承载：拦截系统返回 / 手势，回调把 <code>[didPop, result]</code> 回传 JS</td><td>返回确认</td></tr>
+              <tr><td><code>Dismissible</code></td><td>手势 / 位移 / 收缩动画全在宿主；<code>confirmDismiss</code> 走 <code>invokeAwait</code> 异步回程</td><td>滑动删除</td></tr>
+              <tr><td><code>Drag</code></td><td>任意 JS 负载按身份 id 下发；宿主只把 id 与原生拖动系统对齐，从不解释内容；事件回来换回原引用</td><td>拖拽排序 / 拖放</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.1"/></svg></span>
+          <div class="callout-body">
+            <span class="callout-title">为什么 MediaQuery 需要缓存</span>
+            <p>JS 读 <code>MediaQuery.sizeOf(context)</code> 必须同步返回；而 JS → 宿主只有异步桥。因此首次调用发起异步取值并缓存，之后的同步读使用缓存；窗口尺寸变化时由宿主推送刷新。嵌套 MediaQuery 的 aspect 语义与「取最近者」由 Flutter 自己保证，JS 不自行判等。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAP THIRD -->
+      <div class="cap-block" id="cap-third">
+        <div class="cap-block-head">
+          <h3>04 · 三方库、懒加载与保活</h3>
+          <span class="tag amber">构建期表驱动</span>
+        </div>
+        <p class="cap-intro">三方库的 JS 由宿主维护，生成器只做归属与拷贝；懒容器是否懒由构建期表决定，运行时不维护任何类型白名单。</p>
+
+        <h4>三方库接入模型</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:24%">环节</th><th>规则</th></tr></thead>
+            <tbody>
+              <tr><td>宿主维护 JS</td><td>工程根建 <code>js/&lt;package&gt;.js</code>（文件名 = Dart 包名），写该库的 JS 类与库自有运行期登记</td></tr>
+              <tr><td>构建拷贝</td><td><code>ui_third_party_js</code> 原样拷贝到 <code>patch/packages/&lt;package&gt;.js</code>，无需改 <code>build.yaml</code></td></tr>
+              <tr><td>类型归属</td><td>按「类声明所在包 + 该包是否有宿主 JS 模块」自动判定；没有白名单</td></tr>
+              <tr><td>缺失处理</td><td>源码用到某三方包的类型但 <code>js/&lt;package&gt;.js</code> 缺失 → <strong>构建期直接报错</strong>，不会留到运行期才暴露</td></tr>
+              <tr><td>运行时就绪</td><td>能力库可用 <code>jsModuleAssets</code> 声明需要在任何组件 build 前求值的模块；运行时统一加载作为兜底</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>已接入的三方库：<span class="tag violet">provider</span> <span class="tag violet">flutter_easy_refresh</span> <span class="tag violet">cached_network_image</span>。其中 provider 是纯 JS 结点（无宿主 renderer），EasyRefresh 与 CachedNetworkImage 是宿主组件。</p>
+
+        <h4>懒加载的运行时协议</h4>
+        <div class="two-col">
+          <div>
+            <h4>构建期</h4>
+            <ul class="note-list">
+              <li><code>lazyChildHostTypes</code> 是唯一事实源，写出 <code>__lazyChildrenOf</code></li>
+              <li><code>__h</code> 给元素打 <code>lazyChildren: true</code></li>
+              <li>新增 / 调整懒容器 = 改这一处配置 + 重出产物</li>
+            </ul>
+          </div>
+          <div>
+            <h4>运行时</h4>
+            <ul class="note-list">
+              <li>只认元素标记，不认识类型</li>
+              <li>协议：<code>children.__builder</code> / <code>__items</code> / <code>delegate</code>；占位 props 的 <code>__lazy</code> / <code>__lazyFn</code> / <code>__keepAlive</code></li>
+              <li>宿主 inflate → <code>lazyMount</code>；dispose → <code>lazyUnmount</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <h4>保活与更新语义</h4>
+        <ul class="note-list">
+          <li><strong>保活</strong>：子树中任意组件声明 <code>wantKeepAlive</code>，JS 在挂载、父级重建、组件自身重建后把声明经 <code>__keepAlive</code> 下发；宿主注册真实 <code>KeepAlive</code>，切走 Tab 不再销毁 element。保活只看子树，不越过嵌套懒槽位。</li>
+          <li><strong>父级重建</strong>：已挂载项照常 <code>didUpdateWidget</code>，与原生一致；只有 const 元素引用相同才短路。不要按「props 值相等就跳过 patch」，那会吞掉 <code>didUpdateWidget</code> 里的副作用。</li>
+          <li><strong>帧合并</strong>：<code>setState</code> 只标脏，宿主每帧统一 flush；<code>didUpdateWidget</code> 次数 ≈ 帧数，而不是通知数。</li>
+          <li><strong>性能建议</strong>：props 里不要放每次新建的不可比对象（随机 id / 时间戳 / 裸函数实例）；需要强制刷新时把变化体现在产出里（如 <code>salt</code> / <code>version</code>）。</li>
+        </ul>
+      </div>
+    </section>
+    <!-- ENGINEERING -->
+    <section id="engineering" class="doc-section" aria-labelledby="engineering-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>07.D / Engineering</div>
+        <h2 id="engineering-title">工程化能力：从产物到线上修复</h2>
+        <p>框架不仅翻译语法，还定义了补丁怎么发、怎么校验、怎么切换、怎么观测。以下能力在产品侧直接可用，不需要业务再包一层。</p>
+      </div>
+
+      <!-- ENG PATCH -->
+      <div class="cap-block" id="eng-patch">
+        <div class="cap-block-head">
+          <h3>01 · 补丁分发与版本切换</h3>
+          <span class="tag cyan">三种源 · 一个身份</span>
+        </div>
+        <p class="cap-intro"><code>JsUiWidget.jsAsset</code> 支持三种补丁源，加载后走同一套模块求值与身份版本逻辑。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:22%">补丁源</th><th>形式</th><th style="width:32%">说明 / 约束</th></tr></thead>
+            <tbody>
+              <tr><td>随包资源</td><td><code>assets/patch/...</code></td><td>目录 asset 声明不递归，需逐目录 / 逐文件声明</td></tr>
+              <tr><td>远程补丁包</td><td><code>http(s)://host/patch.zip?component=Name&amp;entry=path/to.js</code></td><td>下载解压后与 asset 同一加载逻辑；<code>component</code> 必填，<code>entry</code> 可选（不传按 component 反查）</td></tr>
+              <tr><td>已加载模块</td><td>同一 JS 运行时里的其它模块路径</td><td>模块注册表 <code>__modules</code> 是运行时全局的，模块只求值一次</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block" data-lang="dart">
+<pre><span class="t">JsUiWidget</span>(
+  <span class="c">// query 会被剥离；component 必须与入口模块注册的类名一致</span>
+  jsAsset: <span class="s">'http://127.0.0.1:8765/patch/patch.zip'</span>
+           <span class="s">'?component=HelloCard&amp;entry=components/hello_component.js'</span>,
+  props: <span class="k">const</span> {<span class="s">'title'</span>: <span class="s">'Hot patch'</span>},
+  showBuildTime: <span class="k">true</span>,  <span class="c">// 右上角显示补丁打包时间，不参与命中测试</span>
+)</pre>
+        </div>
+
+        <h4>manifest：补丁的身份证</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:22%">字段</th><th>作用</th></tr></thead>
+            <tbody>
+              <tr><td><code>name</code> / <code>version</code></td><td>业务信息，可被 <code>build.yaml</code> 的 <code>ui_patch_manifest</code> 选项覆盖</td></tr>
+              <tr><td><code>protocol</code></td><td>产物协议版本，取自生成器包版本；运行时拒绝<strong>主版本</strong>不匹配的包</td></tr>
+              <tr><td><code>buildTime</code></td><td>打包时间；身份版本的一部分，也用于调试角标</td></tr>
+              <tr><td><code>resources</code></td><td>每个 JS 资源的内容 hash；用于完整性校验与缓存</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>身份版本与页面级重载</h4>
+        <p>身份版本 = <code>version + buildTime + protocol</code>（任一字段变化都视为另一个包）。同进程内后续加载的包身份与内存不一致时，运行时清空已加载模块并重新求值 <code>runtime.js</code>；随后由活跃页注册表驱动页面级重载（详见 <a href="#protocol">协议、句柄与版本</a>）。</p>
+        <ul class="note-list">
+          <li><strong>同一进程同一身份</strong>：所有 <code>JsUiWidget</code> 必须指向同一补丁包；混用不同版本会明确报错，而不是反复切换运行时。</li>
+          <li><strong>页面隔离</strong>：运行时全局唯一，每个 <code>JsUiWidget</code> 用 <code>pageKey</code> 隔离自己的结点树 / provider / 订阅 / 脏队列；同屏多实例互不影响。</li>
+          <li><strong>模块表是全局的</strong>：任一远程包 fresh 会清空全部页面已加载的模块，因此两个页面不能依赖同一模块路径的不同版本。</li>
+        </ul>
+      </div>
+
+      <!-- ENG HOST -->
+      <div class="cap-block" id="eng-host">
+        <div class="cap-block-head">
+          <h3>02 · 宿主注入与原生组件</h3>
+          <span class="tag green">唯一出口</span>
+        </div>
+        <p class="cap-intro">JS 只能通过宿主方法触达原生能力；宿主方法只有一个注册入口。另有原生组件注入作为“不翻译也能量”的兜底。</p>
+
+        <h4><code>@HostInjected</code> 的边界</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:24%">主题</th><th>规则</th></tr></thead>
+            <tbody>
+              <tr><td>可用位置</td><td>静态方法或顶层函数。<strong>实例方法不生效</strong>（JS 侧 receiver 回不到宿主实例），私有声明跨库不可见</td></tr>
+              <tr><td>通道名</td><td><code>@HostInjected()</code> 缺省取方法名；<code>@HostInjected('name')</code> 显式指定</td></tr>
+              <tr><td>参数载荷</td><td>纯位置 → 数组；纯具名 → 对象；混合 → 对象 + <code>"@args"</code> 键装位置实参。宿主用 <code>Function.apply</code> 还原，省略参数走实现默认值</td></tr>
+              <tr><td>返回值</td><td>Promise，可 <code>await</code>；宿主抛错则异常抛回 JS 调用者；未注册通道也回填 <code>null</code>，不留悬空 Promise</td></tr>
+              <tr><td>JS 类形态</td><td>类照常产出同名 JS 类，被标注方法仍在；但宿主注入类在 JS 里只保留「类 + 被标注的方法」，字段 / 其它方法 / import 不产出</td></tr>
+              <tr><td>依赖扫描</td><td><code>@HostInjected</code> 方法体不参与引用扫描，只在其中用到的类型不会被连带翻译</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block" data-lang="dart">
+<pre><span class="k">class</span> <span class="t">Network</span> {
+  <span class="p">@HostInjected()</span>
+  <span class="k">static</span> <span class="t">Future</span>&lt;<span class="t">Map</span>&gt; post({
+    <span class="k">required</span> <span class="t">String</span> url,
+    <span class="k">dynamic</span> params,
+  }) <span class="k">async</span> =&gt; {<span class="s">'data'</span>: params, <span class="s">'code'</span>: <span class="n">200</span>};
+}
+
+<span class="c">// JS 调用点与 Dart 一比一：
+// Network.post(url: u, params: p)
+// → Network.post({ "url": u, "params": p })</span></pre>
+        </div>
+
+        <h4>原生组件注入</h4>
+        <p>标记 <code>@PatchIgnore</code> 的组件，或宿主没有 renderer 的类型，产物会保留具体类型名。业务在 <code>main()</code> 里全局注册一次原生实现即可：</p>
+        <div class="code-block" data-lang="dart">
+<pre>registerNativeComponent(
+  <span class="s">'_LabeledDivider'</span>,
+  (c) =&gt; <span class="t">LabeledDivider</span>(
+    text: c.str(<span class="s">'text'</span>) ?? <span class="s">''</span>,
+    child: c.children[<span class="s">'child'</span>] <span class="k">as</span> <span class="t">Widget</span>?,
+  ),
+);</pre>
+        </div>
+        <ul class="note-list">
+          <li>回调收到完整 <code>JsRenderContext</code>：<code>props</code>、<code>children</code> slot、<code>invoke</code>；可渲染子组件并把事件回传到 JS。</li>
+          <li>重复注册同名会覆盖（覆盖时告警），因此必须放在 <code>runApp</code> 之前，不要放进 <code>build()</code>。</li>
+          <li>值对象（<code>InputDecoration</code> / <code>BottomNavigationBarItem</code> / <code>DropdownMenuItem</code>）<strong>不需要注册</strong>；它们由父 renderer 就地还原。</li>
+        </ul>
+
+        <h4>框架内建通道</h4>
+        <div class="chips">
+          <span class="chip hot">log</span><span class="chip hot">nativeToast</span><span class="chip hot">jsuiCommit</span><span class="chip">jsuiEventResult</span>
+        </div>
+        <p class="subtle">内建通道在 <code>JsUiWidget</code> 启动时自动注册；业务只需注册自己的 <code>@HostInjected</code> 方法。<code>JsRuntimeManager.navigatorKey</code> 需传入 <code>MaterialApp.navigatorKey</code>，全局级服务（toast / 路由推页）靠它定位 Navigator 与 ScaffoldMessenger。</p>
+      </div>
+
+      <!-- ENG LOG -->
+      <div class="cap-block" id="eng-log">
+        <div class="cap-block-head">
+          <h3>03 · 日志、隔离与构建产物</h3>
+          <span class="tag amber">可观测</span>
+        </div>
+        <p class="cap-intro">所有输出走唯一出口 <code>HotPatchLog</code>。本地打印与上报彼此独立：注册一个 sink 即可接入日志平台，release 下依然可上报。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:15%">级别</th><th style="width:34%">用途</th><th>典型来源</th></tr></thead>
+            <tbody>
+              <tr><td><code>error</code></td><td>功能已失败</td><td>补丁加载失败（HTTP / zip / 入口缺失）、JS 求值失败、宿主方法调用失败、未注册的宿主 widget 类型</td></tr>
+              <tr><td><code>warn</code></td><td>可降级继续</td><td>远程包回退旧缓存、缓存损坏重下、泄漏残留、未注册通道 / op / Icons、provider 找不到提供者</td></tr>
+              <tr><td><code>info</code></td><td>链路信息（默认不上报）</td><td>模块加载汇总、304 复用、fresh 加载</td></tr>
+              <tr><td><code>debug</code></td><td>排查细节（默认不上报）</td><td>绑定缓存逐条 <code>[binding]</code> 明细</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block" data-lang="dart">
+<pre><span class="t">HotPatchLog</span>.sink = (r) =&gt; <span class="t">MyLogPlatform</span>.upload(
+      level: r.level.name,          <span class="c">// debug / info / warn / error</span>
+      message: r.message,
+      error: r.error,
+      stack: r.stackTrace,
+      time: r.time,
+    );
+
+<span class="t">HotPatchLog</span>.minSinkLevel = <span class="t">HotPatchLevel</span>.info; <span class="c">// 默认只上报 warn/error</span>
+<span class="t">HotPatchLog</span>.enabled = <span class="k">false</span>;                   <span class="c">// 只关本地打印，不影响上报</span></pre>
+        </div>
+        <ul class="note-list">
+          <li>Dart 的 <code>print</code> / <code>debugPrint</code> 在 JS 侧是一比一同名全局函数，桥回同一出口：<code>print</code> → <code>info</code>，<code>debugPrint</code> → <code>debug</code>（仅 kDebugMode 输出），宿主前缀 <code>[js-log] </code>。</li>
+          <li>sink 自身抛异常会被兜底吞掉，不会因为上传日志打断业务。</li>
+          <li>运行时自身（reconciler / 能力模块）的诊断日志走引擎自带的 <code>console</code>，不再经过 <code>HotPatchLog</code>。</li>
+        </ul>
+
+        <h4>构建产物与本地服务</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:30%">路径</th><th>内容</th></tr></thead>
+            <tbody>
+              <tr><td><code>patch/&lt;原路径&gt;.js</code></td><td>组件 / 模型产物，与 <code>lib/</code> 镜像</td></tr>
+              <tr><td><code>patch/flutter.js</code></td><td><code>__h</code>、<code>__asElement</code>、宿主包装类、值类、builder 代理</td></tr>
+              <tr><td><code>patch/runtime.js</code></td><td>mini-react、句柄表、各能力片段；一个文件，分区注释</td></tr>
+              <tr><td><code>patch/packages/&lt;package&gt;.js</code></td><td>宿主维护的三方 JS</td></tr>
+              <tr><td><code>patch/manifest.json</code> + <code>patch.zip</code></td><td>清单与热更分发包</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>本地服务提供两类路由：<code>GET /patch/&lt;相对路径&gt;</code> 返回产物；其余路径按 URL 读取 <code>tool/mock/&lt;路径&gt;.json</code>（新增接口只需放 json，无需改服务端）。默认地址 <code>http://127.0.0.1:8765/</code>，日志在 <code>/tmp/patch_server.log</code>。</p>
+      </div>
+    </section>
+    <!-- EXTENSIONS -->
+    <section id="extensions" class="doc-section" aria-labelledby="extensions-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>08 / Extending</div>
+        <h2 id="extensions-title">扩展点：只允许在这些位置做加法</h2>
+        <p>框架的稳定性来自「扩展点之外的代码不动」。新增能力优先走 <code>JsUiLibrary</code>；新增语法必须先补手册；新增组件先确认是翻译问题还是 renderer 问题。</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:26%">我想……</th><th style="width:38%">应该改哪里</th><th>不应该改哪里</th></tr></thead>
+          <tbody>
+            <tr><td>支持一个新的 Flutter widget</td><td>翻译路径本身通常无需 per-widget 代码；宿主 <code>JsWidgetRegistry</code> 或能力库注册 <code>type → renderer</code>；产物形态不同时调 <code>builderFormTypes</code> 等构建期表</td><td>mini-react、<code>JsUiWidget</code>、业务代码</td></tr>
+            <tr><td>新增 <code>.builder</code> / <code>.separated</code> 滚动容器</td><td><code>js_widget_defs.dart</code> 的 <code>builderFormTypes</code> 登记类型 + 宿主 renderer 按 <code>children.__items</code> / <code>itemCount</code> 还原</td><td>运行时类型白名单（不存在）、mini-react 核心</td></tr>
+            <tr><td>新增组件配置值对象</td><td>生成器 <code>style_values_js.dart</code> 写普通值类（构造 + <code>toJSON</code>，Widget 字段过 <code>__descriptorOf</code>）；宿主 renderer 读字段 JSON，用 <code>c.element(...)</code> 就地还原</td><td>运行时类型表、宿主包装类、reconciler</td></tr>
+            <tr><td>新增宿主能力（如新的 Controller）</td><td><code>capabilities/&lt;name&gt;/</code>：Dart 桥 + kind 描述符 + <code>JsUiLibrary</code> 子类；通用机制写进生成器运行时片段</td><td>runtime.js 骨架、句柄注册表核心</td></tr>
+            <tr><td>接入三方状态管理库</td><td>宿主 <code>js/&lt;package&gt;.js</code> 写 JS 类与运行期登记；构建自动拷贝；JS 内可闭环的 context 扩展不注册宿主 op</td><td>生成器库 / 类型白名单、<code>hot_patch</code> 核心、runtime.js</td></tr>
+            <tr><td>新增 Flutter SDK 顶层函数（如 <code>showDialog</code>）</td><td>生成器 <code>dialogs_js.dart</code> 一类片段里写 <code>export function</code>，随 <code>patch/flutter.js</code> 发布；翻译层自动识别为全局函数</td><td>runtime.js、翻译层方法名映射</td></tr>
+            <tr><td>JS 缺一个 Dart 标准库方法</td><td>运行时【1c】节向内建原型补同名同义方法（<code>defineProperty</code> + 不可枚举 + 存在性守卫）</td><td>生成器方法名映射、Dart 业务写法</td></tr>
+            <tr><td>新增纯原生组件</td><td>App <code>main()</code> 里 <code>registerNativeComponent(name, build)</code> 全局一次注册</td><td>生成器、JS 运行时</td></tr>
+            <tr><td>新增一条 Dart 语法</td><td><strong>先更新</strong> <code>Dart转JS语法翻译手册.html</code>，再新增翻译分支；只增不改，既有语法产物形态不变</td><td>不补手册直接写代码、按方法名白名单改写</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>变更分级：决定能不能动核心</h3>
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="card-num">L1 · 加能力</span>
+          <h4>只走扩展点，核心零改动</h4>
+          <p>默认且首选。新增能力库、注册 renderer、补宿主方法、加原生组件都属于这一级。</p>
+        </div>
+        <div class="card">
+          <span class="card-num">L2 · 加语法</span>
+          <h4>新增语法分支或产物模块</h4>
+          <p>既有语法产物不变，协议次版本只做加法；若替换旧实现，旧实现同步删除。</p>
+        </div>
+        <div class="card">
+          <span class="card-num">L3 · 改协议 / 老策略</span>
+          <h4>必须先沟通确认</h4>
+          <p>升主协议版本、给兼容或迁移方案、更新架构文档、删除被替换的旧路径。未确认前禁止。</p>
+        </div>
+      </div>
+
+      <h3>新增一个运行时能力</h3>
+      <ol>
+        <li>在 <code>packages/hot_patch/lib/src/js_ui/capabilities/</code> 新建目录，写 Dart 桥与 <code>JsUiLibrary</code> 子类。</li>
+        <li>在 <code>js_ui_library.dart</code> 的 <code>_seedBuiltins</code> 里加一行注册（外部库则让业务在 <code>main()</code> 调 <code>registerJsUiLibrary</code>）。</li>
+        <li>JS 片段写进生成器 <code>builders/runtime/js/</code>，随 <code>patch/runtime.js</code> 发布；若只是库自己的 API 面，放该库模块。</li>
+        <li>确认 <code>reconciler</code> / <code>JsUiWidget</code> / <code>disposeRoot</code> / 桥 / 句柄注册表<strong>零改动</strong>。</li>
+      </ol>
+      <p class="subtle">判据：这段 JS 若不认识任何具体库 / 具体 API 也成立 → <code>runtime.js</code>；否则归它的库模块。</p>
+
+      <h3>新增一个可翻译的 widget</h3>
+      <ol>
+        <li>先确认翻译路径是否已覆盖：构造实参、值形态、样式、事件、children 拆分都是通用的。</li>
+        <li>补宿主 renderer（<code>JsWidgetRegistry</code> 或能力库 <code>registerWidgets</code>），注册 key 必须与产物里的 type 字符串同名。</li>
+        <li>若子项组织方式不同（builder / separated / delegate / 懒容器），调整 <code>js_widget_defs.dart</code> 的构建期表。</li>
+        <li>若涉及新的值对象，在 <code>flutter.js</code> 值类区写普通类（构造 + <code>toJSON</code>），宿主用 <code>c.element(...)</code> 还原嵌套 Widget。</li>
+      </ol>
+
+      <div class="callout danger">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">扩展时不要做的事</span>
+          <p>不要发明手册未登记的产物形态 / 命名 / 辅助函数；不要按类名 / 方法名 / 属性名判断执行；不要对固定子组件属性名做特殊处理；不要静默丢弃或降级；不要手改 <code>patch/</code> 下的产物；不要新开 JS ↔ 宿主通道；不要为单个功能设计专用 runtime API。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIMITS -->
+    <section id="limits" class="doc-section" aria-labelledby="limits-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>09 / Known limits</div>
+        <h2 id="limits-title">已知限制：哪些事现在不做</h2>
+        <p>下面这些是明确的边界，不是“待发现的 bug”。未覆盖的写法在构建期或运行期出声，不做静默降级；需要时按建议改写。</p>
+      </div>
+
+      <h3>语言与语义</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:24%">限制</th><th>表现 / 原因</th><th style="width:26%">建议</th></tr></thead>
+          <tbody>
+            <tr><td>泛型擦除</td><td>运行时没有类型实参；<code>List&lt;int&gt;</code> 与 <code>List&lt;String&gt;</code> 只看承载类型。泛型 extension 的成员对所有该类型实例可见</td><td>需要类型身份时显式传 <code>typeArguments</code> 或自带标记</td></tr>
+            <tr><td>Record 结构相等</td><td>承载是普通对象，<code>==</code> 仍是同一性</td><td>逐字段比较或序列化</td></tr>
+            <tr><td>Map 键相等</td><td>JS <code>Map</code> 的 SameValueZero 语义，对象键按引用</td><td>用值键或显式 key 序列化</td></tr>
+            <tr><td>List 下标越界</td><td>越界读得到 <code>undefined</code>，不抛 <code>RangeError</code></td><td>需要校验时用 <code>elementAt</code></td></tr>
+            <tr><td>运算符重载</td><td>只有操作数静态类型可判定时才改写为成员调用；否则保持 JS 原生运算</td><td>给字段 / 形参 / 局部变量显式类型</td></tr>
+            <tr><td>跨库同名 extension</td><td>全局原型无法表达 import 可见性，隐式调用可能失效</td><td>使用显式 <code>E(x).m()</code></td></tr>
+            <tr><td><code>Symbol</code> / mirrors / <code>noSuchMethod</code></td><td>JS 没有同名语义，构建期告警并丢弃</td><td>改用字符串常量或显式分支</td></tr>
+            <tr><td>Isolate / 跨 isolate 通信</td><td>产物运行在单个 JS 引擎实例内，没有对应协议</td><td>用异步任务 / 宿主线程能力替代</td></tr>
+            <tr><td>增强枚举</td><td>带成员或构造实参的枚举告警跳过</td><td>用普通类 + 常量对象</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>组件与 API</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:24%">限制</th><th>说明</th><th style="width:26%">建议</th></tr></thead>
+          <tbody>
+            <tr><td>废弃 API</td><td>只做新 API：<code>Text.textScaleFactor</code>、<code>MaterialStatePropertyAll</code> 等不支持</td><td>改用 <code>TextScaler</code> / <code>WidgetStatePropertyAll</code></td></tr>
+            <tr><td><code>Image.memory</code></td><td>只支持 asset / network 静态路径，不支持动态字节</td><td>先落盘或用宿主通道加载</td></tr>
+            <tr><td>未支持的命令式弹层</td><td><code>showMenu</code>、<code>showSearch</code>、日期 / 时间选择器、<code>showAboutDialog</code>、<code>SnackBar</code></td><td>用已支持的 dialog / bottom sheet 组合</td></tr>
+            <tr><td><code>RadioGroup</code></td><td>Flutter 3.32+ 的成组 API 暂不支持；旧 <code>Radio</code> 可用</td><td>使用旧 API 或自定义组合</td></tr>
+            <tr><td><code>Container.transform</code> / <code>Transform.rotate/scale</code></td><td>只支持 <code>Transform.translate</code></td><td>用 <code>RotatedBox</code> / <code>Transform.translate</code> 替代</td></tr>
+            <tr><td><code>Positioned</code> 工厂</td><td><code>directional</code> / <code>fromRect</code> / <code>fromRelativeRect</code> 不支持</td><td>用四边参数显式定位</td></tr>
+            <tr><td><code>DragTarget.onWillAccept*</code></td><td>需要同步返回 bool，跨语言只能异步；目标恒接受，JS 侧会告警</td><td>在 <code>onAccept</code> 里做校验与回滚</td></tr>
+            <tr><td>部分组件细粒度参数</td><td><code>Tooltip.triggerMode</code> / <code>richMessage</code>、<code>InteractiveViewer</code> 的 <code>transformationController</code> / <code>panAxis</code> 等、<code>CachedNetworkImage</code> 的 placeholder / 缓存策略、<code>EasyRefresh</code> 指示器样式</td><td>使用组件默认行为，或由宿主能力扩展</td></tr>
+            <tr><td>样式中的数字</td><td><code>TextStyle</code> / <code>EdgeInsets</code> / <code>BoxConstraints</code> 等结构化样式内部仍以字面量为主</td><td>把计算提前到普通 props 或字段</td></tr>
+            <tr><td><code>TextStyle(color:)</code></td><td>只支持色板 / <code>Color(0x...)</code> / 顶层常量 / 三目 / 跨文件静态单例；局部变量或任意表达式会被丢弃（构建期告警）</td><td>用已支持的写法，或把颜色放常量</td></tr>
+            <tr><td>主题取值</td><td><code>Theme.of(context).textTheme.xxx</code> 尚未支持，运行时无 ThemeData 镜像</td><td>显式写 <code>TextStyle</code></td></tr>
+            <tr><td>跨包产物边界</td><td>本地依赖包中未被引用到的类不产出；顶层常量与静态单例类产物未覆盖（构建期出声）</td><td>把共享常量放组件可达的类，或由宿主注入</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>运行时与平台</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:24%">限制</th><th>说明</th><th style="width:26%">建议</th></tr></thead>
+          <tbody>
+            <tr><td>引擎 API 基线</td><td>iOS 15+ JSC / Android QuickJS；禁止 <code>Object.hasOwn</code>、<code>.at</code>、<code>findLast</code>、static block、top-level await、<code>structuredClone</code>、<code>WeakRef</code> 等</td><td>用 ES2020 写法或在运行时补同名实现</td></tr>
+            <tr><td><code>CustomPainter.repaint</code></td><td><code>Listenable</code> 重绘暂不支持；组件重建才重新录制</td><td>用 <code>setState</code> 触发重建</td></tr>
+            <tr><td><code>TextPainter</code> 同步测量</td><td><code>width</code> / <code>height</code> / <code>size</code> 需要同步测量，JS 侧访问即抛错</td><td>用已知常量算偏移</td></tr>
+            <tr><td>弹层 root 与版本切换</td><td>命令式弹层的独立 root 不在活跃页注册表内；版本切换时若弹层仍打开，内容会随旧运行时失效</td><td>切换前关闭弹层，或后续把弹层纳入代次机制</td></tr>
+            <tr><td>模块表全局</td><td>任一远程包 fresh 会清空所有页面已加载模块；两个页面不能依赖同一模块路径的不同版本</td><td>统一补丁包与模块版本</td></tr>
+            <tr><td>懒 item 的 State 生命周期</td><td>滚出缓存会 <code>dispose</code>，滚回来是新实例、<code>initState</code> 重跑</td><td>跨滚动数据放父组件 / 模型层；不要用保活替代数据分层</td></tr>
+            <tr><td>占位结点</td><td>未注册 renderer 时 debug 显示红底占位；release 下降为零尺寸并上报 error</td><td>补 renderer 或 <code>registerNativeComponent</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 9v5M12 17.2v.1"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">限制的处理原则</span>
+          <p>未支持项必须出声：构建期告警、运行期 <code>HotPatchLog.error</code>、或 debug 可见占位。占位是诊断兜底，不是长期方案；需要某个能力时优先补正式翻译分支 / renderer / 能力库，而不是在业务里绕过。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILES -->
+    <section id="files" class="doc-section" aria-labelledby="files-title">
+      <div class="section-head">
+        <div class="section-kicker"><span class="line"></span>10 / Reference</div>
+        <h2 id="files-title">关键文件索引</h2>
+        <p>想继续读源码，从这些入口开始。路径相对于仓库根目录。</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:24%">主题</th><th>位置</th></tr></thead>
+          <tbody>
+            <tr><td>架构基线</td><td><span class="file-path">docs/项目架构文档.md</span> · <span class="file-path">docs/组件支持文档.md</span> · <span class="file-path">dart2js-syntax-reference/Dart转JS语法翻译手册.html</span></td></tr>
+            <tr><td>接入指南</td><td><span class="file-path">docs/使用手册.md</span></td></tr>
+            <tr><td>宿主入口 / 生命周期</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/js_ui_widget.dart</span></td></tr>
+            <tr><td>type → widget 映射</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/js_widget_registry.dart</span></td></tr>
+            <tr><td>增量 patch 应用</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/js_ui_store.dart</span></td></tr>
+            <tr><td>能力聚合 / 模板</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/capabilities/js_ui_capabilities.dart</span> · <span class="file-path">.../js_ui_library.dart</span></td></tr>
+            <tr><td>跨语言句柄注册表</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/capabilities/core/handle_registry.dart</span></td></tr>
+            <tr><td>运行时引擎 / 补丁加载</td><td><span class="file-path">packages/hot_patch/lib/src/services/js_runtime_manager.dart</span></td></tr>
+            <tr><td>翻译唯一入口</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/patch_entry/analysis/analyze_dart_class.dart</span></td></tr>
+            <tr><td>组件产物组装</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/patch_entry/component_builder.dart</span></td></tr>
+            <tr><td>widget 统一翻译</td><td><span class="file-path">.../translator/element_json.dart</span> · <span class="file-path">.../translator/value_forms.dart</span> · <span class="file-path">.../translator/style_translators.dart</span></td></tr>
+            <tr><td>语言层翻译</td><td><span class="file-path">.../translator/js_translator.dart</span> · <span class="file-path">.../translator/dart2js.dart</span></td></tr>
+            <tr><td>构建期登记表</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/shared/js_class_defs.dart</span> · <span class="file-path">.../shared/ctor_signatures.dart</span></td></tr>
+            <tr><td>JS 运行时骨架</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/runtime/js/runtime_js.dart</span></td></tr>
+            <tr><td>mini-react</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/runtime/js/mini_react_js.dart</span></td></tr>
+            <tr><td>Flutter SDK 面子层</td><td><span class="file-path">.../runtime/js/dialogs_js.dart</span> · <span class="file-path">.../runtime/js/navigator_js.dart</span> · <span class="file-path">.../runtime/js/canvas_js.dart</span></td></tr>
+            <tr><td>builder 入口 / 配置</td><td><span class="file-path">packages/hot_patch_generator/lib/builder.dart</span> · <span class="file-path">packages/hot_patch_generator/build.yaml</span></td></tr>
+            <tr><td>示例 App 源码 / 产物</td><td><span class="file-path">example/lib/</span> · <span class="file-path">example/patch/</span></td></tr>
+            <tr><td>三方库 JS 示例</td><td><span class="file-path">example/js/provider.js</span></td></tr>
+            <tr><td>本地补丁服务</td><td><span class="file-path">tool/patch_server.dart</span> · <span class="file-path">start_patch_server.sh</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>建议的阅读顺序</h3>
+      <div class="steps">
+        <div class="step"><span class="step-no">READ 01</span><b>先跑起来</b><p>按快速开始跑通示例，观察原生 vs JS 热更的同屏对比。</p></div>
+        <div class="step"><span class="step-no">READ 02</span><b>看架构</b><p>读《项目架构文档》的五条定律与分层，建立边界感。</p></div>
+        <div class="step"><span class="step-no">READ 03</span><b>看翻译</b><p>从 <code>analyze_dart_class</code> → <code>element_json</code> 跟一条 build 树。</p></div>
+        <div class="step"><span class="step-no">READ 04</span><b>再扩展</b><p>按 <code>JsUiLibrary</code> 模板加一个能力，确认核心零改动。</p></div>
+      </div>
+
+      <div class="callout ok">
+        <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span>
+        <div class="callout-body">
+          <span class="callout-title">文档与代码同步</span>
+          <p>改组件属性时，同步更新生成侧的 <code>widget_json.dart</code> / <code>value_forms.dart</code> / <code>style_translators.dart</code> 与运行侧的 <code>flutter_from_json.dart</code> / <code>js_widget_registry.dart</code>。涉及语法翻译时，手册未更新视为未完成。</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>
+        <b>flutter_hot_patch</b> · 注解组件 → JS 热更<br>
+        文档基于仓库 <code>bd8238a</code> · protocol 0.13.0 · MIT License
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/JDongKhan/flutter_hot_patch" target="_blank" rel="noopener">GitHub</a>
+        <a href="#home">回到顶部</a>
+        <a href="#limits">已知限制</a>
+        <a href="#files">文件索引</a>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<button class="back-top" id="backTop" aria-label="回到顶部">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+
+<script>
+(function(){
+  'use strict';
+  var root = document.documentElement;
+  root.classList.add('js');
+
+  /* ---------- Theme ---------- */
+  var themeBtn = document.getElementById('themeBtn');
+  var stored = null;
+  try { stored = localStorage.getItem('hp-theme'); } catch (e) {}
+  if (stored === 'dark' || stored === 'light') {
+    root.setAttribute('data-theme', stored);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    root.setAttribute('data-theme', 'dark');
+  }
+  var metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute('content', root.getAttribute('data-theme') === 'dark' ? '#0f1115' : '#f6f5f2');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function(){
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', next === 'dark' ? '#0f1115' : '#f6f5f2');
+      try { localStorage.setItem('hp-theme', next); } catch (e) {}
+    });
+  }
+
+  /* ---------- Mobile sidebar ---------- */
+  var sidebar = document.getElementById('sidebar');
+  var scrim = document.getElementById('scrim');
+  var menuBtn = document.getElementById('menuBtn');
+  function closeMenu(){
+    if (!sidebar) return;
+    sidebar.classList.remove('open');
+    if (scrim) scrim.classList.remove('show');
+    if (menuBtn) menuBtn.setAttribute('aria-expanded','false');
+    document.body.classList.remove('menu-open');
+  }
+  if (menuBtn) {
+    menuBtn.addEventListener('click', function(){
+      var open = sidebar.classList.toggle('open');
+      if (scrim) scrim.classList.toggle('show', open);
+      menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      document.body.classList.toggle('menu-open', open);
+    });
+  }
+  if (scrim) scrim.addEventListener('click', closeMenu);
+
+  /* ---------- Nav filter ---------- */
+  var filter = document.getElementById('navFilter');
+  var groups = Array.prototype.slice.call(document.querySelectorAll('#toc .nav-group'));
+  function applyFilter(){
+    var q = (filter && filter.value || '').trim().toLowerCase();
+    groups.forEach(function(group){
+      var label = group.querySelector('.nav-label');
+      var labelText = label ? label.textContent.toLowerCase() : '';
+      var groupHit = q && labelText.indexOf(q) !== -1;
+      var any = false;
+      group.querySelectorAll('a').forEach(function(a){
+        var hit = !q || groupHit || a.textContent.toLowerCase().indexOf(q) !== -1;
+        a.style.display = hit ? '' : 'none';
+        if (hit) any = true;
+      });
+      group.style.display = (any || !q) ? '' : 'none';
+    });
+  }
+  if (filter) {
+    filter.addEventListener('input', applyFilter);
+    filter.addEventListener('keydown', function(e){
+      if (e.key === 'Escape') {
+        filter.value = '';
+        applyFilter();
+        filter.blur();
+      }
+    });
+  }
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeMenu();
+    if (e.key === '/' && document.activeElement !== filter &&
+        !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) {
+      e.preventDefault();
+      if (filter) filter.focus();
+    }
+  });
+
+  /* ---------- Active nav ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a.nav-link'));
+  var linkMap = {};
+  links.forEach(function(a){
+    var id = a.getAttribute('href').slice(1);
+    if (!linkMap[id]) linkMap[id] = [];
+    linkMap[id].push(a);
+  });
+  var sections = Array.prototype.slice.call(document.querySelectorAll('section[id], .cap-block[id]'));
+  var positions = [];
+  function measure(){
+    positions = sections.map(function(s){
+      return { id: s.id, top: s.getBoundingClientRect().top + window.pageYOffset };
+    });
+  }
+  var currentId = '';
+  function setActive(id){
+    if (id === currentId) return;
+    currentId = id;
+    links.forEach(function(a){ a.classList.remove('active'); a.removeAttribute('aria-current'); });
+    var targets = linkMap[id];
+    if (targets) {
+      targets.forEach(function(a){ a.classList.add('active'); a.setAttribute('aria-current','true'); });
+      var active = targets[0];
+      var toc = document.getElementById('toc');
+      if (toc) {
+        var tocRect = toc.getBoundingClientRect();
+        var aRect = active.getBoundingClientRect();
+        var topInToc = aRect.top - tocRect.top + toc.scrollTop;
+        if (aRect.top < tocRect.top + 14 || aRect.bottom > tocRect.bottom - 14) {
+          toc.scrollTop = topInToc - toc.clientHeight / 2 + active.offsetHeight / 2;
+        }
+      }
+    }
+  }
+  function updateActive(){
+    var pos = window.pageYOffset + 150;
+    var id = sections.length ? sections[0].id : '';
+    for (var i = 0; i < positions.length; i++) {
+      if (positions[i].top <= pos) id = positions[i].id;
+    }
+    if ((window.innerHeight + window.pageYOffset) >= document.documentElement.scrollHeight - 4) {
+      id = sections.length ? sections[sections.length - 1].id : id;
+    }
+    setActive(id);
+  }
+  var progressBar = document.getElementById('progressBar');
+  var backTop = document.getElementById('backTop');
+  var ticking = false;
+  function onScroll(){
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){
+      updateActive();
+      var doc = document.documentElement;
+      var max = doc.scrollHeight - window.innerHeight;
+      var p = max > 0 ? Math.min(1, Math.max(0, window.pageYOffset / max)) : 0;
+      if (progressBar) progressBar.style.transform = 'scaleX(' + p + ')';
+      if (backTop) backTop.classList.toggle('show', window.pageYOffset > 700);
+      ticking = false;
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', function(){
+    if (window.innerWidth > 1100) closeMenu();
+    measure();
+    onScroll();
+  });
+  measure();
+  setTimeout(function(){ measure(); onScroll(); }, 200);
+
+  /* ---------- Smooth close on nav click (mobile) ---------- */
+  document.querySelectorAll('#toc a').forEach(function(a){
+    a.addEventListener('click', function(){
+      if (window.innerWidth <= 1100) closeMenu();
+    });
+  });
+
+  /* ---------- Back to top ---------- */
+  if (backTop) {
+    backTop.addEventListener('click', function(){
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  /* ---------- Code blocks: language bar + copy ---------- */
+  document.querySelectorAll('.code-block').forEach(function(block){
+    var pre = block.querySelector('pre');
+    if (!pre) return;
+    var lang = block.getAttribute('data-lang') || 'code';
+    var bar = document.createElement('div');
+    bar.className = 'code-bar';
+    var label = document.createElement('span');
+    label.className = 'code-lang';
+    label.textContent = lang;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'code-copy';
+    btn.textContent = '复制';
+    btn.setAttribute('aria-label', '复制代码');
+    bar.appendChild(label);
+    bar.appendChild(btn);
+    block.insertBefore(bar, pre);
+    btn.addEventListener('click', function(){
+      var text = pre.innerText;
+      function done(){
+        btn.textContent = '已复制';
+        setTimeout(function(){ btn.textContent = '复制'; }, 1500);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else {
+        fallback();
+      }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+
+  /* ---------- Reveal on scroll ---------- */
+  var revealEls = Array.prototype.slice.call(document.querySelectorAll('.card, .cap-block, .step'));
+  if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    revealEls.forEach(function(el){ el.classList.add('reveal'); });
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
+    revealEls.forEach(function(el){ io.observe(el); });
+  }
+})();
+</script>
+</body>
+</html>
