@@ -85,6 +85,15 @@ class ComponentBuilder implements Builder {
     // 登记行号信息：本文件产出的告警 / 报错按 AST 结点定位到 `文件:行 | 源码行`。
     registerSource(inputId.path, source, parsed.lineInfo);
 
+    // part 文件：声明与库根共享命名空间，产物统一写在**库根**产物里；
+    // 本输入**不写产物**——`patch/<part>.js` 只是 buildExtensions 声明的
+    // 「潜在输出」，不写就不会落盘，避免 patch/ 下出现空的同路径 JS。
+    final libraryRoot = libraryRootPathOf(parsed.unit, inputId.path);
+    if (libraryRoot != inputId.path) return;
+    // 本库的翻译单元：根文件 + 全部 part（根在前）。
+    final libraryUnits = libraryUnitsOf(parsed.unit, inputId.path);
+    final libraryPaths = {for (final e in libraryUnits) e.$1};
+
     // 组件名 → 依赖产物 jsAsset 路径。规则：
     //   本文件类（注解组件 / public 或私有 widget 类）→ 本文件产物（同产物注册）；
     //   @PatchIgnore(isComponent: true) → 声明它的源文件产物（包装类在那里生成）；
@@ -94,14 +103,20 @@ class ComponentBuilder implements Builder {
     // （提前于根类收集构造：translateClass 内部翻译 Component
     //   节点时即会调用 importResolver，闭包必须已初始化）
     final parsedNames = <String>{
-      for (final d in parsed.unit.declarations)
-        if (d is ClassDeclaration) d.name.lexeme,
+      for (final e in libraryUnits)
+        for (final d in e.$2.declarations)
+          if (d is ClassDeclaration) d.name.lexeme,
     };
     // 本文件可见的「整类忽略」类（`@PatchIgnore` 且 isComponent 非 true）：
     // 使用方引用它们的结点直接丢弃（不产出半截代码）。
     final ignoredTypes = ignoredClassNamesInScope(parsed.unit, inputId.path);
-    // 本文件声明的 `@PatchIgnore(isComponent: true)` 类：在本产物末尾生成包装类。
-    final wrapperClasses = ignoredComponentClassNames(parsed.unit).toList();
+    // 本库声明的 `@PatchIgnore(isComponent: true)` 类：在本产物末尾生成包装类。
+    final wrapperClasses =
+        ignoredComponentClassNames(parsed.unit, inputId.path).toList();
+    final wrapperSet = wrapperClasses.toSet();
+    // `importResolver` / `productOf` 里的「整类忽略」判定（同库含 part）。
+    bool isWholeIgnored(String name) =>
+        ignoredTypes.contains(name) && !wrapperSet.contains(name);
     // 产物采用**相对路径**（相对当前产物所在目录，如 'bar_component.js'）：
     // 未来 JS 产物整体发布（CDN / 包内迁移）时，主产物与依赖产物的相对关系
     // 不变，运行时按当前 jsAsset 的目录解析即可，绝对路径会随部署位置失效。
@@ -137,10 +152,7 @@ class ComponentBuilder implements Builder {
     String? importResolver(String name) {
       // `@PatchIgnore(isComponent: true)` 的包装类就在**声明它的源文件产物**里；
       // 其余的 @PatchIgnore（isComponent 非 true）整类不翻译 → null。
-      if (isIgnoredClass(parsed.unit, name) &&
-          !isIgnoredComponentType(parsed.unit, name)) {
-        return null;
-      }
+      if (isWholeIgnored(name)) return null;
       if (parsedNames.contains(name)) return ownName;
       final abs = importProducts[name];
       if (abs != null) return relativeProduct(ownProduct, abs);
@@ -149,7 +161,9 @@ class ComponentBuilder implements Builder {
       // 其声明文件的产物。判据与「有产物」同口径：公共 widget 类 / @PatchEntry
       // 打 isComponent 标记；@PatchIgnore 不进类表或被上面拦掉。
       final info = classTable[name];
-      if (info != null && info.isComponent && info.sourceFile != inputId.path) {
+      if (info != null &&
+          info.isComponent &&
+          !sameLibrary(info.sourceFile, inputId.path)) {
         return relativeProduct(ownProduct, productPath(info.sourceFile));
       }
       return null;
@@ -158,10 +172,7 @@ class ComponentBuilder implements Builder {
     // 类名 → **产物身份**（`patch/a/b.js`）：扩展注册要判断目标是「本产物内」
     // 还是「另一个产物」（同产物内传裸类名，跨产物才 import）。
     String? productOf(String name) {
-      if (isIgnoredClass(parsed.unit, name) &&
-          !isIgnoredComponentType(parsed.unit, name)) {
-        return null;
-      }
+      if (isWholeIgnored(name)) return null;
       if (parsedNames.contains(name)) return ownProduct;
       return importProducts[name];
     }
@@ -177,54 +188,80 @@ class ComponentBuilder implements Builder {
     //     宿主方法体里 `new` 出来的详情页不翻译（依赖链在宿主方法体处断掉）。
     //     @PatchIgnore 亦不翻译。
     final roots = <(ClassDeclaration, bool)>[];
+    // 根类声明 → (声明单元, 声明文件)：part 里的类按自己的单元翻译，
+    // 但产物统一落在库根（同库一个模块）。
+    final declUnits = <ClassDeclaration, (CompilationUnit, String)>{};
+    final declByName = <String, (ClassDeclaration, CompilationUnit, String)>{};
+    final mixinUnitOf = <MixinDeclaration, (CompilationUnit, String)>{};
     // 无 @PatchEntry 的文件才需要翻译范围（含顶层常量的被引用判定）；
     // 纯数据文件分支在这一分支之外，故在此提前声明。
     TranslationScope? scope;
-    // 本文件是否声明了 `extension`：纯扩展文件没有根类，但也必须产出产物
-    // （`registerExtension(...)` 注册语句就写在声明处），故「无根类 → 不产出」的
-    // 早返回要让它让位。是否产出仍由**文件级可达**决定（component_scope 把声明
-    // 扩展的文件视为有产出，因此被 import 的扩展文件一定可达；没人 import 的
-    // 扩展文件在 JS 侧永远不会被加载，不产出）。
-    final hasExtensions = hasExtensionDeclaration(parsed.unit);
+    // 本库是否声明了 `extension`：纯扩展文件没有根类，但也必须产出产物。
+    final hasExtensions = hasExtensionDeclaration(parsed.unit, inputId.path);
     final unitMixins = [
-      for (final d in parsed.unit.declarations.whereType<MixinDeclaration>()) d,
+      for (final e in libraryUnits)
+        ...e.$2.declarations.whereType<MixinDeclaration>(),
     ];
     // 本文件要产出的 mixin（原文件路径产物）：根文件产出全部；非根文件只产出
     // scope 标记为「被 with 引用」的那些（与类同一套符号级判据）。
     final mixinDecls = <MixinDeclaration>[];
-    final annotated = <ClassDeclaration>[
-      for (final d in parsed.unit.declarations.whereType<ClassDeclaration>())
-        if (findAnnotation(d.metadata, 'PatchEntry') != null) d,
+    final annotated = <(ClassDeclaration, CompilationUnit)>[
+      for (final e in libraryUnits)
+        for (final d in e.$2.declarations.whereType<ClassDeclaration>())
+          if (findAnnotation(d.metadata, 'PatchEntry') != null) (d, e.$2),
     ];
+    // 同库多个文件的 needed 集合合并到库根产物。
+    Set<String> unionFor(Map<String, Set<String>> byFile) {
+      final out = <String>{};
+      for (final p in libraryPaths) {
+        final v = byFile[p];
+        if (v != null) out.addAll(v);
+      }
+      return out;
+    }
+
     if (annotated.isNotEmpty) {
-      roots.addAll([for (final d in annotated) (d, true)]);
+      roots.addAll([for (final e in annotated) (e.$1, true)]);
       // `mixin class` 既是类也是 mixin：根文件里被 with 引用的 mixin class 必须
       // 作为普通类产出（它自己的原文件产物），否则消费者 import 不到。
-      for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
-        if (d.mixinKeyword == null) continue;
-        if (roots.any((e) => identical(e.$1, d))) continue;
-        roots.add((d, false));
+      for (final e in libraryUnits) {
+        for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
+          if (d.mixinKeyword == null) continue;
+          if (roots.any((r) => identical(r.$1, d))) continue;
+          roots.add((d, false));
+        }
       }
       mixinDecls.addAll(unitMixins);
     } else {
       scope = await componentTranslationScope(buildStep);
-      if (!scope.reachableFiles.contains(inputId.path)) return;
-      final neededHere = scope.neededClasses[inputId.path] ?? const <String>{};
-      for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
-        final name = d.name.lexeme;
-        if (name.startsWith('_')) continue;
-        if (!neededHere.contains(name)) continue;
-        if (isIgnoredClass(parsed.unit, name)) continue;
-        final info = classTable[name];
-        if (info == null) continue;
-        // isComponent=true → 组件根类（build 树 / export class）；
-        // false → 普通类根类（模型，export class）。
-        // 抽象类只能作为模型根类产出（它没有 build，也不会是 @PatchEntry 组件）：
-        // 被具体类 extends 时，父类产物必须存在才能 `import` / `extends`。
-        roots.add((d, d.abstractKeyword == null && info.isComponent));
+      if (!libraryPaths.any(scope.reachableFiles.contains)) return;
+      final neededHere = unionFor(scope.neededClasses);
+      for (final e in libraryUnits) {
+        for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
+          final name = d.name.lexeme;
+          if (name.startsWith('_')) continue;
+          if (!neededHere.contains(name)) continue;
+          if (ignoredTypes.contains(name)) continue;
+          final info = classTable[name];
+          if (info == null) continue;
+          // isComponent=true → 组件根类（build 树 / export class）；
+          // false → 普通类根类（模型，export class）。
+          // 抽象类只能作为模型根类产出（它没有 build，也不会是 @PatchEntry 组件）：
+          // 被具体类 extends 时，父类产物必须存在才能 `import` / `extends`。
+          roots.add((d, d.abstractKeyword == null && info.isComponent));
+        }
       }
       for (final d in unitMixins) {
         if (neededHere.contains(d.name.lexeme)) mixinDecls.add(d);
+      }
+    }
+    for (final e in libraryUnits) {
+      for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
+        declUnits[d] = (e.$2, e.$1);
+        declByName.putIfAbsent(d.name.lexeme, () => (d, e.$2, e.$1));
+      }
+      for (final d in e.$2.declarations.whereType<MixinDeclaration>()) {
+        mixinUnitOf[d] = (e.$2, e.$1);
       }
     }
     // 没有根类但有 `@PatchIgnore(isComponent: true)` 包装类：仍按常规路径产出
@@ -240,10 +277,8 @@ class ComponentBuilder implements Builder {
       // 只写**被其它产物引用到**的常量（scope.neededConsts，与类同一套符号级
       // 判据）：没人引用的数据文件不产出空壳产物（如 main.dart 里只被同文件
       // 宿主代码使用的私有常量）。
-      final neededConsts =
-          scope!.neededConsts[inputId.path] ?? const <String>{};
-      final neededFunctions =
-          scope.neededFunctions[inputId.path] ?? const <String>{};
+      final neededConsts = unionFor(scope!.neededConsts);
+      final neededFunctions = unionFor(scope.neededFunctions);
       if (neededConsts.isEmpty && neededFunctions.isEmpty) return;
       final constResolver = buildTopLevelConstResolver(
         parsed.unit,
@@ -261,7 +296,8 @@ class ComponentBuilder implements Builder {
       // 跨文件依赖只按**实际写入产物**的常量计算：未被引用的常量不写，
       // 它依赖的产物也不会产出，按全文件扫描会 import 到不存在的模块。
       final usedNames = {
-        ...referencedImportedConsts(parsed.unit, constResolver),
+        ...referencedImportedConstsIn(
+            libraryUnits.map((e) => e.$2), constResolver),
         ...neededFunctions,
       };
       _addConstImports(importByFile, constResolver,
@@ -285,15 +321,14 @@ class ComponentBuilder implements Builder {
     // 顶层函数 / 常量按符号级引用过滤：根文件（@PatchEntry，scope 为 null）
     // 直接发射本文件全部；非根文件只发射 scope 标记的项。
     final allFunctionNames = <String>{
-      for (final d in parsed.unit.declarations.whereType<FunctionDeclaration>())
-        if (d.name.lexeme != 'main') d.name.lexeme,
+      for (final e in libraryUnits)
+        for (final d in e.$2.declarations.whereType<FunctionDeclaration>())
+          if (d.name.lexeme != 'main') d.name.lexeme,
     };
-    final neededFunctions = scope == null
-        ? allFunctionNames
-        : (scope.neededFunctions[inputId.path] ?? const <String>{});
-    final neededConsts = scope == null
-        ? null
-        : (scope.neededConsts[inputId.path] ?? const <String>{});
+    final neededFunctions =
+        scope == null ? allFunctionNames : unionFor(scope.neededFunctions);
+    final neededConsts =
+        scope == null ? null : unionFor(scope.neededConsts);
     final constResolver = buildTopLevelConstResolver(
       parsed.unit,
       inputId.path,
@@ -306,10 +341,11 @@ class ComponentBuilder implements Builder {
     // 全部在 translateClass 内部完成，builder 只决定「以组件身份还是普通类身份」。
     final exportedClasses = <ClassInfo>[];
     for (final (decl, isComponent) in roots) {
+      final source = declUnits[decl] ?? (parsed.unit, inputId.path);
       exportedClasses.add(translateClass(
         decl,
-        parsed.unit,
-        inputId.path,
+        source.$1,
+        source.$2,
         classTable: classTable,
         importResolver: importResolver,
         jsClassWidgets: jsClassWidgetTypes,
@@ -326,10 +362,11 @@ class ComponentBuilder implements Builder {
     // 纯 mixin：按声明所在文件产出独立类（`export class M { … }`），供 with 的
     // 消费者产物 import + `__mixinHard` 应用。
     for (final d in mixinDecls) {
+      final source = mixinUnitOf[d] ?? (parsed.unit, inputId.path);
       exportedClasses.add(translateMixin(
         d,
-        parsed.unit,
-        inputId.path,
+        source.$1,
+        source.$2,
         classTable: classTable,
         importResolver: importResolver,
         jsClassWidgets: jsClassWidgetTypes,
@@ -345,25 +382,27 @@ class ComponentBuilder implements Builder {
     // 本文件声明的 `extension`：注册语句**写在声明处**（该文件自身的产物里），
     // 调用点与 Dart 一对一（成员由运行时装到目标类型原型上）。
     final extensions = <ExtensionInfo>[];
-    for (final decl in extensionDeclarations(parsed.unit)) {
-      final info = translateExtension(
-        decl,
-        parsed.unit,
-        inputId.path,
-        ownProduct: ownProduct,
-        classTable: classTable,
-        importResolver: importResolver,
-        productOf: productOf,
-        jsClassWidgets: jsClassWidgetTypes,
-        delegateClassWidgets: builderFormTypes,
-        ignoredTypes: ignoredTypes,
-        globalConsts: globalConsts,
-        classNamesInUnit: parsedNames,
-        prefixProducts: prefixProducts,
-        extensionOperators: extensionOperators,
-        extensionNames: extensionNames,
-      );
-      if (info != null) extensions.add(info);
+    for (final e in libraryUnits) {
+      for (final decl in e.$2.declarations.whereType<ExtensionDeclaration>()) {
+        final info = translateExtension(
+          decl,
+          e.$2,
+          e.$1,
+          ownProduct: ownProduct,
+          classTable: classTable,
+          importResolver: importResolver,
+          productOf: productOf,
+          jsClassWidgets: jsClassWidgetTypes,
+          delegateClassWidgets: builderFormTypes,
+          ignoredTypes: ignoredTypes,
+          globalConsts: globalConsts,
+          classNamesInUnit: parsedNames,
+          prefixProducts: prefixProducts,
+          extensionOperators: extensionOperators,
+          extensionNames: extensionNames,
+        );
+        if (info != null) extensions.add(info);
+      }
     }
 
     // 按依赖关系递归：从根类的 dependencies 做 BFS（组件与普通类同一套）——
@@ -387,14 +426,14 @@ class ComponentBuilder implements Builder {
       doneDeps.add(dep);
       if (!parsedNames.contains(dep)) continue; // 跨文件 → import 阶段处理
       // `@PatchIgnore(isComponent: true)`：类不翻译，产物里是包装类（上面已生成）。
-      if (isIgnoredComponentType(parsed.unit, dep)) continue;
+      if (wrapperSet.contains(dep)) continue;
       if (exportedClasses.any((c) => c.name == dep) ||
           inlineClasses.containsKey(dep)) {
         continue;
       }
-      final decl = parsed.unit.declarations
-          .whereType<ClassDeclaration>()
-          .firstWhere((d) => d.name.lexeme == dep);
+      final hit = declByName[dep];
+      if (hit == null) continue;
+      final (decl, declUnit, declPath) = hit;
       final tableInfo = classTable[dep];
       // 类表只收公共类，私有依赖不在表里 → 按源码事实（extends 链 / 注解）判定，
       // 而不是按 `_` 前缀：私有但非 widget 的类（`_XxxPainter extends CustomPainter`、
@@ -407,8 +446,8 @@ class ComponentBuilder implements Builder {
       }
       final translated = translateClass(
         decl,
-        parsed.unit,
-        inputId.path,
+        declUnit,
+        declPath,
         classTable: classTable,
         importResolver: importResolver,
         jsClassWidgets: jsClassWidgetTypes,
@@ -441,7 +480,9 @@ class ComponentBuilder implements Builder {
       for (final name in deps) {
         final model = classTable[name];
         if (model == null || model.isComponent) continue;
-        if (model.sourceFile != inputId.path) crossModels[name] = model;
+        if (!sameLibrary(model.sourceFile, inputId.path)) {
+          crossModels[name] = model;
+        }
       }
     }
 
@@ -557,8 +598,11 @@ class ComponentBuilder implements Builder {
     // 与「常量里构造的跨文件模型」→ import。按源文件聚合，与上面的 import 合并
     // 后统一去重。
     final constImportsByFile = <String, Set<String>>{};
-    _addConstImports(constImportsByFile, constResolver,
-        referencedImportedConsts(parsed.unit, constResolver));
+    _addConstImports(
+        constImportsByFile,
+        constResolver,
+        referencedImportedConstsIn(
+            libraryUnits.map((e) => e.$2), constResolver));
     _addClassImports(
         constImportsByFile, classTable, constResolver.sameFileConstClasses);
     dependencyImports.addAll(_importLines(constImportsByFile, ownProduct));

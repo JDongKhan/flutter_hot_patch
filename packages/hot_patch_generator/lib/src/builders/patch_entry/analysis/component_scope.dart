@@ -164,6 +164,10 @@ Set<String> _reachableFiles(Map<String, CompilationUnit> units) {
     // 「不参与翻译」的文件仍算可达（自身产出为空，会自行退出），
     // 但不再沿它的 import 深入。
     if (unit == null || _isTranslationStop(unit)) continue;
+    // 同库 part：与根共享命名空间与产物，根可达即 part 可达。
+    for (final e in libraryUnitsOf(unit, file)) {
+      if (e.$1 != file && units.containsKey(e.$1)) queue.add(e.$1);
+    }
     for (final imported in resolveImportFiles(unit, file)) {
       if (units.containsKey(imported)) queue.add(imported);
     }
@@ -208,6 +212,21 @@ Map<String, Set<String>> _neededClasses(
       for (final n in own.keys) n: file,
       for (final n in ownMixinMap.keys) n: file,
     };
+    // 同库 part：同一命名空间与产物，声明全部进可见表（含私有名）。
+    for (final e in libraryUnitsOf(e.value, file)) {
+      if (e.$1 == file) continue;
+      for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
+        if (!_translatableDecl(d)) continue;
+        owners.putIfAbsent(d.name.lexeme, () => e.$1);
+      }
+      for (final d in e.$2.declarations.whereType<MixinDeclaration>()) {
+        owners.putIfAbsent(d.name.lexeme, () => e.$1);
+      }
+      for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
+        if (d.mixinKeyword == null) continue;
+        owners.putIfAbsent(d.name.lexeme, () => e.$1);
+      }
+    }
     for (final imported in resolveImportFiles(e.value, file)) {
       final unit = units[imported];
       if (unit == null) continue;
@@ -410,6 +429,20 @@ Map<String, Set<String>> _neededConsts(
         visibleHere.putIfAbsent(name, () => (file, init));
       }
     }
+    // 同库 part：常量 / 枚举共享命名空间与产物（含私有名）。
+    for (final part in libraryUnitsOf(e.value, file)) {
+      if (part.$1 == file) continue;
+      for (final d in part.$2.declarations.whereType<EnumDeclaration>()) {
+        visibleHere.putIfAbsent(d.name.lexeme, () => (part.$1, null));
+      }
+      for (final d in part.$2.declarations.whereType<TopLevelVariableDeclaration>()) {
+        for (final v in d.variables.variables) {
+          final init = v.initializer;
+          if (init == null) continue;
+          visibleHere.putIfAbsent(v.name.lexeme, () => (part.$1, init));
+        }
+      }
+    }
     for (final imported in resolveImportFiles(e.value, file)) {
       final unit = units[imported];
       if (unit == null) continue;
@@ -514,6 +547,15 @@ Map<String, Set<String>> _neededFunctions(
       final n = d.name.lexeme;
       if (n == 'main') continue;
       owners[n] = (file, d);
+    }
+    // 同库 part：函数共享命名空间与产物（含私有名）。
+    for (final part in libraryUnitsOf(e.value, file)) {
+      if (part.$1 == file) continue;
+      for (final d in part.$2.declarations.whereType<FunctionDeclaration>()) {
+        final n = d.name.lexeme;
+        if (n == 'main') continue;
+        owners.putIfAbsent(n, () => (part.$1, d));
+      }
     }
     for (final imported in resolveImportFiles(e.value, file)) {
       final unit = units[imported];

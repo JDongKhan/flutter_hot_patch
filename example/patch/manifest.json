@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-09T13:17:53.400463",
+  "buildTime": "2026-11-09T13:45:44.933494",
   "resources": {
     "flutter.js": "07fdf7109f0bed52b05dd6c2da81837686a17f7c774810e89ea23ffaa79fecc3",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
@@ -42,6 +42,7 @@
     "grammar/enum_detail.js": "8a3d83720667fd603f5ee5634fd5cf6e42e58cad854be12729de49e22fadd2a6",
     "grammar/constructor_detail.js": "e3e3d4d003256bd11839d3fcce2fca60b04985928d47d17c71b0bbcd27884bcf",
     "grammar/record_detail.js": "210b2af2f01368fdc94b386563cbbe796d5e9f758c66ee0f70c8720b5655b3d4",
+    "grammar/part_library.js": "c1b0c3d9afebb612146aadf8a26835d716be2423fca384e287ba25109e2dcfa3",
     "grammar/collection_detail.js": "b11eae735a74654feba503d9a1f7915806cf6f522c0b32b26bd4177e41cbcbce",
     "app/vm/app_shell_vm.js": "d4a7566b52b49635039890dc817bfd73389b55f8bd72bf48cde90a9a6375e4b4",
     "app/vm/home_vm.js": "5f2f5664e8f7df669e68d45e94d2b59dd8f9e92b3b298a092bfbeb2acbc80bb6",

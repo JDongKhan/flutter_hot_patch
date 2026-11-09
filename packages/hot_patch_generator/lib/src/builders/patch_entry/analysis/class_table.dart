@@ -51,6 +51,13 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
   for (final d in unit.declarations.whereType<ClassDeclaration>()) {
     addFile(d, sourcePath, unit, sameFile: true);
   }
+  // 同库 part 文件：共享命名空间与同一份产物，按 sameFile 收（含私有类）。
+  for (final e in libraryUnitsOf(unit, sourcePath)) {
+    if (e.$1 == sourcePath) continue;
+    for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
+      addFile(d, e.$1, e.$2, sameFile: true);
+    }
+  }
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final importUnit = parseUnitFile(file);
     if (importUnit == null) continue;
@@ -78,13 +85,13 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
         if (!visitedMixinFiles.add(mixinFile)) continue;
         final mixinUnit = parseUnitFile(mixinFile);
         if (mixinUnit == null) continue;
-        final sources = <(CompilationUnit, String)>[
-          (mixinUnit, mixinFile),
+        final sources = <(CompilationUnit, String, bool)>[
+          for (final e in libraryUnitsOf(mixinUnit, mixinFile))
+            (e.$2, e.$1, true),
           for (final f in resolveImportFiles(mixinUnit, mixinFile))
-            if (parseUnitFile(f) case final u?) (u, f),
+            if (parseUnitFile(f) case final u?) (u, f, false),
         ];
-        for (final (sourceUnit, sourceFile) in sources) {
-          final sameFile = sourceFile == mixinFile;
+        for (final (sourceUnit, sourceFile, sameFile) in sources) {
           for (final d in sourceUnit.declarations.whereType<ClassDeclaration>()) {
             if (decls.containsKey(d.name.lexeme)) continue;
             addFile(d, sourceFile, sourceUnit,

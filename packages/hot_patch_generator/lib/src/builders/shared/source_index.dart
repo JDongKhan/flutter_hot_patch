@@ -9,6 +9,7 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:build/build.dart' show log;
 
 import 'package_sources.dart';
 import 'source_location.dart';
@@ -124,33 +125,48 @@ bool isIgnoredComponentType(CompilationUnit unit, String className) {
 
 /// 本文件里全部 `@PatchIgnore(isComponent: true)` 的类名（含私有类：包装类
 /// 与使用方在同一产物里解析，类名必须原样一致）。
-Set<String> ignoredComponentClassNames(CompilationUnit unit) => {
-      for (final d in unit.declarations.whereType<ClassDeclaration>())
-        if (isIgnoredComponentClass(d)) d.name.lexeme,
-    };
+///
+/// 给出 [sourcePath] 时扫描**整个库**（根 + part），因为同库声明共享一份产物。
+Set<String> ignoredComponentClassNames(
+  CompilationUnit unit, [
+  String? sourcePath,
+]) {
+  final out = <String>{};
+  final units = sourcePath == null
+      ? [(sourcePath ?? '', unit)]
+      : libraryUnitsOf(unit, sourcePath);
+  for (final e in units) {
+    for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
+      if (isIgnoredComponentClass(d)) out.add(d.name.lexeme);
+    }
+  }
+  return out;
+}
 
-/// 本文件**可见**（同文件 + import 源文件）的「整类忽略」类名：带 `@PatchIgnore`
+/// 本文件**可见**（同库 + import 源文件）的「整类忽略」类名：带 `@PatchIgnore`
 /// 但 `isComponent` 非 true（不产出任何 JS 类，引用它的结点丢弃）。
 ///
-/// 跨文件只收 public 类（私有名不可能被别的文件引用）。
+/// 同库（根 + part）含私有名；跨库只收公共类（私有名不可能被别的库引用）。
 Set<String> ignoredClassNamesInScope(CompilationUnit unit, String sourcePath) {
   final out = <String>{};
-  void collect(CompilationUnit u, String file, {required bool onlyPublic}) {
+  void collect(CompilationUnit u, String file, {required bool sameLibraryFile}) {
     for (final d in u.declarations.whereType<ClassDeclaration>()) {
       final name = d.name.lexeme;
-      if (onlyPublic && name.startsWith('_')) continue;
-      if (onlyPublic && !importedSymbolVisible(unit, sourcePath, file, name)) {
-        continue;
+      if (!sameLibraryFile) {
+        if (name.startsWith('_')) continue;
+        if (!importedSymbolVisible(unit, sourcePath, file, name)) continue;
       }
       if (isIgnoredComponentClass(d)) continue; // isComponent: true 有包装类
       if (findAnnotation(d.metadata, 'PatchIgnore') != null) out.add(name);
     }
   }
 
-  collect(unit, sourcePath, onlyPublic: false);
+  for (final e in libraryUnitsOf(unit, sourcePath)) {
+    collect(e.$2, e.$1, sameLibraryFile: true);
+  }
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final importUnit = parseUnitFile(file);
-    if (importUnit != null) collect(importUnit, file, onlyPublic: true);
+    if (importUnit != null) collect(importUnit, file, sameLibraryFile: false);
   }
   return out;
 }
@@ -207,6 +223,9 @@ List<(MixinDeclRef, String)> resolveMixinDeclRefs(
   }
 
   collect(unit, sourcePath, sameFile: true);
+  for (final e in libraryUnitsOf(unit, sourcePath)) {
+    if (e.$1 != sourcePath) collect(e.$2, e.$1, sameFile: true);
+  }
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final u = parseUnitFile(file);
     if (u != null) collect(u, file, sameFile: false);
@@ -282,6 +301,10 @@ const Set<String> nonTranslatedPackages = {
 
 /// 组件文件的业务 import → 源文件身份列表（见 [isPackageIdentity]）。
 ///
+/// 库视图（`part` / `part of`）按 Dart 语义处理：一个库 = 根文件 + 它的全部
+/// `part` 文件，三者共享同一命名空间（含私有名），产物统一落在**根文件**产物；
+/// 本函数只返回**跨库**可达文件（库内文件由各 helper 以 sameFile 口径单独扫描）。
+///
 ///   - 相对导入 → 本项目包内身份（`lib/...`）；
 ///   - `package:<本项目>/...` → 本项目包内身份（同一份文件，身份必须一致）；
 ///   - `package:<本地依赖包>/...` → 跨包身份；**本地包**（path 依赖 / workspace
@@ -297,14 +320,25 @@ const Set<String> nonTranslatedPackages = {
 List<String> resolveImportFiles(CompilationUnit unit, String sourcePath) {
   final out = <String>[];
   final visited = <String>{};
-  // 已扫描过 export 的文件（防循环 barrel）。
+  // 已扫描过 export 的库根（防循环 barrel）。
   final scanned = <String>{};
-  // 加入一个直接依赖（import / export 目标）；与 followExports 相互递归。
+  final rootPath = libraryRootPathOf(unit, sourcePath);
+  final rootUnit = rootPath == sourcePath ? unit : parseUnitFile(rootPath);
+  if (rootUnit == null) return const [];
+  // 当前库的文件集合（含私有）：这些文件由调用方按 sameFile 口径处理，
+  // 不作为「导入文件」返回，避免私有符号被跨库规则过滤掉。
+  final ownLibrary = {
+    for (final e in libraryUnitsOf(rootUnit, rootPath)) e.$1,
+  };
   late final void Function(String target) addTarget;
+  // 加入一个导入目标的**整个库**（根 + parts）；跨库才返回。
+  void addLibrary(String targetRoot, CompilationUnit targetUnit) {
+    for (final e in libraryUnitsOf(targetUnit, targetRoot)) {
+      if (ownLibrary.contains(e.$1)) continue;
+      if (visited.add(e.$1)) out.add(e.$1);
+    }
+  }
 
-  // 展开一个文件的 export 转发链：barrel 自身没有声明，其可见符号全在
-  // export 目标里。import 目标的 export 同样要展开（`import` 一个 barrel
-  // 是常见写法，不展开就查不到经 barrel 暴露的类）。
   void followExports(CompilationUnit u, String path) {
     if (!scanned.add(path)) return;
     for (final uri in _directiveUris(u, isExport: true)) {
@@ -316,18 +350,138 @@ List<String> resolveImportFiles(CompilationUnit unit, String sourcePath) {
   // import 目标：直接依赖，本层不深入（依赖闭包由调用方逐层展开），
   // 但其 export 转发要展开。
   addTarget = (target) {
-    if (!visited.add(target)) return;
-    out.add(target);
     final t = parseUnitFile(target);
-    if (t != null) followExports(t, target);
+    if (t == null) return;
+    final tRoot = libraryRootPathOf(t, target);
+    final tRootUnit = tRoot == target ? t : parseUnitFile(tRoot);
+    if (tRootUnit == null) return;
+    addLibrary(tRoot, tRootUnit);
+    followExports(tRootUnit, tRoot);
   };
 
-  for (final uri in _directiveUris(unit, isExport: false)) {
-    final target = _resolveDirective(uri, sourcePath);
+  for (final uri in _directiveUris(rootUnit, isExport: false)) {
+    final target = _resolveDirective(uri, rootPath);
     if (target != null) addTarget(target);
   }
-  followExports(unit, sourcePath);
+  followExports(rootUnit, rootPath);
   return out;
+}
+
+/// 该文件所属库的根文件身份：`part of` 文件沿声明回推，普通文件即自身。
+///
+/// `part of 'a.dart'` 按 URI 解析；`part of libName;` 在项目 / 本地依赖包的
+/// lib 目录里按 `library libName;` 反查（结果按构建代缓存）。定位失败出声，
+/// 该文件按独立库处理，不静默丢弃。
+String libraryRootPathOf(CompilationUnit unit, String sourcePath) {
+  final hit = _libraryRoots[sourcePath];
+  if (hit != null && hit.$1 == _parseGeneration) return hit.$2;
+  var root = sourcePath;
+  final po = unit.directives.whereType<PartOfDirective>().firstOrNull;
+  if (po != null) {
+    final uri = po.uri?.stringValue;
+    final name = po.libraryName?.name;
+    final found = uri != null
+        ? _relativeSource(uri, sourcePath)
+        : _libraryPathNamed(name);
+    if (found == null) {
+      log.warning('[hot_patch_generator] $sourcePath: 无法定位 part of 所属库'
+          '（${uri ?? name ?? '?'}），按独立库处理');
+    } else if (parseUnitFile(found) == null) {
+      log.warning('[hot_patch_generator] $sourcePath: part of 指向的库根 $found '
+          '无法解析，按独立库处理');
+    } else {
+      root = found;
+    }
+  }
+  _libraryRoots[sourcePath] = (_parseGeneration, root);
+  return root;
+}
+
+/// 该文件所属库的全部文件（根在前，part 按声明顺序；含当前文件）。
+///
+/// 库内文件共享命名空间：调用方扫描声明时应把这里的每个单元都按「同文件」
+/// 口径处理（含私有名），而不是按 import 可见性规则过滤。
+List<(String, CompilationUnit)> libraryUnitsOf(
+  CompilationUnit unit,
+  String sourcePath,
+) {
+  final hit = _libraryUnits[sourcePath];
+  if (hit != null && hit.$1 == _parseGeneration) return hit.$2;
+  final rootPath = libraryRootPathOf(unit, sourcePath);
+  final rootUnit = rootPath == sourcePath ? unit : parseUnitFile(rootPath);
+  if (rootUnit == null) {
+    final only = [(sourcePath, unit)];
+    _libraryUnits[sourcePath] = (_parseGeneration, only);
+    return only;
+  }
+  final out = <(String, CompilationUnit)>[(rootPath, rootUnit)];
+  for (final d in rootUnit.directives.whereType<PartDirective>()) {
+    final uri = d.uri.stringValue;
+    if (uri == null) continue;
+    final target = _relativeSource(uri, rootPath);
+    if (target == null) {
+      log.warning('[hot_patch_generator] $rootPath: part 指令 $uri 无法解析为'
+          '源文件，已跳过');
+      continue;
+    }
+    if (out.any((e) => e.$1 == target)) continue;
+    final partUnit = parseUnitFile(target);
+    if (partUnit == null) {
+      log.warning('[hot_patch_generator] $rootPath: part 目标 $target 无法解析，'
+          '已跳过');
+      continue;
+    }
+    out.add((target, partUnit));
+  }
+  _libraryUnits[sourcePath] = (_parseGeneration, out);
+  return out;
+}
+
+/// 两个文件是否属于同一个库（根相同）。
+bool sameLibrary(String a, String b) {
+  if (a == b) return true;
+  final ua = parseUnitFile(a);
+  final ub = parseUnitFile(b);
+  if (ua == null || ub == null) return false;
+  return libraryRootPathOf(ua, a) == libraryRootPathOf(ub, b);
+}
+
+final Map<String, (int, String)> _libraryRoots = {};
+final Map<String, (int, List<(String, CompilationUnit)>)> _libraryUnits = {};
+final Map<String, (int, String?)> _libraryByName = {};
+
+/// `part of libName;` → 声明该库名的源文件（项目 + 本地依赖包 lib 目录）。
+String? _libraryPathNamed(String? name) {
+  if (name == null || name.isEmpty) return null;
+  final hit = _libraryByName[name];
+  if (hit != null && hit.$1 == _parseGeneration) return hit.$2;
+  String? found;
+  final sources = PackageSources.instance;
+  if (sources != null) {
+    for (final pkg in sources.packages) {
+      final isProject = pkg.name == sources.projectName;
+      if (!isProject && !pkg.isLocal) continue;
+      if (!pkg.hasLib) continue;
+      final dir = Directory(pkg.libDir);
+      if (!dir.existsSync()) continue;
+      for (final f in dir.listSync(recursive: true)) {
+        if (f is! File || !f.path.endsWith('.dart')) continue;
+        final rel = f.path
+            .substring(pkg.libDir.length + 1)
+            .replaceAll(Platform.pathSeparator, '/');
+        final id = isProject ? 'lib/$rel' : 'package:${pkg.name}/$rel';
+        final u = parseUnitFile(id);
+        final lib = u?.directives.whereType<LibraryDirective>().firstOrNull;
+        if (lib?.name2?.name == name) {
+          found = id;
+          break;
+        }
+      }
+      if (found != null) break;
+    }
+  }
+  _libraryByName[name] = (_parseGeneration, found);
+  return found;
 }
 
 /// 本文件**直接** import / export 的 `package:` 归属包名（含三方宿主包与框架包）。
@@ -341,39 +495,43 @@ Set<String> importedPackageNames(CompilationUnit unit) => {
         if (d is NamespaceDirective) ?packageNameOf(d.uri.stringValue ?? ''),
     };
 
-/// 一个源文件**导出**的公共顶层符号：名字 → 声明文件身份。
+/// 一个**库**导出的公共顶层符号：名字 → 声明文件身份（根文件或 part 文件）。
 ///
-/// Dart 的库命名空间 = 本文件声明 + `export` 转发，转发逐层应用 `show` / `hide`
-/// （见 [directiveAllowsSymbol]）；私有名（`_x`）不导出。barrel 的转发目标会
-/// 归到**声明文件**，调用方据此判断符号真正来自哪个产物。
+/// 库命名空间 = 根文件声明 + 全部 part 文件声明 + `export` 转发，转发逐层应用
+/// `show` / `hide`（见 [directiveAllowsSymbol]）；私有名（`_x`）不导出。barrel 的
+/// 转发目标会归到**声明文件**，调用方据此判断符号真正来自哪个源文件。
 Map<String, String> exportedSymbolsOf(String file, [CompilationUnit? unit]) {
   final u = unit ?? parseUnitFile(file);
   if (u == null) return const {};
-  final hit = _exportNamespaces[file];
+  final rootPath = libraryRootPathOf(u, file);
+  final hit = _exportNamespaces[rootPath];
   if (hit != null && hit.$1 == _parseGeneration) return hit.$2;
-  final out = _exportNamespace(u, file, <String>{file});
-  _exportNamespaces[file] = (_parseGeneration, out);
+  final rootUnit = rootPath == file ? u : (parseUnitFile(rootPath) ?? u);
+  final out = _libraryNamespace(rootUnit, rootPath, <String>{rootPath});
+  _exportNamespaces[rootPath] = (_parseGeneration, out);
   return out;
 }
 
-/// 本文件经 **import** 可见的顶层符号：名字 → 声明文件身份。
+/// 本**库**经 **import** 可见的顶层符号：名字 → 声明文件身份。
 ///
 /// 与 [resolveImportFiles] 的文件级可达性互补：这里回答「名字能不能用」。
-///   - 同文件声明不在表里（调用方本来就先扫同文件）；
+///   - 库内声明（根 + part）不在表里（调用方按 [libraryUnitsOf] 先扫同库）；
 ///   - 私有名不跨库可见；
 ///   - `import ... show / hide` 按组合子过滤（[directiveAllowsSymbol]）；
 ///   - barrel 的 `export ... show / hide` 逐层过滤，值落到声明文件；
 ///   - `import ... as p` 的符号不进入未限定名表（调用点按 `p.name` 走模块
 ///     命名空间，见 `component_builder` 的 prefixProducts）。
 Map<String, String> importedSymbolsOf(CompilationUnit unit, String sourcePath) {
-  final hit = _importedSymbols[sourcePath];
+  final rootPath = libraryRootPathOf(unit, sourcePath);
+  final hit = _importedSymbols[rootPath];
   if (hit != null && hit.$1 == _parseGeneration) return hit.$2;
+  final rootUnit = rootPath == sourcePath ? unit : (parseUnitFile(rootPath) ?? unit);
   final out = <String, String>{};
-  for (final d in unit.directives.whereType<ImportDirective>()) {
+  for (final d in rootUnit.directives.whereType<ImportDirective>()) {
     if (d.prefix != null) continue;
     final uri = d.uri.stringValue;
     if (uri == null) continue;
-    final target = resolveDirectiveTarget(uri, sourcePath);
+    final target = resolveDirectiveTarget(uri, rootPath);
     if (target == null) continue;
     final targetUnit = parseUnitFile(target);
     if (targetUnit == null) continue;
@@ -382,13 +540,13 @@ Map<String, String> importedSymbolsOf(CompilationUnit unit, String sourcePath) {
       out.putIfAbsent(e.key, () => e.value);
     }
   }
-  _importedSymbols[sourcePath] = (_parseGeneration, out);
+  _importedSymbols[rootPath] = (_parseGeneration, out);
   return out;
 }
 
 /// [name] 是否经 import 对 [sourcePath] 可见，且声明在 [declaringFile]。
 ///
-/// 同文件声明恒为 true（私有名由调用方自己按需过滤）；跨文件按
+/// 同一库内的文件（根 ↔ part）共享命名空间，含私有名，恒为 true；跨库按
 /// [importedSymbolsOf] 的名字 → 声明文件映射判定。
 bool importedSymbolVisible(
   CompilationUnit unit,
@@ -397,6 +555,7 @@ bool importedSymbolVisible(
   String name,
 ) {
   if (declaringFile == sourcePath) return true;
+  if (sameLibrary(sourcePath, declaringFile)) return true;
   return importedSymbolsOf(unit, sourcePath)[name] == declaringFile;
 }
 
@@ -452,31 +611,40 @@ Iterable<String> _declaredNames(CompilationUnitMember d) sync* {
   }
 }
 
-/// 一个文件的导出命名空间：自身公共声明 + `export` 转发（逐层过滤）。
+/// 一个**库**的导出命名空间：根文件 + 全部 part 的公共声明，再加 `export`
+/// 转发（逐层过滤）。每个名字的值是它的**声明文件**（根或某个 part）。
 ///
-/// [visiting] 防 export 环；环上的文件只保留本层已收集的声明。
-Map<String, String> _exportNamespace(
-  CompilationUnit unit,
-  String file,
+/// [visiting] 防 export 环；环上的库只保留本层已收集的声明。
+Map<String, String> _libraryNamespace(
+  CompilationUnit rootUnit,
+  String rootPath,
   Set<String> visiting,
 ) {
-  final out = <String, String>{
-    for (final n in _publicTopLevelNames(unit)) n: file,
-  };
-  for (final d in unit.directives.whereType<ExportDirective>()) {
+  final out = <String, String>{};
+  for (final e in libraryUnitsOf(rootUnit, rootPath)) {
+    for (final n in _publicTopLevelNames(e.$2)) {
+      out.putIfAbsent(n, () => e.$1);
+    }
+  }
+  for (final d in rootUnit.directives.whereType<ExportDirective>()) {
     final uri = d.uri.stringValue;
     if (uri == null) continue;
-    final target = resolveDirectiveTarget(uri, file);
-    if (target == null || !visiting.add(target)) continue;
+    final target = resolveDirectiveTarget(uri, rootPath);
+    if (target == null) continue;
     final targetUnit = parseUnitFile(target);
-    if (targetUnit != null) {
-      final ns = _exportNamespace(targetUnit, target, visiting);
+    if (targetUnit == null) continue;
+    final targetRoot = libraryRootPathOf(targetUnit, target);
+    if (!visiting.add(targetRoot)) continue;
+    final targetRootUnit =
+        targetRoot == target ? targetUnit : parseUnitFile(targetRoot);
+    if (targetRootUnit != null) {
+      final ns = _libraryNamespace(targetRootUnit, targetRoot, visiting);
       for (final e in ns.entries) {
         if (!directiveAllowsSymbol(d.combinators, e.key)) continue;
         out.putIfAbsent(e.key, () => e.value);
       }
     }
-    visiting.remove(target);
+    visiting.remove(targetRoot);
   }
   return out;
 }

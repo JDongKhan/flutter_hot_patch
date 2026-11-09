@@ -47,7 +47,7 @@ Map<String, String> resolveImportedComponentProducts(
           !isIgnoredComponentClass(decl)) {
         continue;
       }
-      out[name] = productPath(file);
+      out[name] = productPath(libraryRootPathOf(importUnit, file));
     }
   }
   return out;

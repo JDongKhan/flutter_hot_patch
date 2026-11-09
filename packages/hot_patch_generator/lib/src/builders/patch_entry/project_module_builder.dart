@@ -120,19 +120,14 @@ class ProjectModuleBuilder implements Builder {
       }
     }
     for (final e in outputs.entries) {
-      await buildStep.writeAsString(
-        e.value,
-        canonicalizeJsIndent(
-          renderProjectPackageFile(
-            e.key,
-            neededNames: scope.neededClasses[e.key] ?? const {},
-            neededConsts: scope.neededConsts[e.key] ?? const {},
-            neededFunctions: scope.neededFunctions[e.key] ?? const {},
-            emittedScope: scope,
-            ownerOf: ownerOf,
-          ),
-        ),
+      final text = renderProjectPackageFile(
+        e.key,
+        emittedScope: scope,
+        ownerOf: ownerOf,
       );
+      // part 文件没有独立产物（声明随库根发射）：跳过即不落盘。
+      if (text == null) continue;
+      await buildStep.writeAsString(e.value, canonicalizeJsIndent(text));
     }
   }
 }
@@ -153,17 +148,14 @@ String? _sourceFileOfProductPath(String path) {
 
 /// 一个依赖包源文件的产物（`patch/packages/<package>/<rel>.js`）。
 ///
-/// [neededNames] / [neededConsts] / [neededFunctions] 是本文件里**真正被引用**的
-/// 类 / 顶层常量 / 顶层函数（来自 [componentTranslationScope]）；产物同时承载本
-/// 文件声明的 `extension` 注册语句（与声明处一对一，见 [translateExtension]）。
-/// [emittedScope] 用于判断跨文件依赖（类 / 常量 / 函数）是否真的被产出——
-/// barrel re-export 与 const import 都只指向已产出的符号，避免引用空模块。
-/// [ownerOf] 是类名 → 声明文件身份（跨文件 import 用）。
-String renderProjectPackageFile(
+/// 库内的类 / 顶层常量 / 顶层函数取 [emittedScope]（[componentTranslationScope]）
+/// 中「真正被引用」的部分，并把 **根 + 全部 part** 合并到库根产物；part 文件
+/// 输入返回 null（不产出独立模块）。产物同时承载本库声明的 `extension` 注册语句。
+/// [emittedScope] 还用于判断跨库依赖是否真的被产出——barrel re-export 与
+/// const import 都只指向已产出的符号，避免引用空模块。
+/// [ownerOf] 是类名 → 声明文件身份（跨库 import 用）。
+String? renderProjectPackageFile(
   String sourceFile, {
-  required Set<String> neededNames,
-  required Set<String> neededConsts,
-  required Set<String> neededFunctions,
   required TranslationScope emittedScope,
   required Map<String, String> ownerOf,
 }) {
@@ -180,21 +172,39 @@ String renderProjectPackageFile(
     b.writeln('// 无法解析该源文件，空模块。');
     return b.toString();
   }
+  // part 文件：声明随库根产物发射（一个库一个模块），本文件不产出独立模块。
+  if (libraryRootPathOf(unit, sourceFile) != sourceFile) return null;
+  final libraryUnits = libraryUnitsOf(unit, sourceFile);
+  final libraryPaths = {for (final e in libraryUnits) e.$1};
+  Set<String> unionFor(Map<String, Set<String>> byFile) {
+    final out = <String>{};
+    for (final p in libraryPaths) {
+      final v = byFile[p];
+      if (v != null) out.addAll(v);
+    }
+    return out;
+  }
+
+  final neededClassesHere = unionFor(emittedScope.neededClasses);
+  final neededConstsHere = unionFor(emittedScope.neededConsts);
+  final neededFunctionsHere = unionFor(emittedScope.neededFunctions);
   final table = buildClassTable(unit, sourceFile);
   final consts = buildTopLevelConstResolver(
     unit,
     sourceFile,
     table,
-    emitFunctions: neededFunctions,
+    emitFunctions: neededFunctionsHere,
   );
   final extensionOperators = extensionOperatorsInScope(unit, sourceFile);
   final extensionNames = extensionScopesInScope(unit, sourceFile);
   warnExtensionConflicts(extensionNames, sourceFile);
   final localNames = <String>{
-    for (final d in unit.declarations.whereType<ClassDeclaration>())
-      d.name.lexeme,
-    for (final d in unit.declarations.whereType<MixinDeclaration>())
-      d.name.lexeme,
+    for (final e in libraryUnits) ...[
+      for (final d in e.$2.declarations.whereType<ClassDeclaration>())
+        d.name.lexeme,
+      for (final d in e.$2.declarations.whereType<MixinDeclaration>())
+        d.name.lexeme,
+    ],
   };
 
   // 本文件真正写进产物的顶层常量 / 枚举 / 函数（只取被引用到的）。初始化器
@@ -202,50 +212,58 @@ String renderProjectPackageFile(
   // 类有 TDZ），其余常量先写，保证类的静态字段引用顶层常量时不触发 TDZ。
   final emittedConsts = <String, String>{
     for (final e in consts.sameFile.entries)
-      if (neededConsts.contains(e.key) || neededFunctions.contains(e.key))
+      if (neededConstsHere.contains(e.key) ||
+          neededFunctionsHere.contains(e.key))
         e.key: e.value,
   };
   final earlyConsts = <String, String>{};
   final deferredConsts = <String, String>{};
+  final libraryUnitList = libraryUnits.map((e) => e.$2).toList();
   for (final e in emittedConsts.entries) {
     final refs = <String>{
-      ...constRefNames(unit, {e.key}),
-      ...topLevelFunctionRefNames(unit, {e.key}),
+      ...constRefNamesIn(libraryUnitList, {e.key}),
+      ...topLevelFunctionRefNamesIn(libraryUnitList, {e.key}),
     };
     (refs.any(localNames.contains) ? deferredConsts : earlyConsts)[e.key] =
         e.value;
   }
 
-  // 本文件里被引用到的类 / mixin：只取本文件声明，跨文件由 import 承接。
+  // 本文件里被引用到的类 / mixin：只取本库声明，跨文件由 import 承接。
   final decls = <String, AstNode>{};
   // StatefulWidget 的 State 类已随 widget 类合并产出（见 translateClass 的
   // 唯一分叉），不能在这里再单独产出一个模型类——否则同一份实现会出现两遍，
   // 且独立类没有宿主初始化上下文。
   final stateNames = <String>{
-    for (final d in unit.declarations.whereType<ClassDeclaration>())
-      if (stateClassNameOf(d) case final n?) n,
+    for (final e in libraryUnits)
+      for (final d in e.$2.declarations.whereType<ClassDeclaration>())
+        if (stateClassNameOf(d) case final n?) n,
   };
-  for (final name in neededNames) {
+  for (final name in neededClassesHere) {
     if (!localNames.contains(name) || stateNames.contains(name)) continue;
-    final decl = unit.declarations
-            .whereType<ClassDeclaration>()
-            .where((d) => d.name.lexeme == name)
-            .firstOrNull ??
-        unit.declarations
-            .whereType<MixinDeclaration>()
-            .where((d) => d.name.lexeme == name)
-            .firstOrNull;
-    if (decl != null) decls[name] = decl;
+    for (final e in libraryUnits) {
+      final decl = e.$2.declarations
+              .whereType<ClassDeclaration>()
+              .where((d) => d.name.lexeme == name)
+              .firstOrNull ??
+          e.$2.declarations
+              .whereType<MixinDeclaration>()
+              .where((d) => d.name.lexeme == name)
+              .firstOrNull;
+      if (decl != null) {
+        decls[name] = decl;
+        break;
+      }
+    }
   }
 
-  // 依赖产物路径：本文件已产出 → 本产物；跨文件 → 该文件的产物。
+  // 依赖产物路径：本库已产出 → 本产物；跨库 → 该库根文件的产物。
   String? productOf(String name) {
     final owner = ownerOf[name];
     if (owner == null) return null;
-    if (owner == sourceFile) {
+    if (libraryPaths.contains(owner)) {
       return decls.containsKey(name) ? ownProduct : null;
     }
-    return productPath(owner);
+    return productPath(libraryRootPathOf(parseUnitFile(owner) ?? unit, owner));
   }
 
   String? importResolver(String name) {
@@ -255,24 +273,26 @@ String renderProjectPackageFile(
 
   // 本文件声明的 extension：注册语句写在本文件产物里，调用方 import 即注册。
   final extensions = <ExtensionInfo>[];
-  for (final decl in extensionDeclarations(unit)) {
-    final info = translateExtension(
-      decl,
-      unit,
-      sourceFile,
-      ownProduct: ownProduct,
-      classTable: table,
-      importResolver: importResolver,
-      productOf: productOf,
-      jsClassWidgets: jsClassWidgetTypes,
-      delegateClassWidgets: builderFormTypes,
-      ignoredTypes: ignoredClassNamesInScope(unit, sourceFile),
-      globalConsts: consts.names,
-      classNamesInUnit: localNames,
-      extensionOperators: extensionOperators,
-      extensionNames: extensionNames,
-    );
-    if (info != null) extensions.add(info);
+  for (final lu in libraryUnits) {
+    for (final decl in lu.$2.declarations.whereType<ExtensionDeclaration>()) {
+      final info = translateExtension(
+        decl,
+        lu.$2,
+        lu.$1,
+        ownProduct: ownProduct,
+        classTable: table,
+        importResolver: importResolver,
+        productOf: productOf,
+        jsClassWidgets: jsClassWidgetTypes,
+        delegateClassWidgets: builderFormTypes,
+        ignoredTypes: ignoredClassNamesInScope(unit, sourceFile),
+        globalConsts: consts.names,
+        classNamesInUnit: localNames,
+        extensionOperators: extensionOperators,
+        extensionNames: extensionNames,
+      );
+      if (info != null) extensions.add(info);
+    }
   }
 
   // barrel（只有 export 转发、没有声明，如包入口 `lib/hot_module_base.dart`）：
@@ -281,8 +301,8 @@ String renderProjectPackageFile(
   // 名字：跨包产物按「被引用」决定符号，转发一个没产出的名字会让运行时
   // `__modules[...]` 里缺少绑定。
   bool emittedInFile(String file, String name) {
-    if (file == sourceFile) {
-      return neededNames.contains(name) || emittedConsts.containsKey(name);
+    if (libraryPaths.contains(file)) {
+      return neededClassesHere.contains(name) || emittedConsts.containsKey(name);
     }
     return emittedScope.neededClasses[file]?.contains(name) == true ||
         emittedScope.neededConsts[file]?.contains(name) == true ||
@@ -402,8 +422,8 @@ String renderProjectPackageFile(
       if (importResolver(name) != null) deps.add(name);
     }
     final valueRefs = <String>{
-      ...constRefNames(unit, emittedConsts.keys.toSet()),
-      ...topLevelFunctionRefNames(unit, neededFunctions),
+      ...constRefNamesIn(libraryUnitList, emittedConsts.keys.toSet()),
+      ...topLevelFunctionRefNamesIn(libraryUnitList, neededFunctionsHere),
     };
     for (final name in valueRefs) {
       final owner = consts.importedFileOf[name];
@@ -524,14 +544,22 @@ List<String> _barrelExportLines(
     if (pkg != null && !isFileLayoutPackage(pkg)) continue;
     final targetUnit = parseUnitFile(target);
     if (targetUnit == null) continue;
-    final extensionNames = {
-      for (final e in targetUnit.declarations.whereType<ExtensionDeclaration>())
-        if (e.name?.lexeme case final n?) n,
-    };
-    var shown = {
-      for (final n in _exportedDeclarationNames(targetUnit))
-        if (extensionNames.contains(n) || emitted(target, n)) n,
-    };
+    // 目标库：根 + part（声明分布在各文件，产物统一在库根）。
+    final targetRoot = libraryRootPathOf(targetUnit, target);
+    final targetRootUnit =
+        targetRoot == target ? targetUnit : parseUnitFile(targetRoot);
+    if (targetRootUnit == null) continue;
+    final targetProduct = productPath(targetRoot);
+    var shown = <String>{};
+    for (final lu in libraryUnitsOf(targetRootUnit, targetRoot)) {
+      final extensionNames = {
+        for (final e in lu.$2.declarations.whereType<ExtensionDeclaration>())
+          if (e.name?.lexeme case final n?) n,
+      };
+      for (final n in _exportedDeclarationNames(lu.$2)) {
+        if (extensionNames.contains(n) || emitted(lu.$1, n)) shown.add(n);
+      }
+    }
     for (final c in d.combinators) {
       if (c is ShowCombinator) {
         shown = shown.where((n) => c.shownNames.any((s) => s.name == n)).toSet();
@@ -542,7 +570,7 @@ List<String> _barrelExportLines(
     if (shown.isEmpty) continue;
     final sorted = shown.toList()..sort();
     out.add("export { ${sorted.join(', ')} } from "
-        "'${relativeProduct(ownProduct, productPath(target))}';");
+        "'${relativeProduct(ownProduct, targetProduct)}';");
   }
   return out;
 }

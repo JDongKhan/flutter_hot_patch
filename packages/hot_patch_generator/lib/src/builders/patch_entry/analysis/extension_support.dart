@@ -184,6 +184,9 @@ Map<String, Map<String, String>> extensionOperatorsInScope(
   }
 
   scan(unit, sourcePath, sameFile: true);
+  for (final e in libraryUnitsOf(unit, sourcePath)) {
+    if (e.$1 != sourcePath) scan(e.$2, e.$1, sameFile: true);
+  }
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final u = parseUnitFile(file);
     if (u != null) scan(u, file, sameFile: false);
@@ -231,6 +234,11 @@ Map<String, ExtensionScope> extensionScopesInScope(
   }
 
   scan(unit, sourcePath, includePrivate: true, sameFile: true);
+  for (final e in libraryUnitsOf(unit, sourcePath)) {
+    if (e.$1 != sourcePath) {
+      scan(e.$2, e.$1, includePrivate: true, sameFile: true);
+    }
+  }
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final u = parseUnitFile(file);
     if (u != null) {
@@ -265,14 +273,25 @@ void warnExtensionConflicts(
   }
 }
 
-/// 本文件声明的全部 `extension`（含无名扩展）。
-List<ExtensionDeclaration> extensionDeclarations(CompilationUnit unit) => [
-      for (final d in unit.declarations.whereType<ExtensionDeclaration>()) d,
-    ];
+/// 本库声明的全部 `extension`（含无名扩展）。
+///
+/// 给出 [sourcePath] 时扫描整个库（根 + part）——同库声明共享一份产物。
+List<ExtensionDeclaration> extensionDeclarations(
+  CompilationUnit unit, [
+  String? sourcePath,
+]) {
+  final units = sourcePath == null
+      ? [(sourcePath ?? '', unit)]
+      : libraryUnitsOf(unit, sourcePath);
+  return [
+    for (final e in units)
+      ...e.$2.declarations.whereType<ExtensionDeclaration>(),
+  ];
+}
 
-/// 本文件是否声明了 extension（纯扩展文件也必须产出产物）。
-bool hasExtensionDeclaration(CompilationUnit unit) =>
-    extensionDeclarations(unit).isNotEmpty;
+/// 本库是否声明了 extension（纯扩展文件也必须产出产物）。
+bool hasExtensionDeclaration(CompilationUnit unit, [String? sourcePath]) =>
+    extensionDeclarations(unit, sourcePath).isNotEmpty;
 
 /// 一个 extension 在**调用点**会出现的名字（用来判断本文件有没有用到它）。
 ///
@@ -311,8 +330,11 @@ Set<String> identifierNamesIn(CompilationUnit unit) {
 /// mixin 成员会被线性化进本产物，其方法体里的 `'x'.logText()` 同样要求声明
 /// 该扩展的产物被加载；只扫本文件会漏掉「调用只写在 mixin 里」的场景。
 Set<String> identifierNamesInProduct(CompilationUnit unit, String sourcePath) {
-  final names = identifierNamesIn(unit);
-  for (final d in _productHostClasses(unit)) {
+  final names = <String>{};
+  for (final e in libraryUnitsOf(unit, sourcePath)) {
+    names.addAll(identifierNamesIn(e.$2));
+  }
+  for (final d in _productHostClasses(unit, sourcePath)) {
     for (final (mixinDecl, _) in resolveMixinDeclRefs(d, unit, sourcePath)) {
       names.addAll(_identifierNamesOfMembers(mixinDecl.members));
     }
@@ -328,7 +350,12 @@ Set<String> identifierNamesInProduct(CompilationUnit unit, String sourcePath) {
 /// 扩展声明库（`import` 目标不逐层深入）。
 Set<String> extensionScopeFiles(CompilationUnit unit, String sourcePath) {
   final files = <String>{...resolveImportFiles(unit, sourcePath)};
-  for (final d in _productHostClasses(unit)) {
+  // 同库 part：它们与根共享 import 图，产物也是同一份。
+  for (final e in libraryUnitsOf(unit, sourcePath)) {
+    if (e.$1 == sourcePath) continue;
+    files.addAll(resolveImportFiles(e.$2, e.$1));
+  }
+  for (final d in _productHostClasses(unit, sourcePath)) {
     for (final (_, mixinFile) in resolveMixinDeclRefs(d, unit, sourcePath)) {
       final mixinUnit = parseUnitFile(mixinFile);
       if (mixinUnit == null) continue;
@@ -343,10 +370,18 @@ Set<String> extensionScopeFiles(CompilationUnit unit, String sourcePath) {
 /// `with` 子句通常写在**私有 State 类**上（`class _XState extends State<X>
 /// with M`），只遍历公共类会看不到它携带的 mixin 成员——而那段代码确实会被
 /// 线性化进本产物。
-Iterable<ClassDeclaration> _productHostClasses(CompilationUnit unit) sync* {
-  for (final d in unit.declarations.whereType<ClassDeclaration>()) {
-    if (d.name.lexeme.startsWith('_')) continue;
-    yield* classAndStateDecls(d, unit);
+Iterable<ClassDeclaration> _productHostClasses(
+  CompilationUnit unit, [
+  String? sourcePath,
+]) sync* {
+  final units = sourcePath == null
+      ? [(sourcePath ?? '', unit)]
+      : libraryUnitsOf(unit, sourcePath);
+  for (final e in units) {
+    for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
+      if (d.name.lexeme.startsWith('_')) continue;
+      yield* classAndStateDecls(d, e.$2);
+    }
   }
 }
 

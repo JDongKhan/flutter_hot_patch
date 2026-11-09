@@ -132,6 +132,11 @@ TopLevelConstResolver buildTopLevelConstResolver(
   }
 
   add(unit, sourcePath, sameFile: true);
+  // 同库 part 文件：共享命名空间与同一份产物，按 sameFile 收（含私有名）。
+  for (final e in libraryUnitsOf(unit, sourcePath)) {
+    if (e.$1 == sourcePath) continue;
+    add(e.$2, e.$1, sameFile: true);
+  }
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final importUnit = parseUnitFile(file);
     if (importUnit == null) continue;
@@ -184,7 +189,7 @@ TopLevelConstResolver buildTopLevelConstResolver(
   resolver.sameFileConstClasses.addAll([
     for (final e in classTable.entries)
       if (!e.value.isComponent &&
-          e.value.sourceFile != sourcePath &&
+          !sameLibrary(e.value.sourceFile, sourcePath) &&
           used.names.contains(e.key))
         e.key,
   ]);
@@ -233,7 +238,7 @@ TopLevelConstResolver buildTopLevelConstResolver(
   resolver.sameFileConstClasses.addAll([
     for (final e in classTable.entries)
       if (!e.value.isComponent &&
-          e.value.sourceFile != sourcePath &&
+          !sameLibrary(e.value.sourceFile, sourcePath) &&
           fnUsed.names.contains(e.key))
         e.key,
   ]);
@@ -247,10 +252,19 @@ TopLevelConstResolver buildTopLevelConstResolver(
 Set<String> referencedImportedConsts(
   CompilationUnit unit,
   TopLevelConstResolver resolver,
+) =>
+    referencedImportedConstsIn([unit], resolver);
+
+/// 多单元版本（同库根 + part）：按这些单元里出现的标识符判断跨文件常量。
+Set<String> referencedImportedConstsIn(
+  Iterable<CompilationUnit> units,
+  TopLevelConstResolver resolver,
 ) {
   if (resolver.importedFileOf.isEmpty) return const {};
   final used = _IdentifierCollector();
-  unit.accept(used);
+  for (final u in units) {
+    u.accept(used);
+  }
   return resolver.importedFileOf.keys.where(used.names.contains).toSet();
 }
 
@@ -260,26 +274,41 @@ Set<String> referencedImportedConsts(
 /// neededConsts），此时 import 也必须只按这些常量的初始化器计算——否则会
 /// import 到未被引用的常量依赖的跨文件常量 / 类，目标产物本身不产出，
 /// 运行时模块解析失败。
-Set<String> constRefNames(CompilationUnit unit, Set<String> names) {
+Set<String> constRefNames(CompilationUnit unit, Set<String> names) =>
+    constRefNamesIn([unit], names);
+
+/// 多单元版本（同库根 + part）：常量初始化器里出现的标识符名。
+Set<String> constRefNamesIn(Iterable<CompilationUnit> units, Set<String> names) {
   if (names.isEmpty) return const {};
   final used = _IdentifierCollector();
-  for (final d in unit.declarations.whereType<TopLevelVariableDeclaration>()) {
-    for (final v in d.variables.variables) {
-      final init = v.initializer;
-      if (init == null || !names.contains(v.name.lexeme)) continue;
-      init.accept(used);
+  for (final u in units) {
+    for (final d in u.declarations.whereType<TopLevelVariableDeclaration>()) {
+      for (final v in d.variables.variables) {
+        final init = v.initializer;
+        if (init == null || !names.contains(v.name.lexeme)) continue;
+        init.accept(used);
+      }
     }
   }
   return used.names;
 }
 
 /// 指定顶层函数体里出现的全部标识符名（跨文件常量 / 类的 import 判定）。
-Set<String> topLevelFunctionRefNames(CompilationUnit unit, Set<String> names) {
+Set<String> topLevelFunctionRefNames(CompilationUnit unit, Set<String> names) =>
+    topLevelFunctionRefNamesIn([unit], names);
+
+/// 多单元版本（同库根 + part）。
+Set<String> topLevelFunctionRefNamesIn(
+  Iterable<CompilationUnit> units,
+  Set<String> names,
+) {
   if (names.isEmpty) return const {};
   final used = _IdentifierCollector();
-  for (final d in unit.declarations.whereType<FunctionDeclaration>()) {
-    if (!names.contains(d.name.lexeme)) continue;
-    d.functionExpression.body.accept(used);
+  for (final u in units) {
+    for (final d in u.declarations.whereType<FunctionDeclaration>()) {
+      if (!names.contains(d.name.lexeme)) continue;
+      d.functionExpression.body.accept(used);
+    }
   }
   return used.names;
 }

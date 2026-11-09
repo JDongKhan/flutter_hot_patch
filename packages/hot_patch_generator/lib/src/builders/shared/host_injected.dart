@@ -122,6 +122,9 @@ Set<String> buildHostFunctions(CompilationUnit unit, String sourcePath) {
   }
 
   scan(unit, sourcePath, sameFile: true);
+  for (final e in libraryUnitsOf(unit, sourcePath)) {
+    if (e.$1 != sourcePath) scan(e.$2, e.$1, sameFile: true);
+  }
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final importUnit = parseUnitFile(file);
     if (importUnit == null) continue;
