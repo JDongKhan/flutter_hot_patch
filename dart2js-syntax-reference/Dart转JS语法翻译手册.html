@@ -437,7 +437,6 @@ const ok = !!(a || b);   // 或 Boolean(a || b)</code><button class="copy" type=
 
 
 <h3>基础类型</h3>
-<h3>类型判定</h3>
 <div class="scroll">
 <table>
   <colgroup><col style="width:11%"><col style="width:14%"><col style="width:18%"><col style="width:18%"><col style="width:21%"><col style="width:6%"><col style="width:12%"></colgroup>
@@ -454,6 +453,7 @@ const ok = !!(a || b);   // 或 Boolean(a || b)</code><button class="copy" type=
 
 
 
+<h3>类型判定</h3>
 <div class="scroll">
 <table>
   <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
@@ -471,6 +471,7 @@ const ok = !!(a || b);   // 或 Boolean(a || b)</code><button class="copy" type=
 
 
 
+<h3>Record</h3>
 <h3>字面量与字段访问</h3>
 <div class="scroll">
 <table>
@@ -513,6 +514,7 @@ console.log(named.x);  // 1</code><button class="copy" type="button">复制</but
 
 
 
+<h3>空安全</h3>
 <h3>空安全读取、合并与判空</h3>
 <div class="scroll">
 <table>
@@ -915,6 +917,23 @@ function connect(__o) {
   <span class="t">函数值自身的字符串表示不做等价保证</span>
   tear-off 在 JS 侧落成 <code>recv.m.bind(recv)</code>（保留 <code>this</code>）。调用语义与 Dart 一致，但把<strong>函数对象本身</strong>插值 / <code>toString()</code> 时文本必然不同：Dart VM 输出 <code>Closure: () =&gt; int from Function 'm'.</code>，JS 的 bound function 按规范输出 <code>function m() { [native code] }</code>。这是引擎表示差异，不按需伪造；需要稳定文案时请插值调用结果（<code>${f()}</code>）或显式调用业务 <code>toString</code>。
 </div>
+
+
+<h3>顶层函数</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:16%"><col style="width:8%"><col style="width:20%"><col style="width:20%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>void foo(int x)</code> / <code>int bar() =&gt; ...</code></td><td>无产物</td><td>顶层函数没有 JS 类承载；生成器当前不收集顶层 <code>FunctionDeclaration</code></td><td><span class="lv lv-must">必须改写</span> 待实现：<code>export function foo(x) { ... }</code></td><td>普通顶层函数不翻译；调用点解析不到时告警丢弃；仅 <code>@HostInjected</code> 顶层函数走 <code>_app_host_.invoke</code></td><td><span class="st st-fail">不通过</span></td><td>按成员函数同一套 <code>_functionParamPlan</code> + <code>translateMethodBody</code> 新增收集 / 发射 / 调用点解析</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="t">成员函数 / 局部函数 / 闭包共用一套</span>
+  形参前导（可选位置默认值、具名实参尾参对象 <code>__o</code>）由 <code>_functionParamPlan</code> 统一处理，函数体走同一条 <code>translateMethodBody</code> / <code>translateStmtList</code>；差异只在外层发射形态：类方法落 class body，局部函数落 <code>const f = &lt;closure&gt;</code>。<b>顶层函数目前不产出 JS 函数体</b>（普通顶层函数不翻译；唯一例外是 <code>@HostInjected</code> 顶层函数，调用点改写为 <code>_app_host_.invoke</code>），因此顶层函数与成员函数还没有共用发射路径。
+</div>
 </section>
 
 <!-- ================= 07 类与对象 ================= -->
@@ -995,7 +1014,6 @@ class Child extends Base {
   <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
   <tbody>
     <tr><td><code>static const int MAX = 9</code></td><td><code>static MAX = 9</code></td><td>Dart 静态常量在类加载期初始化，JS 静态字段按声明顺序求值</td><td><span class="lv lv-care">注意</span> 生成 <code>static MAX = 9</code>，初始化顺序见第 07 章</td><td><code>dart2js 的 _writeStaticFields</code> 发 <code>static f = init;</code>，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>static const int max = 9</code></td><td><code>static max = 9</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>dart2js 的 <code>_writeStaticFields</code> 发 `static f = init;`，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>static int compute()</code></td><td><code>static compute()</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>dart2js 类体发 <code>static m(...)</code>；裸调用由 _methodCallJs 落 <code>C.m()</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>C.max</code> 访问</td><td><code>C.max</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>exprToJs 的 PrefixedIdentifier / PropertyAccess 原样发 <code>C.max</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>static final cache = {}</code></td><td><code>static cache = new Map()</code></td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 立即求值 vs 懒求值</td><td>dart2js 的 <code>_writeStaticFields</code> 发 `static f = init;`，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
@@ -1431,21 +1449,22 @@ try {
 <p class="h2-sub">import / export 按文件产物映射为 ESM；当前实现只按 URI 收集依赖，import 侧的 show / hide 尚未过滤。</p>
 
 <table>
-  <colgroup><col style="width:22%"><col style="width:28%"><col style="width:50%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>现状（项目实现）</th></tr></thead>
+  <colgroup><col style="width:20%"><col style="width:24%"><col style="width:44%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>现状（项目实现）</th><th>是否通过</th></tr></thead>
   <tbody>
-    <tr><td><code>import 'x.dart'</code></td><td><code>import { A } from './x.js'</code></td><td>按 URI 解析目标文件产物；跨文件符号按类名 / 顶层常量加入可见表</td></tr>
-    <tr><td><code>import 'x.dart' as p</code></td><td><code>import * as p from './x.js'</code></td><td><code>p.Foo</code> 保留为模块命名空间引用；前缀不参与成员名改写</td></tr>
-    <tr><td><code>show A</code> / <code>hide B</code></td><td>无产物差异</td><td><b>import 侧未实现</b>：<code>resolveImportFiles</code> 只读 URI，不读 combinators；被 hide / 未 show 的符号仍可能进入类表，记为不通过</td></tr>
-    <tr><td><code>export 'x.dart' show/hide</code></td><td><code>export { A } from './x.js'</code></td><td>barrel re-export 已按声明名过滤（class / mixin / 具名 extension）；顶层函数 / 常量不参与转发</td></tr>
-    <tr><td><code>import 'dart:...'</code></td><td>宿主模块 / <code>flutter.js</code></td><td>由宿主承接，不产出 ESM 文件</td></tr>
-    <tr><td><code>part</code> / <code>part of</code></td><td>无</td><td><b>未覆盖</b>：当前只处理 import / export，part 文件不进入翻译范围</td></tr>
+    <tr><td><code>import 'x.dart'</code></td><td><code>import { A } from './x.js'</code></td><td>按 URI 解析目标文件产物；跨文件符号按类名 / 顶层常量加入可见表</td><td><span class="st st-pass">通过</span></td></tr>
+    <tr><td><code>import 'x.dart' as p</code></td><td><code>import * as p from './x.js'</code></td><td><code>p.Foo</code> 保留为模块命名空间引用；前缀不参与成员名改写</td><td><span class="st st-pass">通过</span></td></tr>
+    <tr><td><code>show A</code> / <code>hide B</code></td><td>无产物差异</td><td><b>import 侧未实现</b>：<code>resolveImportFiles</code> 只读 URI，不读 combinators；被 hide / 未 show 的符号仍可能进入类表</td><td><span class="st st-fail">不通过</span></td></tr>
+    <tr><td><code>export 'x.dart' show/hide</code></td><td><code>export { A } from './x.js'</code></td><td>barrel re-export 仅按 class / mixin / 具名 extension 过滤；顶层函数与常量不参与转发</td><td><span class="st st-fail">不通过</span></td></tr>
+    <tr><td><code>import 'dart:...'</code></td><td>宿主模块 / <code>flutter.js</code></td><td>由宿主承接，不产出 ESM 文件</td><td><span class="st st-pass">通过</span></td></tr>
+    <tr><td><code>part</code> / <code>part of</code></td><td>无</td><td>当前只处理 import / export，part 文件不进入翻译范围</td><td><span class="st st-fail">不通过</span></td></tr>
+    <tr><td><code>library</code> 指令</td><td>无</td><td>未解析；不影响产物，但库级元数据 / 注解不承接</td><td><span class="st st-skip">不适用</span></td></tr>
   </tbody>
 </table>
 
 <div class="note risk">
   <span class="t">跨库同名扩展的可见性</span>
-  全局原型无法表达 import 可见性；跨库同名扩展的隐式调用是已知限制（见本章「extension 扩展成员」），显式 <code>E(x).m()</code> 正常。
+  全局原型无法表达 import 可见性；跨库同名扩展的隐式调用是已知限制（见第 07 章「extension 扩展成员」），显式 <code>E(x).m()</code> 正常。
 </div>
 </section>
 
