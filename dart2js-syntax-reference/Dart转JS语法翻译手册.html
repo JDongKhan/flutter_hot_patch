@@ -169,24 +169,26 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
 
 <aside class="toc" aria-label="目录">
   <p class="toc-title">目录</p>
-  <ol>
+    <ol>
     <li><a href="#principles"><span class="n">00</span>实现总则</a></li>
     <li><a href="#pipeline"><span class="n">01</span>翻译流水</a></li>
-    <li><a href="#declarations"><span class="n">02</span>声明与常量</a></li>
-    <li><a href="#basic-types"><span class="n">03</span>基础类型</a></li>
-    <li><a href="#types"><span class="n">04</span>类型判定</a></li>
-    <li><a href="#null-assign"><span class="n">05</span>空安全</a></li>
-    <li><a href="#conditional"><span class="n">06</span>条件与逻辑运算符</a></li>
-    <li><a href="#operators"><span class="n">07</span>运算符</a></li>
-    <li><a href="#classes"><span class="n">08</span>类</a></li>
-    <li><a href="#static"><span class="n">09</span>static 成员</a></li>
-    <li><a href="#enums"><span class="n">10</span>枚举</a></li>
-    <li><a href="#mixins"><span class="n">11</span>mixin</a></li>
-    <li><a href="#extensions"><span class="n">12</span>extension</a></li>
-    <li><a href="#collections"><span class="n">13</span>集合方法差异</a></li>
-    <li><a href="#control"><span class="n">14</span>控制流与异常</a></li>
-    <li><a href="#async"><span class="n">15</span>异步与生成器</a></li>
-    <li><a href="#helpers"><span class="n">16</span>运行时补齐与辅助能力</a></li>
+    <li><a href="#basic-syntax"><span class="n">02</span>基础语法</a></li>
+    <li><a href="#variables-types"><span class="n">03</span>变量与数据类型</a></li>
+    <li><a href="#control-flow"><span class="n">04</span>控制流</a></li>
+    <li><a href="#collections"><span class="n">05</span>集合类型</a></li>
+    <li><a href="#functions"><span class="n">06</span>函数</a></li>
+    <li><a href="#classes"><span class="n">07</span>类与对象</a></li>
+    <li><a href="#inheritance"><span class="n">08</span>继承与多态</a></li>
+    <li><a href="#interfaces-mixins"><span class="n">09</span>接口与 Mixin</a></li>
+    <li><a href="#generics"><span class="n">10</span>泛型</a></li>
+    <li><a href="#enums-symbols"><span class="n">11</span>枚举与符号</a></li>
+    <li><a href="#exceptions"><span class="n">12</span>异常处理</a></li>
+    <li><a href="#packages-libraries"><span class="n">13</span>包与库管理</a></li>
+    <li><a href="#typedef-function-types"><span class="n">14</span>typedef 与函数类型</a></li>
+    <li><a href="#async"><span class="n">15</span>异步编程</a></li>
+    <li><a href="#streams"><span class="n">16</span>Stream 流</a></li>
+    <li><a href="#isolates"><span class="n">17</span>并发与 Isolate</a></li>
+    <li><a href="#helpers"><span class="n">18</span>运行时补齐与辅助能力</a></li>
   </ol>
 </aside>
 
@@ -251,13 +253,15 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
 </div>
 </section>
 
-<!-- ================= 02 声明 ================= -->
-<section id="declarations">
-<h2><span class="sec-no">02</span>声明与常量</h2>
-<p class="h2-sub">Dart 的 const 是编译期深度不可变，JS 的 const 只锁绑定。这是最容易“看起来对、其实没锁住”的一处。</p>
+<!-- ================= 02 基础语法 ================= -->
+<section id="basic-syntax">
+<h2><span class="sec-no">02</span>基础语法</h2>
+<p class="h2-sub">变量声明、常量、运算符与条件表达式；差异集中在常量不可变、取模 / 整除、类型判断与逻辑返回值。</p>
 
-<div class="scroll"><table>
-  <colgroup><col style="width:12%"><col style="width:11%"><col style="width:16%"><col style="width:20%"><col style="width:30%"><col style="width:9%"><col style="width:12%"></colgroup>
+<h3>声明与常量</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
   <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
   <tbody>
     <tr><td><code>var x = 1</code></td><td><code>let x = 1</code></td><td>Dart 的 <code>var</code> 是函数 / 库级作用域，JS 的 <code>var</code> 有变量提升与重复声明</td><td><span class="lv lv-ok">直译</span> 统一生成 <code>let</code>，禁止生成 <code>var</code></td><td>translateStmtList 的 VariableDeclarationStatement 分支：<code>var</code> 与无修饰声明发 <code>let</code>，不再生成 <code>var</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
@@ -268,10 +272,9 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
     <tr><td><code>late int x</code></td><td><code>let x</code></td><td>Dart 有惰性初始化与未赋值读取检查，JS 两者都没有</td><td><span class="lv lv-care">注意</span> 生成 <code>let x</code>，读取点补未赋值断言</td><td>不适用：JS 无惰性初始化 / 未赋值读取检查；项目按普通局部变量生成 <code>let x = null</code>（不伪造未赋值断言）</td><td><span class="st st-skip">不适用</span></td><td>拒绝实现（JS 无等价能力，见 00 总则）</td></tr>
     <tr><td><code>int x = 1</code></td><td><code>let x = 1</code></td><td>类型标注只存在于编译期</td><td><span class="lv lv-ok">直译</span> 擦除类型标注，保留变量名与初值</td><td><code>translateStmtList 的 VariableDeclarationStatement 分支</code> 类型只登记进 <code>scope.localTypes</code>，不进入产物</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>String? s</code></td><td><code>let s = null</code></td><td>Dart 可空局部变量默认 <code>null</code>，JS 的 <code>let s</code> 是 <code>undefined</code></td><td><span class="lv lv-must">必须改写</span> 显式初始化 <code>= null</code>，保证声明值一致</td><td>translateStmtList 的 VariableDeclarationStatement 分支：无初始化器发 <code>let s = null</code>（<code>final</code> / <code>const</code> 声明不可能无初始化器）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>static const int MAX = 9</code></td><td><code>static MAX = 9</code></td><td>Dart 静态常量在类加载期初始化，JS 静态字段按声明顺序求值</td><td><span class="lv lv-care">注意</span> 生成 <code>static MAX = 9</code>，初始化顺序见第 09 章</td><td><code>dart2js 的 _writeStaticFields</code> 发 <code>static f = init;</code>，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>typedef F = int Function(int)</code></td><td>无运行时表示</td><td><code>typedef</code> 只参与类型检查</td><td><span class="lv lv-ok">直译</span> 删除该声明，类型检查交给 TS 注解</td><td><code>component_scope 的顶层声明收集</code> 顶层只收集变量 / extension / enum，typedef 不进产物</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
   </tbody>
-</table></div>
+</table>
+</div>
 
 <p class="cap"><span class="dart">DART</span> → <span class="js">JS</span> · 深度冻结</p>
 <pre><code>// const 集合：递归冻结，Map/Set 需要单独包一层
@@ -297,14 +300,144 @@ function deepFreeze(v) {
   <span class="t">Map 的冻结陷阱</span>
   Map 字面量现在是原生 <code>new Map([[k, v], …])</code>；<code>Object.freeze(new Map())</code> 并不能阻止 <code>set</code>，因为数据存在内部槽而非属性上。<b>项目不伪造 const 的不可变语义</b>（与 List 一致，Dart 的 const 是编译期保证），因此不冻结、不做只读代理；把这条记为「不适用 / 不实现」，不要为了“冻结”再造包装形态。
 </div>
+
+<h3>运算符</h3>
+
+
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>+ - * /</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> Dart 的 <code>/</code> 返回 double，与 JS 一致</td><td>exprToJs 的 BinaryExpression 原样发 JS 运算符（int/double 一比一为 number）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>%</code></td><td><code>__mod(a, b)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> Dart 是欧几里得取模，负数结果非负；JS 是截断余数</td><td><code>exprToJs</code> 的 BinaryExpression <code>%</code> 分支发 <code>__mod(a, b)</code>；运行时 <code>G.__mod</code>（<code>runtime_js.dart</code> 的 <code>_jsUiEnvVars</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>~/</code></td><td><code>Math.trunc(a / b)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 向零取整，JS 无此运算符</td><td>exprToJs 的 <code>~/</code> 分支发 <code>Math.trunc(a / b)</code>（向零截断）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>==</code> / <code>!=</code></td><td><code>===</code> / <code>!==</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> JS 的宽松相等会做类型转换</td><td><code>exprToJs</code> 的 BinaryExpression：判空在另一侧可能为空时发 <code>__nn(x) == null</code>；其余 <code>==</code> / <code>!=</code> 只要有一侧确定非空就直接严格比较（null / undefined 对结果一致），仅两侧都可能为空时才各自包 <code>__nn</code>；声明了 <code>operator ==</code> 的类按 <code>_operatorOwnerOf</code> 改 <code>__op$eq</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>identical(a, b)</code></td><td><code>Object.is(a, b)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 两者对 NaN / -0 处理一致</td><td><code>_methodCallJs</code> 裸调用分支 → <code>Object.is(a, b)</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>is</code> / <code>is!</code></td><td><code>typeof</code> / <code>instanceof</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 按第 03 / 04 章的类型判定分派</td><td><code>typeTestJs</code>（js_value.dart）覆盖 String/int<code>Number.isInteger</code>/double/num/bool/List/Iterable/Set/Map/Function/Object/dynamic/Never/项目类/宿主类；类型不可解析时整条丢弃并告警</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>as</code></td><td>擦除</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 可选生成断言辅助</td><td>直接擦除（exprToJs 的 AsExpression 分支，类型参数同样擦除）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>++</code> / <code>--</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 前后缀语义一致</td><td>普通目标一比一（语句位置下标 / 属性自增落成 <code>+= 1</code>）；空安全目标走 <code>_nullAwareUpdateJs</code> 守卫</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>?.</code> / <code>?[]</code></td><td>读取同形</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 写位置非法，见第 03 章「空安全」</td><td>exprToJs 的属性 / 下标分支原样发可选链</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>..</code> 级联</td><td>多条语句</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> JS 无级联运算符</td><td>exprToJs 级联 IIFE：<code>_t</code> 单次求值；section 支持方法调用 / 属性·下标读写 / 赋值（<code>_cascadeRefJs</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>?..</code> 空安全级联</td><td>条件块</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span></td><td>入口非空守卫 IIFE（目标为空时整条短路）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>...spread</code></td><td><code>...</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 列表/集合展开一致</td><td>_listLiteralJs / _collectionFragmentJs 生成 <code>...</code> 片段（含 <code>...?</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>'$x'</code> / <code>'${a+b}'</code></td><td><code>\`${x}\`</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 模板字符串</td><td>字符串插值用 <code>+</code> 拼接（非模板字符串），语义等价</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>operator +</code> 等重载</td><td><code>__op$add(other)</code></td><td>JS 无运算符重载，改成带下划线前缀的具名方法避免外部同名冲突</td><td><span class="lv lv-must">必须改写</span> <code>operatorJsName</code> 统一映射为 <code>__op$add</code> / <code>__op$sub</code> / <code>__op$eq</code> 等</td><td>js_value.dart 的 <code>operatorJsName</code> 映射；调用点 <code>_operatorOwnerOf</code> 按静态类型改写</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>operator []=</code></td><td><code>__op$indexSet(i, v)</code></td><td>同 <code>operator +</code></td><td><span class="lv lv-must">必须改写</span> <code>operatorJsName</code> <code>'[]=' => '__op$indexSet'</code></td><td><code>operatorJsName</code> 的 <code>[]=</code> 映射；<code>_assignValueJs</code> / 语句赋值分支改写</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>call(...)</code></td><td><code>invoke(...)</code></td><td><span class="muted">—</span> 避免与 <code>Function.prototype.call</code> 冲突</td><td><span class="lv lv-must">必须改写</span> 声明侧改名、调用侧按静态类型判定</td><td>声明：<code>classInfoOf</code> 把非 static 实例方法 <code>call</code> 改名为 <code>invoke</code>，并记 <code>ClassInfo.isCallable</code>；调用：<code>obj(...)</code> / 字段 <code>cb(...)</code> / <code>obj.call(...)</code> 在接收者可判定为可调用类（含 <code>extends</code> 链）时改写为 <code>.invoke(...)</code>，未知类型保持原样</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>fn.call(a, b)</code>（<code>Function</code>）</td><td><code>fn(a, b)</code></td><td><span class="lv lv-must">必须改写</span> Dart 的 <code>Function.call</code> 只有实参；JS 的 <code>Function.prototype.call</code> 首参是 <code>thisArg</code></td><td>接收者静态类型为函数（<code>Function</code> / <code>T Function(...)</code>）时，把 <code>.call(args)</code> 改写为直接调用 <code>fn(args)</code>；可空 <code>fn?.call(...)</code> → <code>fn?.(...)</code></td><td><code>js_translator</code> 的 <code>_isFunctionType</code> + <code>_methodCallJs</code>（参数 / 字段 / 可选链三个分支）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="cap"><span class="dart">DART</span> → <span class="js">JS</span> · 取模与整除</p>
+<pre><code>// Dart: (-7 % 3) == 2      （欧几里得取模，结果非负）
+// JS  : (-7 % 3) == -1     （截断余数）
+
+function __mod(a, b) {
+  return ((a % b) + b) % b;
+}
+
+// Dart: a ~/ b   →   向零取整
+const q = Math.trunc(a / b);</code><button class="copy" type="button">复制</button></pre>
+
+<p class="cap"><span class="dart">DART</span> → <span class="js">JS</span> · 类型判断分派</p>
+<pre><code>// Dart: x is String        →  typeof x === 'string'
+// Dart: x is int           →  Number.isInteger(x)
+// Dart: x is List          →  Array.isArray(x)
+// Dart: x is Map           →  x instanceof Map
+// Dart: x is MyClass       →  x instanceof MyClass
+// Dart: x is! String       →  typeof x !== 'string'</code><button class="copy" type="button">复制</button></pre>
+
+<h3>级联运算符</h3>
+<pre><code>// Dart
+final b = Buffer()
+  ..write(1)
+  ..write(2)
+  ..flush();
+
+// 项目实际产物：IIFE 内绑定 _t（接收者只求值一次，级联返回 target 本身）
+const b = (() => { const _t = new Buffer({});
+  _t.write(1); _t.write(2); _t.flush();
+  return _t; })();
+
+// 级联 section 内的赋值同样以 _t 为根（..x = v → _t.x = v；..[i] = v → _t[i] = v）
+const p = (() => { const _t = new Point({}); _t.x = 1; _t.y = 2; return _t; })();</code><button class="copy" type="button">复制</button></pre>
+
+<h3>运算符重载必须做「类表 + 调用点重写」</h3>
+<p>JS 不支持运算符重载，翻译器要登记每个类重载了哪些运算符，再把所有使用该类型值的位置改写成方法调用。项目按<strong>操作数静态类型</strong>在调用点判定（字段 / 形参 / 显式类型局部变量 / 项目类构造推断），<b>不做跨文件全量重扫</b>；类型不可判定时保持 JS 原生运算。</p>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>operator +(other)</code></td><td><code>__op$add(other)</code></td><td><span class="muted">—</span></td><td><code>a + b</code> → <code>a.__op$add(b)</code></td><td><code>operatorJsName</code> 映射表</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>operator ==(other)</code></td><td><code>__op$eq(other)</code></td><td><span class="muted">—</span></td><td><code>a == b</code> → <code>a.__op$eq(b)</code></td><td><code>operatorJsName</code> <code>'==' => '__op$eq'</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>operator [](i)</code></td><td><code>__op$indexGet(i)</code></td><td><span class="muted">—</span></td><td><code>a[i]</code> → <code>a.__op$indexGet(i)</code></td><td><code>operatorJsName</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>operator []=</code></td><td><code>__op$indexSet(i, v)</code></td><td><span class="muted">—</span></td><td><code>a[i] = v</code> → <code>a.__op$indexSet(i, v)</code></td><td><code>operatorJsName</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>operator &lt;(o)</code></td><td><code>__op$lt(o)</code></td><td><span class="muted">—</span></td><td><code>a &lt; b</code> → <code>a.__op$lt(b)</code></td><td><code>operatorJsName</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>operator -()</code>（一元）</td><td><code>__op$neg()</code></td><td><span class="muted">—</span></td><td><code>-a</code> → <code>a.__op$neg()</code></td><td><code>operatorJsName</code> 一元取负 <code>'-' => '__op$neg'</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note risk">
+  <span class="t">这是翻译器里最容易漏的一类</span>
+  重载 <code>==</code> 的类，如果按第 02 章“<code>==</code> → <code>===</code>”一刀切，语义会直接错。必须先生成类表，再决定 <code>==</code> 走 <code>===</code> 还是 <code>equals()</code>。
+</div>
+
+
+
+
+<h3>三目：语法一致，类型约束擦除</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>c ? a : b</code></td><td><code>c ? a : b</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> Dart 静态检查分支类型兼容，JS 不检查，擦除即可</td><td>exprToJs 的 ConditionalExpression 分支 直译 `($c ? $t : $f)`</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>a ? b : c ? d : e</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 两边都右结合</td><td>exprToJs 的 ConditionalExpression 原样发三目（Dart/JS 都右结合）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>条件必须是 <code>bool</code></td><td>任意 truthy/falsy</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 可空 bool 为 null 时 JS 走 falsy 分支，会静默改变行为</td><td>Dart 侧 <code>bool?</code> 不能直接作条件（需显式比较），产物原样发条件</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>x != null ? x.foo() : 0</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 类型提升是编译期行为，运行时 x 确实非空</td><td>原样发三目；运行期 x 确实非空</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note warn">
+  <span class="t">条件表达式：Dart 要求 bool，JS 接受一切</span>
+  Dart 的 <code>if (x)</code> 里 x 必须是 bool，所以 Dart→JS 方向本身安全。唯一隐患是<strong>可空 bool</strong>（<code>bool?</code>）：Dart 侧会强制你先判空，若生成侧直接写成 <code>if (x)</code>，null 会静默变成 false 分支。遇到 <code>bool?</code> 条件建议生成 <code>if (x === true)</code> 或显式判空。
+</div>
+
+
+
+<h3>逻辑运算符的返回值类型不同</h3>
+<p>Dart 的 <code>&amp;&amp;</code> / <code>||</code> 结果类型是 <code>bool</code>；JS 返回<strong>操作数本身</strong>。语句位置（<code>if</code>）无差异，作为值存储或跨语言传递时必须归一。</p>
+<pre><code>// Dart
+bool ok = a || b;        // ok 一定是 true / false
+
+// JS 直译：ok 可能是 a 本身（对象、字符串…）
+const ok = a || b;
+
+// ✅ 作为值使用时归一
+const ok = !!(a || b);   // 或 Boolean(a || b)</code><button class="copy" type="button">复制</button></pre>
+
+
+<div class="note">
+  <span class="t">?? 与逻辑运算符混用</span>
+  <code>??</code> 属于空安全；它与 <code>||</code> / <code>&amp;&amp;</code> 裸混用会 SyntaxError，括号规则见第 03 章「空安全」。
+</div>
+
 </section>
 
-<!-- ================= 03 基础类型 ================= -->
-<section id="basic-types">
-<h2><span class="sec-no">03</span>基础类型</h2>
-<p class="h2-sub">int / double / num / String / bool 在 JS 侧分别落到 number / string / boolean；差异集中在精度、UTF-16 与真值语义。null 本身见第 05 章。</p>
+<!-- ================= 03 变量与数据类型 ================= -->
+<section id="variables-types">
+<h2><span class="sec-no">03</span>变量与数据类型</h2>
+<p class="h2-sub">基础类型、类型判定、Record 与空安全统一归入数据类型；类型注解擦除，运行时只保留必要的类型身份。</p>
 
-<h3>承载与判定</h3>
+
+
+<h3>基础类型</h3>
+<h3>类型判定</h3>
 <div class="scroll">
 <table>
   <colgroup><col style="width:11%"><col style="width:14%"><col style="width:18%"><col style="width:18%"><col style="width:21%"><col style="width:6%"><col style="width:12%"></colgroup>
@@ -319,23 +452,16 @@ function deepFreeze(v) {
 </table>
 </div>
 
-</section>
 
-<!-- ================= 04 类型判定 ================= -->
-<section id="types">
-<h2><span class="sec-no">04</span>类型判定</h2>
-<p class="h2-sub">复合类型、集合、类与特殊类型在运行时只剩 instanceof / typeof 判定；类型不可解析时整条丢弃并告警。</p>
 
-<h3>类型判定映射</h3>
 <div class="scroll">
 <table>
-  <colgroup><col style="width:11%"><col style="width:14%"><col style="width:18%"><col style="width:18%"><col style="width:21%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
   <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
   <tbody>
     <tr><td><code>List&lt;T&gt;</code></td><td><code>Array.isArray(x)</code></td><td>Dart List 与 Array 一一对应</td><td><span class="lv lv-ok">直译</span> <code>Iterable</code> 同样判数组</td><td><code>typeTestJs</code> List / Iterable 走 <code>Array.isArray</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>Map&lt;K, V&gt;</code></td><td>字面量为 <code>instanceof Map</code>；宿主回包为普通对象</td><td>Map 有两种承载（原生 Map / 宿主 JSON 普通对象），单用 <code>instanceof</code> 会漏判宿主数据</td><td><span class="lv lv-care">注意</span> 同时兼容两种承载：<code>!= null &amp;&amp; typeof object &amp;&amp; !Array.isArray &amp;&amp; !(instanceof Set)</code></td><td><code>typeTestJs</code> 的 <code>Map</code> 分支按对象判定并排除 <code>Set</code> / <code>Array</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>Set&lt;T&gt;</code></td><td><code>x instanceof Set</code></td><td>字面量翻成 <code>new Set()</code> 后可直接判</td><td><span class="lv lv-ok">直译</span> 生成 <code>instanceof Set</code></td><td><code>typeTestJs</code> 的 <code>Set</code> 分支走 <code>instanceof Set</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>Function</code></td><td><code>typeof x === 'function'</code></td><td>直接对应</td><td><span class="lv lv-ok">直译</span></td><td><code>typeTestJs</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td>自定义类 <code>C</code></td><td><code>x instanceof C</code></td><td>继承链仍有效</td><td><span class="lv lv-ok">直译</span> 只对确实存在的类生成 <code>instanceof</code></td><td><code>typeTestJs</code> 的 <code>instanceof</code> 判定：已知类 / 宿主类型走 <code>instanceof</code>，未定义则整条不翻译</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>dynamic</code> / <code>Object?</code></td><td>任意值</td><td><code>dynamic</code> 不做检查，<code>Object?</code> 只排除空</td><td><span class="lv lv-ok">直译</span> <code>dynamic</code> 恒真，<code>Object?</code> 只判非空</td><td><code>typeTestJs</code>：<code>dynamic</code> 生成 <code>true</code>，<code>Object</code> 生成 <code>__nn(v) != null</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>Never</code></td><td>不可达</td><td>无运行时表示</td><td><span class="lv lv-must">必须改写</span> 生成 <code>throw</code> 或删除分支</td><td><code>typeTestJs</code> 的 <code>Never</code> 分支生成 <code>false</code>（<code>is!</code> 得到 <code>true</code>，等价于删除不可达分支）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
@@ -343,12 +469,49 @@ function deepFreeze(v) {
 </table>
 </div>
 
-</section>
 
-<!-- ================= 05 空安全 ================= -->
-<section id="null-assign">
-<h2><span class="sec-no">05</span>空安全</h2>
-<p class="h2-sub">Dart 的空安全在 JS 侧没有运行时表示；读、写、合并、判空由生成侧按位置分别处理。</p>
+
+<h3>字面量与字段访问</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>(a, b)</code> / <code>(x: 1)</code> / <code>(a, x: 1)</code> record</td><td>统一对象：位置字段 <code>{"$1": a, "$2": b}</code>，命名字段用原名</td><td>JS 的 <code>(a, b)</code> 是逗号表达式（值为 b）；Dart record 的 <code>==</code> 是结构相等，JS 对象是同一性</td><td><span class="lv lv-must">必须改写</span> 生成对象；<code>r.$1</code> / <code>r.x</code> 原样属性访问（<code>$1</code> 是合法 JS 标识符）</td><td><code>js_translator</code> 的 <code>_recordLiteralJs</code>（<code>rhsToJs</code> / <code>exprToJs</code> 共用）；箭头体 <code>=&gt; (…)</code>、<code>return (…)</code>、局部函数、闭包都经 <code>rhsToJs</code>，无返回值专用分支；<b>== 的结构相等不伪造</b>（对象比较仍是同一性，与 Map 键语义同属已知差异）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="cap"><span class="dart">DART</span></p>
+<pre><code>var point = (1, 'a');
+var named = (x: 1, y: 2);
+print(point.$1);       // 1
+print(named.x);        // 1</code><button class="copy" type="button">复制</button></pre>
+
+<p class="cap"><span class="js">JS</span> · 统一对象承载</p>
+<pre><code>let point = {"$1": 1, "$2": "a"};
+let named = {"x": 1, "y": 2};
+console.log(point.$1); // 1
+console.log(named.x);  // 1</code><button class="copy" type="button">复制</button></pre>
+
+<h3>模式匹配</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td>模式匹配 <code>case (a, b)</code></td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 解构 + 守卫条件</td><td><code>_compilePattern</code> 的 <code>RecordPattern</code> 分支：位置字段取 <code>["$1"…"$N"]</code>、命名字段取原名，逐字段递归匹配；JS 侧 record 就是普通对象，只做 <code>typeof === "object"</code> 浅检查</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note risk">
+  <span class="t">结构相等不伪造</span>
+  Dart record 的 <code>==</code> 是逐字段结构相等；JS 承载是普通对象，<code>==</code> / <code>===</code> 是同一性。项目不伪造结构相等（与 Map 键语义同属已知差异）。需要按值比较时，显式比较各字段或先序列化。
+</div>
+
+
+
 
 <h3>空安全读取、合并与判空</h3>
 <div class="scroll">
@@ -533,590 +696,57 @@ const v2 = a || b ?? c;
 const v2 = (a || b) ?? c;</code><button class="copy" type="button">复制</button></pre>
 
 
+
 </section>
 
-<!-- ================= 06 条件与逻辑运算符 ================= -->
-<section id="conditional">
-<h2><span class="sec-no">06</span>条件与逻辑运算符</h2>
-<p class="h2-sub">三目语法同形，差异集中在条件类型与逻辑运算符的返回值类型。</p>
-
-<h3>三目：语法一致，类型约束擦除</h3>
-<div class="scroll">
-<table>
-  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
-  <tbody>
-    <tr><td><code>c ? a : b</code></td><td><code>c ? a : b</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> Dart 静态检查分支类型兼容，JS 不检查，擦除即可</td><td>exprToJs 的 ConditionalExpression 分支 直译 `($c ? $t : $f)`</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>a ? b : c ? d : e</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 两边都右结合</td><td>exprToJs 的 ConditionalExpression 原样发三目（Dart/JS 都右结合）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>条件必须是 <code>bool</code></td><td>任意 truthy/falsy</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 可空 bool 为 null 时 JS 走 falsy 分支，会静默改变行为</td><td>Dart 侧 <code>bool?</code> 不能直接作条件（需显式比较），产物原样发条件</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>x != null ? x.foo() : 0</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 类型提升是编译期行为，运行时 x 确实非空</td><td>原样发三目；运行期 x 确实非空</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-  </tbody>
-</table>
-</div>
-
-<div class="note warn">
-  <span class="t">条件表达式：Dart 要求 bool，JS 接受一切</span>
-  Dart 的 <code>if (x)</code> 里 x 必须是 bool，所以 Dart→JS 方向本身安全。唯一隐患是<strong>可空 bool</strong>（<code>bool?</code>）：Dart 侧会强制你先判空，若生成侧直接写成 <code>if (x)</code>，null 会静默变成 false 分支。遇到 <code>bool?</code> 条件建议生成 <code>if (x === true)</code> 或显式判空。
-</div>
-
-
-
-<h3>逻辑运算符的返回值类型不同</h3>
-<p>Dart 的 <code>&amp;&amp;</code> / <code>||</code> 结果类型是 <code>bool</code>；JS 返回<strong>操作数本身</strong>。语句位置（<code>if</code>）无差异，作为值存储或跨语言传递时必须归一。</p>
-<pre><code>// Dart
-bool ok = a || b;        // ok 一定是 true / false
-
-// JS 直译：ok 可能是 a 本身（对象、字符串…）
-const ok = a || b;
-
-// ✅ 作为值使用时归一
-const ok = !!(a || b);   // 或 Boolean(a || b)</code><button class="copy" type="button">复制</button></pre>
-
-
-<div class="note">
-  <span class="t">?? 与逻辑运算符混用</span>
-  <code>??</code> 属于空安全；它与 <code>||</code> / <code>&amp;&amp;</code> 裸混用会 SyntaxError，括号规则见第 05 章。
-</div>
-</section>
-
-<!-- ================= 07 运算符 ================= -->
-<section id="operators">
-<h2><span class="sec-no">07</span>运算符</h2>
-<p class="h2-sub">算术类基本一致，语义分叉集中在取模、整除、相等、类型判断、级联和运算符重载。</p>
+<!-- ================= 04 控制流 ================= -->
+<section id="control-flow">
+<h2><span class="sec-no">04</span>控制流</h2>
+<p class="h2-sub">if / for / while 基本一致，差异集中在 switch 穿透、模式匹配降级与 for await。</p>
 
 <div class="scroll">
 <table>
   <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
   <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
   <tbody>
-    <tr><td><code>+ - * /</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> Dart 的 <code>/</code> 返回 double，与 JS 一致</td><td>exprToJs 的 BinaryExpression 原样发 JS 运算符（int/double 一比一为 number）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>%</code></td><td><code>__mod(a, b)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> Dart 是欧几里得取模，负数结果非负；JS 是截断余数</td><td><code>exprToJs</code> 的 BinaryExpression <code>%</code> 分支发 <code>__mod(a, b)</code>；运行时 <code>G.__mod</code>（<code>runtime_js.dart</code> 的 <code>_jsUiEnvVars</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>~/</code></td><td><code>Math.trunc(a / b)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 向零取整，JS 无此运算符</td><td>exprToJs 的 <code>~/</code> 分支发 <code>Math.trunc(a / b)</code>（向零截断）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>==</code> / <code>!=</code></td><td><code>===</code> / <code>!==</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> JS 的宽松相等会做类型转换</td><td><code>exprToJs</code> 的 BinaryExpression：判空在另一侧可能为空时发 <code>__nn(x) == null</code>；其余 <code>==</code> / <code>!=</code> 只要有一侧确定非空就直接严格比较（null / undefined 对结果一致），仅两侧都可能为空时才各自包 <code>__nn</code>；声明了 <code>operator ==</code> 的类按 <code>_operatorOwnerOf</code> 改 <code>__op$eq</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>identical(a, b)</code></td><td><code>Object.is(a, b)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 两者对 NaN / -0 处理一致</td><td><code>_methodCallJs</code> 裸调用分支 → <code>Object.is(a, b)</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>is</code> / <code>is!</code></td><td><code>typeof</code> / <code>instanceof</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 按第 03 / 04 章的类型判定分派</td><td><code>typeTestJs</code>（js_value.dart）覆盖 String/int<code>Number.isInteger</code>/double/num/bool/List/Iterable/Set/Map/Function/Object/dynamic/Never/项目类/宿主类；类型不可解析时整条丢弃并告警</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>as</code></td><td>擦除</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 可选生成断言辅助</td><td>直接擦除（exprToJs 的 AsExpression 分支，类型参数同样擦除）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>++</code> / <code>--</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 前后缀语义一致</td><td>普通目标一比一（语句位置下标 / 属性自增落成 <code>+= 1</code>）；空安全目标走 <code>_nullAwareUpdateJs</code> 守卫</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>?.</code> / <code>?[]</code></td><td>读取同形</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 写位置非法，见第 05 章</td><td>exprToJs 的属性 / 下标分支原样发可选链</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>..</code> 级联</td><td>多条语句</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> JS 无级联运算符</td><td>exprToJs 级联 IIFE：<code>_t</code> 单次求值；section 支持方法调用 / 属性·下标读写 / 赋值（<code>_cascadeRefJs</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>?..</code> 空安全级联</td><td>条件块</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span></td><td>入口非空守卫 IIFE（目标为空时整条短路）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>...spread</code></td><td><code>...</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 列表/集合展开一致</td><td>_listLiteralJs / _collectionFragmentJs 生成 <code>...</code> 片段（含 <code>...?</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>'$x'</code> / <code>'${a+b}'</code></td><td><code>\`${x}\`</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 模板字符串</td><td>字符串插值用 <code>+</code> 拼接（非模板字符串），语义等价</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>(a, b)</code> / <code>(x: 1)</code> / <code>(a, x: 1)</code> record</td><td>统一对象：位置字段 <code>{"$1": a, "$2": b}</code>，命名字段用原名</td><td>JS 的 <code>(a, b)</code> 是逗号表达式（值为 b）；Dart record 的 <code>==</code> 是结构相等，JS 对象是同一性</td><td><span class="lv lv-must">必须改写</span> 生成对象；<code>r.$1</code> / <code>r.x</code> 原样属性访问（<code>$1</code> 是合法 JS 标识符）</td><td><code>js_translator</code> 的 <code>_recordLiteralJs</code>（<code>rhsToJs</code> / <code>exprToJs</code> 共用）；箭头体 <code>=&gt; (…)</code>、<code>return (…)</code>、局部函数、闭包都经 <code>rhsToJs</code>，无返回值专用分支；<b>== 的结构相等不伪造</b>（对象比较仍是同一性，与 Map 键语义同属已知差异）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>operator +</code> 等重载</td><td><code>__op$add(other)</code></td><td>JS 无运算符重载，改成带下划线前缀的具名方法避免外部同名冲突</td><td><span class="lv lv-must">必须改写</span> <code>operatorJsName</code> 统一映射为 <code>__op$add</code> / <code>__op$sub</code> / <code>__op$eq</code> 等</td><td>js_value.dart 的 <code>operatorJsName</code> 映射；调用点 <code>_operatorOwnerOf</code> 按静态类型改写</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>operator []=</code></td><td><code>__op$indexSet(i, v)</code></td><td>同 <code>operator +</code></td><td><span class="lv lv-must">必须改写</span> <code>operatorJsName</code> <code>'[]=' => '__op$indexSet'</code></td><td><code>operatorJsName</code> 的 <code>[]=</code> 映射；<code>_assignValueJs</code> / 语句赋值分支改写</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>call(...)</code></td><td><code>invoke(...)</code></td><td><span class="muted">—</span> 避免与 <code>Function.prototype.call</code> 冲突</td><td><span class="lv lv-must">必须改写</span> 声明侧改名、调用侧按静态类型判定</td><td>声明：<code>classInfoOf</code> 把非 static 实例方法 <code>call</code> 改名为 <code>invoke</code>，并记 <code>ClassInfo.isCallable</code>；调用：<code>obj(...)</code> / 字段 <code>cb(...)</code> / <code>obj.call(...)</code> 在接收者可判定为可调用类（含 <code>extends</code> 链）时改写为 <code>.invoke(...)</code>，未知类型保持原样</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>fn.call(a, b)</code>（<code>Function</code>）</td><td><code>fn(a, b)</code></td><td><span class="lv lv-must">必须改写</span> Dart 的 <code>Function.call</code> 只有实参；JS 的 <code>Function.prototype.call</code> 首参是 <code>thisArg</code></td><td>接收者静态类型为函数（<code>Function</code> / <code>T Function(...)</code>）时，把 <code>.call(args)</code> 改写为直接调用 <code>fn(args)</code>；可空 <code>fn?.call(...)</code> → <code>fn?.(...)</code></td><td><code>js_translator</code> 的 <code>_isFunctionType</code> + <code>_methodCallJs</code>（参数 / 字段 / 可选链三个分支）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>if / else / while</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>_ifStatementJs</code> IfStatement / <code>:1968</code> WhileStatement</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>for (var i = 0; ...)</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>_forStatementJs</code> ForStatement</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>for (final x in list)</code></td><td><code>for (const x of arr)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> in → of</td><td><code>_forStatementJs</code> ForStatement 分支</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>switch</code>（Dart 3 隐式 break）</td><td><code>switch</code>（会穿透）</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 每个 case 末尾补 <code>break</code></td><td><code>_switchStatementJs</code> 的 <code>SwitchStatement</code> 分支：常量 case 走原生 <code>switch</code>，case 末尾未以 <code>return</code> / <code>break</code> / <code>continue</code> / <code>throw</code> 终止时自动补 <code>break</code>；模式 case 走 <code>switch (true)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td>有意穿透（Dart 3 用 <code>continue</code> 标签）</td><td>不写 break</td><td><span class="muted">—</span></td><td>按标签映射</td><td>label 语句 + <code>continue outer;</code> 一比一发射为 JS 标签</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>switch 表达式</td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 转 if 链或查表</td><td>IIFE + 原生 switch；非常量条件写 <code>switch (true)</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>if (x case T v)</code></td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 先 instanceof 再绑定</td><td><code>typeTestJs</code> 的 <code>instanceof</code> 判定 已知类/宿主类型走 instanceof</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>break / continue</code> 标签</td><td>标签语法存在</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> Dart 标签在循环前，JS 在语句前</td><td>label 语句与带标签 break/continue 一比一发射</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>for ... await</code></td><td><code>for await ... of</code></td><td><span class="muted">—</span></td><td>见第 16 章</td><td><code>_forStatementJs</code> 按 <code>ForStatement.awaitKeyword</code> 输出 <code>for await (... of ...)</code>（三段式 / for-in / pattern for 三种形态同口径）；被迭代对象由运行时 <code>Stream</code> 的 <code>[Symbol.asyncIterator]</code> 承接</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
   </tbody>
 </table>
 </div>
 
-<p class="cap"><span class="dart">DART</span> → <span class="js">JS</span> · 取模与整除</p>
-<pre><code>// Dart: (-7 % 3) == 2      （欧几里得取模，结果非负）
-// JS  : (-7 % 3) == -1     （截断余数）
-
-function __mod(a, b) {
-  return ((a % b) + b) % b;
+<p class="cap"><span class="js">JS</span> · switch 补 break</p>
+<pre><code>// Dart 3：case 结束自动跳出
+switch (s) {
+  case Status.success: print('ok');
+  case Status.error:   print('fail');
 }
 
-// Dart: a ~/ b   →   向零取整
-const q = Math.trunc(a / b);</code><button class="copy" type="button">复制</button></pre>
-
-<p class="cap"><span class="dart">DART</span> → <span class="js">JS</span> · 类型判断分派</p>
-<pre><code>// Dart: x is String        →  typeof x === 'string'
-// Dart: x is int           →  Number.isInteger(x)
-// Dart: x is List          →  Array.isArray(x)
-// Dart: x is Map           →  x instanceof Map
-// Dart: x is MyClass       →  x instanceof MyClass
-// Dart: x is! String       →  typeof x !== 'string'</code><button class="copy" type="button">复制</button></pre>
-
-<h3>级联运算符</h3>
-<pre><code>// Dart
-final b = Buffer()
-  ..write(1)
-  ..write(2)
-  ..flush();
-
-// 项目实际产物：IIFE 内绑定 _t（接收者只求值一次，级联返回 target 本身）
-const b = (() => { const _t = new Buffer({});
-  _t.write(1); _t.write(2); _t.flush();
-  return _t; })();
-
-// 级联 section 内的赋值同样以 _t 为根（..x = v → _t.x = v；..[i] = v → _t[i] = v）
-const p = (() => { const _t = new Point({}); _t.x = 1; _t.y = 2; return _t; })();</code><button class="copy" type="button">复制</button></pre>
-
-<h3>运算符重载必须做「类表 + 调用点重写」</h3>
-<p>JS 不支持运算符重载，翻译器要登记每个类重载了哪些运算符，再把所有使用该类型值的位置改写成方法调用。项目按<strong>操作数静态类型</strong>在调用点判定（字段 / 形参 / 显式类型局部变量 / 项目类构造推断），<b>不做跨文件全量重扫</b>；类型不可判定时保持 JS 原生运算。</p>
-<div class="scroll">
-<table>
-  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
-  <tbody>
-    <tr><td><code>operator +(other)</code></td><td><code>__op$add(other)</code></td><td><span class="muted">—</span></td><td><code>a + b</code> → <code>a.__op$add(b)</code></td><td><code>operatorJsName</code> 映射表</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>operator ==(other)</code></td><td><code>__op$eq(other)</code></td><td><span class="muted">—</span></td><td><code>a == b</code> → <code>a.__op$eq(b)</code></td><td><code>operatorJsName</code> <code>'==' => '__op$eq'</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>operator [](i)</code></td><td><code>__op$indexGet(i)</code></td><td><span class="muted">—</span></td><td><code>a[i]</code> → <code>a.__op$indexGet(i)</code></td><td><code>operatorJsName</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>operator []=</code></td><td><code>__op$indexSet(i, v)</code></td><td><span class="muted">—</span></td><td><code>a[i] = v</code> → <code>a.__op$indexSet(i, v)</code></td><td><code>operatorJsName</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>operator &lt;(o)</code></td><td><code>__op$lt(o)</code></td><td><span class="muted">—</span></td><td><code>a &lt; b</code> → <code>a.__op$lt(b)</code></td><td><code>operatorJsName</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>operator -()</code>（一元）</td><td><code>__op$neg()</code></td><td><span class="muted">—</span></td><td><code>-a</code> → <code>a.__op$neg()</code></td><td><code>operatorJsName</code> 一元取负 <code>'-' => '__op$neg'</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-  </tbody>
-</table>
-</div>
-
-<div class="note risk">
-  <span class="t">这是翻译器里最容易漏的一类</span>
-  重载 <code>==</code> 的类，如果按第 07 章“<code>==</code> → <code>===</code>”一刀切，语义会直接错。必须先生成类表，再决定 <code>==</code> 走 <code>===</code> 还是 <code>equals()</code>。
-</div>
-</section>
-
-<!-- ================= 08 类 ================= -->
-<section id="classes">
-<h2><span class="sec-no">08</span>类</h2>
-<p class="h2-sub">Dart 的构造函数家族比 JS 多一层：命名构造、工厂构造、初始化列表。全部要落到 JS 的单一 constructor + static 工厂。</p>
-
-<div class="scroll">
-<table>
-  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
-  <tbody>
-    <tr><td><code>class C { }</code></td><td><code>class C { }</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>dart2js 的类声明渲染</code> 发 <code>class C</code> 或 <code>export class C</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>C(this.x)</code></td><td><code>constructor(args) { this.x = args.x; }</code></td><td>项目统一收一个 <code>args</code> 对象，key 是参数名</td><td><span class="lv lv-ok">直译</span></td><td>dart2js.dart 的类体渲染统一 <code>constructor(args)</code> + <code>__applyProps(args)</code> 映射 this.x 形参</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>C.named(...)</code></td><td><code>static named(args)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 命名构造挂成 static 方法，调用点形态不变</td><td><code>dart2js 的命名构造渲染</code> 发 static 命名构造</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>factory C.fromJson(...)</code></td><td><code>static fromJson(args)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 工厂构造挂成 static 方法</td><td><code>dart2js 的命名构造渲染</code> 同命名构造</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td>初始化列表 <code>: super(x), this.a = a</code></td><td>构造体内顺序赋值</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 必须在 <code>super()</code> 之后</td><td><code>analyze_dart_class 的 _translateNamedCtors</code>（命名构造）与 <code>_translateUnnamedCtor</code>（默认构造）都翻译 ConstructorFieldInitializer / AssertInitializer；默认构造落在 <code>constructor(args)</code>：形参局部绑定 → 字段默认赋值 → 初始化列表 → 构造体。<code>super(...)</code> / <code>this.other(...)</code> 仍跳过并告警（基类构造由 <code>super(args)</code> 承接）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>int get x =&gt; _x;</code></td><td><code>get x() { return this._x; }</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>dart2js.dart 的 getter 分支发 <code>get name()</code>，实体走 <code>this._x</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>set x(int v) {}</code></td><td><code>set x(v) {}</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>dart2js 的 setter 分支</code> 发 <code>set name(...)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>_private</code></td><td><code>_private</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 原样保留下划线，不转 JS <code>#</code> 私有</td><td>保留 `_x` 原名，不转 JS `#` 私有</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>abstract class</code></td><td>普通 class</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 抽象成员默认抛错或留空</td><td>抽象类照常进类表并产出 <code>export class</code>（可被具体类 <code>extends</code>）；<code>translateClassMethodBody</code> 对无方法体的抽象成员发 <code>throw new Error("Unimplemented: Class.member")</code>；具体子类按原型链覆盖</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>implements I</code></td><td>擦除</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">消除</span> 接口是编译期契约</td><td><code>dart2js 的类声明渲染（<code>extends</code>）</code> 只发 <code>extends</code>，<code>implements</code> 不进产物</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>extends</code> / <code>super.foo()</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 原生 class 支持</td><td><code>dart2js 的 <code>extends</code> 渲染</code> 发 <code>extends base</code>；<code>:67</code> 发 <code>super(args)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td>具名参数 <code>{int a}</code></td><td><code>args.a</code></td><td>统一收一个 args map，从 map 取具名参数</td><td><span class="lv lv-ok">直译</span></td><td><code>dart2js 的 constructor 生成</code> 构造统一 <code>constructor(args)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td>可选位置参数 <code>[int a]</code></td><td><code>args.a ??= null</code></td><td>统一从 args map 取，缺省在方法体给默认值</td><td><span class="lv lv-care">注意</span> 方法体里 <code>a ??= 默认值</code></td><td>_functionParamPlan 在函数体开头补默认值；构造可选位置参数经 <code>__applyProps</code> 默认值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-  </tbody>
-</table>
-</div>
-
-<p class="cap"><span class="dart">DART</span></p>
-<pre><code>class Point {
-  final double x;
-  final double y;
-
-  Point(this.x, this.y);
-  Point.origin() : x = 0, y = 0;
-  factory Point.fromJson(Map&lt;String, dynamic&gt; j) =&gt;
-      Point(j['x'] as double, j['y'] as double);
-
-  double get length =&gt; sqrt(x * x + y * y);
-}</code><button class="copy" type="button">复制</button></pre>
-
-<p class="cap"><span class="js">JS</span> · 项目实际形态（构造统一收 args 对象）</p>
-<pre><code>class Point {
-  constructor(args) {
-    this.__applyProps(args);            // this.x / this.y 由 args 派生
-  }
-  __applyProps(args) {
-    this.x = (args && args.x !== undefined) ? args.x : 0;
-    this.y = (args && args.y !== undefined) ? args.y : 0;
-  }
-  static origin() { return new Point({}); }
-  static fromJson(j) { return new Point({"x": j.x, "y": j.y}); }
-  get length() { return Math.sqrt(this.x * this.x + this.y * this.y); }
-}</code><button class="copy" type="button">复制</button></pre>
-
-<h3>初始化列表与 super 的顺序</h3>
-<pre><code>// Dart
-class Child extends Base {
-  final int id;
-  Child(this.id) : super(id + 1);
-}
-
-// JS：super() 必须先执行，之后才能触碰 this
-class Child extends Base {
-  constructor(id) {
-    super(id + 1);
-    this.id = id;
-  }
+// JS：必须显式 break，否则穿透
+switch (s) {
+  case Status.success: console.log('ok'); break;
+  case Status.error:   console.log('fail'); break;
 }</code><button class="copy" type="button">复制</button></pre>
 
 <div class="note">
-  <span class="t">私有成员不做转换</span>
-  Dart 的 <code>_x</code> 是<strong>库级编译期约定</strong>，运行时只是普通字段。翻译一律保留 <code>_x</code> 原名，<strong>不生成 JS <code>#x</code></strong>——<code>#x</code> 是类级私有，会把同库其它类本应能访问的成员拦在外面，反而改变语义。
-</div>
-
-<h3>抽象类</h3>
-<pre><code>// Dart
-abstract class Shape { double area(); }
-
-// 项目实际形态：抽象类照常产出普通 JS class；无方法体的抽象成员抛错兜底。
-export class Shape {
-  get area() {
-    throw new Error("Unimplemented: Shape.area");
-  }
-  label() {
-    throw new Error("Unimplemented: Shape.label");
-  }
-}
-// 具体子类 `class Rect extends Shape` 走原生 extends，覆盖抽象成员。</code><button class="copy" type="button">复制</button></pre>
-
-<h3>具名参数</h3>
-<pre><code>// Dart
-void connect({required String host, int port = 80}) {}
-
-// 项目实际形态：位置形参按原名 + 具名实参合并尾参对象 __o，函数体开头解构默认值
-function connect(__o) {
-  let port = (__o && __o.port !== undefined) ? __o.port : 80;
-  let host = (__o && __o.host !== undefined) ? __o.host : null;
-  // `required` 不做运行期校验：Dart 编译期已保证调用方传入（翻译产物的
-  // 调用点都来自编译通过的源码），再抛一次属于重复校验。
-}</code><button class="copy" type="button">复制</button></pre>
-<h3>成员值位置：tear-off / super / 函数值调用</h3>
-<p>同一个成员名在「调用」与「取值」位置语义不同：Dart 的 tear-off 自带 <code>this</code>，JS 的原型方法不带；<code>super.x</code> 对字段与 getter 的落点也不同。</p>
-<div class="scroll">
-<table>
-  <colgroup><col style="width:14%"><col style="width:16%"><col style="width:20%"><col style="width:20%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
-  <tbody>
-    <tr><td><code>final f = _handler;</code></td><td><code>this._handler.bind(this)</code></td><td>Dart tear-off 绑定实例；JS 方法取值不绑定</td><td><span class="lv lv-must">必须改写</span> 实例方法 bind(this)，getter 只读值</td><td>FieldScope.fieldRef + <code>getterNames</code>（<code>objectGetterNamesOf</code>）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>car.report</code></td><td><code>car.report.bind(car)</code></td><td>接收者不是 this 时同样需要绑定</td><td><span class="lv lv-must">必须改写</span> 简单引用直接 bind，复杂接收者 IIFE 只求值一次</td><td><code>_tearOffMemberJs</code> + <code>_staticTypeOf</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>SportCar().report</code></td><td><code>((__o) =&gt; __o.report.bind(__o))(new SportCar())</code></td><td>接收者表达式不能求值两次</td><td><span class="lv lv-must">必须改写</span> IIFE 参数承接</td><td><code>_tearOffMemberJs</code> 的复杂接收者分支</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>super.speed</code>（getter）</td><td><code>super.speed</code></td><td>getter 在原型上，子类 override 时必须绕过</td><td><span class="lv lv-ok">直译</span></td><td>exprToJs 的 SuperExpression 分支（非字段时原样 super.x）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>super.wheels</code>（字段）</td><td><code>this.wheels</code></td><td>JS 字段是实例属性，<code>super.x</code> 只查父类原型、读不到</td><td><span class="lv lv-must">必须改写</span> 字段视图命中 → this.x</td><td>FieldScope.instanceFields（含继承链字段）判定</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>super.describe()</code></td><td><code>super.describe()</code></td><td>原生 class 支持</td><td><span class="lv lv-ok">直译</span></td><td>_methodCallJs 的 SuperExpression 分支（hasJsBase 守卫）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>((x) =&gt; x)(3)</code> / <code>(f)(x)</code></td><td><code>((x) =&gt; x)(3)</code></td><td>AST 是 FunctionExpressionInvocation；普通 <code>f(x)</code> 是 MethodInvocation</td><td><span class="lv lv-ok">直译</span></td><td><code>_fnValueCallJs</code>（位置实参 + 尾参对象）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>a ?? (v) =&gt; v</code></td><td><code>a ?? ((v) =&gt; v)</code></td><td>箭头函数优先级低于 <code>??</code> / 二元 / 三目，缺括号非法</td><td><span class="lv lv-must">必须改写</span> 运算符操作数位置的闭包补括号</td><td><code>_fnParen</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>x..a = v</code> / <code>x..[i] = v</code></td><td><code>_t.a = v</code> / <code>_t[i] = v</code>（级联 IIFE 内）</td><td>JS 无级联；赋值是 section 内的一条语句</td><td><span class="lv lv-must">必须改写</span> 以已绑定一次的 _t 为根展开</td><td><code>_cascadeRefJs</code> + 级联 IIFE</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-  </tbody>
-</table>
-</div>
-
-<div class="note">
-  <span class="t">函数值自身的字符串表示不做等价保证</span>
-  tear-off 在 JS 侧落成 <code>recv.m.bind(recv)</code>（保留 <code>this</code>）。调用语义与 Dart 一致，但把<strong>函数对象本身</strong>插值 / <code>toString()</code> 时文本必然不同：Dart VM 输出 <code>Closure: () =&gt; int from Function 'm'.</code>，JS 的 bound function 按规范输出 <code>function m() { [native code] }</code>。这是引擎表示差异，不按需伪造；需要稳定文案时请插值调用结果（<code>${f()}</code>）或显式调用业务 <code>toString</code>。
+  <span class="t">Dart 3 模式匹配要单独做降级</span>
+  switch 表达式、record 解构（见第 03 章「Record」）、<code>if-case</code> 都没有 JS 对应语法。建议统一降级成「类型判断 + 解构 + if 链」，并在生成期记录被降级的节点，方便回溯语义。
 </div>
 </section>
 
-<!-- ================= 09 static ================= -->
-<section id="static">
-<h2><span class="sec-no">09</span>static 成员</h2>
-<p class="h2-sub">映射本身一一对应，唯一的语义差在初始化时机：Dart 懒求值，JS 类定义时立即求值。</p>
-
-<div class="scroll">
-<table>
-  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
-  <tbody>
-    <tr><td><code>static const int max = 9</code></td><td><code>static max = 9</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>dart2js 的 <code>_writeStaticFields</code> 发 `static f = init;`，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>static int compute()</code></td><td><code>static compute()</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>dart2js 类体发 <code>static m(...)</code>；裸调用由 _methodCallJs 落 <code>C.m()</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>C.max</code> 访问</td><td><code>C.max</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>exprToJs 的 PrefixedIdentifier / PropertyAccess 原样发 <code>C.max</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>static final cache = {}</code></td><td><code>static cache = new Map()</code></td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 立即求值 vs 懒求值</td><td>dart2js 的 <code>_writeStaticFields</code> 发 `static f = init;`，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>依赖其它静态字段的 <code>static final</code></td><td><code>static get</code> + 缓存</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 见下</td><td>dart2js 的 <code>_writeStaticFields</code> 发 `static f = init;`，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-  </tbody>
-</table>
-</div>
-
-<p class="cap"><span class="js">JS</span> · 保懒求值</p>
-<pre><code>// Dart: static final instance = _build();
-// JS 直接 static instance = _build() 会在类定义时执行，与 Dart 懒加载不同
-
-class Registry {
-  static #instance;
-  static get instance() {
-    return (Registry.#instance ??= build());
-  }
-}</code><button class="copy" type="button">复制</button></pre>
-
-<div class="note">
-  <span class="t">前端少见 static 不等于不能用</span>
-  模块导出替代了 static 的日常职责，但 D‍art 源码里的 static 直接映射成 JS static 是安全的：<code>C.foo</code> 访问形态、继承传递、<code>this</code> 指向类本身都一一对应。唯一要处理的是懒初始化与初始化顺序。
-</div>
-</section>
-
-<!-- ================= 10 枚举 ================= -->
-<section id="enums">
-<h2><span class="sec-no">10</span>枚举</h2>
-<p class="h2-sub">JS 没有原生 enum。最忠实的映射是「class + 静态实例」，因为 Dart 编译器自己就是这么降低语义的。</p>
-
-<p class="cap"><span class="dart">DART</span></p>
-<pre><code>enum Color { red, green, blue }
-
-enum Status {
-  success(200, '成功'),
-  error(500, '失败');
-
-  final int code;
-  final String label;
-  const Status(this.code, this.label);
-
-  bool get isOk =&gt; code &lt; 400;
-}</code><button class="copy" type="button">复制</button></pre>
-
-<p class="cap"><span class="js">JS</span> · 基础枚举</p>
-<pre><code>class Color {
-  static red   = new Color(0, 'red');
-  static green = new Color(1, 'green');
-  static blue  = new Color(2, 'blue');
-
-  constructor(index, name) {
-    if (Color.#locked) throw new Error('Color 是枚举，禁止外部实例化');
-    this.#index = index;
-    this.#name = name;
-  }
-
-  #index; #name;
-  static #locked = false;
-
-  get index() { return this.#index; }
-  get name()  { return this.#name; }
-
-  static get values() { return [Color.red, Color.green, Color.blue]; }
-
-  static byName(name) {
-    for (const v of Color.values) if (v.name === name) return v;
-    throw new Error('没有名为 ' + name + ' 的 Color 枚举值');
-  }
-
-  toString() { return this.#name; }
-}
-Color.#locked = true;</code><button class="copy" type="button">复制</button></pre>
-
-<p class="cap"><span class="js">JS</span> · enhanced enum</p>
-<pre><code>class Status {
-  static success = new Status(0, 'success', 200, '成功');
-  static error   = new Status(1, 'error', 500, '失败');
-
-  constructor(index, name, code, label) {
-    if (Status.#locked) throw new Error('Status 是枚举，禁止外部实例化');
-    this.#index = index;
-    this.#name = name;
-    this.code = code;
-    this.label = label;
-  }
-
-  #index; #name;
-  static #locked = false;
-
-  get index() { return this.#index; }
-  get name()  { return this.#name; }
-  get isOk()  { return this.code &lt; 400; }
-
-  static get values() { return [Status.success, Status.error]; }
-  static byName(n) {
-    for (const v of Status.values) if (v.name === n) return v;
-    throw new Error('没有名为 ' + n + ' 的 Status 枚举值');
-  }
-  toString() { return this.#name; }
-}
-Status.#locked = true;</code><button class="copy" type="button">复制</button></pre>
-
-<h3>语义对照</h3>
-<div class="scroll">
-<table>
-  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
-  <tbody>
-    <tr><td><code>E.red.index</code></td><td><code>E.red.index</code></td><td><span class="muted">—</span></td><td>直接对应</td><td>项目简单枚举产物带 name/index；SDK <code>Color</code> 不是 enum（没有 <code>values / index</code>），不适用</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>E.values</code></td><td><code>E.values</code></td><td><span class="muted">—</span></td><td>静态 getter</td><td>项目简单枚举产物带 <code>values</code> 数组</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>E.values.byName('red')</code></td><td><code>E.byName('red')</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">调用点改写</span></td><td><code>_enumJs</code> 给枚举常量对象挂 <code>byName(name)</code>（找不到抛错）；<code>_methodCallJs</code> 把 <code>E.values.byName(...)</code> 改写为 <code>E.byName(...)</code>（仅前缀是类 / 枚举命名空间时，按值绑定的同名 <code>values</code> 原样）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>Color.red == Color.red</code></td><td><code>Color.red === Color.red</code></td><td><span class="muted">—</span></td><td>同一静态实例，引用相等成立</td><td>同一静态实例引用相等成立</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>switch (c) { case Color.red: }</code>（<code>enum Color { red }</code>）</td><td><code>switch (c) { case Color.red: }</code></td><td><span class="muted">—</span></td><td>JS 需要显式 break</td><td><code>_switchStatementJs</code> <code>SwitchStatement</code> 分支；<code>:2652</code> 模式 switch</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>print(c)</code> → <code>Color.red</code></td><td><code>String(c)</code> → <code>'red'</code></td><td><span class="muted">—</span></td><td>由 toString 保证</td><td>字符串插值 / <code>toString()</code> 走枚举对象的 toString</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>c.index</code> / <code>c.name</code></td><td>同</td><td><span class="muted">—</span></td><td>getter 实现</td><td>项目简单枚举对象带 <code>name</code> / <code>index</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-  </tbody>
-</table>
-</div>
-
-<div class="note">
-  <span class="t">项目实现范围</span>
-  只翻译简单枚举：产物是带 <code>name</code> / <code>index</code> / <code>values</code> / <code>toString</code> 的常量对象（<code>const_support.dart</code> 的 <code>_enumJs</code>）；带成员或构造实参的增强枚举在构建期告警并跳过，不生成悬空引用。
-</div>
-
-<div class="note risk">
-  <span class="t">枚举不能裸序列化</span>
-  <code>JSON.stringify(Color.red)</code> 会得到内部字段，而不是 Dart 的 <code>"Color.red"</code>。需要序列化时给实例加 <code>toJson()</code>，并在 <code>toJSON</code> 里返回名称。
-</div>
-</section>
-
-<!-- ================= 11 mixin ================= -->
-<section id="mixins">
-<h2><span class="sec-no">11</span>mixin</h2>
-<p class="h2-sub">mixin 是编译期概念：声明按<b>原文件路径</b>产出独立类；<code>with</code> 在消费者产物里生成 application 类链，并用运行时 <code>__mixinHard</code> 复制成员。不能把 mixin 成员内联进最终类。</p>
-
-<h3>实现方案（唯一）</h3>
-<ol>
-  <li>mixin 声明按<b>原文件路径</b>产出独立类（纯 <code>mixin</code> 也是 <code>export class</code>，不能实例化；成员集合与静态成员保留）。</li>
-  <li><code>class C extends S with M1, M2</code> 在消费者产物里生成 intermediate application 类链：<code>_C_S_M1 extends S</code>、<code>_C_S_M1_M2 extends _C_S_M1</code>，最终 <code>C</code> 继承最后一层。</li>
-  <li>不带 <code>super</code> 的成员留在 mixin 类里，运行时 <code>__mixinHard(app, M)</code> 复制 <b>mixin 原型上的自有成员</b>；目标已有同名自有成员时不覆盖（因此后写的 mixin / 类自身声明优先）。</li>
-  <li>带 <code>super</code> 的方法在对应的 application 类里重新发射，原生 JS <code>super</code> 指向上一层（<code>M2.log</code> 的 super → <code>_C_S_M1.log</code>，<code>M1.log</code> 的 super → <code>S.log</code>）。</li>
-  <li>mixin 实例字段不并进最终类，由对应 application 类的构造函数在 <code>super(args)</code> 之后初始化；顺序天然是 <code>S → M1 → M2 → C</code>。</li>
-  <li><code>mixin class</code> 同时按普通 class 产出（可实例化 / <code>extends</code>）；被 <code>with</code> 时走同一套 application 链，构造不参与混合。</li>
-  <li><code>__mixinHard</code> 调用统一下发在本模块<b>全部类声明之后</b>（class 有 TDZ，mixin 类可能声明得比 application 类晚）。</li>
-</ol>
-
-<div class="scroll">
-<table>
-  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
-  <tbody>
-    <tr><td><code>mixin M { void f() {} }</code></td><td>原文件产出 <code>export class M</code>；with 时 <code>__mixinHard</code></td><td><span class="muted">—</span></td><td>独立类 + 运行时复制</td><td><code>translateMixin</code>（analyze_dart_class）+ ComponentBuilder / ProjectModuleBuilder 按原路径产出</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>mixin M on S</code></td><td>super 在 application 层指向上一层</td><td><span class="muted">—</span></td><td><code>on</code> 约束不进 JS 继承链；带 super 的方法在 application 类发射</td><td><code>_methodUsesSuper</code> 判定；<code>translateClass</code> 的 mixin application 层重新翻译</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>class C extends B with M</code></td><td><code>_C_B_M extends B</code> + <code>C extends _C_B_M</code></td><td><span class="muted">—</span></td><td>单 mixin application 链</td><td><code>ClassInfo.mixinApplications</code>（翻译期）→ 渲染期输出合成类与 <code>__mixinHard</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>... with M1, M2</code></td><td>chain <code>_C_B_M1</code> → <code>_C_B_M1_M2</code> → <code>C</code></td><td><span class="muted">—</span></td><td>低优先级先应用；高优先级后一层覆盖</td><td>按 <code>with</code> 书写顺序逐层生成，后层继承前层</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>mixin 字段 <code>int x = 1</code></td><td>application 类构造里初始化</td><td><span class="muted">—</span></td><td>按应用顺序</td><td>layer 的 <code>instanceFields</code> → <code>constructor(args){ super(args); this.x = …; }</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>mixin class</code></td><td>普通 class + with 时同样的 application 链</td><td><span class="muted">—</span></td><td>两种身份互不影响</td><td><code>ClassDeclaration.mixinKeyword</code> 进类表照常产出；with 由 <code>MixinDeclRef</code> 统一解析</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-  </tbody>
-</table>
-</div>
-
-<p class="cap"><span class="dart">DART</span></p>
-<pre><code>mixin A {
-  void log() { print('A'); }
-}
-
-mixin B on Base {
-  void log() { print('B'); super.log(); }
-}
-
-class Base { void log() { print('Base'); } }
-
-class C extends Base with A, B {}</code><button class="copy" type="button">复制</button></pre>
-
-<p class="cap"><span class="js">JS</span> · 独立 mixin 类 + application 链 + 运行时复制</p>
-<pre><code>// a.js（A 的原文件产物）
-export class A {
-  log() { console.log('A'); }
-}
-
-// b.js（B 的原文件产物；带 super 的 log 不在本文件发射，
-//      它属于 with 生成的 application 层）
-export class B {}
-
-// c.js（消费者产物）
-import { A } from './a.js';
-import { B } from './b.js';
-
-class _C_Base_A extends Base {}
-
-class _C_Base_A_B extends _C_Base_A {
-  log() { console.log('B'); super.log(); }   // 带 super：本层发射
-}
-
-export class C extends _C_Base_A_B {
-  // C 自身成员；`super.log()` 在这里指向 _C_Base_A_B.log
-}
-
-// 所有类声明完成后再应用（class 有 TDZ：mixin 类可能声明得比这里晚）
-__mixinHard(_C_Base_A, A);          // 复制 A.prototype 的自有成员
-__mixinHard(_C_Base_A_B, B);</code><button class="copy" type="button">复制</button></pre>
-
-<div class="note">
-  <span class="t">顺序与覆盖</span>
-  <code>with M1, M2</code> 中 M2 优先级最高：application 链按书写顺序生成，M2 在更派生的一层；<code>__mixinHard</code> 只填充目标<b>尚无自有同名成员</b>的位置，因此 M2 覆盖 M1。类自身声明写在最终 <code>C</code> 上，优先级最高。<br><b>调用时机</b>：<code>__mixinHard</code> 一律放在本模块<b>全部类声明之后</b>——mixin 类可能声明得比 application 类晚，类声明之间调用会触发 TDZ（<code>Cannot access 'M' before initialization</code>）。
-</div>
-
-<h3>红线</h3>
-<ul>
-  <li>不要把 mixin 成员内联进最终类（<code>C</code> 里不应出现 <code>A.log</code>）；成员只在 mixin 产物 / application 层。</li>
-  <li>不要用 <code>Object.assign(C.prototype, M.prototype)</code>：原生 class 方法不可枚举，且会绕过「目标已有同名自有成员不覆盖」的优先级规则；用 <code>__mixinHard</code> 的自有属性描述符复制。</li>
-  <li>不要跳过 mixin 的原文件产物直接在本文件合并——消费者必须 import 该 mixin 类。</li>
-  <li>mixin 字段不要在最终类构造里重复初始化；由 application 类构造按 <code>with</code> 顺序负责。</li>
-  <li>字段初始化顺序：superclass 构造 → 各 mixin 按 <code>with</code> 顺序初始化 → 子类构造体。</li>
-</ul>
-</section>
-
-<!-- ================= 12 extension ================= -->
-<section id="extensions">
-<h2><span class="sec-no">12</span>extension</h2>
-<p class="h2-sub">extension 是纯编译期概念：Dart 按接收者静态类型解析；本项目把成员装到目标类型原型上，调用点保持原样。</p>
-
-<h3>当前方案（本项目）</h3>
-<p>选择原型注册而不是编译期静态分派，原因是本项目只有源码级静态判定、没有完整类型推断：表达式的接收者类型经常不可判定，照搬静态分派会让大量调用退化成“无法改写”。原型注册让调用点保持 Dart 原样（<code>x.m()</code> 仍是 <code>x.m()</code>），且 <code>registerExtension</code> 的稳定 <code>id</code> 支持热更时先卸载再重注册。显式 <code>E(x).m()</code> 是唯一的身份分派形态（必须按扩展名绑定）。作为参照，dart2js 的做法是把扩展成员编译成模块内顶层函数、在调用点静态改写成函数调用（不碰原型），本项目未采用该形态。</p>
-<ol>
-  <li>成员（方法 / getter / setter / 运算符）编译成目标类型原型上的同名成员；声明所在的产物求值时执行一次 <code>registerExtension(Target, { members }, { id })</code>。</li>
-  <li>函数成员由<b>严格模式函数</b>承载，<code>this</code> 就是接收者（避免原始值装箱），与 Dart 的 <code>this</code> 语义一致。</li>
-  <li>调用点保持 Dart 原样：<code>x.m()</code> / <code>x.m</code> 直接落到 JS 成员读取；实例成员优先由原型的同名成员承接。运算符无 JS 语法，声明侧改名 <code>__op$add</code> / <code>__op$neg</code> …，调用点按接收者静态类型改写成 <code>receiver.__op$xxx(args)</code>。</li>
-  <li>静态成员放在 extension 命名空间对象上（<code>E.foo</code> 原样访问）。</li>
-  <li>目标类型必须在 JS 侧有可挂载的原型（核心类型 / 运行时注入类 / 项目类）；Map / Object / dynamic / 宿主 widget 等没有单一实体原型的注册在构建期拒绝。</li>
-</ol>
-
-<div class="scroll">
-<table>
-  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
-  <tbody>
-    <tr><td><code>extension E on T { R m() {} }</code></td><td><code>registerExtension(T, { m() {} }, { id })</code></td><td><span class="muted">—</span></td><td>成员装到目标原型，<code>this</code> = 接收者</td><td>analysis/extension_support.dart 生成注册语句，产物求值时安装</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>x.m()</code>（隐式调用）</td><td><code>x.m()</code></td><td><span class="muted">—</span></td><td>调用点原样，成员装在原型上</td><td>成员由 <code>registerExtension</code> 装到目标原型，调用点无需改写；实例成员优先由 <code>name in proto</code> 承接。<b>已知限制</b>：两个库在同目标声明同名成员时，全局原型无法表达 import 可见性，运行期 <code>@conflict</code> 双方不安装并告警；显式 <code>E(x).m()</code> 不受影响</td><td><span class="st st-pass">通过</span></td><td>保持调用点同名</td></tr>
-    <tr><td><code>E(x).m()</code> 显式调用</td><td><code>E.m.call(x, …)</code>（getter：<code>E.g.get.call(x)</code>）</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 按扩展名绑定，绕过实例成员与其它扩展</td><td><code>_explicitExtensionCallJs</code> / <code>_explicitExtensionGetterJs</code> / <code>_explicitExtensionSetterJs</code>：识别 <code>ExtensionOverride</code> 与裸名 <code>MethodInvocation</code> 两种形态，按 <code>extensionScopesInScope</code> 的成员种类集合选择 <code>.call(接收者)</code> / <code>.get.call(接收者)</code> / <code>.set.call(接收者, 值)</code>（命名空间由 <code>registerExtension</code> 返回，保存与原型同一份实现）；拦截点在 <code>rhsToJs</code> / <code>exprToJs</code> 的构造翻译之前（否则 <code>E(x)</code> 会被当成 <code>new E(...)</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>getter / setter / operator</td><td>原型同名 getter / setter / <code>__op$xxx</code></td><td><span class="muted">—</span></td><td>运算符声明侧改名、调用点按接收者静态类型改写</td><td>getter / setter 已支持（同名 get/set 合并为一个 <code>{ get, set }</code> 描述符）；显式访问按身份分派（<code>E.g.get.call(x)</code> / <code>E.g.set.call(x, v)</code>，复合赋值、<code>??=</code>、<code>++</code>/<code>--</code> 统一「读 getter → 运算/判空 → 写 setter」）；运算符用与类运算符同一张映射表（<code>operatorJsName</code>），<code>extensionOperatorsInScope</code> 建立可见运算符表，调用点 <code>_operatorOwnerOf</code> 之后再查表</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>E.staticField</code></td><td>模块级变量 <code>E_staticField</code></td><td><span class="muted">—</span></td><td>或挂在命名空间对象上</td><td>staticsEntries 发射到 extension 命名空间对象</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>extension 静态成员体（<code>static get/set</code>、引用静态字段）</td><td><code>statics: { get x() {…}, set x(v) {…} }</code></td><td><span class="muted">—</span></td><td>静态成员与实例成员共用同一发射规则，静态字段在成员体内可读</td><td><code>translateExtension</code> 先把静态字段 / 方法收进 <code>hostInfo</code>，成员体里的裸引用落成 <code>E.field</code> / <code>E.method</code>；静态成员按名字聚合槽位，<code>static set</code> 走 <code>jsLiteralAccessor(isGetter:false)</code>，与同名 getter 在同一对象字面量里并存。<code>registerExtension</code> 按**属性描述符**搬运 statics（不按值读，避免 getter 在命名空间初始化前求值）。<code>example/lib/grammar/extension_detail.dart</code> 的 <code>CounterLevel.v</code> / <code>bump()</code> 已验证 <code>7→8</code> 与 Dart 一致</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>泛型 <code>extension E&lt;T&gt; on List&lt;T&gt;</code></td><td>类型参数擦除</td><td><span class="muted">—</span></td><td>运行时无 T 信息</td><td><b>部分实现</b>：类型参数擦除，<code>translateExtension</code> 取 <code>extendedType.name2.lexeme</code> 后挂到擦除类型（<code>List&lt;int&gt;</code> → <code>Array</code> 原型），成员对所有该类型实例可见，Dart 的“仅此实例化可调”约束丢失，无法还原。类型参数在<b>类型位置</b>（返回类型 / 形参类型）不受影响，<code>example/lib/grammar/generic_detail.dart</code> 的 <code>ListTail&lt;T&gt; on List&lt;T&gt;</code> / <code>TypeCodecLabel&lt;T&gt; on TypeCodec&lt;T&gt;</code> 已验证可注册可调用；成员体里把 <code>T</code> 按值使用（<code>T.toString()</code> / <code>T == int</code>）时接收者没有 <code>typeArguments</code> 元信息，<code>_TypeParamValueUse</code> 构建期出声。另：成员体内访问目标类型成员须写 <code>this.</code>（裸名与顶层函数无法静态区分）</td><td><span class="st st-fail">不通过</span></td><td>接受擦除限制（不处理）</td></tr>
-    <tr><td><code>extension E on T?</code>（可空目标）</td><td>无原型可挂</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> null 接收者由静态分派承接</td><td><code>translateExtension</code> 检测 <code>extendedType.question != null</code>（如 <code>String?</code>）→ 构建期出声跳过，不产出必然失效的注册（当前原型方案无法在 null 上分派）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译（出声拒绝，不错误产出）</td></tr>
-    <tr><td><code>dynamic</code> 接收者</td><td>解析失败</td><td><span class="muted">—</span></td><td>Dart 侧本就运行时报 NoSuchMethod，生成侧应报编译错误</td><td>N/A：无 resolution，dynamic 成员编译期不解析（Dart 侧本身运行时报错）</td><td><span class="st st-skip">未检测</span></td><td>按原则翻译</td></tr>
-  </tbody>
-</table>
-</div>
-
-<p class="cap"><span class="dart">DART</span></p>
-<pre><code>extension NumX on String {
-  int parseInt() =&gt; int.parse(this);
-  bool get isBlank =&gt; trim().isEmpty;
-}
-
-void main() {
-  final n = '42'.parseInt();
-  final b = '  '.isBlank;
-}</code><button class="copy" type="button">复制</button></pre>
-
-<p class="cap"><span class="js">JS</span> · 注册原型成员，调用点原样</p>
-<pre><code>export const NumX = registerExtension(String, (function () {
-  "use strict";
-  return {
-    parseInt: function () { return int_parse(this); },
-    get isBlank() { return this.trim().isEmpty; },
-  };
-})(), { id: "lib/...dart#NumX" });
-
-// 调用点
-const n = '42'.parseInt();
-const b = '  '.isBlank;</code><button class="copy" type="button">复制</button></pre>
-
-<h3>成员解析顺序（调用点重写必须遵守）</h3>
-<ol>
-  <li>先找实例成员（含继承链）；找到就<strong>不</strong>走 extension。</li>
-  <li>再找当前作用域可见的 extension，按 import 顺序，受 <code>show</code> / <code>hide</code> 限制。</li>
-  <li>显式调用 <code>E(x).m()</code> 绕过前两步，直接绑定到 E。</li>
-  <li>同文件多个 extension 同名成员冲突：Dart 报编译错误，生成侧不应静默择一。</li>
-</ol>
-
-<div class="note">
-  <span class="t">注册语义</span>
-  扩展的 <code>id</code> 是稳定标识（<code>&lt;sourcePath&gt;#&lt;name&gt;</code>）：同 id 再注册时运行时会先卸载旧成员，热更不会重复叠加。目标类型没有实体原型（Map / Object / dynamic / 宿主 widget 包装类）时构建期直接拒绝，不产出必然无效的注册。
-</div>
-
-<div class="note">
-  <span class="t">实测（2026-11-06，macOS example）</span>
-  跨包 <code>StringLogExtension.logText</code> 与 <code>VectorOps</code> 的 <code>+</code> / 一元 <code>-</code> / <code>%</code> 已跑通：产物落在 <code>patch/packages/&lt;包名&gt;/&lt;原路径&gt;.js</code>，调用方按文件 import，注册随声明文件求值。当前不通过项：① 泛型实例化目标（擦除的固有约束）；② 隐式调用在接收者静态类型不可判定时仍走原型，跨库同名扩展会 <code>TypeError</code>（字面量 / 方法返回值 / 无类型形参等）；③ extension 静态成员（<code>static set</code> 被发射成方法、静态字段引用被静默丢弃）。
-</div>
-
-<h3>分派模型：静态分派优先，原型兜底</h3>
-<p>Dart 的扩展成员解析有三条规则，项目逐条对应，不把语义交给注册顺序：</p>
-<table>
-  <colgroup><col style="width:22%"><col style="width:36%"><col style="width:42%"></colgroup>
-  <thead><tr><th>Dart 规则</th><th>JS 承接方式</th><th>实现</th></tr></thead>
-  <tbody>
-    <tr><td>实例成员优先于扩展</td><td>原型上已有同名成员（含继承）时扩展成员不安装</td><td><code>registerExtension</code> 的 <code>name in proto</code> 判定</td></tr>
-    <tr><td>多个扩展按 <code>on</code> 类型具体性选择</td><td>各自装到自己的目标原型，原型链天然给出「更具体者优先」</td><td>运行时原型链，无额外判定</td></tr>
-    <tr><td>显式 <code>E(x).m()</code> / <code>E(x).g</code> / <code>E(x).g = v</code> 由扩展身份决定</td><td>方法：<code>E.m.call(x, …)</code>；getter：<code>E.g.get.call(x)</code>；setter：<code>E.g.set.call(x, v)</code>；复合赋值 / <code>??=</code> / <code>++</code> / <code>--</code> 一律「读 getter → 运算（或判空短路）→ 写 setter」，值语义返回结果。扩展命名空间保存成员实现，与原型共用同一份函数</td><td><code>_explicitExtensionCallJs</code> / <code>_explicitExtensionGetterJs</code> / <code>_explicitExtensionSetterJs</code> / <code>_explicitExtensionUpdateJs</code>（js_translator），<code>extensionScopesInScope</code> 提供「扩展名 → 声明文件 + 成员种类集合」，调用点据种类选择形态；接收者与右值各求值一次</td></tr>
-    <tr><td>同目标同名成员（隐式调用本身是歧义编译错误）</td><td>两个扩展都<b>不安装</b>该成员（把先注册的一方也卸掉），与加载顺序无关；显式调用仍可用</td><td><b>构建期</b>：<code>warnExtensionConflicts</code> 按「目标类型 + 成员名」静态比对并告警（<code>extension_detail.dart</code> 的 <code>TagA</code> / <code>TagB</code> 即触发）；<b>运行时</b>：<code>registerExtension</code> 的 <code>@conflict</code> 标记兜底（顺序无关）</td></tr>
-    <tr><td>不同库各自 import 同名扩展（同一调用文件只看见一个）</td><td><b>已知限制（不通过）</b>：全局原型无法表达 import 可见性，运行期 <code>@conflict</code> 双方都不安装 → 隐式调用失效；显式 <code>E(x).m()</code> 不受影响</td><td><code>registerExtension</code> 的 <code>@conflict</code> 兜底；<code>warnExtensionConflicts</code> 只看单文件 import 图，跨库场景无构建期告警</td></tr>
-  </tbody>
-</table>
-<p>扩展体内调用同名成员必须显式写出扩展（<code>TagA(this).tag()</code>）：Dart 里 <code>this.tag()</code> 在两个扩展都适用时本就是 <code>ambiguous_extension_member_access</code>，产物不替开发者选一个。跨文件显式调用所需的扩展命名空间 import 由现有依赖 import 机制带出（<code>import { TagA } from '&lt;声明文件产物&gt;'</code>）。</p>
-</section>
-
-<!-- ================= 13 集合 ================= -->
+<!-- ================= 05 集合类型 ================= -->
 <section id="collections">
-<h2><span class="sec-no">13</span>集合方法差异</h2>
-<p class="h2-sub"><code>List</code> 翻译成原生 Array；<code>Map</code> 字面量翻译成<strong>原生 JS Map</strong>（`m[k]` → <code>get</code> / <code>set</code>）。项目策略是<strong>同名直译 + 运行时按接收者类型补同名</strong>，<b>禁止在翻译层把方法名改成 push / splice / filter / find / size / delete</b>（AGENTS §5）；只有 JS 已有同名但语义不同（Array 的 sort/join/indexOf、Map 的 keys/values/entries）才按映射表加 <code>_</code>。</p>
+<h2><span class="sec-no">05</span>集合类型</h2>
+<p class="h2-sub">Dart List / Map / Set 与 JS Array / Map / Set 的方法名、参数顺序、越界行为与惰性差异。</p>
+
+
 
 <h3>List → Array：同名但语义/参数不同</h3>
 <p>Dart 的 <code>List</code> 与 JS 的 <code>Array</code> 结构最接近，差异集中在<strong>方法名、参数顺序、越界行为和惰性</strong>。项目处理口径：<strong>产物原样同名；运行时在 <code>Array.prototype</code> 补同名同义实现</strong>。内建已有同名但语义不一致的三项由**构建期映射表**改名（主键 = 接收者内建类型 + Dart 成员名，且仅当接收者可判定为 <code>List</code> 时生效）：<code>sort → _sort</code>（默认比较器）、<code>join → _join</code>（默认空串、null 元素输出 <code>"null"</code>）、<code>length 写 → _setLength(n)</code>（截断 / 补 null，负数抛 <code>RangeError</code>）；其它接收者上的同名成员一律原样。</p>
@@ -1234,47 +864,542 @@ const list = b.toList();                   // [2, 3]，此时才执行回调
 const again = b.toList();                  // 再执行一遍（可重复迭代）</code><button class="copy" type="button">复制</button></pre>
 <p class="h2-sub">终止操作（<code>toList</code> / <code>toSet</code> / <code>forEach</code> / <code>fold</code> / <code>any</code> / <code>every</code> / <code>join</code> / <code>contains</code> / <code>indexOf</code> / <code>first</code> / <code>last</code> / <code>length</code> / <code>isEmpty</code> / <code>isNotEmpty</code> / <code>elementAt</code>）才消费；<code>for-in</code> / 展开直接用 <code>[Symbol.iterator]</code>。JS 生成器（<code>sync*</code>）本身仍是一次性迭代，但其 <code>map</code> / <code>where</code> 等成员同样返回 <code>LazyIterable</code>（可重复迭代）。</p>
 
+
 </section>
 
-<!-- ================= 14 控制流 ================= -->
-<section id="control">
-<h2><span class="sec-no">14</span>控制流与异常</h2>
-<p class="h2-sub">if / for / while 基本一致。差异集中在 switch 的穿透规则、异常类型分派和 Dart 3 的模式匹配。</p>
+<!-- ================= 06 函数 ================= -->
+<section id="functions">
+<h2><span class="sec-no">06</span>函数</h2>
+<p class="h2-sub">参数绑定、闭包、tear-off 与函数值调用；Dart 的 this 绑定与 JS 原型方法不同，必须在值位置补齐。</p>
+
+<h3>参数</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td>具名参数 <code>{int a}</code></td><td><code>args.a</code></td><td>统一收一个 args map，从 map 取具名参数</td><td><span class="lv lv-ok">直译</span></td><td><code>dart2js 的 constructor 生成</code> 构造统一 <code>constructor(args)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td>可选位置参数 <code>[int a]</code></td><td><code>args.a ??= null</code></td><td>统一从 args map 取，缺省在方法体给默认值</td><td><span class="lv lv-care">注意</span> 方法体里 <code>a ??= 默认值</code></td><td>_functionParamPlan 在函数体开头补默认值；构造可选位置参数经 <code>__applyProps</code> 默认值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<pre><code>// Dart
+void connect({required String host, int port = 80}) {}
+
+// 项目实际形态：位置形参按原名 + 具名实参合并尾参对象 __o，函数体开头解构默认值
+function connect(__o) {
+  let port = (__o && __o.port !== undefined) ? __o.port : 80;
+  let host = (__o && __o.host !== undefined) ? __o.host : null;
+  // `required` 不做运行期校验：Dart 编译期已保证调用方传入（翻译产物的
+  // 调用点都来自编译通过的源码），再抛一次属于重复校验。
+}</code><button class="copy" type="button">复制</button></pre>
+
+
+<h3>函数值与 tear-off</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>final f = _handler;</code></td><td><code>this._handler.bind(this)</code></td><td>Dart tear-off 绑定实例；JS 方法取值不绑定</td><td><span class="lv lv-must">必须改写</span> 实例方法 bind(this)，getter 只读值</td><td>FieldScope.fieldRef + <code>getterNames</code>（<code>objectGetterNamesOf</code>）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>car.report</code></td><td><code>car.report.bind(car)</code></td><td>接收者不是 this 时同样需要绑定</td><td><span class="lv lv-must">必须改写</span> 简单引用直接 bind，复杂接收者 IIFE 只求值一次</td><td><code>_tearOffMemberJs</code> + <code>_staticTypeOf</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>SportCar().report</code></td><td><code>((__o) =&gt; __o.report.bind(__o))(new SportCar())</code></td><td>接收者表达式不能求值两次</td><td><span class="lv lv-must">必须改写</span> IIFE 参数承接</td><td><code>_tearOffMemberJs</code> 的复杂接收者分支</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>((x) =&gt; x)(3)</code> / <code>(f)(x)</code></td><td><code>((x) =&gt; x)(3)</code></td><td>AST 是 FunctionExpressionInvocation；普通 <code>f(x)</code> 是 MethodInvocation</td><td><span class="lv lv-ok">直译</span></td><td><code>_fnValueCallJs</code>（位置实参 + 尾参对象）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>a ?? (v) =&gt; v</code></td><td><code>a ?? ((v) =&gt; v)</code></td><td>箭头函数优先级低于 <code>??</code> / 二元 / 三目，缺括号非法</td><td><span class="lv lv-must">必须改写</span> 运算符操作数位置的闭包补括号</td><td><code>_fnParen</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="t">函数值自身的字符串表示不做等价保证</span>
+  tear-off 在 JS 侧落成 <code>recv.m.bind(recv)</code>（保留 <code>this</code>）。调用语义与 Dart 一致，但把<strong>函数对象本身</strong>插值 / <code>toString()</code> 时文本必然不同：Dart VM 输出 <code>Closure: () =&gt; int from Function 'm'.</code>，JS 的 bound function 按规范输出 <code>function m() { [native code] }</code>。这是引擎表示差异，不按需伪造；需要稳定文案时请插值调用结果（<code>${f()}</code>）或显式调用业务 <code>toString</code>。
+</div>
+</section>
+
+<!-- ================= 07 类与对象 ================= -->
+<section id="classes">
+<h2><span class="sec-no">07</span>类与对象</h2>
+<p class="h2-sub">构造、字段、方法、static 与 extension；类统一渲染为原生 JS class，构造统一收 args 对象。</p>
 
 <div class="scroll">
 <table>
   <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
   <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
   <tbody>
-    <tr><td><code>if / else / while</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>_ifStatementJs</code> IfStatement / <code>:1968</code> WhileStatement</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>for (var i = 0; ...)</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>_forStatementJs</code> ForStatement</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>for (final x in list)</code></td><td><code>for (const x of arr)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> in → of</td><td><code>_forStatementJs</code> ForStatement 分支</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>switch</code>（Dart 3 隐式 break）</td><td><code>switch</code>（会穿透）</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 每个 case 末尾补 <code>break</code></td><td><code>_switchStatementJs</code> 的 <code>SwitchStatement</code> 分支：常量 case 走原生 <code>switch</code>，case 末尾未以 <code>return</code> / <code>break</code> / <code>continue</code> / <code>throw</code> 终止时自动补 <code>break</code>；模式 case 走 <code>switch (true)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td>有意穿透（Dart 3 用 <code>continue</code> 标签）</td><td>不写 break</td><td><span class="muted">—</span></td><td>按标签映射</td><td>label 语句 + <code>continue outer;</code> 一比一发射为 JS 标签</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>switch 表达式</td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 转 if 链或查表</td><td>IIFE + 原生 switch；非常量条件写 <code>switch (true)</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>模式匹配 <code>case (a, b)</code></td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 解构 + 守卫条件</td><td><code>_compilePattern</code> 的 <code>RecordPattern</code> 分支：位置字段取 <code>["$1"…"$N"]</code>、命名字段取原名，逐字段递归匹配；JS 侧 record 就是普通对象，只做 <code>typeof === "object"</code> 浅检查</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>if (x case T v)</code></td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 先 instanceof 再绑定</td><td><code>typeTestJs</code> 的 <code>instanceof</code> 判定 已知类/宿主类型走 instanceof</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>try / on X catch (e)</code></td><td><code>try / catch (e)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 用 <code>instanceof</code> 分派</td><td><code>typeTestJs</code> 的 <code>instanceof</code> 判定 已知类/宿主类型走 instanceof</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>rethrow</code></td><td><code>throw e</code></td><td><span class="muted">—</span></td><td>保留原始堆栈需额外处理</td><td>catch 内统一重抛 <code>throw __e;</code>，保留原异常对象与栈</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>try / catch / finally</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>_tryStatementJs</code> TryStatement</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
-    <tr><td><code>break / continue</code> 标签</td><td>标签语法存在</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> Dart 标签在循环前，JS 在语句前</td><td>label 语句与带标签 break/continue 一比一发射</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>for ... await</code></td><td><code>for await ... of</code></td><td><span class="muted">—</span></td><td>见第 15 章</td><td><code>_forStatementJs</code> 按 <code>ForStatement.awaitKeyword</code> 输出 <code>for await (... of ...)</code>（三段式 / for-in / pattern for 三种形态同口径）；被迭代对象由运行时 <code>Stream</code> 的 <code>[Symbol.asyncIterator]</code> 承接</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>class C { }</code></td><td><code>class C { }</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>dart2js 的类声明渲染</code> 发 <code>class C</code> 或 <code>export class C</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>C(this.x)</code></td><td><code>constructor(args) { this.x = args.x; }</code></td><td>项目统一收一个 <code>args</code> 对象，key 是参数名</td><td><span class="lv lv-ok">直译</span></td><td>dart2js.dart 的类体渲染统一 <code>constructor(args)</code> + <code>__applyProps(args)</code> 映射 this.x 形参</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>C.named(...)</code></td><td><code>static named(args)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 命名构造挂成 static 方法，调用点形态不变</td><td><code>dart2js 的命名构造渲染</code> 发 static 命名构造</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>factory C.fromJson(...)</code></td><td><code>static fromJson(args)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 工厂构造挂成 static 方法</td><td><code>dart2js 的命名构造渲染</code> 同命名构造</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td>初始化列表 <code>: super(x), this.a = a</code></td><td>构造体内顺序赋值</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 必须在 <code>super()</code> 之后</td><td><code>analyze_dart_class 的 _translateNamedCtors</code>（命名构造）与 <code>_translateUnnamedCtor</code>（默认构造）都翻译 ConstructorFieldInitializer / AssertInitializer；默认构造落在 <code>constructor(args)</code>：形参局部绑定 → 字段默认赋值 → 初始化列表 → 构造体。<code>super(...)</code> / <code>this.other(...)</code> 仍跳过并告警（基类构造由 <code>super(args)</code> 承接）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>int get x =&gt; _x;</code></td><td><code>get x() { return this._x; }</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>dart2js.dart 的 getter 分支发 <code>get name()</code>，实体走 <code>this._x</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>set x(int v) {}</code></td><td><code>set x(v) {}</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>dart2js 的 setter 分支</code> 发 <code>set name(...)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>_private</code></td><td><code>_private</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 原样保留下划线，不转 JS <code>#</code> 私有</td><td>保留 `_x` 原名，不转 JS `#` 私有</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
   </tbody>
 </table>
 </div>
 
-<p class="cap"><span class="js">JS</span> · switch 补 break</p>
-<pre><code>// Dart 3：case 结束自动跳出
-switch (s) {
-  case Status.success: print('ok');
-  case Status.error:   print('fail');
+<p class="cap"><span class="dart">DART</span></p>
+<pre><code>class Point {
+  final double x;
+  final double y;
+
+  Point(this.x, this.y);
+  Point.origin() : x = 0, y = 0;
+  factory Point.fromJson(Map&lt;String, dynamic&gt; j) =&gt;
+      Point(j['x'] as double, j['y'] as double);
+
+  double get length =&gt; sqrt(x * x + y * y);
+}</code><button class="copy" type="button">复制</button></pre>
+
+<p class="cap"><span class="js">JS</span> · 项目实际形态（构造统一收 args 对象）</p>
+<pre><code>class Point {
+  constructor(args) {
+    this.__applyProps(args);            // this.x / this.y 由 args 派生
+  }
+  __applyProps(args) {
+    this.x = (args && args.x !== undefined) ? args.x : 0;
+    this.y = (args && args.y !== undefined) ? args.y : 0;
+  }
+  static origin() { return new Point({}); }
+  static fromJson(j) { return new Point({"x": j.x, "y": j.y}); }
+  get length() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+}</code><button class="copy" type="button">复制</button></pre>
+
+<h3>初始化列表与 super 的顺序</h3>
+<pre><code>// Dart
+class Child extends Base {
+  final int id;
+  Child(this.id) : super(id + 1);
 }
 
-// JS：必须显式 break，否则穿透
-switch (s) {
-  case Status.success: console.log('ok'); break;
-  case Status.error:   console.log('fail'); break;
+// JS：super() 必须先执行，之后才能触碰 this
+class Child extends Base {
+  constructor(id) {
+    super(id + 1);
+    this.id = id;
+  }
 }</code><button class="copy" type="button">复制</button></pre>
+
+<div class="note">
+  <span class="t">私有成员不做转换</span>
+  Dart 的 <code>_x</code> 是<strong>库级编译期约定</strong>，运行时只是普通字段。翻译一律保留 <code>_x</code> 原名，<strong>不生成 JS <code>#x</code></strong>——<code>#x</code> 是类级私有，会把同库其它类本应能访问的成员拦在外面，反而改变语义。
+</div>
+
+<h3>static 成员</h3>
+
+
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>static const int MAX = 9</code></td><td><code>static MAX = 9</code></td><td>Dart 静态常量在类加载期初始化，JS 静态字段按声明顺序求值</td><td><span class="lv lv-care">注意</span> 生成 <code>static MAX = 9</code>，初始化顺序见第 07 章</td><td><code>dart2js 的 _writeStaticFields</code> 发 <code>static f = init;</code>，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>static const int max = 9</code></td><td><code>static max = 9</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>dart2js 的 <code>_writeStaticFields</code> 发 `static f = init;`，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>static int compute()</code></td><td><code>static compute()</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>dart2js 类体发 <code>static m(...)</code>；裸调用由 _methodCallJs 落 <code>C.m()</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>C.max</code> 访问</td><td><code>C.max</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>exprToJs 的 PrefixedIdentifier / PropertyAccess 原样发 <code>C.max</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>static final cache = {}</code></td><td><code>static cache = new Map()</code></td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 立即求值 vs 懒求值</td><td>dart2js 的 <code>_writeStaticFields</code> 发 `static f = init;`，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>依赖其它静态字段的 <code>static final</code></td><td><code>static get</code> + 缓存</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 见下</td><td>dart2js 的 <code>_writeStaticFields</code> 发 `static f = init;`，按声明序求值</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="cap"><span class="js">JS</span> · 保懒求值</p>
+<pre><code>// Dart: static final instance = _build();
+// JS 直接 static instance = _build() 会在类定义时执行，与 Dart 懒加载不同
+
+class Registry {
+  static #instance;
+  static get instance() {
+    return (Registry.#instance ??= build());
+  }
+}</code><button class="copy" type="button">复制</button></pre>
+
+<div class="note">
+  <span class="t">前端少见 static 不等于不能用</span>
+  模块导出替代了 static 的日常职责，但 D‍art 源码里的 static 直接映射成 JS static 是安全的：<code>C.foo</code> 访问形态、继承传递、<code>this</code> 指向类本身都一一对应。唯一要处理的是懒初始化与初始化顺序。
+</div>
+
+
+<h3>extension 扩展成员</h3>
+
+
+<h3>当前方案（本项目）</h3>
+<p>选择原型注册而不是编译期静态分派，原因是本项目只有源码级静态判定、没有完整类型推断：表达式的接收者类型经常不可判定，照搬静态分派会让大量调用退化成“无法改写”。原型注册让调用点保持 Dart 原样（<code>x.m()</code> 仍是 <code>x.m()</code>），且 <code>registerExtension</code> 的稳定 <code>id</code> 支持热更时先卸载再重注册。显式 <code>E(x).m()</code> 是唯一的身份分派形态（必须按扩展名绑定）。作为参照，dart2js 的做法是把扩展成员编译成模块内顶层函数、在调用点静态改写成函数调用（不碰原型），本项目未采用该形态。</p>
+<ol>
+  <li>成员（方法 / getter / setter / 运算符）编译成目标类型原型上的同名成员；声明所在的产物求值时执行一次 <code>registerExtension(Target, { members }, { id })</code>。</li>
+  <li>函数成员由<b>严格模式函数</b>承载，<code>this</code> 就是接收者（避免原始值装箱），与 Dart 的 <code>this</code> 语义一致。</li>
+  <li>调用点保持 Dart 原样：<code>x.m()</code> / <code>x.m</code> 直接落到 JS 成员读取；实例成员优先由原型的同名成员承接。运算符无 JS 语法，声明侧改名 <code>__op$add</code> / <code>__op$neg</code> …，调用点按接收者静态类型改写成 <code>receiver.__op$xxx(args)</code>。</li>
+  <li>静态成员放在 extension 命名空间对象上（<code>E.foo</code> 原样访问）。</li>
+  <li>目标类型必须在 JS 侧有可挂载的原型（核心类型 / 运行时注入类 / 项目类）；Map / Object / dynamic / 宿主 widget 等没有单一实体原型的注册在构建期拒绝。</li>
+</ol>
+
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>extension E on T { R m() {} }</code></td><td><code>registerExtension(T, { m() {} }, { id })</code></td><td><span class="muted">—</span></td><td>成员装到目标原型，<code>this</code> = 接收者</td><td>analysis/extension_support.dart 生成注册语句，产物求值时安装</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>x.m()</code>（隐式调用）</td><td><code>x.m()</code></td><td><span class="muted">—</span></td><td>调用点原样，成员装在原型上</td><td>成员由 <code>registerExtension</code> 装到目标原型，调用点无需改写；实例成员优先由 <code>name in proto</code> 承接。<b>已知限制</b>：两个库在同目标声明同名成员时，全局原型无法表达 import 可见性，运行期 <code>@conflict</code> 双方不安装并告警；显式 <code>E(x).m()</code> 不受影响</td><td><span class="st st-pass">通过</span></td><td>保持调用点同名</td></tr>
+    <tr><td><code>E(x).m()</code> 显式调用</td><td><code>E.m.call(x, …)</code>（getter：<code>E.g.get.call(x)</code>）</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 按扩展名绑定，绕过实例成员与其它扩展</td><td><code>_explicitExtensionCallJs</code> / <code>_explicitExtensionGetterJs</code> / <code>_explicitExtensionSetterJs</code>：识别 <code>ExtensionOverride</code> 与裸名 <code>MethodInvocation</code> 两种形态，按 <code>extensionScopesInScope</code> 的成员种类集合选择 <code>.call(接收者)</code> / <code>.get.call(接收者)</code> / <code>.set.call(接收者, 值)</code>（命名空间由 <code>registerExtension</code> 返回，保存与原型同一份实现）；拦截点在 <code>rhsToJs</code> / <code>exprToJs</code> 的构造翻译之前（否则 <code>E(x)</code> 会被当成 <code>new E(...)</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>getter / setter / operator</td><td>原型同名 getter / setter / <code>__op$xxx</code></td><td><span class="muted">—</span></td><td>运算符声明侧改名、调用点按接收者静态类型改写</td><td>getter / setter 已支持（同名 get/set 合并为一个 <code>{ get, set }</code> 描述符）；显式访问按身份分派（<code>E.g.get.call(x)</code> / <code>E.g.set.call(x, v)</code>，复合赋值、<code>??=</code>、<code>++</code>/<code>--</code> 统一「读 getter → 运算/判空 → 写 setter」）；运算符用与类运算符同一张映射表（<code>operatorJsName</code>），<code>extensionOperatorsInScope</code> 建立可见运算符表，调用点 <code>_operatorOwnerOf</code> 之后再查表</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>E.staticField</code></td><td>模块级变量 <code>E_staticField</code></td><td><span class="muted">—</span></td><td>或挂在命名空间对象上</td><td>staticsEntries 发射到 extension 命名空间对象</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>extension 静态成员体（<code>static get/set</code>、引用静态字段）</td><td><code>statics: { get x() {…}, set x(v) {…} }</code></td><td><span class="muted">—</span></td><td>静态成员与实例成员共用同一发射规则，静态字段在成员体内可读</td><td><code>translateExtension</code> 先把静态字段 / 方法收进 <code>hostInfo</code>，成员体里的裸引用落成 <code>E.field</code> / <code>E.method</code>；静态成员按名字聚合槽位，<code>static set</code> 走 <code>jsLiteralAccessor(isGetter:false)</code>，与同名 getter 在同一对象字面量里并存。<code>registerExtension</code> 按**属性描述符**搬运 statics（不按值读，避免 getter 在命名空间初始化前求值）。<code>example/lib/grammar/extension_detail.dart</code> 的 <code>CounterLevel.v</code> / <code>bump()</code> 已验证 <code>7→8</code> 与 Dart 一致</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>泛型 <code>extension E&lt;T&gt; on List&lt;T&gt;</code></td><td>类型参数擦除</td><td><span class="muted">—</span></td><td>运行时无 T 信息</td><td><b>部分实现</b>：类型参数擦除，<code>translateExtension</code> 取 <code>extendedType.name2.lexeme</code> 后挂到擦除类型（<code>List&lt;int&gt;</code> → <code>Array</code> 原型），成员对所有该类型实例可见，Dart 的“仅此实例化可调”约束丢失，无法还原。类型参数在<b>类型位置</b>（返回类型 / 形参类型）不受影响，<code>example/lib/grammar/generic_detail.dart</code> 的 <code>ListTail&lt;T&gt; on List&lt;T&gt;</code> / <code>TypeCodecLabel&lt;T&gt; on TypeCodec&lt;T&gt;</code> 已验证可注册可调用；成员体里把 <code>T</code> 按值使用（<code>T.toString()</code> / <code>T == int</code>）时接收者没有 <code>typeArguments</code> 元信息，<code>_TypeParamValueUse</code> 构建期出声。另：成员体内访问目标类型成员须写 <code>this.</code>（裸名与顶层函数无法静态区分）</td><td><span class="st st-fail">不通过</span></td><td>接受擦除限制（不处理）</td></tr>
+    <tr><td><code>extension E on T?</code>（可空目标）</td><td>无原型可挂</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> null 接收者由静态分派承接</td><td><code>translateExtension</code> 检测 <code>extendedType.question != null</code>（如 <code>String?</code>）→ 构建期出声跳过，不产出必然失效的注册（当前原型方案无法在 null 上分派）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译（出声拒绝，不错误产出）</td></tr>
+    <tr><td><code>dynamic</code> 接收者</td><td>解析失败</td><td><span class="muted">—</span></td><td>Dart 侧本就运行时报 NoSuchMethod，生成侧应报编译错误</td><td>N/A：无 resolution，dynamic 成员编译期不解析（Dart 侧本身运行时报错）</td><td><span class="st st-skip">未检测</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="cap"><span class="dart">DART</span></p>
+<pre><code>extension NumX on String {
+  int parseInt() =&gt; int.parse(this);
+  bool get isBlank =&gt; trim().isEmpty;
+}
+
+void main() {
+  final n = '42'.parseInt();
+  final b = '  '.isBlank;
+}</code><button class="copy" type="button">复制</button></pre>
+
+<p class="cap"><span class="js">JS</span> · 注册原型成员，调用点原样</p>
+<pre><code>export const NumX = registerExtension(String, (function () {
+  "use strict";
+  return {
+    parseInt: function () { return int_parse(this); },
+    get isBlank() { return this.trim().isEmpty; },
+  };
+})(), { id: "lib/...dart#NumX" });
+
+// 调用点
+const n = '42'.parseInt();
+const b = '  '.isBlank;</code><button class="copy" type="button">复制</button></pre>
+
+<h3>成员解析顺序（调用点重写必须遵守）</h3>
+<ol>
+  <li>先找实例成员（含继承链）；找到就<strong>不</strong>走 extension。</li>
+  <li>再找当前作用域可见的 extension，按 import 顺序，受 <code>show</code> / <code>hide</code> 限制。</li>
+  <li>显式调用 <code>E(x).m()</code> 绕过前两步，直接绑定到 E。</li>
+  <li>同文件多个 extension 同名成员冲突：Dart 报编译错误，生成侧不应静默择一。</li>
+</ol>
+
+<div class="note">
+  <span class="t">注册语义</span>
+  扩展的 <code>id</code> 是稳定标识（<code>&lt;sourcePath&gt;#&lt;name&gt;</code>）：同 id 再注册时运行时会先卸载旧成员，热更不会重复叠加。目标类型没有实体原型（Map / Object / dynamic / 宿主 widget 包装类）时构建期直接拒绝，不产出必然无效的注册。
+</div>
+
+<div class="note">
+  <span class="t">实测（2026-11-06，macOS example）</span>
+  跨包 <code>StringLogExtension.logText</code> 与 <code>VectorOps</code> 的 <code>+</code> / 一元 <code>-</code> / <code>%</code> 已跑通：产物落在 <code>patch/packages/&lt;包名&gt;/&lt;原路径&gt;.js</code>，调用方按文件 import，注册随声明文件求值。当前不通过项：① 泛型实例化目标（擦除的固有约束）；② 隐式调用在接收者静态类型不可判定时仍走原型，跨库同名扩展会 <code>TypeError</code>（字面量 / 方法返回值 / 无类型形参等）；③ extension 静态成员（<code>static set</code> 被发射成方法、静态字段引用被静默丢弃）。
+</div>
+
+<h3>分派模型：静态分派优先，原型兜底</h3>
+<p>Dart 的扩展成员解析有三条规则，项目逐条对应，不把语义交给注册顺序：</p>
+<table>
+  <colgroup><col style="width:22%"><col style="width:36%"><col style="width:42%"></colgroup>
+  <thead><tr><th>Dart 规则</th><th>JS 承接方式</th><th>实现</th></tr></thead>
+  <tbody>
+    <tr><td>实例成员优先于扩展</td><td>原型上已有同名成员（含继承）时扩展成员不安装</td><td><code>registerExtension</code> 的 <code>name in proto</code> 判定</td></tr>
+    <tr><td>多个扩展按 <code>on</code> 类型具体性选择</td><td>各自装到自己的目标原型，原型链天然给出「更具体者优先」</td><td>运行时原型链，无额外判定</td></tr>
+    <tr><td>显式 <code>E(x).m()</code> / <code>E(x).g</code> / <code>E(x).g = v</code> 由扩展身份决定</td><td>方法：<code>E.m.call(x, …)</code>；getter：<code>E.g.get.call(x)</code>；setter：<code>E.g.set.call(x, v)</code>；复合赋值 / <code>??=</code> / <code>++</code> / <code>--</code> 一律「读 getter → 运算（或判空短路）→ 写 setter」，值语义返回结果。扩展命名空间保存成员实现，与原型共用同一份函数</td><td><code>_explicitExtensionCallJs</code> / <code>_explicitExtensionGetterJs</code> / <code>_explicitExtensionSetterJs</code> / <code>_explicitExtensionUpdateJs</code>（js_translator），<code>extensionScopesInScope</code> 提供「扩展名 → 声明文件 + 成员种类集合」，调用点据种类选择形态；接收者与右值各求值一次</td></tr>
+    <tr><td>同目标同名成员（隐式调用本身是歧义编译错误）</td><td>两个扩展都<b>不安装</b>该成员（把先注册的一方也卸掉），与加载顺序无关；显式调用仍可用</td><td><b>构建期</b>：<code>warnExtensionConflicts</code> 按「目标类型 + 成员名」静态比对并告警（<code>extension_detail.dart</code> 的 <code>TagA</code> / <code>TagB</code> 即触发）；<b>运行时</b>：<code>registerExtension</code> 的 <code>@conflict</code> 标记兜底（顺序无关）</td></tr>
+    <tr><td>不同库各自 import 同名扩展（同一调用文件只看见一个）</td><td><b>已知限制（不通过）</b>：全局原型无法表达 import 可见性，运行期 <code>@conflict</code> 双方都不安装 → 隐式调用失效；显式 <code>E(x).m()</code> 不受影响</td><td><code>registerExtension</code> 的 <code>@conflict</code> 兜底；<code>warnExtensionConflicts</code> 只看单文件 import 图，跨库场景无构建期告警</td></tr>
+  </tbody>
+</table>
+<p>扩展体内调用同名成员必须显式写出扩展（<code>TagA(this).tag()</code>）：Dart 里 <code>this.tag()</code> 在两个扩展都适用时本就是 <code>ambiguous_extension_member_access</code>，产物不替开发者选一个。跨文件显式调用所需的扩展命名空间 import 由现有依赖 import 机制带出（<code>import { TagA } from '&lt;声明文件产物&gt;'</code>）。</p>
+
+</section>
+
+<!-- ================= 08 继承与多态 ================= -->
+<section id="inheritance">
+<h2><span class="sec-no">08</span>继承与多态</h2>
+<p class="h2-sub">extends / super / abstract 走原生 class 继承；字段读取落 this，getter 与方法落 super。</p>
+
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>abstract class</code></td><td>普通 class</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 抽象成员默认抛错或留空</td><td>抽象类照常进类表并产出 <code>export class</code>（可被具体类 <code>extends</code>）；<code>translateClassMethodBody</code> 对无方法体的抽象成员发 <code>throw new Error("Unimplemented: Class.member")</code>；具体子类按原型链覆盖</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>extends</code> / <code>super.foo()</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 原生 class 支持</td><td><code>dart2js 的 <code>extends</code> 渲染</code> 发 <code>extends base</code>；<code>:67</code> 发 <code>super(args)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>super.speed</code>（getter）</td><td><code>super.speed</code></td><td>getter 在原型上，子类 override 时必须绕过</td><td><span class="lv lv-ok">直译</span></td><td>exprToJs 的 SuperExpression 分支（非字段时原样 super.x）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>super.wheels</code>（字段）</td><td><code>this.wheels</code></td><td>JS 字段是实例属性，<code>super.x</code> 只查父类原型、读不到</td><td><span class="lv lv-must">必须改写</span> 字段视图命中 → this.x</td><td>FieldScope.instanceFields（含继承链字段）判定</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>super.describe()</code></td><td><code>super.describe()</code></td><td>原生 class 支持</td><td><span class="lv lv-ok">直译</span></td><td>_methodCallJs 的 SuperExpression 分支（hasJsBase 守卫）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>抽象类</h3>
+<pre><code>// Dart
+abstract class Shape { double area(); }
+
+// 项目实际形态：抽象类照常产出普通 JS class；无方法体的抽象成员抛错兜底。
+export class Shape {
+  get area() {
+    throw new Error("Unimplemented: Shape.area");
+  }
+  label() {
+    throw new Error("Unimplemented: Shape.label");
+  }
+}
+// 具体子类 `class Rect extends Shape` 走原生 extends，覆盖抽象成员。</code><button class="copy" type="button">复制</button></pre>
+
+
+</section>
+
+<!-- ================= 09 接口与 Mixin ================= -->
+<section id="interfaces-mixins">
+<h2><span class="sec-no">09</span>接口与 Mixin</h2>
+<p class="h2-sub">接口是编译期契约（擦除）；mixin 按原文件产出独立类，with 生成 application 类并在运行时复制成员。</p>
+
+<h3>接口</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>implements I</code></td><td>擦除</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">消除</span> 接口是编译期契约</td><td><code>dart2js 的类声明渲染（<code>extends</code>）</code> 只发 <code>extends</code>，<code>implements</code> 不进产物</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+  </tbody>
+</table>
+</div>
+
+
+
+<h3>mixin 实现方案（唯一）</h3>
+<ol>
+  <li>mixin 声明按<b>原文件路径</b>产出独立类（纯 <code>mixin</code> 也是 <code>export class</code>，不能实例化；成员集合与静态成员保留）。</li>
+  <li><code>class C extends S with M1, M2</code> 在消费者产物里生成 intermediate application 类链：<code>_C_S_M1 extends S</code>、<code>_C_S_M1_M2 extends _C_S_M1</code>，最终 <code>C</code> 继承最后一层。</li>
+  <li>不带 <code>super</code> 的成员留在 mixin 类里，运行时 <code>__mixinHard(app, M)</code> 复制 <b>mixin 原型上的自有成员</b>；目标已有同名自有成员时不覆盖（因此后写的 mixin / 类自身声明优先）。</li>
+  <li>带 <code>super</code> 的方法在对应的 application 类里重新发射，原生 JS <code>super</code> 指向上一层（<code>M2.log</code> 的 super → <code>_C_S_M1.log</code>，<code>M1.log</code> 的 super → <code>S.log</code>）。</li>
+  <li>mixin 实例字段不并进最终类，由对应 application 类的构造函数在 <code>super(args)</code> 之后初始化；顺序天然是 <code>S → M1 → M2 → C</code>。</li>
+  <li><code>mixin class</code> 同时按普通 class 产出（可实例化 / <code>extends</code>）；被 <code>with</code> 时走同一套 application 链，构造不参与混合。</li>
+  <li><code>__mixinHard</code> 调用统一下发在本模块<b>全部类声明之后</b>（class 有 TDZ，mixin 类可能声明得比 application 类晚）。</li>
+</ol>
+
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>mixin M { void f() {} }</code></td><td>原文件产出 <code>export class M</code>；with 时 <code>__mixinHard</code></td><td><span class="muted">—</span></td><td>独立类 + 运行时复制</td><td><code>translateMixin</code>（analyze_dart_class）+ ComponentBuilder / ProjectModuleBuilder 按原路径产出</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>mixin M on S</code></td><td>super 在 application 层指向上一层</td><td><span class="muted">—</span></td><td><code>on</code> 约束不进 JS 继承链；带 super 的方法在 application 类发射</td><td><code>_methodUsesSuper</code> 判定；<code>translateClass</code> 的 mixin application 层重新翻译</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>class C extends B with M</code></td><td><code>_C_B_M extends B</code> + <code>C extends _C_B_M</code></td><td><span class="muted">—</span></td><td>单 mixin application 链</td><td><code>ClassInfo.mixinApplications</code>（翻译期）→ 渲染期输出合成类与 <code>__mixinHard</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>... with M1, M2</code></td><td>chain <code>_C_B_M1</code> → <code>_C_B_M1_M2</code> → <code>C</code></td><td><span class="muted">—</span></td><td>低优先级先应用；高优先级后一层覆盖</td><td>按 <code>with</code> 书写顺序逐层生成，后层继承前层</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>mixin 字段 <code>int x = 1</code></td><td>application 类构造里初始化</td><td><span class="muted">—</span></td><td>按应用顺序</td><td>layer 的 <code>instanceFields</code> → <code>constructor(args){ super(args); this.x = …; }</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>mixin class</code></td><td>普通 class + with 时同样的 application 链</td><td><span class="muted">—</span></td><td>两种身份互不影响</td><td><code>ClassDeclaration.mixinKeyword</code> 进类表照常产出；with 由 <code>MixinDeclRef</code> 统一解析</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="cap"><span class="dart">DART</span></p>
+<pre><code>mixin A {
+  void log() { print('A'); }
+}
+
+mixin B on Base {
+  void log() { print('B'); super.log(); }
+}
+
+class Base { void log() { print('Base'); } }
+
+class C extends Base with A, B {}</code><button class="copy" type="button">复制</button></pre>
+
+<p class="cap"><span class="js">JS</span> · 独立 mixin 类 + application 链 + 运行时复制</p>
+<pre><code>// a.js（A 的原文件产物）
+export class A {
+  log() { console.log('A'); }
+}
+
+// b.js（B 的原文件产物；带 super 的 log 不在本文件发射，
+//      它属于 with 生成的 application 层）
+export class B {}
+
+// c.js（消费者产物）
+import { A } from './a.js';
+import { B } from './b.js';
+
+class _C_Base_A extends Base {}
+
+class _C_Base_A_B extends _C_Base_A {
+  log() { console.log('B'); super.log(); }   // 带 super：本层发射
+}
+
+export class C extends _C_Base_A_B {
+  // C 自身成员；`super.log()` 在这里指向 _C_Base_A_B.log
+}
+
+// 所有类声明完成后再应用（class 有 TDZ：mixin 类可能声明得比这里晚）
+__mixinHard(_C_Base_A, A);          // 复制 A.prototype 的自有成员
+__mixinHard(_C_Base_A_B, B);</code><button class="copy" type="button">复制</button></pre>
+
+<div class="note">
+  <span class="t">顺序与覆盖</span>
+  <code>with M1, M2</code> 中 M2 优先级最高：application 链按书写顺序生成，M2 在更派生的一层；<code>__mixinHard</code> 只填充目标<b>尚无自有同名成员</b>的位置，因此 M2 覆盖 M1。类自身声明写在最终 <code>C</code> 上，优先级最高。<br><b>调用时机</b>：<code>__mixinHard</code> 一律放在本模块<b>全部类声明之后</b>——mixin 类可能声明得比 application 类晚，类声明之间调用会触发 TDZ（<code>Cannot access 'M' before initialization</code>）。
+</div>
+
+<h3>红线</h3>
+<ul>
+  <li>不要把 mixin 成员内联进最终类（<code>C</code> 里不应出现 <code>A.log</code>）；成员只在 mixin 产物 / application 层。</li>
+  <li>不要用 <code>Object.assign(C.prototype, M.prototype)</code>：原生 class 方法不可枚举，且会绕过「目标已有同名自有成员不覆盖」的优先级规则；用 <code>__mixinHard</code> 的自有属性描述符复制。</li>
+  <li>不要跳过 mixin 的原文件产物直接在本文件合并——消费者必须 import 该 mixin 类。</li>
+  <li>mixin 字段不要在最终类构造里重复初始化；由 application 类构造按 <code>with</code> 顺序负责。</li>
+  <li>字段初始化顺序：superclass 构造 → 各 mixin 按 <code>with</code> 顺序初始化 → 子类构造体。</li>
+</ul>
+
+</section>
+
+<!-- ================= 10 泛型 ================= -->
+<section id="generics">
+<h2><span class="sec-no">10</span>泛型</h2>
+<p class="h2-sub">泛型只存在于编译期：类型实参擦除，但构造与方法的尾参对象必须携带 typeArguments。</p>
+
+<table>
+  <colgroup><col style="width:24%"><col style="width:34%"><col style="width:42%"></colgroup>
+  <thead><tr><th>写法</th><th>翻译</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>class Box&lt;T&gt;</code> / <code>T f&lt;T&gt;()</code></td><td>类型参数不进 JS 签名；尾参对象带 <code>typeArguments</code>（<code>__ta</code>，已有具名参数时复用 <code>__o</code>）</td><td>运行时靠它完成 <code>T == X</code> / <code>as T</code>；没有泛型特化，同一份类服务所有实参</td></tr>
+    <tr><td><code>List&lt;int&gt;</code> / <code>Map&lt;String, V&gt;</code> 的 <code>is</code></td><td><code>Array.isArray</code> / Map 对象判定</td><td>泛型实参擦除，判定只看运行时承载类型</td></tr>
+    <tr><td><code>f&lt;int&gt;()</code></td><td>调用点把类型实参写进尾参对象的参数名键</td><td>与定义侧读取 <code>typeArguments</code> 的口径一致</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="t">不要伪造泛型</span>
+  不为类型参数生成运行时代码、不做 per-type 分支；类型身份只由 <code>typeArguments</code> 与运行时判定承接。
+</div>
+</section>
+
+<!-- ================= 11 枚举与符号 ================= -->
+<section id="enums-symbols">
+<h2><span class="sec-no">11</span>枚举与符号</h2>
+<p class="h2-sub">简单枚举产出常量对象；增强枚举告警跳过。Dart Symbol 在 JS 侧没有对应，未覆盖。</p>
+
+
+
+<p class="cap"><span class="dart">DART</span></p>
+<pre><code>enum Color { red, green, blue }
+
+enum Status {
+  success(200, '成功'),
+  error(500, '失败');
+
+  final int code;
+  final String label;
+  const Status(this.code, this.label);
+
+  bool get isOk =&gt; code &lt; 400;
+}</code><button class="copy" type="button">复制</button></pre>
+
+<p class="cap"><span class="js">JS</span> · 基础枚举</p>
+<pre><code>class Color {
+  static red   = new Color(0, 'red');
+  static green = new Color(1, 'green');
+  static blue  = new Color(2, 'blue');
+
+  constructor(index, name) {
+    if (Color.#locked) throw new Error('Color 是枚举，禁止外部实例化');
+    this.#index = index;
+    this.#name = name;
+  }
+
+  #index; #name;
+  static #locked = false;
+
+  get index() { return this.#index; }
+  get name()  { return this.#name; }
+
+  static get values() { return [Color.red, Color.green, Color.blue]; }
+
+  static byName(name) {
+    for (const v of Color.values) if (v.name === name) return v;
+    throw new Error('没有名为 ' + name + ' 的 Color 枚举值');
+  }
+
+  toString() { return this.#name; }
+}
+Color.#locked = true;</code><button class="copy" type="button">复制</button></pre>
+
+<p class="cap"><span class="js">JS</span> · enhanced enum</p>
+<pre><code>class Status {
+  static success = new Status(0, 'success', 200, '成功');
+  static error   = new Status(1, 'error', 500, '失败');
+
+  constructor(index, name, code, label) {
+    if (Status.#locked) throw new Error('Status 是枚举，禁止外部实例化');
+    this.#index = index;
+    this.#name = name;
+    this.code = code;
+    this.label = label;
+  }
+
+  #index; #name;
+  static #locked = false;
+
+  get index() { return this.#index; }
+  get name()  { return this.#name; }
+  get isOk()  { return this.code &lt; 400; }
+
+  static get values() { return [Status.success, Status.error]; }
+  static byName(n) {
+    for (const v of Status.values) if (v.name === n) return v;
+    throw new Error('没有名为 ' + n + ' 的 Status 枚举值');
+  }
+  toString() { return this.#name; }
+}
+Status.#locked = true;</code><button class="copy" type="button">复制</button></pre>
+
+<h3>语义对照</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>E.red.index</code></td><td><code>E.red.index</code></td><td><span class="muted">—</span></td><td>直接对应</td><td>项目简单枚举产物带 name/index；SDK <code>Color</code> 不是 enum（没有 <code>values / index</code>），不适用</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>E.values</code></td><td><code>E.values</code></td><td><span class="muted">—</span></td><td>静态 getter</td><td>项目简单枚举产物带 <code>values</code> 数组</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>E.values.byName('red')</code></td><td><code>E.byName('red')</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">调用点改写</span></td><td><code>_enumJs</code> 给枚举常量对象挂 <code>byName(name)</code>（找不到抛错）；<code>_methodCallJs</code> 把 <code>E.values.byName(...)</code> 改写为 <code>E.byName(...)</code>（仅前缀是类 / 枚举命名空间时，按值绑定的同名 <code>values</code> 原样）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>Color.red == Color.red</code></td><td><code>Color.red === Color.red</code></td><td><span class="muted">—</span></td><td>同一静态实例，引用相等成立</td><td>同一静态实例引用相等成立</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>switch (c) { case Color.red: }</code>（<code>enum Color { red }</code>）</td><td><code>switch (c) { case Color.red: }</code></td><td><span class="muted">—</span></td><td>JS 需要显式 break</td><td><code>_switchStatementJs</code> <code>SwitchStatement</code> 分支；<code>:2652</code> 模式 switch</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>print(c)</code> → <code>Color.red</code></td><td><code>String(c)</code> → <code>'red'</code></td><td><span class="muted">—</span></td><td>由 toString 保证</td><td>字符串插值 / <code>toString()</code> 走枚举对象的 toString</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>c.index</code> / <code>c.name</code></td><td>同</td><td><span class="muted">—</span></td><td>getter 实现</td><td>项目简单枚举对象带 <code>name</code> / <code>index</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="t">项目实现范围</span>
+  只翻译简单枚举：产物是带 <code>name</code> / <code>index</code> / <code>values</code> / <code>toString</code> 的常量对象（<code>const_support.dart</code> 的 <code>_enumJs</code>）；带成员或构造实参的增强枚举在构建期告警并跳过，不生成悬空引用。
+</div>
+
+<div class="note risk">
+  <span class="t">枚举不能裸序列化</span>
+  <code>JSON.stringify(Color.red)</code> 会得到内部字段，而不是 Dart 的 <code>"Color.red"</code>。需要序列化时给实例加 <code>toJson()</code>，并在 <code>toJSON</code> 里返回名称。
+</div>
+
+
+<div class="note risk">
+  <span class="t">Symbol 未覆盖</span>
+  Dart 的 <code>Symbol</code> / <code>#name</code> 字面量在 JS 侧没有等价物；项目未生成 Symbol 承载，相关写法不进入翻译范围。
+</div>
+</section>
+
+<!-- ================= 12 异常处理 ================= -->
+<section id="exceptions">
+<h2><span class="sec-no">12</span>异常处理</h2>
+<p class="h2-sub">Dart 的 on 类型分派在 JS 侧落成 instanceof 链；try / catch / finally 结构同形。</p>
+
+<h3>异常分派</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>try / on X catch (e)</code></td><td><code>try / catch (e)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 用 <code>instanceof</code> 分派</td><td><code>typeTestJs</code> 的 <code>instanceof</code> 判定 已知类/宿主类型走 instanceof</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>rethrow</code></td><td><code>throw e</code></td><td><span class="muted">—</span></td><td>保留原始堆栈需额外处理</td><td>catch 内统一重抛 <code>throw __e;</code>，保留原异常对象与栈</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>try / catch / finally</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>_tryStatementJs</code> TryStatement</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+  </tbody>
+</table>
+</div>
 
 <p class="cap"><span class="js">JS</span> · 异常类型分派</p>
 <pre><code>// Dart
@@ -1298,17 +1423,58 @@ try {
     throw e;
   }
 }</code><button class="copy" type="button">复制</button></pre>
+</section>
 
-<div class="note">
-  <span class="t">Dart 3 模式匹配要单独做降级</span>
-  switch 表达式、record 解构、<code>if-case</code> 都没有 JS 对应语法。建议统一降级成「类型判断 + 解构 + if 链」，并在生成期记录被降级的节点，方便回溯语义。
+<!-- ================= 13 包与库管理 ================= -->
+<section id="packages-libraries">
+<h2><span class="sec-no">13</span>包与库管理</h2>
+<p class="h2-sub">import / export 按文件产物映射为 ESM；当前实现只按 URI 收集依赖，import 侧的 show / hide 尚未过滤。</p>
+
+<table>
+  <colgroup><col style="width:22%"><col style="width:28%"><col style="width:50%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>现状（项目实现）</th></tr></thead>
+  <tbody>
+    <tr><td><code>import 'x.dart'</code></td><td><code>import { A } from './x.js'</code></td><td>按 URI 解析目标文件产物；跨文件符号按类名 / 顶层常量加入可见表</td></tr>
+    <tr><td><code>import 'x.dart' as p</code></td><td><code>import * as p from './x.js'</code></td><td><code>p.Foo</code> 保留为模块命名空间引用；前缀不参与成员名改写</td></tr>
+    <tr><td><code>show A</code> / <code>hide B</code></td><td>无产物差异</td><td><b>import 侧未实现</b>：<code>resolveImportFiles</code> 只读 URI，不读 combinators；被 hide / 未 show 的符号仍可能进入类表，记为不通过</td></tr>
+    <tr><td><code>export 'x.dart' show/hide</code></td><td><code>export { A } from './x.js'</code></td><td>barrel re-export 已按声明名过滤（class / mixin / 具名 extension）；顶层函数 / 常量不参与转发</td></tr>
+    <tr><td><code>import 'dart:...'</code></td><td>宿主模块 / <code>flutter.js</code></td><td>由宿主承接，不产出 ESM 文件</td></tr>
+    <tr><td><code>part</code> / <code>part of</code></td><td>无</td><td><b>未覆盖</b>：当前只处理 import / export，part 文件不进入翻译范围</td></tr>
+  </tbody>
+</table>
+
+<div class="note risk">
+  <span class="t">跨库同名扩展的可见性</span>
+  全局原型无法表达 import 可见性；跨库同名扩展的隐式调用是已知限制（见本章「extension 扩展成员」），显式 <code>E(x).m()</code> 正常。
 </div>
 </section>
 
-<!-- ================= 15 异步 ================= -->
+<!-- ================= 14 typedef 与函数类型 ================= -->
+<section id="typedef-function-types">
+<h2><span class="sec-no">14</span>typedef 与函数类型</h2>
+<p class="h2-sub">typedef 只参与类型检查，不进产物；函数类型在运行时用 typeof 判定。</p>
+
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>typedef F = int Function(int)</code></td><td>无运行时表示</td><td><code>typedef</code> 只参与类型检查</td><td><span class="lv lv-ok">直译</span> 删除该声明，类型检查交给 TS 注解</td><td><code>component_scope 的顶层声明收集</code> 顶层只收集变量 / extension / enum，typedef 不进产物</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>Function</code></td><td><code>typeof x === 'function'</code></td><td>直接对应</td><td><span class="lv lv-ok">直译</span></td><td><code>typeTestJs</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="t">函数类型只做判定</span>
+  <code>Function</code> / <code>T Function(...)</code> 在 JS 侧一律判 <code>typeof x === 'function'</code>；参数与返回值类型擦除。tear-off 与函数值调用见第 06 章。
+</div>
+</section>
+
+<!-- ================= 15 异步编程 ================= -->
 <section id="async">
-<h2><span class="sec-no">15</span>异步与生成器</h2>
-<p class="h2-sub">Future ↔ Promise 基本同构；Stream 没有直接对应，必须自建 <code>Stream</code> 类，同时支撑 <code>listen</code> 与 <code>await for</code>。</p>
+<h2><span class="sec-no">15</span>异步编程</h2>
+<p class="h2-sub">Future ↔ Promise 同构；async / await 直译，Completer 与 Timer 由运行时同名类承接。</p>
 
 <div class="scroll">
 <table>
@@ -1324,10 +1490,7 @@ try {
     <tr><td><code>.then</code> / <code>.catchError</code> / <code>.whenComplete</code></td><td><code>.then</code> / <code>.catch</code> / <code>.finally</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 方法名不同</td><td>future_js.dart 的 Future 类实现 then / catchError / whenComplete</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>Completer&lt;T&gt;</code></td><td>手写 Promise + 外置 resolve</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span></td><td>已实现：<code>future_js.dart</code> 的 <code>export class Completer</code>——<code>future</code> 为 <code>Future.__wrap</code> 包住的外置 resolve/reject Promise；<code>complete</code> / <code>completeError</code> 只允许一次，重复完成抛 <code>StateError</code>；<code>isCompleted</code> getter</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>Timer(...)</code> / <code>Timer.periodic</code></td><td><code>setTimeout</code> / <code>setInterval</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 句柄语义不同</td><td>timer_js.dart 提供 Timer / Timer.periodic 同名类</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>Stream&lt;T&gt;</code></td><td>自建 <code>Stream</code> 类</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 推送 + AsyncIterator 双形态，见下节</td><td>已实现：<code>stream_js.dart</code> 的 <code>export class Stream</code>（<code>listen</code> + <code>[Symbol.asyncIterator]</code>、惰性启动、单订阅 / 广播、pause 期间按订阅者缓冲（单订阅与广播一致）、广播无订阅者时才丢弃 data / error（done 粘滞）、错误不终止流）与 <code>StreamSubscription</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>sync*</code> / <code>yield</code></td><td><code>function*</code> / <code>yield</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 对应良好</td><td><code>closureToJs</code> 的 <code>BlockFunctionBody + isGenerator</code> 分支产出 <code>function*</code>（局部函数 / 闭包）；<code>dart2js</code> 方法渲染按 <code>isGenerator</code> 加 <code>*</code> 前缀；<code>translateStmtList</code> 的 <code>YieldStatement</code> 分支产出 <code>yield</code> / <code>yield*</code>。生成器对象不是数组：运行时在共享 <code>%GeneratorPrototype%</code> 上补 <code>toList</code> / <code>map</code> / <code>where</code> / <code>first</code> / <code>length</code> 等 Array 同名同义成员（随机访问成员先 <code>Array.from(this)</code> 物化；<code>map</code> / <code>where</code> / <code>expand</code> / <code>take</code> / <code>skip</code> 惰性转发 <code>__iter*</code>；覆盖引擎的 Iterator Helpers 以保证跨引擎一致）。已知差异：JS 生成器一次性迭代（Dart 的 sync* Iterable 可重复迭代）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>async*</code> / <code>yield</code></td><td><code>Stream.fromAsyncGenerator(...)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 不能返回裸 <code>async function*</code>：它没有 <code>listen</code></td><td>已实现：<code>dart2js</code> 的 <code>async*</code> 方法渲染为普通方法 <code>return Stream.fromAsyncGenerator((async function* () { … }).bind(this)())</code>；<code>closureToJs</code> 的生成器分支对闭包 / 局部函数做同样包装（外层仍是箭头，默认值在调用时求值）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>await for (x in stream)</code></td><td><code>for await (const x of it)</code></td><td><span class="lv lv-care">注意</span> 语法直译，但错误退出的取消语义未对齐</td><td><span class="lv lv-ok">直译</span> 依赖 <code>[Symbol.asyncIterator]</code></td><td><code>_forStatementJs</code> 检测 <code>ForStatement.awaitKeyword</code> 后输出 <code>for await (... of ...)</code>；<code>break</code> / <code>take(1)</code> / 循环体抛错会走 <code>return()</code> 取消上游；<b>stream error 退出不取消</b>（JS 的 <code>for await</code> 在 <code>next()</code> reject 时不会调用 <code>iterator.return()</code>），puller 残留、<code>onCancel</code> 不触发</td><td><span class="st st-fail">不通过</span></td><td>向 puller 投递 error 时主动移除 puller 并取消上游</td></tr>
   </tbody>
 </table>
 </div>
@@ -1355,6 +1518,24 @@ async function* ticks(count) {
 for await (const x of ticks(3)) {
   console.log(x);
 }</code><button class="copy" type="button">复制</button></pre>
+</section>
+
+<!-- ================= 16 Stream 流 ================= -->
+<section id="streams">
+<h2><span class="sec-no">16</span>Stream 流</h2>
+<p class="h2-sub">Stream 没有 JS 直接对应，运行时自建 Stream / StreamController / StreamSubscription，同时支撑 listen 与 await for。</p>
+
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td><code>Stream&lt;T&gt;</code></td><td>自建 <code>Stream</code> 类</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 推送 + AsyncIterator 双形态，见下节</td><td>已实现：<code>stream_js.dart</code> 的 <code>export class Stream</code>（<code>listen</code> + <code>[Symbol.asyncIterator]</code>、惰性启动、单订阅 / 广播、pause 期间按订阅者缓冲（单订阅与广播一致）、广播无订阅者时才丢弃 data / error（done 粘滞）、错误不终止流）与 <code>StreamSubscription</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>async*</code> / <code>yield</code></td><td><code>Stream.fromAsyncGenerator(...)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 不能返回裸 <code>async function*</code>：它没有 <code>listen</code></td><td>已实现：<code>dart2js</code> 的 <code>async*</code> 方法渲染为普通方法 <code>return Stream.fromAsyncGenerator((async function* () { … }).bind(this)())</code>；<code>closureToJs</code> 的生成器分支对闭包 / 局部函数做同样包装（外层仍是箭头，默认值在调用时求值）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>await for (x in stream)</code></td><td><code>for await (const x of it)</code></td><td><span class="lv lv-care">注意</span> 语法直译，但错误退出的取消语义未对齐</td><td><span class="lv lv-ok">直译</span> 依赖 <code>[Symbol.asyncIterator]</code></td><td><code>_forStatementJs</code> 检测 <code>ForStatement.awaitKeyword</code> 后输出 <code>for await (... of ...)</code>；<code>break</code> / <code>take(1)</code> / 循环体抛错会走 <code>return()</code> 取消上游；<b>stream error 退出不取消</b>（JS 的 <code>for await</code> 在 <code>next()</code> reject 时不会调用 <code>iterator.return()</code>），puller 残留、<code>onCancel</code> 不触发</td><td><span class="st st-fail">不通过</span></td><td>向 puller 投递 error 时主动移除 puller 并取消上游</td></tr>
+  </tbody>
+</table>
+</div>
 
 <h3>Stream：运行时自建，推送 + 拉取双形态</h3>
 <div class="note">
@@ -1488,12 +1669,26 @@ class StreamSubscription {
   ⑥ <strong>单订阅一生一次 / 错误不静默</strong>：取消后再次 <code>listen</code> 或 <code>await for</code> 抛 <code>StateError</code>；无 <code>onError</code> 的错误经 <code>__error</code> 上报；<code>onError</code> 第二参为栈字符串（<code>addError</code> 未给栈时为空串，对应 Dart <code>StackTrace.empty</code>；生成器 <code>throw</code> 取 <code>Error.stack</code>）。<br>
   ⑦ <strong>close / done / onCancel 生命周期</strong>：Dart 的单订阅流在 <code>cancel()</code> 后不再缓冲（<code>add</code> 丢弃、<code>close()</code> 立即完成），done 交付后订阅自动取消（<code>hasListener=false</code>），广播的 <code>onListen</code> / <code>onCancel</code> 按订阅周期成对触发。<b>当前四项均未对齐</b>：取消后 <code>_pending</code> 仍累积导致 <code>close()</code> 挂起、无订阅者同 tick <code>close()</code> 提前完成、done 后订阅留在 <code>_subs</code>、广播 <code>onCancel</code> 只触发一次（见上表不通过行）。
 </div>
+
 </section>
 
-<!-- ================= 16 运行时补齐 ================= -->
+<!-- ================= 17 并发与 Isolate ================= -->
+<section id="isolates">
+<h2><span class="sec-no">17</span>并发与 Isolate</h2>
+<p class="h2-sub">不适用：<code>dart:isolate</code> 不在翻译范围，JS 侧没有等价的多 isolate 运行时。</p>
+
+<div class="note risk">
+  <span class="t">未覆盖</span>
+  项目不翻译 <code>Isolate</code> / <code>ReceivePort</code> / <code>SendPort</code>；补充包产物运行在单个 JS 引擎实例内，跨 isolate 通信没有对应协议。
+</div>
+</section>
+
+<!-- ================= 18 运行时补齐 ================= -->
 <section id="helpers">
-<h2><span class="sec-no">16</span>运行时补齐与辅助能力</h2>
-<p class="h2-sub">项目把跨语言差异集中到运行时（<code>packages/hot_patch_generator/lib/src/builders/runtime/js/</code>），生成器只做语法级翻译；下面的「已实现」即当前运行时能力。</p>
+<h2><span class="sec-no">18</span>运行时补齐与辅助能力</h2>
+<p class="h2-sub">项目把跨语言差异集中到运行时（<code>packages/hot_patch_generator/lib/src/builders/runtime/js/</code>），生成器只做语法级翻译。</p>
+
+
 
 <h3>已实现</h3>
 <table>
@@ -1508,7 +1703,7 @@ class StreamSubscription {
     <tr><td><code>Future</code></td><td><code>future_js.dart</code></td><td><code>then</code> / <code>catchError</code> / <code>whenComplete</code> / <code>delayed</code> / <code>wait</code> / <code>value</code> / <code>error</code>，底层 Promise</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>Completer</code></td><td><code>future_js.dart</code></td><td><code>future</code> / <code>complete</code> / <code>completeError</code> / <code>isCompleted</code>；重复完成抛 <code>StateError</code></td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>Stream</code> / <code>StreamController</code> / <code>StreamSubscription</code></td><td><code>stream_js.dart</code></td><td>显式事件 + 订阅状态机：订阅前缓冲（<b>异步</b>交付）、暂停缓冲（单订阅与广播一致）、背压、取消传播并 await <code>iterator.return()</code>、转换 = 订阅上游 + 事件转发；<code>await for</code> 遇 error / done 注销拉取方并传播取消；单订阅取消后重听抛 <code>StateError</code>；唯一订阅取消后 <code>add</code> 不影响 <code>close()</code> 完成；无订阅者 <code>close()</code> 等 done 交付后才完成；done 后订阅自动移除（<code>hasListener</code> 变 false）；广播每个周期都触发 <code>onCancel</code>；无 onError 的错误经 <code>__error</code> 上报，onError 第二参为栈字符串</td><td><span class="st st-pass">通过</span></td></tr>
-    <tr><td><code>extension</code>（方法 / getter / setter / 运算符 / 显式调用）</td><td><code>extension_support.dart</code> + <code>js_extension_js.dart</code></td><td>实例成员、显式调用、静态 get/set 与静态字段引用已通过；<b>仍不通过</b>：跨库同名扩展的隐式调用（全局原型无法表达 import 可见性，<code>@conflict</code> 双方不安装；显式 <code>E(x).m()</code> 正常）；泛型目标擦除（见第 12 章）</td><td><span class="st st-fail">不通过</span></td></tr>
+    <tr><td><code>extension</code>（方法 / getter / setter / 运算符 / 显式调用）</td><td><code>extension_support.dart</code> + <code>js_extension_js.dart</code></td><td>实例成员、显式调用、静态 get/set 与静态字段引用已通过；<b>仍不通过</b>：跨库同名扩展的隐式调用（全局原型无法表达 import 可见性，<code>@conflict</code> 双方不安装；显式 <code>E(x).m()</code> 正常）；泛型目标擦除（见第 07 章「extension 扩展成员」）</td><td><span class="st st-fail">不通过</span></td></tr>
     <tr><td><code>where</code> / <code>expand</code> / <code>take</code> / <code>skip</code>（同名惰性）+ <code>map → _map</code> + <code>LazyIterable</code></td><td><code>runtime_js.dart</code> / <code>iterable_js.dart</code></td><td>调用点保持同名；Array / Set / 生成器原型上的同名成员返回 <code>LazyIterable</code>（调用时零副作用、可重复迭代）；<code>map</code> 因不能覆盖原生 <code>Array.prototype.map</code>，按映射表改名为 <code>_map</code>；<code>__iter*</code> 仅为原型实现的内部原语</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>sync*</code> / <code>async*</code> / <code>yield</code> / <code>yield*</code></td><td><code>js_member.dart</code> + <code>js_translator.dart</code></td><td><code>function*</code> / <code>async function*</code>；<code>async*</code> 由 <code>Stream.fromAsyncGenerator</code> 包装；生成器原型补 Iterable 同名成员</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>Timer</code> / <code>Timer.periodic</code></td><td><code>timer_js.dart</code></td><td>句柄 + <code>cancel()</code>，宿主缺失时按取消标记兜底</td><td><span class="st st-pass">通过</span></td></tr>
@@ -1519,19 +1714,20 @@ class StreamSubscription {
 <h3>已提供</h3>
 <ul>
   <li><code>__nn(v)</code>（undefined → null 归一，<b>不抛错</b>，其他值原样返回）、<code>__mod(a, b)</code>（欧几里得取模）、<code>__mixinHard(cls, mixin)</code>（mixin application 的原型成员复制）、<code>assert</code>、Array / String / Number 同名成员补齐。</li>
-  <li>已知边界以各章「现状」列为准：<code>Stream</code> 六项语义边界见第 15 章，extension 跨库同名隐式分派 / 泛型目标见第 12 章。</li>
+  <li>已知边界以各章「现状」列为准：<code>Stream</code> 六项语义边界见第 16 章，extension 跨库同名隐式分派 / 泛型目标见第 07 章「extension 扩展成员」。</li>
 </ul>
 
 <div class="note">
   <span class="t">为什么补齐放运行时</span>
   生成器不带类型解析，只看得到方法名；同名成员按<b>接收者类型</b>分发（挂 <code>Array.prototype</code> 只影响数组，不会误伤同名的控制器方法）。补齐项必须不可枚举、带存在性守卫，禁止挂 <code>Object.prototype</code>。
 </div>
+
 </section>
 
 <footer>
   <p>本手册基于 Dart 3.11.5 stable 实测与 Dart 官方语言规范整理，用于代码生成器实现与自检。空安全赋值、可选链读写边界、能力矩阵与返回值语义均在本机验证。</p>
   <p>未覆盖范围：<code>dart:isolate</code>、<code>dart:mirrors</code> 反射、<code>TypedData</code> 数值精度、正则命名组差异、JS interop 桥接、编译器特有优化（tree-shaking / minify）。</p>
-  <p>使用建议：先落地第 00 章总则与第 16 章运行时，再逐章对照规则核对；每条改写配三条断言（null 分支、非 null 分支、求值次数）。<b>禁止按类名 / 方法名 / 属性名特判</b>：新增能力走扩展点或运行时内建补齐。</p>
+  <p>使用建议：先落地第 00 章总则与第 18 章运行时，再逐章对照规则核对；每条改写配三条断言（null 分支、非 null 分支、求值次数）。<b>禁止按类名 / 方法名 / 属性名特判</b>：新增能力走扩展点或运行时内建补齐。</p>
 </footer>
 
 </main>
