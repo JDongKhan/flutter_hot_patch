@@ -223,63 +223,6 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
   <li><b>产物必须可验证，且手册先行</b><span>每条改写规则都要能构造“null 分支 / 非 null 分支 / 求值次数”三个断言，任一不成立即视为实现错误。动手前先定位本手册对应章节（含「翻译原则 / 现状 / 是否通过」）；改完必须在同一次变更中更新对应行、<code>CHANGELOG</code> 与（涉及行为时）示例。<b>手册未更新视为未完成</b>；代码与手册不一致时以手册为准并立即收敛。<b>禁止“先实现再解释”</b>：无法在手册中找到依据的实现，一律停下先确认，不得用“内部原语 / 临时包装 / 为了兼容”绕过约束；新增 <code>__</code> 前缀原语同属产物形态，必须登记。</span></li>
 </ol>
 
-<h3>表格约定：差异与翻译原则</h3>
-<p>对比表统一四列。第三列只回答“为什么不能照抄”，第四列只回答“生成器该怎么做”，两者不混写。存量三列表在原“规则 / 备注”列里混着这两类内容，修订时按下表拆开。</p>
-
-<table>
-  <colgroup><col style="width:16%"><col style="width:22%"><col style="width:31%"><col style="width:31%"></colgroup>
-  <thead><tr><th>列</th><th>回答的问题</th><th>写什么</th><th>不要写</th></tr></thead>
-  <tbody>
-    <tr><td>Dart 写法</td><td>源码长什么样</td><td>原样摘取，保留类型标注</td><td>改写后的形态</td></tr>
-    <tr><td>JS 对应</td><td>目标长什么样</td><td>能直接粘贴的片段</td><td>“类似 xxx”“用 xxx 实现”</td></tr>
-    <tr><td>差异</td><td>为什么不能照抄</td><td>陈述句：参数顺序、默认值、越界规则、求值时机、类型判定</td><td>动作指令、等级标签</td></tr>
-    <tr><td>翻译原则</td><td>生成器必须做什么</td><td>等级标签 + 动词开头 + 目标形态</td><td>现象复述、“注意一下”这类空话</td></tr>
-    <tr><td>现状</td><td>项目里实际怎么做的</td><td>写「文件 + 函数 / 分支名」的实现事实（<b>不写行号</b>，行号随版本漂移）；未实现直接写「未实现」</td><td>「应该会」「大概支持」「文件:行号」</td></tr>
-    <tr><td>是否通过</td><td>与原则列是否一致</td><td><span class="st st-pass">通过</span> / <span class="st st-fail">不通过</span>，部分实现归不通过</td><td>把“能跑”当成“符合语义”</td></tr>
-  </tbody>
-</table>
-
-<p>“现状”与“是否通过”两列只在核对过的表里出现，判定口径固定：现状必须落到具体文件与函数 / 分支名（不写会漂移的行号），没有代码证据的项一律记“未检测”，不推测；通过与否只看是否满足“翻译原则”列的完整要求，部分实现（如做了类型擦除却没做常量绑定）记为不通过，并在现状里写明差在哪。确实是 JS 无等价能力的项，记“不适用”并写明原因，不硬凑实现；<b>Dart 语法本身不存在的写法不收录</b>，直接不进行表。</p>
-
-<p><strong>翻译原则的五级</strong>，与第三列标签一一对应（直译 / 注意 / 扩展 / 必须改写 / 禁止生成）：</p>
-<table>
-  <colgroup><col style="width:14%"><col style="width:26%"><col style="width:32%"><col style="width:28%"></colgroup>
-  <thead><tr><th>等级</th><th>含义</th><th>生成器行为</th><th>例子</th></tr></thead>
-  <tbody>
-    <tr><td><span class="lv lv-ok">直译</span></td><td>形态与语义一致</td><td>原样生成</td><td><code>for (final x in list)</code> → <code>for...of</code></td></tr>
-    <tr><td><span class="lv lv-care">注意</span></td><td>可直译，但边界要处理</td><td>直译 + 检查、断言或注释</td><td><code>bool?</code> 为 null 时 JS 按 falsy 处理</td></tr>
-    <tr><td><span class="lv lv-care">扩展</span></td><td>JS 内建缺同名成员，或同名存在但参数 / 返回值 / 内部逻辑不一致</td><td>运行时给<strong>具体内建原型</strong>补齐：缺同名直接挂同名（<code>clear</code>）；同名已存在但语义不一致则<strong>不覆盖原生</strong>，挂 <code>_</code> 前缀版本（<code>_sort</code> / <code>_join</code> / <code>_setLength</code>），生成器按<b>构建期映射表</b>（主键 = 内建接收者类型 + 成员名）改写成员名。<strong>只有接收者可判定为该内建类型时才改写；自定义类上的同名方法永不改名</strong></td><td><code>clear()</code> 已挂同名；<code>(Array, sort)</code> → <code>_sort()</code>；<code>fold(init, fn)</code> 直接扩展同名</td></tr>
-    <tr><td><span class="lv lv-must">必须改写</span></td><td>直译会语法错</td><td>走守卫 / IIFE / 复合赋值模板</td><td><code>a?.x = v</code> → IIFE 守卫；<code>list.length = n</code> → <code>list._setLength(n)</code>（仅接收者可判定为 List 时）</td></tr>
-    <tr><td><span class="lv lv-ban">禁止生成</span></td><td>该形态在 JS 侧不成立</td><td><strong>构建期告警并丢弃该表达式</strong>（AGENTS「无静默」），不产出代码；不静默、不占位兜底</td><td>无基类却发射 <code>super.m()</code>；未验证的 <code>instanceof</code> 目标（Dart 源码中没有对应写法，该级用于生成器自检）</td></tr>
-  </tbody>
-</table>
-
-<div class="note">
-  <span class="t">自定义类的成员禁止重写</span>
-  「扩展」只挂在 JS 内建原型（<code>Array.prototype</code> / <code>String.prototype</code> / <code>Map.prototype</code> / <code>Set.prototype</code> / <code>Number.prototype</code> 等）上。用户自己写的 Dart class，其方法名、字段名一律原样翻译：<strong>不改名、不挂 <code>_</code> 前缀、不替换实现</strong>。
-</div>
-
-<div class="note">
-  <span class="t">原则列的五条写法</span>
-  ① 动词开头：生成 / 保留 / 重写 / 禁止 / 补 / 检查。<br>
-  ② 给出目标形态，能直接敲进代码；不写“改成对应方法”这种空话。<br>
-  ③ 条件放前面：<code>无比较器时</code>、<code>静态类型为 List&lt;int&gt;</code>、<code>值为 null 时</code>。<br>
-  ④ 一行只做一个动作，两个动作拆两行。<br>
-  ⑤ 不复述“差异”列，只写动作。
-</div>
-
-<p class="cap">四列写法示例</p>
-<table>
-  <colgroup><col style="width:22%"><col style="width:22%"><col style="width:28%"><col style="width:28%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th></tr></thead>
-  <tbody>
-    <tr><td><code>list.sort()</code></td><td><code>list._sort()</code></td><td>JS 已有 <code>sort()</code>，但默认按 UTF-16 字符串序，Dart 按 <code>Comparable</code></td><td><span class="lv lv-care">扩展</span> 同名已存在但默认行为不一致，<strong>不覆盖原生</strong>：运行时扩展 <code>Array.prototype._sort</code>（内置 Comparable 默认比较器），生成器按映射表把 <b><code>(Array, sort)</code></b> 改写为 <code>_sort</code>；自定义类的 <code>sort()</code> 原样，不改名</td></tr>
-    <tr><td><code>list.join()</code></td><td><code>list._join()</code></td><td>JS <code>join</code> 默认分隔符是 <code>','</code>，Dart 是 <code>''</code></td><td><span class="lv lv-care">扩展</span> 同名已存在但默认值不同，<strong>不覆盖原生</strong>：运行时扩展 <code>Array.prototype._join</code> 默认空串，生成器按映射表把 <b><code>(Array, join)</code></b> 改写为 <code>_join</code>；其它类型的 <code>join</code> 原样</td></tr>
-    <tr><td><code>list.fold(0, (a, e) =&gt; a + e)</code></td><td><code>list.fold(0, (a, e) =&gt; a + e)</code></td><td>JS 数组没有 <code>fold</code>，<code>reduce</code> 初值位置相反</td><td><span class="lv lv-ok">直译</span> 同名不存在，运行时<strong>直接扩展同名</strong> <code>fold(init, fn)</code>，翻译原样生成 <code>list.fold(0, fn)</code></td></tr>
-    <tr><td><code>list.length = 3;</code></td><td><code>list._setLength(3)</code></td><td>JS 写 <code>length</code> 是静默截断，Dart 固定长度列表抛 <code>UnsupportedError</code></td><td><span class="lv lv-must">必须改写</span> 运行时扩展 <code>Array.prototype._setLength(n)</code>（可变长截断 / 补 null，固定长度抛错），生成器按映射表把 <b><code>(Array, length 写)</code></b> 改写为 <code>_setLength(n)</code>；其它对象的 <code>length</code> 原样</td></tr>
-  </tbody>
-</table>
-
 </section>
 
 <!-- ================= 01 流水线 ================= -->
