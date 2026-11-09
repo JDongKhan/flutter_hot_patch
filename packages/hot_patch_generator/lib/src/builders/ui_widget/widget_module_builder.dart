@@ -14,6 +14,7 @@ import '../shared/js_format.dart';
 import '../shared/js_class_defs.dart';
 import '../shared/paths.dart';
 import '../runtime/js/animation_js.dart';
+import '../runtime/js/asset_bundle_js.dart';
 import '../runtime/js/canvas_js.dart';
 import '../runtime/js/change_notifier_js.dart';
 import '../runtime/js/color_js.dart';
@@ -55,59 +56,61 @@ import '../runtime/js/timer_js.dart';
 /// 句柄机制、`ControllerBase`）。片段内的 `function` 声明会提升，故同区内可以
 /// 前后互引。依赖方向单向：flutter.js → runtime.js，反方向禁止。
 String flutterValueClassesSource() => [
-      dartValuesJsSource,
-      // dart:core 里 JS 无同名内建的类型（DateTime / RegExp / StringBuffer）
-      // 与小写静态命名空间（int / double / num）：依赖 __positionalArgs，
-      // 故紧随基础值类之后。
-      dartCoreJsSource,
-      // 绘制值类（Rect / RRect / Path / Paint / Canvas）与 CustomPainter 句柄：
-      // 依赖基础值类工具（__positionalArgs）与 core 句柄机制，故紧随其后。
-      canvasJsSource,
-      // Dart 内置异常（StateError / ArgumentError / …）：产物 `throw`/`catch`
-      // 的落点，按名 import；runtime.js 自身不构造异常，故归值类区。
-      dartErrorsJsSource,
-      // dart:async 的 Future 同名镜像（Future.delayed / value / wait …）：
-      // 依赖基础值类工具（__positionalArgs / __durationMs）与 dartErrors 的
-      // StateError（仅 Future.any 的实参校验用），故排在两者之后。
-      futureJsSource,
-      // Dart `Iterable` 的惰性载体：`__iterMap` / `__iterWhere` / … 与
-      // `LazyIterable`（Array 立即求值，语义不同；生成器按静态类型改写）。
-      iterableJsSource,
-      // dart:async 的 Stream / StreamController / StreamSubscription：依赖
-      // Future（Future.__wrap 包装终止操作）与 __durationMs（periodic），
-      // 故紧随 Future 之后。
-      streamJsSource,
-      // 控制器基类（句柄层）：各 Controller 继承它，必须排在它们之前。
-      controllerBaseJsSource,
-      // SDK 枚举值类（按源码 `enum` 声明自动生成）：翻译层已改为对
-      // `Owner.member` 原样引用，这些类就是那些引用的落点。
-      enumValuesJsSource(),
-      // IconData / Icons：同口径，`Icons.edit` 原样引用。
-      iconValuesJsSource(),
-      styleValuesJsSource,
-      colorJsSource,
-      changeNotifierSource,
-      animationJsSource,
-      scrollControllerJsSource,
-      textEditingControllerJsSource,
-      focusJsSource,
-      keyboardListenerJsSource,
-      mediaQueryJsSource,
-      // 命令式弹层（showDialog 系列）+ 面板根机制 + Navigator 的落点：
-      // Flutter SDK 的 API 面放这里，runtime.js 不留任何弹层知识。
-      dialogsJsSource,
-      navigatorJsSource,
-      // 拖拽：data 身份表与事件详情还原（Draggable / DragTarget 的组件类
-      // 在同一模块里引用这里的函数）。
-      dragJsSource,
-      // OverlayPortal：LayerLink / OverlayPortalController 两个跨语言对象
-      // （句柄即身份，show/hide 命令发往宿主）。
-      overlayPortalJsSource,
-      tabControllerJsSource,
-      keyJsSource,
-      easyRefreshJsSource,
-      timerJsSource,
-    ].join('\n');
+  dartValuesJsSource,
+  // dart:core 里 JS 无同名内建的类型（DateTime / RegExp / StringBuffer）
+  // 与小写静态命名空间（int / double / num）：依赖 __positionalArgs，
+  // 故紧随基础值类之后。
+  dartCoreJsSource,
+  // 绘制值类（Rect / RRect / Path / Paint / Canvas）与 CustomPainter 句柄：
+  // 依赖基础值类工具（__positionalArgs）与 core 句柄机制，故紧随其后。
+  canvasJsSource,
+  // Dart 内置异常（StateError / ArgumentError / …）：产物 `throw`/`catch`
+  // 的落点，按名 import；runtime.js 自身不构造异常，故归值类区。
+  dartErrorsJsSource,
+  // dart:async 的 Future 同名镜像（Future.delayed / value / wait …）：
+  // 依赖基础值类工具（__positionalArgs / __durationMs）与 dartErrors 的
+  // StateError（仅 Future.any 的实参校验用），故排在两者之后。
+  futureJsSource,
+  // rootBundle（assets 读取）：方法返回 Future，紧随其定义之后。
+  assetBundleJsSource,
+  // Dart `Iterable` 的惰性载体：`__iterMap` / `__iterWhere` / … 与
+  // `LazyIterable`（Array 立即求值，语义不同；生成器按静态类型改写）。
+  iterableJsSource,
+  // dart:async 的 Stream / StreamController / StreamSubscription：依赖
+  // Future（Future.__wrap 包装终止操作）与 __durationMs（periodic），
+  // 故紧随 Future 之后。
+  streamJsSource,
+  // 控制器基类（句柄层）：各 Controller 继承它，必须排在它们之前。
+  controllerBaseJsSource,
+  // SDK 枚举值类（按源码 `enum` 声明自动生成）：翻译层已改为对
+  // `Owner.member` 原样引用，这些类就是那些引用的落点。
+  enumValuesJsSource(),
+  // IconData / Icons：同口径，`Icons.edit` 原样引用。
+  iconValuesJsSource(),
+  styleValuesJsSource,
+  colorJsSource,
+  changeNotifierSource,
+  animationJsSource,
+  scrollControllerJsSource,
+  textEditingControllerJsSource,
+  focusJsSource,
+  keyboardListenerJsSource,
+  mediaQueryJsSource,
+  // 命令式弹层（showDialog 系列）+ 面板根机制 + Navigator 的落点：
+  // Flutter SDK 的 API 面放这里，runtime.js 不留任何弹层知识。
+  dialogsJsSource,
+  navigatorJsSource,
+  // 拖拽：data 身份表与事件详情还原（Draggable / DragTarget 的组件类
+  // 在同一模块里引用这里的函数）。
+  dragJsSource,
+  // OverlayPortal：LayerLink / OverlayPortalController 两个跨语言对象
+  // （句柄即身份，show/hide 命令发往宿主）。
+  overlayPortalJsSource,
+  tabControllerJsSource,
+  keyJsSource,
+  easyRefreshJsSource,
+  timerJsSource,
+].join('\n');
 
 /// 有 JS 类的类型 → (package → {type})：由静态登记推导（[jsClassWidgetTypes]
 /// 与 [widgetPackageOf]），作为 package 模块产物清单（每个包一个文件）的唯一来源。
@@ -154,7 +157,9 @@ class WidgetModuleBuilder implements Builder {
       final pkg = segs[1].substring(0, segs[1].length - '.js'.length);
       await buildStep.writeAsString(
         out,
-        canonicalizeJsIndent(renderPackageModule(pkg, packages[pkg] ?? const <String>{})),
+        canonicalizeJsIndent(
+          renderPackageModule(pkg, packages[pkg] ?? const <String>{}),
+        ),
       );
     }
   }
@@ -166,12 +171,14 @@ class WidgetModuleBuilder implements Builder {
 /// 时（`ElevatedButton.styleFrom` → `ButtonStyle`），JS 侧落点就是构造该值类。
 /// 抽取自产物源码本身，生成器不维护任何类型表。
 Set<String> get mirrorValueClasses => _mirrorValueClasses ??= {
-      for (final m in _exportClassDecl.allMatches(flutterValueClassesSource()))
-        m.group(1)!,
-    };
+  for (final m in _exportClassDecl.allMatches(flutterValueClassesSource()))
+    m.group(1)!,
+};
 Set<String>? _mirrorValueClasses;
-final RegExp _exportClassDecl =
-    RegExp(r'^[ \t]*export class[ \t]+([A-Za-z_$][\w$]*)', multiLine: true);
+final RegExp _exportClassDecl = RegExp(
+  r'^[ \t]*export class[ \t]+([A-Za-z_$][\w$]*)',
+  multiLine: true,
+);
 
 /// 包装类的**静态方法**（Dart 命名构造 / 静态方法的 1:1 落点）。
 ///
@@ -193,7 +200,8 @@ String namedCtorStatics(String type, {Iterable<String> extra = const []}) {
   final sigs = CtorSignatures.instance;
   final names = <String>{...?sigs?.ctorNamesOf(type), ...extra};
   final factories = <String, String>{};
-  final statics = sigs?.staticMethodsOf(type) ?? const <String, StaticMethodInfo>{};
+  final statics =
+      sigs?.staticMethodsOf(type) ?? const <String, StaticMethodInfo>{};
   for (final e in statics.entries) {
     final info = e.value;
     final ret = info.returnType;
@@ -208,15 +216,16 @@ String namedCtorStatics(String type, {Iterable<String> extra = const []}) {
   if (names.isEmpty && factories.isEmpty) return '';
   final b = StringBuffer();
   for (final n in names.toList()..sort()) {
-    b.writeln('  static $n(props) { '
-        "return new $type(Object.assign({}, props, { factory: '$n' })); }");
+    b.writeln(
+      '  static $n(props) { '
+      "return new $type(Object.assign({}, props, { factory: '$n' })); }",
+    );
   }
   for (final f in factories.entries) {
     b.writeln('  static ${f.key}(props) { return new ${f.value}(props); }');
   }
   return b.toString();
 }
-
 
 /// 逻辑组件的**命名构造静态方法**（`ChangeNotifierProvider.value(props)`）。
 ///
@@ -230,8 +239,10 @@ String logicCtorStatics(String type) {
   if (names.isEmpty) return '';
   final b = StringBuffer();
   for (final n in names.toList()..sort()) {
-    b.writeln('  static $n(props) { '
-        "return new $type(Object.assign({}, props, { factory: '$n' })); }");
+    b.writeln(
+      '  static $n(props) { '
+      "return new $type(Object.assign({}, props, { factory: '$n' })); }",
+    );
   }
   return b.toString();
 }
@@ -244,9 +255,7 @@ String withClassStatics(String classSource, String statics) {
   if (statics.isEmpty) return classSource;
   final i = classSource.lastIndexOf('}');
   if (i < 0) {
-    throw StateError(
-      '[hot_patch_generator] 逻辑组件源码缺少类体闭合花括号：\n$classSource',
-    );
+    throw StateError('[hot_patch_generator] 逻辑组件源码缺少类体闭合花括号：\n$classSource');
   }
   final head = classSource.substring(0, i).trimRight();
   return '$head\n$statics${classSource.substring(i)}';
@@ -270,8 +279,8 @@ String hostWrapperSource(String type, {bool exported = true}) {
   final fnLine = fnParams == null
       ? '  static __fnProps = null;\n'
       : fnParams.isEmpty
-          ? ''
-          : '  static __fnProps = [${(fnParams.toList()..sort()).map(jsonEncode).join(', ')}];\n';
+      ? ''
+      : '  static __fnProps = [${(fnParams.toList()..sort()).map(jsonEncode).join(', ')}];\n';
   return '''
 ${exported ? 'export ' : ''}class $type extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
@@ -504,7 +513,8 @@ export class Builder extends Component {
 ///
 /// Draggable / LongPressDraggable 各自持一份 `__sourceProps`（同一段源码由
 /// [dragSourcePropsMethodSource] 插入），build 里给出宿主类型名（不按类名判断）。
-const String jsDraggableComponent = '''
+const String jsDraggableComponent =
+    '''
 export class Draggable extends Component {
 $dragSourcePropsMethodSource
   build(context) {
@@ -512,7 +522,8 @@ $dragSourcePropsMethodSource
   }
 }''';
 
-const String jsLongPressDraggableComponent = '''
+const String jsLongPressDraggableComponent =
+    '''
 export class LongPressDraggable extends Component {
 $dragSourcePropsMethodSource
   build(context) {
@@ -524,7 +535,8 @@ $dragSourcePropsMethodSource
 /// （候选/被拒数据只在悬停时由宿主产生，且候选里是**任意 JS 值**）。与
 /// LayoutBuilder 同一方案：登记句柄，宿主回调时带回 id 列表，本侧换回原值后
 /// 执行 builder，结果作为 `child` 插槽随下一次 patch 回填。
-const String jsDragTargetComponent = '''
+const String jsDragTargetComponent =
+    '''
 export class DragTarget extends Component {
 $dragTargetPropsMethodSource
   build(context) {
@@ -892,10 +904,14 @@ String renderPackageModule(String package, Set<String> types) {
     b
       ..writeln('const G = globalThis;')
       ..writeln('const {')
-      ..writeln('  __handleOp, __registerHandle, __releaseHandle, __handleObjectOf,')
+      ..writeln(
+        '  __handleOp, __registerHandle, __releaseHandle, __handleObjectOf,',
+      )
       ..writeln('  __createFnHandle, __objectToken, __inheritElement,')
       ..writeln('  __contextOf, __isElement, __isElementList, __descriptorOf,')
-      ..writeln('  __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,')
+      ..writeln(
+        '  __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,',
+      )
       ..writeln('} = G.__core;')
       ..writeln()
       // 框架内日志 / 值展开：runtime 的两个内部入口经 __core 交接（release 零跨桥）。
@@ -1002,8 +1018,10 @@ String renderPackageModule(String package, Set<String> types) {
         ..writeln(colors);
     } else {
       // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 未能定位 Flutter SDK colors.dart，'
-          'Colors 常量未注入（产物里 Colors.* 会解析失败）');
+      print(
+        '[hot_patch_generator] 未能定位 Flutter SDK colors.dart，'
+        'Colors 常量未注入（产物里 Colors.* 会解析失败）',
+      );
     }
   }
   return b.toString();

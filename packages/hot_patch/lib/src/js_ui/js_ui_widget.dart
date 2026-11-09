@@ -192,17 +192,23 @@ class JsUiWidgetState extends State<JsUiWidget> {
         if (!allowBundleSwitch &&
             _manager.loadedBundleVersion != null &&
             bundle.version != _manager.loadedBundleVersion) {
-          throw StateError('页面补丁包版本（${bundle.version ?? 'unknown'}）'
-              '与当前运行时（${_manager.loadedBundleVersion}）不一致，'
-              '无法自动重载；请统一所有 JsUiWidget 的补丁源');
+          throw StateError(
+            '页面补丁包版本（${bundle.version ?? 'unknown'}）'
+            '与当前运行时（${_manager.loadedBundleVersion}）不一致，'
+            '无法自动重载；请统一所有 JsUiWidget 的补丁源',
+          );
         }
-        final switched =
-            _manager.syncBundleVersion(bundle.version, fresh: bundle.fresh);
+        final switched = _manager.syncBundleVersion(
+          bundle.version,
+          fresh: bundle.fresh,
+          localRoot: bundle.localRoot,
+        );
         if (switched) {
           // 通知活跃页协调器：除本页（即将用新版本重新 boot）外，其余已挂载
           // 页面全部 stale，需要页面级重载。
-          JsRuntimeSwitchCoordinator.instance
-              .onRuntimeSwitched(bootingPageKey: _pageKey);
+          JsRuntimeSwitchCoordinator.instance.onRuntimeSwitched(
+            bootingPageKey: _pageKey,
+          );
         }
         // 记录该包的打包时间（调试展示用，见 showBuildTime）。
         _buildTime = bundle.buildTime;
@@ -287,8 +293,11 @@ class JsUiWidgetState extends State<JsUiWidget> {
         '${jsonEncode(jsonEncode(widget.props))});',
       );
     } catch (e, s) {
-      HotPatchLog.error('js_ui updateProps failed: $e',
-          error: e, stackTrace: s);
+      HotPatchLog.error(
+        'js_ui updateProps failed: $e',
+        error: e,
+        stackTrace: s,
+      );
     }
   }
 
@@ -425,10 +434,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
 
   /// 失败后整页重来：模块加载按文件幂等，但可能已有半挂载状态，统一切干净再 boot。
   /// 用户主动重试，允许按本页补丁源重新判定版本切换。
-  void _retry() => _reloadFromScratch(
-        reason: '加载失败后重试',
-        allowBundleSwitch: true,
-      );
+  void _retry() =>
+      _reloadFromScratch(reason: '加载失败后重试', allowBundleSwitch: true);
 }
 
 /// 弹层内容的宿主入口：把**已经存在的一份独立 [JsUiStore]** 渲染成 widget 树。
@@ -707,7 +714,11 @@ JsRenderContext _renderContextOf(
   for (final entry in node.propData.entries) {
     children[entry.key] = entry.value;
   }
-  return JsRenderContext(type: node.type, props: node.props, children: children);
+  return JsRenderContext(
+    type: node.type,
+    props: node.props,
+    children: children,
+  );
 }
 
 /// 两类宿主共用的「结点绑定」基类。
@@ -943,8 +954,11 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
       try {
         invokeJsHandler(lazyOffFn, [nodeId]);
       } catch (e, s) {
-        HotPatchLog.error('js_ui lazy unmount failed: $e',
-            error: e, stackTrace: s);
+        HotPatchLog.error(
+          'js_ui lazy unmount failed: $e',
+          error: e,
+          stackTrace: s,
+        );
       }
     });
   }

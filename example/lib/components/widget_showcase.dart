@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 import 'animated_list_detail.dart';
+import 'asset_override_detail.dart';
 import 'automatic_keep_alive_detail.dart';
 import 'button_detail.dart';
 import 'color_filtered_detail.dart';
@@ -83,16 +84,30 @@ class WidgetShowcase extends StatelessWidget {
   static const List<_Group> groups = [
     _Group('文本展示', [
       _Entry('Text', '文案 / TextStyle / 截断 / 对齐 / 装饰', 'TextDetail'),
-      _Entry('RichText', 'TextSpan 树：嵌套子串、不同样式、maxLines + ellipsis', 'RichTextDetail'),
+      _Entry(
+        'RichText',
+        'TextSpan 树：嵌套子串、不同样式、maxLines + ellipsis',
+        'RichTextDetail',
+      ),
     ]),
-    _Group('按钮操作', [_Entry('Button', 'Elevated / Text / Outlined + ButtonStyle 全属性', 'ButtonDetail')]),
+    _Group('按钮操作', [
+      _Entry(
+        'Button',
+        'Elevated / Text / Outlined + ButtonStyle 全属性',
+        'ButtonDetail',
+      ),
+    ]),
     _Group('布局', [
       _Entry(
         'Row / Column / Stack',
         'Expanded / Flexible / Wrap / Align / Padding / Center / SizedBox',
         'LayoutDetail',
       ),
-      _Entry('Spacer', 'Row/Column 弹性空隙：flex 切 1/2/3，Column 里把按钮顶到底', 'SpacerDetail'),
+      _Entry(
+        'Spacer',
+        'Row/Column 弹性空隙：flex 切 1/2/3，Column 里把按钮顶到底',
+        'SpacerDetail',
+      ),
       _Entry(
         'Visibility / Offstage',
         '显隐控制：不占位 / 占位 / 仍可点 / replacement；Offstage 退出布局',
@@ -101,12 +116,33 @@ class WidgetShowcase extends StatelessWidget {
     ]),
     _Group('图片图标', [
       _Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail'),
-      _Entry('ImageIcon', '图片当图标：size / color(srcIn) / semanticLabel / 与 Icon 对照', 'ImageIconDetail'),
-      _Entry('FadeInImage', '占位图 → 目标图淡入（assetNetwork / 普通构造）', 'FadeInImageDetail'),
+      _Entry(
+        'Asset 覆盖',
+        'assets 图片 / JSON：补丁包同名资源优先，缺失回退项目 assets',
+        'AssetOverrideDetail',
+      ),
+      _Entry(
+        'ImageIcon',
+        '图片当图标：size / color(srcIn) / semanticLabel / 与 Icon 对照',
+        'ImageIconDetail',
+      ),
+      _Entry(
+        'FadeInImage',
+        '占位图 → 目标图淡入（assetNetwork / 普通构造）',
+        'FadeInImageDetail',
+      ),
     ]),
     _Group('容器装饰', [
-      _Entry('Container / Card / Divider', '颜色、圆角、Padding、卡片、分割线', 'ContainerDetail'),
-      _Entry('ColorFiltered', '颜色滤镜：mode(multiply/modulate) 与 20 项矩阵灰度', 'ColorFilteredDetail'),
+      _Entry(
+        'Container / Card / Divider',
+        '颜色、圆角、Padding、卡片、分割线',
+        'ContainerDetail',
+      ),
+      _Entry(
+        'ColorFiltered',
+        '颜色滤镜：mode(multiply/modulate) 与 20 项矩阵灰度',
+        'ColorFilteredDetail',
+      ),
       _Entry(
         'CustomPaint',
         '自绘：图元 / 文字 / 图片 / 旋转 / 裁剪 / Path / 渐变',
@@ -115,9 +151,21 @@ class WidgetShowcase extends StatelessWidget {
     ]),
     _Group('列表滚动', [
       _Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail'),
-      _Entry('AnimatedList', '增删补间：GlobalKey.currentState 的 insertItem / removeItem', 'AnimatedListDetail'),
-      _Entry('Dismissible', '滑动删除：background / secondaryBackground + confirmDismiss 方向确认', 'DismissibleDetail'),
-      _Entry('ReorderableListView', '长按拖拽重排：onReorder 双参事件，重排 / 添加列表项', 'ReorderListDetail'),
+      _Entry(
+        'AnimatedList',
+        '增删补间：GlobalKey.currentState 的 insertItem / removeItem',
+        'AnimatedListDetail',
+      ),
+      _Entry(
+        'Dismissible',
+        '滑动删除：background / secondaryBackground + confirmDismiss 方向确认',
+        'DismissibleDetail',
+      ),
+      _Entry(
+        'ReorderableListView',
+        '长按拖拽重排：onReorder 双参事件，重排 / 添加列表项',
+        'ReorderListDetail',
+      ),
     ]),
     _Group('Key 家族', [
       _Entry(
@@ -129,31 +177,97 @@ class WidgetShowcase extends StatelessWidget {
     _Group('Sliver 滚动', [
       _Entry('CustomScrollView', 'Sliver 全家桶整页', 'SliverDetail'),
       _Entry('GridView', 'GridView 懒加载验证', 'GridDetail'),
-      _Entry('NestedScrollView', '头部 slivers 与内层 body 联动：pinned 折叠 / floating 浮出', 'NestedScrollViewDetail'),
-      _Entry('SliverFillViewport', '每屏占视口 fraction：切 1.0/0.8/0.5，padEnds 对比', 'SliverFillViewportDetail'),
-      _Entry('SliverFillRemaining', '填满视口剩余高度：hasScrollBody / fillOverscroll / 贴底', 'SliverFillRemainingDetail'),
-      _Entry('SliverPersistentHeader', '滚动折叠 / 浮出的头部：pinned + floating 两个 delegate', 'SliverPersistentHeaderDetail'),
+      _Entry(
+        'NestedScrollView',
+        '头部 slivers 与内层 body 联动：pinned 折叠 / floating 浮出',
+        'NestedScrollViewDetail',
+      ),
+      _Entry(
+        'SliverFillViewport',
+        '每屏占视口 fraction：切 1.0/0.8/0.5，padEnds 对比',
+        'SliverFillViewportDetail',
+      ),
+      _Entry(
+        'SliverFillRemaining',
+        '填满视口剩余高度：hasScrollBody / fillOverscroll / 贴底',
+        'SliverFillRemainingDetail',
+      ),
+      _Entry(
+        'SliverPersistentHeader',
+        '滚动折叠 / 浮出的头部：pinned + floating 两个 delegate',
+        'SliverPersistentHeaderDetail',
+      ),
     ]),
     _Group('页面骨架', [
       _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
-      _Entry('Drawer / endDrawer', '抽屉 + AppBar 汉堡按钮（仅 JS 热更版）', 'DrawerDetail'),
-      _Entry('OrientationBuilder / MediaQuery', '方向与窗口尺寸驱动布局（拉高窗口切 portrait）', 'OrientationBuilderDetail'),
-      _Entry('Overlay / OverlayEntry', '声明式 initialEntries + 命令式 insert / remove 浮层', 'OverlayDetail'),
-      _Entry('PopScope', '拦截返回：canPop 开关 + onPopInvokedWithResult 两参回调', 'PopScopeDetail'),
-      _Entry('PreferredSize', '自定义顶栏高度：任意子树声明成 PreferredSizeWidget（仅 JS 热更版）', 'PreferredSizeDetail'),
-      _Entry('RadioGroup', '子级 Radio 共用选中值与回调（不再传 groupValue/onChanged）', 'RadioGroupDetail'),
-      _Entry('SafeArea', '系统安全区内边距：四边开关 + minimum 强制留白 + viewPadding', 'SafeAreaDetail'),
+      _Entry(
+        'Drawer / endDrawer',
+        '抽屉 + AppBar 汉堡按钮（仅 JS 热更版）',
+        'DrawerDetail',
+      ),
+      _Entry(
+        'OrientationBuilder / MediaQuery',
+        '方向与窗口尺寸驱动布局（拉高窗口切 portrait）',
+        'OrientationBuilderDetail',
+      ),
+      _Entry(
+        'Overlay / OverlayEntry',
+        '声明式 initialEntries + 命令式 insert / remove 浮层',
+        'OverlayDetail',
+      ),
+      _Entry(
+        'PopScope',
+        '拦截返回：canPop 开关 + onPopInvokedWithResult 两参回调',
+        'PopScopeDetail',
+      ),
+      _Entry(
+        'PreferredSize',
+        '自定义顶栏高度：任意子树声明成 PreferredSizeWidget（仅 JS 热更版）',
+        'PreferredSizeDetail',
+      ),
+      _Entry(
+        'RadioGroup',
+        '子级 Radio 共用选中值与回调（不再传 groupValue/onChanged）',
+        'RadioGroupDetail',
+      ),
+      _Entry(
+        'SafeArea',
+        '系统安全区内边距：四边开关 + minimum 强制留白 + viewPadding',
+        'SafeAreaDetail',
+      ),
     ]),
     _Group('Tab 切换', [
-      _Entry('TabBar / TabBarView', 'DefaultTabController + 显式 TabController 驱动切页', 'TabDetail'),
+      _Entry(
+        'TabBar / TabBarView',
+        'DefaultTabController + 显式 TabController 驱动切页',
+        'TabDetail',
+      ),
     ]),
     _Group('分页视图', [_Entry('PageView', '分页切换 + 页码回传', 'PageViewDetail')]),
-    _Group('表单输入', [_Entry('TextField / Radio / Dropdown', '输入框、单选、下拉、开关、勾选、滑块', 'InputDetail')]),
+    _Group('表单输入', [
+      _Entry(
+        'TextField / Radio / Dropdown',
+        '输入框、单选、下拉、开关、勾选、滑块',
+        'InputDetail',
+      ),
+    ]),
     _Group('焦点交互', [
-      _Entry('Focus / FocusNode', 'requestFocus / unfocus、onFocusChange、hasFocus、canRequestFocus', 'FocusDetail'),
+      _Entry(
+        'Focus / FocusNode',
+        'requestFocus / unfocus、onFocusChange、hasFocus、canRequestFocus',
+        'FocusDetail',
+      ),
       _Entry('Hero', '跨路由共享元素：点卡片飞向目标页，返回时飞回', 'HeroDetail'),
-      _Entry('ImageFiltered', '整棵子树图片滤镜：blur / dilate / matrix / compose', 'ImageFilteredDetail'),
-      _Entry('KeyboardListener', '原始按键事件：KeyDown/Repeat/Up、logicalKey 比较、focusNode', 'KeyboardListenerDetail'),
+      _Entry(
+        'ImageFiltered',
+        '整棵子树图片滤镜：blur / dilate / matrix / compose',
+        'ImageFilteredDetail',
+      ),
+      _Entry(
+        'KeyboardListener',
+        '原始按键事件：KeyDown/Repeat/Up、logicalKey 比较、focusNode',
+        'KeyboardListenerDetail',
+      ),
     ]),
     _Group('拖拽', [
       _Entry(
@@ -181,20 +295,44 @@ class WidgetShowcase extends StatelessWidget {
         'DialogDetail',
       ),
     ]),
-    _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
+    _Group('进度指示', [
+      _Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail'),
+    ]),
     _Group('状态管理', [
-      _Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard'),
+      _Entry(
+        'ChangeNotifier',
+        'ListenableBuilder 局部重建（跨文件模型 + dispose）',
+        'NotifierCard',
+      ),
       _Entry(
         'ValueListenableBuilder',
         'ValueNotifier 订阅：值变化只重建该子树，赋相同值不重建，可切订阅对象',
         'ValueListenableBuilderDetail',
       ),
-      _Entry('AutomaticKeepAlive', '切页保活：wantKeepAlive 声明决定离屏 State 是否销毁', 'AutomaticKeepAliveDetail'),
+      _Entry(
+        'AutomaticKeepAlive',
+        '切页保活：wantKeepAlive 声明决定离屏 State 是否销毁',
+        'AutomaticKeepAliveDetail',
+      ),
     ]),
-    _Group('无状态组件', [_Entry('StatelessWidget', '无 State，build 在 widget 类自身，props 走构造参数', 'StatelessCard')]),
+    _Group('无状态组件', [
+      _Entry(
+        'StatelessWidget',
+        '无 State，build 在 widget 类自身，props 走构造参数',
+        'StatelessCard',
+      ),
+    ]),
     _Group('动画', [
-      _Entry('隐式动画', 'AnimatedContainer / Opacity / Scale / Rotation / Slide / CrossFade / Size / Switcher（宿主插值）', 'ImplicitAnimationDetail'),
-      _Entry('显式动画', 'AnimationController + AnimatedBuilder + *Transition（宿主 Ticker 驱动）', 'ExplicitAnimationDetail'),
+      _Entry(
+        '隐式动画',
+        'AnimatedContainer / Opacity / Scale / Rotation / Slide / CrossFade / Size / Switcher（宿主插值）',
+        'ImplicitAnimationDetail',
+      ),
+      _Entry(
+        '显式动画',
+        'AnimationController + AnimatedBuilder + *Transition（宿主 Ticker 驱动）',
+        'ExplicitAnimationDetail',
+      ),
       _Entry(
         'TweenAnimationBuilder',
         '隐式动画：tween 目标变化自动过渡，可切目标/时长/曲线，onEnd 计数',
@@ -212,7 +350,11 @@ class WidgetShowcase extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text(
               g.title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
             ),
           ),
           for (final e in g.entries)
@@ -225,7 +367,8 @@ class WidgetShowcase extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => WidgetDetailPage(
                     component: e.component,
-                    fullPage: e.component == 'ScaffoldDetail' ||
+                    fullPage:
+                        e.component == 'ScaffoldDetail' ||
                         e.component == 'DrawerDetail' ||
                         e.component == 'PreferredSizeDetail' ||
                         e.component == 'SliverFillViewportDetail' ||
@@ -260,7 +403,11 @@ class _Entry {
 ///
 /// 窄屏（手机）默认只显示 JS 热更版，右上角开关可切到原生组件对照。
 class WidgetDetailPage extends StatefulWidget {
-  const WidgetDetailPage({super.key, required this.component, this.fullPage = false});
+  const WidgetDetailPage({
+    super.key,
+    required this.component,
+    this.fullPage = false,
+  });
 
   /// 详情组件名（components 下对应源文件里的 @PatchEntry 类名）。
   final String component;
@@ -284,6 +431,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
   /// （见 build.yaml 的 patch_entry）。
   static const Map<String, String> _jsEntries = {
     'AnimatedListDetail': 'components/animated_list_detail.js',
+    'AssetOverrideDetail': 'components/asset_override_detail.js',
     'AutomaticKeepAliveDetail': 'components/automatic_keep_alive_detail.js',
     'ButtonDetail': 'components/button_detail.js',
     'ColorFilteredDetail': 'components/color_filtered_detail.js',
@@ -322,7 +470,8 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'SliverDetail': 'components/sliver_detail.js',
     'SliverFillViewportDetail': 'components/sliver_fill_viewport_detail.js',
     'SliverFillRemainingDetail': 'components/sliver_fill_remaining_detail.js',
-    'SliverPersistentHeaderDetail': 'components/sliver_persistent_header_detail.js',
+    'SliverPersistentHeaderDetail':
+        'components/sliver_persistent_header_detail.js',
     'SpacerDetail': 'components/spacer_detail.js',
     'StatelessCard': 'components/stateless_card.js',
     'TabDetail': 'components/tab_detail.js',
@@ -384,6 +533,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'CustomPaintDetail' => const CustomPaintDetail(),
       'ScrollDetail' => const ScrollDetail(),
       'AnimatedListDetail' => const AnimatedListDetail(),
+      'AssetOverrideDetail' => const AssetOverrideDetail(),
       'AutomaticKeepAliveDetail' => const AutomaticKeepAliveDetail(),
       'ColorFilteredDetail' => const ColorFilteredDetail(),
       'DismissibleDetail' => const DismissibleDetail(),
@@ -410,8 +560,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'SpacerDetail' => const SpacerDetail(),
       'VisibilityDetail' => const VisibilityDetail(),
       'TweenAnimationBuilderDetail' => const TweenAnimationBuilderDetail(),
-      'ValueListenableBuilderDetail' =>
-        const ValueListenableBuilderDetail(),
+      'ValueListenableBuilderDetail' => const ValueListenableBuilderDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
@@ -423,7 +572,11 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'InputDetail' => const InputDetail(),
       'ProgressDetail' => const ProgressDetail(),
       'NotifierCard' => const NotifierCard(),
-      'StatelessCard' => const StatelessCard(title: 'Hello Stateless', subtitle: '原生直接渲染，无需 State', badge: 'FLUTTER'),
+      'StatelessCard' => const StatelessCard(
+        title: 'Hello Stateless',
+        subtitle: '原生直接渲染，无需 State',
+        badge: 'FLUTTER',
+      ),
       'ImplicitAnimationDetail' => const ImplicitAnimationDetail(),
       'ExplicitAnimationDetail' => const ExplicitAnimationDetail(),
       'MixinDetail' => const MixinDetail(),
@@ -457,7 +610,11 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
   /// 硬编码在 JS 构造函数里，不需要传 props。
   Map<String, dynamic> _jsProps() {
     return switch (widget.component) {
-      'StatelessCard' => const {'title': 'Hello Stateless', 'subtitle': '原生直接渲染，无需 State', 'badge': 'FLUTTER'},
+      'StatelessCard' => const {
+        'title': 'Hello Stateless',
+        'subtitle': '原生直接渲染，无需 State',
+        'badge': 'FLUTTER',
+      },
       // Hero 两侧必须在同一路由里用**不同 tag**（同 tag 会触发重复 Hero 断言）。
       'HeroDetail' => const {'tag': 'hero-js', 'label': 'JS 热更 Hero'},
       _ => const {},
@@ -466,10 +623,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final js = JsUiWidget(
-      jsAsset: _jsAsset,
-      props: _jsProps(),
-    );
+    final js = JsUiWidget(jsAsset: _jsAsset, props: _jsProps());
     if (widget.fullPage) return js;
 
     // 窄屏（手机）默认 JS 热更版，右上角开关切原生组件对照；宽屏始终双栏对比。
@@ -499,9 +653,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
           if (!wide) {
             // 整页 demo 自带 Scaffold，直接铺满 body；套滚动容器会给它无界高度。
             if (bounded) return _narrowShowJs ? js : _native();
-            return SingleChildScrollView(
-              child: _narrowShowJs ? js : _native(),
-            );
+            return SingleChildScrollView(child: _narrowShowJs ? js : _native());
           }
 
           Column side(String title, Widget child, {bool fill = false}) {
@@ -510,7 +662,10 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 if (fill)
                   Expanded(
@@ -520,7 +675,10 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
                     ),
                   )
                 else
-                  Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: child),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: child,
+                  ),
               ],
             );
           }
@@ -541,9 +699,15 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: SingleChildScrollView(child: side('原生组件', _native()))),
+              Expanded(
+                child: SingleChildScrollView(child: side('原生组件', _native())),
+              ),
               const VerticalDivider(width: 1),
-              Expanded(child: SingleChildScrollView(child: side('JS 热更（JsUiWidget）', js))),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: side('JS 热更（JsUiWidget）', js),
+                ),
+              ),
             ],
           );
         },

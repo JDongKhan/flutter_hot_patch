@@ -42,3 +42,5 @@ flutter:
   # 本地示例图片（替代原先 images.unsplash.com 网络图，避免离线/弱网时加载失败）。
   assets:
     - assets/images/
+    # assets 覆盖 demo 的 JSON（补丁包同名文件优先，见 AssetOverrideDetail）。
+    - assets/data/

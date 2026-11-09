@@ -30,7 +30,6 @@ import 'js_value.dart';
 // 表达式 / 语句翻译（以 FieldScope + 已知类表为键）
 // ---------------------------------------------------------------------------
 
-
 /// 已告警过的「带常量参数、未生成 JS 值类」的 SDK 枚举（同一次构建只出声一次）。
 final Set<String> _warnedUnsupportedEnums = {};
 
@@ -43,9 +42,11 @@ void _warnUnsupportedSdkEnum(String owner) {
   final file = sdkUnsupportedEnums()[owner];
   if (file == null) return;
   if (!_warnedUnsupportedEnums.add(owner)) return;
-  log.warning('[hot_patch_generator] 引用了带常量参数的 SDK 枚举 $owner'
-      '（$file）：未生成 JS 值类，产物里 `$owner.xxx` 是未定义引用'
-      '（需补能力模块或改用常量）');
+  log.warning(
+    '[hot_patch_generator] 引用了带常量参数的 SDK 枚举 $owner'
+    '（$file）：未生成 JS 值类，产物里 `$owner.xxx` 是未定义引用'
+    '（需补能力模块或改用常量）',
+  );
 }
 
 // Dart 集合 / 字符串 / 数字的同名成员（`first` / `where` / `add` / `compareTo` …）
@@ -60,23 +61,31 @@ void _warnUnsupportedSdkEnum(String owner) {
 /// 否则会被译成 `new Symbol({name: …})`（JS 的 Symbol 不是构造函数）。
 bool _rejectSymbolExpression(Expression e, FieldScope scope) {
   if (e is SymbolLiteral) {
-    log.warning('[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
-        'Symbol 字面量 ${e.toSource()} 在 JS 侧不适用'
-        '（无 Symbol / noSuchMethod 承载），已丢弃');
+    log.warning(
+      '[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
+      'Symbol 字面量 ${e.toSource()} 在 JS 侧不适用'
+      '（无 Symbol / noSuchMethod 承载），已丢弃',
+    );
     return true;
   }
   if (e is MethodInvocation &&
       e.target == null &&
       e.methodName.name == 'Symbol') {
-    log.warning('[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
-        'Symbol(...) 在 JS 侧不适用（无 Symbol / noSuchMethod 承载），已丢弃');
+    log.warning(
+      '[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
+      'Symbol(...) 在 JS 侧不适用（无 Symbol / noSuchMethod 承载），已丢弃',
+    );
     return true;
   }
   return false;
 }
 
 /// 读位置表达式 → JS 表达式（this._model.n / this._model / 字面量 / 形参）。
-String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
+String? exprToJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
   // 函数表达式（闭包）本身就是表达式：变量初始化器、实参、三元分支等位置
   // 统一在这里翻译，可选 / 具名形参与默认值由 [closureToJs] 同一实现处理。
   if (e is FunctionExpression) return closureToJs(e, scope, classes);
@@ -132,7 +141,12 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       base = e.prefix.name;
     }
     if (base == null) return null;
-    final member = _mapPropertyMember(e.prefix, e.identifier.name, scope, classes);
+    final member = _mapPropertyMember(
+      e.prefix,
+      e.identifier.name,
+      scope,
+      classes,
+    );
     // `obj.method` 值位置：方法 tear-off 需绑定接收者（getter 是值读取；
     // 类型不可判定时保持原样，不按名字猜）。
     final tear = _tearOffMemberJs(
@@ -146,7 +160,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   }
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被字面量分支
   // 吞成 ""——插值表达式丢失）。
-  if (e is StringInterpolation) return _stringInterpolationJs(e, scope, classes);
+  if (e is StringInterpolation)
+    return _stringInterpolationJs(e, scope, classes);
   // 相邻字符串字面量（`'a' 'b'`）→ `+` 拼接。
   if (e is AdjacentStrings) {
     final parts = <String>[];
@@ -184,9 +199,11 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if ((op == '==' || op == '!=') &&
         (_isTypeParamOperand(e.leftOperand, scope) ||
             _isTypeParamOperand(e.rightOperand, scope))) {
-      final l = _typeValueJs(e.leftOperand, scope, classes) ??
+      final l =
+          _typeValueJs(e.leftOperand, scope, classes) ??
           exprToJs(e.leftOperand, scope, classes);
-      final r = _typeValueJs(e.rightOperand, scope, classes) ??
+      final r =
+          _typeValueJs(e.rightOperand, scope, classes) ??
           exprToJs(e.rightOperand, scope, classes);
       if (l != null && r != null) return '($l $op $r)';
     }
@@ -194,7 +211,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       '>', '<', '>=', '<=', '==', '!=', '&&', '||', '+', '-', '*', '/',
       // 位运算与移位：JS 同名运算符语义一致（`>>` 算术右移、`>>>` 无符号右移）。
       // 数值口径随运行时（Dart int 在 JS 侧就是 number），按 32 位位宽参与运算。
-      '&', '|', '^', '<<', '>>', '>>>'
+      '&', '|', '^', '<<', '>>', '>>>',
     }.contains(op)) {
       final l = exprToJs(e.leftOperand, scope, classes);
       final r = exprToJs(e.rightOperand, scope, classes);
@@ -302,8 +319,10 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
           if (v == null) return null;
           argsJs.add(v);
         }
-        stmts.add('_t.${_memberCallName(e.target, s.methodName.name, scope, classes)}'
-            '(${argsJs.join(', ')})');
+        stmts.add(
+          '_t.${_memberCallName(e.target, s.methodName.name, scope, classes)}'
+          '(${argsJs.join(', ')})',
+        );
       } else if (s is AssignmentExpression) {
         // 级联里**赋值** `..x = v` / `..[i] = v` / `..x += v`：目标链以 `_t`
         // 为根（级联 target 已只求值一次），落成 IIFE 内的一条语句；赋值结果
@@ -324,11 +343,10 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
         }
         final ref = _cascadeRefJs(lhs, scope, classes);
         if (ref == null) return null;
-        stmts.add(op == '~/='
-            ? '$ref = Math.trunc($ref / $rhs)'
-            : '$ref $op $rhs');
-      } else if (s is PropertyAccess ||
-          s is IndexExpression) {
+        stmts.add(
+          op == '~/=' ? '$ref = Math.trunc($ref / $rhs)' : '$ref $op $rhs',
+        );
+      } else if (s is PropertyAccess || s is IndexExpression) {
         // 级联里**读**访问 `..x` / `..a.b` / `..[i]`：同样以 `_t` 为根展开，
         // 多级链（`..a.b`）不会丢掉中间层。
         if (s is IndexExpression && s.target == null && cascadeType == 'Map') {
@@ -424,7 +442,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   if (e is NullLiteral) return 'null';
   final lit = literalToJs(e);
   if (lit != null) return lit;
-  if (e is PropertyAccess && e.target is Identifier &&
+  if (e is PropertyAccess &&
+      e.target is Identifier &&
       (e.target as Identifier).name == 'Platform') {
     // Platform.isAndroid 等 → 运行时注入的平台标志
     final flag = platformFlagJs(e.propertyName.name);
@@ -450,7 +469,12 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   if (e is PropertyAccess && e.target != null) {
     final t = exprToJs(e.target!, scope, classes);
     if (t == null) return null;
-    final member = _mapPropertyMember(e.target!, e.propertyName.name, scope, classes);
+    final member = _mapPropertyMember(
+      e.target!,
+      e.propertyName.name,
+      scope,
+      classes,
+    );
     // 空安全属性访问 `a?.b` → JS 原生可选链：与 Dart 源码 1:1，且链式
     // （`a?.b?.c` / `a?.b.c`）的「接收者单次求值 + 整链短路」由 JS 语义天然
     // 保证。旧的 `($t == null ? null : $t.b)` 展开在链上会重复求值接收者，
@@ -533,8 +557,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       return exprToJs(e.operand, scope, classes);
     }
     if ((op == '++' || op == '--') && _chainHasNullAware(e.operand)) {
-      return _nullAwareUpdateJs(
-          e.operand, op, scope, classes, prefix: false);
+      return _nullAwareUpdateJs(e.operand, op, scope, classes, prefix: false);
     }
     final v = exprToJs(e.operand, scope, classes);
     if (v == null) return null;
@@ -622,7 +645,11 @@ String? _fnValueCallJs(
 
 /// 赋值右侧：字面量 / 形参 / 字段读 / 模型构造 `new X({...})` /
 /// 插值、`??` 等其余形态兜底走 exprToJs。
-String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
+String? rhsToJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
   // 显式 extension 调用 `E(x).m(...)`：先于构造钩子 / 构造翻译拦截——否则
   // `E(x)` 会被当成 `new E({...})` 构造（E 是扩展名，不是类）。
   if (_rejectSymbolExpression(e, scope)) return null;
@@ -641,7 +668,8 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   final hooked = constructionHook?.call(e);
   if (hooked != null) return hooked;
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被吞成 ""）
-  if (e is StringInterpolation) return _stringInterpolationJs(e, scope, classes);
+  if (e is StringInterpolation)
+    return _stringInterpolationJs(e, scope, classes);
   // 相邻字符串字面量拼接（`'a' 'b'`，Dart 语义是**拼接**）同为 StringLiteral 子类，
   // 在 literalToJs 里只能翻「全为常量」的情况；这里交给 exprToJs 的
   // AdjacentStrings 分支逐段翻译，含插值的段才翻得出来（必须早于下面的 literalToJs）。
@@ -678,7 +706,11 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
     final n = e.methodName.name;
     if (classes.containsKey(n)) {
       final ctor = modelCtorFromPartsJs(
-          n, e.argumentList.arguments.toList(), scope, classes);
+        n,
+        e.argumentList.arguments.toList(),
+        scope,
+        classes,
+      );
       if (ctor != null) return ctor;
     }
   }
@@ -809,7 +841,12 @@ String? _collectionFragmentJs(
       final before = {...scope.localVars};
       final gp = caseClause.guardedPattern;
       if (!_compilePatternWithGuard(
-          gp.pattern, gp.whenClause?.expression, plan, scope, classes)) {
+        gp.pattern,
+        gp.whenClause?.expression,
+        plan,
+        scope,
+        classes,
+      )) {
         scope.localVars
           ..clear()
           ..addAll(before);
@@ -854,9 +891,15 @@ String? _collectionFragmentJs(
       final iterable = loop is ForEachPartsWithDeclaration
           ? exprToJs(loop.iterable, scope, classes)
           : exprToJs(
-              (loop as ForEachPartsWithIdentifier).iterable, scope, classes);
-      final body =
-          _collectionArrayJs(el.body, scope.withParams([name]), classes);
+              (loop as ForEachPartsWithIdentifier).iterable,
+              scope,
+              classes,
+            );
+      final body = _collectionArrayJs(
+        el.body,
+        scope.withParams([name]),
+        classes,
+      );
       if (iterable == null || body == null) return null;
       return '...($iterable).map(($name) => $body)';
     }
@@ -902,8 +945,9 @@ String? _collectionFragmentJs(
         ..addAll(before);
       return null;
     }
-    final condJs =
-        loop.condition == null ? '' : exprToJs(loop.condition!, scope, classes);
+    final condJs = loop.condition == null
+        ? ''
+        : exprToJs(loop.condition!, scope, classes);
     final upds = <String>[];
     if (condJs != null) {
       for (final u in loop.updaters) {
@@ -1007,8 +1051,11 @@ String? valueCtorJs(
   final posCount = args.where((a) => a is! NamedExpression).length;
   // 命名形态（`A.b(...)`）只在签名表命中时接管：否则可能是静态方法调用。
   final signatures = CtorSignatures.instance;
-  final sig = signatures?.of(cls,
-      ctorName: ctorName, positionalCount: posCount);
+  final sig = signatures?.of(
+    cls,
+    ctorName: ctorName,
+    positionalCount: posCount,
+  );
   // 项目类的命名构造：类表里已按同一份源码 AST 收集了构造形参名，签名索引在
   // 当前构建上下文不可得时用它兜底——两条来源都是「源码事实」，不维护白名单。
   ClassCtor? projectCtor;
@@ -1021,7 +1068,8 @@ String? valueCtorJs(
     }
     if (projectCtor == null) return null;
   }
-  final positional = sig?.positional ?? projectCtor?.positional ?? const <String>[];
+  final positional =
+      sig?.positional ?? projectCtor?.positional ?? const <String>[];
   final entries = <String>[];
   final rest = <String>[];
   var posIndex = 0;
@@ -1043,9 +1091,11 @@ String? valueCtorJs(
   }
   if (rest.isNotEmpty) {
     // 签名未知（源码里找不到该类）→ 下标兜底，运行时按构造签名展开。
-    log.warning('[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
-        '构造 $cls${ctorName == null ? '' : '.$ctorName'} '
-        '的位置实参缺少形参名签名，落 __pos 兜底：${rest.join(', ')}');
+    log.warning(
+      '[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
+      '构造 $cls${ctorName == null ? '' : '.$ctorName'} '
+      '的位置实参缺少形参名签名，落 __pos 兜底：${rest.join(', ')}',
+    );
     entries.add('__pos: [${rest.join(', ')}]');
   }
   // 类型实参 → `typeArguments` **元信息 Map**（唯一解析见 [typeArgsOf]）。
@@ -1077,14 +1127,17 @@ Map<String, String> typeArgsOf(
   List<String> declared = const [],
 }) {
   final List<TypeAnnotation>? args = switch (e) {
-    InstanceCreationExpression() => e.constructorName.type.typeArguments?.arguments,
+    InstanceCreationExpression() =>
+      e.constructorName.type.typeArguments?.arguments,
     MethodInvocation() => e.typeArguments?.arguments,
     _ => null,
   };
   final list = args ?? const <TypeAnnotation>[];
   return {
     for (var i = 0; i < list.length; i++)
-      (i < declared.length ? declared[i] : '$i'): _bareTypeSource(list[i].toSource()),
+      (i < declared.length ? declared[i] : '$i'): _bareTypeSource(
+        list[i].toSource(),
+      ),
   };
 }
 
@@ -1141,7 +1194,8 @@ String? _typeValueJs(
   }
   // 首字母大写 = 类名形态（项目内 / 三方类型）；未知小写名不当作类型。
   final bare = e.name.replaceFirst(RegExp('^_+'), '');
-  if (bare.isNotEmpty && bare[0] == bare[0].toUpperCase()) return jsString(e.name);
+  if (bare.isNotEmpty && bare[0] == bare[0].toUpperCase())
+    return jsString(e.name);
   return null;
 }
 
@@ -1196,17 +1250,18 @@ String? _ctorArgJs(
   return rhsToJs(a, scope, classes);
 }
 
-
-
 /// 模型构造调用 → JS：`new User({name:..., age:...})`。
 /// 位置参数按类实例字段声明顺序映射；命名参数按 label。
 String? modelCtorToJs(
   InstanceCreationExpression e,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-) =>
-    modelCtorFromPartsJs(e.constructorName.type.name2.lexeme,
-        e.argumentList.arguments.toList(), scope, classes);
+) => modelCtorFromPartsJs(
+  e.constructorName.type.name2.lexeme,
+  e.argumentList.arguments.toList(),
+  scope,
+  classes,
+);
 
 /// 按「构造名 + 参数」生成 `new X({...})`。供 modelCtorToJs（InstanceCreation）
 /// 与字段初始化的 MethodInvocation 形式（parseString 无 resolution 下 `Foo()`
@@ -1276,17 +1331,20 @@ String? _stringInterpolationJs(
       if (el is InterpolationString) {
         if (el.value.isNotEmpty) parts.add(jsString(el.value));
       } else if (el is InterpolationExpression) {
-        final v = _mapReadValueJs(el.expression, scope, classes) ??
+        final v =
+            _mapReadValueJs(el.expression, scope, classes) ??
             exprToJs(el.expression, scope, classes);
         if (v != null) {
           parts.add(v);
         } else {
           // 丢片段会让产物「看着对、其实少东西」（如 `"用户信息:$x"` →
           // `"用户信息:"`），故必须出声，不能静默。
-          log.warning('[hot_patch_generator] '
-              '${sourceAt(scope.sourcePath, el.expression)}: 插值片段无法翻译，已在 JS 产物中'
-              '丢失：\${${el.expression.toSource()}}'
-              '（原因：${_expressionFailureReason(el.expression, scope, classes)}）');
+          log.warning(
+            '[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, el.expression)}: 插值片段无法翻译，已在 JS 产物中'
+            '丢失：\${${el.expression.toSource()}}'
+            '（原因：${_expressionFailureReason(el.expression, scope, classes)}）',
+          );
         }
       }
     }
@@ -1373,21 +1431,26 @@ _ParamPlan _functionParamPlan(
     if (defaultValue != null) {
       dj = defaultJs(defaultValue);
       if (dj == null) {
-        log.warning('[hot_patch_generator] 形参 $name 的默认值无法翻译，'
-            '已退回 null：${defaultValue.toSource()}');
+        log.warning(
+          '[hot_patch_generator] 形参 $name 的默认值无法翻译，'
+          '已退回 null：${defaultValue.toSource()}',
+        );
       }
     }
     if (p.isNamed) {
       hasNamed = true;
       // `required` 由 Dart 编译期校验：所有调用点都来自编译通过的源码，
       // 产物无需重复做运行期缺参检查。
-      plan.prologue.add('let $name = (__o && __o.$name !== undefined) '
-          '? __o.$name : ${dj ?? 'null'};');
+      plan.prologue.add(
+        'let $name = (__o && __o.$name !== undefined) '
+        '? __o.$name : ${dj ?? 'null'};',
+      );
     } else {
       plan.jsParams.add(name);
       if (p is DefaultFormalParameter) {
-        plan.prologue
-            .add('$name = ($name === undefined) ? ${dj ?? 'null'} : $name;');
+        plan.prologue.add(
+          '$name = ($name === undefined) ? ${dj ?? 'null'} : $name;',
+        );
       }
     }
   }
@@ -1409,7 +1472,9 @@ String? closureToJs(
   // 形参与默认值走全仓库唯一实现：可选位置参数补缺省、具名形参从尾参对象
   // `__o` 解构。默认值是常量表达式，用闭包定义处的作用域翻译。
   final plan = _functionParamPlan(
-      fn.parameters, (e) => rhsToJs(e, scope, classes));
+    fn.parameters,
+    (e) => rhsToJs(e, scope, classes),
+  );
   // 泛型闭包 / 泛型局部函数（`T f<T>(...)`）：调用点把类型实参（与具名实参）
   // 合并成**尾参对象**下发，定义侧追加 `__ta` 接住（已有具名时直接复用 `__o`）。
   // 函数体里的 `T` 从 `尾参.typeArguments["T"]` 读，与类方法泛型同一口径。
@@ -1437,8 +1502,12 @@ String? closureToJs(
   // 外层仍是箭头（保住 this 与默认值求值时机），内层用 `function*` 产出生成器；
   // `sync*` 直接返回生成器，`async*` 包成 `Stream.fromAsyncGenerator(...)`。
   if (body is BlockFunctionBody && body.isGenerator) {
-    final stmts =
-        translateStmtList(body.block.statements, bodyScope, classes, renderer);
+    final stmts = translateStmtList(
+      body.block.statements,
+      bodyScope,
+      classes,
+      renderer,
+    );
     final inner = body.isAsynchronous ? 'async function*' : 'function*';
     final genExpr = '($inner () { ${stmts.trim()} }).bind(this)()';
     final call = body.isAsynchronous
@@ -1468,7 +1537,8 @@ String? closureToJs(
     // 进管线会因「表达式翻不出来」被降级成占位组件（产物里是 `new SizedBox({})`）：
     // 谓词恒假 → 列表被筛空、比较器恒 0 → 排序失效，且产物里看不出问题。
     // 判据与 `return` 位置一致：有没有 JS 类定义（[ExprRenderer.ctorJsClassFile]）。
-    final wv = renderer != null && renderer.ctorJsClassFile(body.expression) != null
+    final wv =
+        renderer != null && renderer.ctorJsClassFile(body.expression) != null
         ? _widgetExprToJs(renderer, body.expression, 0)
         : null;
     if (wv != null) {
@@ -1499,8 +1569,12 @@ String? closureToJs(
     // 声明、if/for/while/switch、setState 展开全部覆盖。旧实现只收
     // `ExpressionStatement`，`onPick: (k, v) { setState(() { switch ... }) }`
     // 这类块体会被静默丢成 `(...) => {}`（筛选面板点选条件无任何反应）。
-    final stmts =
-        translateStmtList(body.block.statements, bodyScope, classes, renderer);
+    final stmts = translateStmtList(
+      body.block.statements,
+      bodyScope,
+      classes,
+      renderer,
+    );
     if (stmts.trim().isEmpty) return null;
     return '$asyncKw($pjs) => { ${pro}${stmts.trim()} }';
   }
@@ -1515,8 +1589,7 @@ String? translateTopLevelFunctionJs(
   FunctionDeclaration decl,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-) =>
-    closureToJs(decl.functionExpression, scope, classes);
+) => closureToJs(decl.functionExpression, scope, classes);
 
 /// 顶层函数翻译失败的可读原因：只按 AST 形态与作用域判定，不重新翻译。
 String topLevelFunctionFailureReason(
@@ -1598,7 +1671,8 @@ String _expressionFailureReason(
     final lhs = e.leftHandSide;
     if (lhs is PrefixedIdentifier) {
       final recv = lhs.prefix.name;
-      final known = scope.fieldRef(recv) != null ||
+      final known =
+          scope.fieldRef(recv) != null ||
           scope.localVars.contains(recv) ||
           scope.params.contains(recv) ||
           classes.containsKey(recv) ||
@@ -1615,7 +1689,8 @@ String _expressionFailureReason(
     }
     if (lhs is SimpleIdentifier) {
       final n = lhs.name;
-      final visible = scope.fieldRef(n) != null ||
+      final visible =
+          scope.fieldRef(n) != null ||
           scope.localVars.contains(n) ||
           scope.params.contains(n) ||
           scope.globalConsts.contains(n) ||
@@ -1635,12 +1710,14 @@ String _expressionFailureReason(
     final t = e.target;
     if (t is SimpleIdentifier) {
       final n = t.name;
-      final known = scope.fieldRef(n) != null ||
+      final known =
+          scope.fieldRef(n) != null ||
           scope.localVars.contains(n) ||
           scope.params.contains(n) ||
           classes.containsKey(n) ||
           scope.extensionNames.containsKey(n) ||
           runtimeGlobalTypes().contains(n) ||
+          runtimeGlobalNamespaces().contains(n) ||
           scope.className == n;
       if (!known) {
         return '调用 `${e.methodName.name}(...)` 的接收者 `$n` 不可解析';
@@ -1664,7 +1741,8 @@ String _expressionFailureReason(
   }
   if (e is SimpleIdentifier) {
     final n = e.name;
-    final known = scope.fieldRef(n) != null ||
+    final known =
+        scope.fieldRef(n) != null ||
         scope.localVars.contains(n) ||
         scope.params.contains(n) ||
         scope.globalConsts.contains(n) ||
@@ -1702,9 +1780,12 @@ List<String> _declaredTypeParamsFor(
   }
   final tgt = e.target;
   if (tgt is SimpleIdentifier &&
-      (classes.containsKey(tgt.name) || runtimeGlobalTypes().contains(tgt.name))) {
-    final declared = CtorSignatures.instance
-        ?.staticMethodTypeParamsOf(tgt.name, e.methodName.name);
+      (classes.containsKey(tgt.name) ||
+          runtimeGlobalTypes().contains(tgt.name))) {
+    final declared = CtorSignatures.instance?.staticMethodTypeParamsOf(
+      tgt.name,
+      e.methodName.name,
+    );
     if (declared != null && declared.isNotEmpty) return declared;
   }
   return CtorSignatures.instance?.methodTypeParamsOfName(e.methodName.name) ??
@@ -1718,8 +1799,7 @@ String? closureBodyStmtJs(
   Expression e,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-) =>
-    _bodyExprStmtJs(e, scope, classes);
+) => _bodyExprStmtJs(e, scope, classes);
 
 /// 方法调用（表达式位置）：返回 `obj.method(args)` / `this.method(args)`。
 ///
@@ -1846,8 +1926,9 @@ String? _explicitExtensionUpdateJs(
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
-  final operand =
-      e is PrefixExpression ? e.operand : (e as PostfixExpression).operand;
+  final operand = e is PrefixExpression
+      ? e.operand
+      : (e as PostfixExpression).operand;
   final op = e is PrefixExpression
       ? e.operator.lexeme
       : (e as PostfixExpression).operator.lexeme;
@@ -2004,22 +2085,30 @@ String? _methodCallJs(
   //   - 有位置实参 + 无具名实参：尾对象会被目标当成第 N+1 个**位置实参**
   //     （如原生 `Array.reduce<T>(fn)` 的 initialValue），属语义污染，故擦除
   //     元信息并出声——与 dart2js 的擦除行为一致，绝不静默错译。
-  final typeArgs = typeArgsOf(e, declared: _declaredTypeParamsFor(e, classes, scope));
-  final typeArgsJs =
-      typeArgs.isEmpty ? null : 'typeArguments: ${typeArgsMapJs(typeArgs)}';
+  final typeArgs = typeArgsOf(
+    e,
+    declared: _declaredTypeParamsFor(e, classes, scope),
+  );
+  final typeArgsJs = typeArgs.isEmpty
+      ? null
+      : 'typeArguments: ${typeArgsMapJs(typeArgs)}';
   final keepTypeArgs =
       typeArgsJs != null && (argJs.isEmpty || namedJs.isNotEmpty);
   // 接收者以 **JS 内建**为运行时（List/Set/Map/String/Iterable 等）时，泛型
   // 实参在 JS 侧本就没有语义，擦除是正常行为、不需要出声；只有自定义类 /
   // 类型不可判定时，`typeArguments` 才可能是实现要读的元信息，擦除要告警。
-  final receiverType =
-      e.target == null ? null : _staticTypeOf(e.target!, scope, classes);
-  final erasedByJsBuiltin =
-      _jsBuiltinReceiverTypes.contains(eraseType(receiverType ?? ''));
+  final receiverType = e.target == null
+      ? null
+      : _staticTypeOf(e.target!, scope, classes);
+  final erasedByJsBuiltin = _jsBuiltinReceiverTypes.contains(
+    eraseType(receiverType ?? ''),
+  );
   if (typeArgsJs != null && !keepTypeArgs && !erasedByJsBuiltin) {
-    log.warning('[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
-        '${e.methodName.name}<${typeArgs.values.join(', ')}> '
-        '带位置实参且无具名实参，尾参对象会被当成位置实参，已擦除类型实参元信息');
+    log.warning(
+      '[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
+      '${e.methodName.name}<${typeArgs.values.join(', ')}> '
+      '带位置实参且无具名实参，尾参对象会被当成位置实参，已擦除类型实参元信息',
+    );
   }
   final tailJs = [...namedJs, if (keepTypeArgs) typeArgsJs];
   // 位置实参原样，具名实参（与类型实参）合并成**尾参对象**（与构造
@@ -2068,8 +2157,7 @@ String? _methodCallJs(
     // 可调用对象（声明了实例方法 call）：`f(...)` / 字段 `cb(...)` 落成
     // `recv.invoke(...)`（声明侧同名改名为 invoke，见手册 `call(...)` 行）。
     final recv = scope.fieldRef(name);
-    if (recv != null &&
-        _typeIsCallable(_rawTypeOfName(name, scope), classes)) {
+    if (recv != null && _typeIsCallable(_rawTypeOfName(name, scope), classes)) {
       return '$recv.invoke($passed)';
     }
     // Function 的 `call`：Dart `fn.call(a, b)` 等价 `fn(a, b)`；JS
@@ -2121,7 +2209,12 @@ String? _methodCallJs(
     return '$member($passed)';
   }
   if (target is Identifier) {
-    final callMember = _memberCallName(target, e.methodName.name, scope, classes);
+    final callMember = _memberCallName(
+      target,
+      e.methodName.name,
+      scope,
+      classes,
+    );
     final ref = scope.fieldRef(target.name);
     if (ref != null) {
       // Function 的 `call`：`fn.call(a, b)` → `fn(a, b)`（去掉 thisArg 语义）。
@@ -2132,8 +2225,9 @@ String? _methodCallJs(
       // 成员字段本身是「可调用对象」：`holder.cb(1)` → `holder.cb.invoke(1)`。
       if (e.methodName.name != 'invoke' &&
           _typeIsCallable(
-              _rawMemberType(target, e.methodName.name, scope, classes),
-              classes)) {
+            _rawMemberType(target, e.methodName.name, scope, classes),
+            classes,
+          )) {
         return '$ref.${e.methodName.name}.invoke($passed)';
       }
       return '$ref.$callMember($passed)';
@@ -2159,6 +2253,12 @@ String? _methodCallJs(
     if (runtimeGlobalTypes().contains(target.name)) {
       return '${target.name}.$callMember($passed)';
     }
+    // 运行时注入的小写全局对象（`rootBundle.loadString(...)`，见
+    // [runtimeGlobalNamespaces]）：它们不是构造函数，但成员调用与静态容器
+    // 同一形态，原样产出 `<对象>.<成员>(args)`。
+    if (runtimeGlobalNamespaces().contains(target.name)) {
+      return '${target.name}.$callMember($passed)';
+    }
   }
   // `super.m(...)` 出现在**表达式**位置（`'${super.greet()} x'` 这类插值 / 赋值右值）：
   // 与语句级同一套落法——原生基类 → `super.m`；无 JS 基类 → 丢弃。
@@ -2176,11 +2276,17 @@ String? _methodCallJs(
     // 成员字段本身是「可调用对象」：`holder.cb(1)` → `holder.cb.invoke(1)`。
     if (e.methodName.name != 'invoke' &&
         _typeIsCallable(
-            _rawMemberType(target, e.methodName.name, scope, classes),
-            classes)) {
+          _rawMemberType(target, e.methodName.name, scope, classes),
+          classes,
+        )) {
       return '$t.${e.methodName.name}.invoke($passed)';
     }
-    final callMember = _memberCallName(target, e.methodName.name, scope, classes);
+    final callMember = _memberCallName(
+      target,
+      e.methodName.name,
+      scope,
+      classes,
+    );
     return '$t.$callMember($passed)';
   }
   return null;
@@ -2227,16 +2333,10 @@ const _memberRenames = _MemberRenameConfig(
     },
     // `map` 在 Iterable 接收者上同样要改名（运行时可能是 Array，原生 map 无法
     // 覆盖成惰性）；`where` / `expand` / `take` / `skip` 的惰性由原型同名实现承接。
-    'Iterable': {
-      'map': '_map',
-    },
+    'Iterable': {'map': '_map'},
   },
   property: {
-    'Map': {
-      'keys': '_keys',
-      'values': '_values',
-      'entries': '_entries',
-    },
+    'Map': {'keys': '_keys', 'values': '_values', 'entries': '_entries'},
   },
 );
 
@@ -2333,7 +2433,8 @@ String? _listLengthWriteJs(
 /// **不能只写 `is Identifier`**：analyzer 里 `PrefixedIdentifier` 也
 /// `implements Identifier`，裸判定会把 `_count.value++` 当成字段 `_count.value`
 /// 的标识符，`fieldRef` 解析不到就整条丢弃（静默丢代码）。
-bool _isPlainIdentifier(Expression e) => e is Identifier && e is! PrefixedIdentifier;
+bool _isPlainIdentifier(Expression e) =>
+    e is Identifier && e is! PrefixedIdentifier;
 
 /// 复合赋值（目标可安全重复读写时）：Dart 的 `~/=` 在 JS 没有对应运算符，
 /// 按语义展开为 `a = Math.trunc(a / b)`（向零截断与 Dart 一致）。
@@ -2343,7 +2444,18 @@ bool _isPlainIdentifier(Expression e) => e is Identifier && e is! PrefixedIdenti
 String? _compoundAssignJs(String lhsJs, String op, String rhsJs) {
   if (op == '~/=') return '$lhsJs = Math.trunc($lhsJs / $rhsJs)';
   const jsOps = <String>{
-    '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', '>>>=',
+    '=',
+    '+=',
+    '-=',
+    '*=',
+    '/=',
+    '%=',
+    '&=',
+    '|=',
+    '^=',
+    '<<=',
+    '>>=',
+    '>>>=',
     '??=',
   };
   return jsOps.contains(op) ? '$lhsJs $op $rhsJs' : null;
@@ -2422,20 +2534,25 @@ String? _assignValueJs(
   if (lhs is PropertyAccess && lhs.target is SuperExpression) {
     // `~/=` 要读两次属性（getter 执行两次），不产出近似语义：交由调用方告警。
     if (op == '~/=') return null;
-    final rewritten =
-        _compoundAssignJs('super.${lhs.propertyName.name}', op, rhs);
+    final rewritten = _compoundAssignJs(
+      'super.${lhs.propertyName.name}',
+      op,
+      rhs,
+    );
     return rewritten == null ? null : '($rewritten)';
   }
 
   // 下标 / 属性目标：接收者、下标、右值都只求值一次。
   if (lhs is! IndexExpression && lhs is! PropertyAccess) return null;
-  final target =
-      lhs is IndexExpression ? lhs.target : (lhs as PropertyAccess).target;
+  final target = lhs is IndexExpression
+      ? lhs.target
+      : (lhs as PropertyAccess).target;
   if (target == null) return null;
   final recv = exprToJs(target, scope, classes);
   if (recv == null) return null;
-  final indexJs =
-      lhs is IndexExpression ? exprToJs(lhs.index, scope, classes) : null;
+  final indexJs = lhs is IndexExpression
+      ? exprToJs(lhs.index, scope, classes)
+      : null;
   if (lhs is IndexExpression && indexJs == null) return null;
   final member = lhs is IndexExpression
       ? '[$indexJs]'
@@ -2537,7 +2654,11 @@ String? _extensionStaticTargetJs(Expression lhs, FieldScope scope) {
   return null;
 }
 
-String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
+String? exprStmtToJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
   // `throw <expr>;`：Dart 的 throw 在 AST 里是 ThrowExpression（包在
   // ExpressionStatement 里），JS 的 throw 是语句，这里直接产出 `throw ...;`。
   if (e is ThrowExpression) {
@@ -2549,7 +2670,8 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
   // 因此一比一发射 `throw __e;`（不重建 Error，栈保持原样）。
   if (e is RethrowExpression) return 'throw __e;';
   // _x++ / ++_x / _x--（只认自增 / 自减；`x!` 是空断言，不能按 -= 1 处理）
-  if (e is PostfixExpression && _isPlainIdentifier(e.operand) &&
+  if (e is PostfixExpression &&
+      _isPlainIdentifier(e.operand) &&
       (e.operator.type.name == 'PLUS_PLUS' ||
           e.operator.type.name == 'MINUS_MINUS')) {
     final ref = scope.fieldRef((e.operand as Identifier).name);
@@ -2559,7 +2681,8 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     }
     return null;
   }
-  if (e is PrefixExpression && _isPlainIdentifier(e.operand) &&
+  if (e is PrefixExpression &&
+      _isPlainIdentifier(e.operand) &&
       (e.operator.type.name == 'PLUS_PLUS' ||
           e.operator.type.name == 'MINUS_MINUS')) {
     final ref = scope.fieldRef((e.operand as Identifier).name);
@@ -2600,8 +2723,7 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
   // 前缀本身按普通表达式翻译（`?.` 链仍是原生可选链，null 时短路为 undefined），
   // 层数再多也只是前缀更长，不会嵌套守卫。链上没有空安全则直接赋值。
   if (e is AssignmentExpression &&
-      (e.leftHandSide is IndexExpression ||
-          e.leftHandSide is PropertyAccess)) {
+      (e.leftHandSide is IndexExpression || e.leftHandSide is PropertyAccess)) {
     final lhs = e.leftHandSide;
     final target = lhs is IndexExpression
         ? lhs.target
@@ -2699,13 +2821,17 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     final rhs = rhsToJs(e.rightHandSide, scope, classes);
     if (rhs == null) return null;
     final len = _listLengthWriteJs(
-        e.leftHandSide as PrefixedIdentifier, e.operator.lexeme, rhs, scope, classes);
+      e.leftHandSide as PrefixedIdentifier,
+      e.operator.lexeme,
+      rhs,
+      scope,
+      classes,
+    );
     if (len != null) return '$len;';
     // extension 名称空间静态字段：`CounterLevel.v = 7` → `CounterLevel.v = 7;`。
     final extStatic = _extensionStaticTargetJs(e.leftHandSide, scope);
     if (extStatic != null) {
-      final rewritten =
-          _compoundAssignJs(extStatic, e.operator.lexeme, rhs);
+      final rewritten = _compoundAssignJs(extStatic, e.operator.lexeme, rhs);
       return rewritten == null ? null : '$rewritten;';
     }
   }
@@ -2713,7 +2839,8 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
   // SDK 值对象（ValueNotifier / Listenable 代理类）的典型用法，LHS 是
   // PrefixedIdentifier（`<字段>.<属性>`）。字段部分走 fieldRef（→ `this._count`），
   // 属性部分原样保留（JS 侧同名属性/访问器，如 ValueNotifier.prototype.value）。
-  if (e is AssignmentExpression && _prefixedFieldRef(e.leftHandSide, scope) != null) {
+  if (e is AssignmentExpression &&
+      _prefixedFieldRef(e.leftHandSide, scope) != null) {
     final lhs = _prefixedFieldRef(e.leftHandSide, scope)!;
     final rhs = rhsToJs(e.rightHandSide, scope, classes);
     if (rhs != null) {
@@ -2725,15 +2852,24 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
   if ((e is PostfixExpression || e is PrefixExpression)) {
     final extUpdate = _explicitExtensionUpdateJs(e, scope, classes);
     if (extUpdate != null) return '$extUpdate;';
-    final operand = e is PostfixExpression ? e.operand : (e as PrefixExpression).operand;
-    final op = e is PostfixExpression ? e.operator : (e as PrefixExpression).operator;
+    final operand = e is PostfixExpression
+        ? e.operand
+        : (e as PrefixExpression).operand;
+    final op = e is PostfixExpression
+        ? e.operator
+        : (e as PrefixExpression).operator;
     // 空安全目标 `a?[i]++` / `a?.x++`：JS 可选链不能作写目标，走单次求值守卫。
     if ((op.lexeme == '++' || op.lexeme == '--') &&
         _chainHasNullAware(operand) &&
         (operand is IndexExpression || operand is PropertyAccess)) {
       final guarded = _nullAwareUpdateJs(
-          operand, op.lexeme, scope, classes,
-          prefix: e is PrefixExpression, statement: true);
+        operand,
+        op.lexeme,
+        scope,
+        classes,
+        prefix: e is PrefixExpression,
+        statement: true,
+      );
       return guarded == null ? null : '$guarded;';
     }
     final lhs = _prefixedFieldRef(operand, scope);
@@ -2812,7 +2948,9 @@ String? _staticTypeOf(
   } else if (e is MethodInvocation && e.target is SimpleIdentifier) {
     // `Money.of(...)` / `Xxx.fromJson(...)`：receiver 是项目类名时按该类推断。
     raw = (e.target as SimpleIdentifier).name;
-  } else if (e is MethodInvocation && e.target == null && e.typeArguments == null) {
+  } else if (e is MethodInvocation &&
+      e.target == null &&
+      e.typeArguments == null) {
     // 无 `new` 的项目类构造（`SportCar()`）：parseString 下是 MethodInvocation。
     // 名字命中类表才认（否则可能是普通函数调用）。
     raw = e.methodName.name;
@@ -2976,7 +3114,8 @@ String? _tearOffMemberJs({
 }) {
   final type = _staticTypeOf(receiver, scope, classes);
   if (_isInstanceMethodMember(type, member, classes) != true) return null;
-  final simple = receiver is ThisExpression ||
+  final simple =
+      receiver is ThisExpression ||
       (receiver is SimpleIdentifier &&
           (scope.params.contains(receiver.name) ||
               scope.localVars.contains(receiver.name) ||
@@ -2986,7 +3125,7 @@ String? _tearOffMemberJs({
     return simple
         ? '$receiverJs?.$member.bind($receiverJs)'
         : '((__o) => __o == null ? null : __o.$member.bind(__o))'
-            '($receiverJs)';
+              '($receiverJs)';
   }
   return simple
       ? '$receiverJs.$member.bind($receiverJs)'
@@ -3117,12 +3256,16 @@ String translateMethodBody(
   if (body is ExpressionFunctionBody) {
     final e = body.expression;
     String? t;
-    if (renderer != null && returnsWidget && renderer.ctorJsClassFile(e) != null) {
+    if (renderer != null &&
+        returnsWidget &&
+        renderer.ctorJsClassFile(e) != null) {
       t = _widgetExprToJs(renderer, e, depth);
     }
     t ??= _bodyExprStmtJs(e, scope, classes);
     if (t != null) {
-      out.add('$ind${returnExpressionBody ? 'return ${_statementValueJs(t)};' : t}');
+      out.add(
+        '$ind${returnExpressionBody ? 'return ${_statementValueJs(t)};' : t}',
+      );
     } else {
       // 语句级不认的表达式（switch 表达式、集合字面量、纯值表达式）：回退到
       // 通用表达式翻译。缺这一步会让「箭头体方法」静默产出空方法体
@@ -3131,13 +3274,21 @@ String translateMethodBody(
       if (v != null) {
         out.add('$ind${returnExpressionBody ? 'return $v;' : v}');
       } else {
-        log.warning('[hot_patch_generator] 方法体表达式无法翻译，已在 JS '
-            '产物中丢弃：${e.toSource()}');
+        log.warning(
+          '[hot_patch_generator] 方法体表达式无法翻译，已在 JS '
+          '产物中丢弃：${e.toSource()}',
+        );
       }
     }
   } else if (body is BlockFunctionBody) {
-    final r = translateStmtList(body.block.statements, scope, classes, renderer,
-        depth: depth, returnsWidget: returnsWidget);
+    final r = translateStmtList(
+      body.block.statements,
+      scope,
+      classes,
+      renderer,
+      depth: depth,
+      returnsWidget: returnsWidget,
+    );
     if (r.isNotEmpty) out.add(r);
   }
   return out.isEmpty ? '' : out.join('\n');
@@ -3189,30 +3340,39 @@ String translateStmtList(
           argsJs.add(v);
         }
         if (!ok) {
-          log.warning('[hot_patch_generator] '
-              '${sourceAt(scope.sourcePath, e)}: super 调用实参无法翻译，已在 JS '
-              '产物中丢弃：${e.toSource()}');
+          log.warning(
+            '[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, e)}: super 调用实参无法翻译，已在 JS '
+            '产物中丢弃：${e.toSource()}',
+          );
           continue;
         }
         // 表达式位置（`f(super.x())`）走 rhsToJs 的同一分支；这里覆盖语句级。
-        out.add('$ind' 'super.${e.methodName.name}(${argsJs.join(', ')});');
+        out.add(
+          '$ind'
+          'super.${e.methodName.name}(${argsJs.join(', ')});',
+        );
         continue;
       }
       final t = _bodyExprStmtJs(e, scope, classes);
       if (t != null) {
         out.add('$ind$t');
       } else {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, e)}: 语句无法翻译，已在 JS 产物中'
-            '丢弃：${e.toSource()}'
-            '（原因：${_expressionFailureReason(e, scope, classes)}）');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, e)}: 语句无法翻译，已在 JS 产物中'
+          '丢弃：${e.toSource()}'
+          '（原因：${_expressionFailureReason(e, scope, classes)}）',
+        );
       }
     } else if (s is VariableDeclarationStatement) {
       // 局部变量声明 `String? name = await X.y();` → `let name = ...;` /
       // `const name = ...;`（`final` / `const` 声明生成 `const`，`var` 与
       // 无修饰声明生成 `let`；不生成 `var`）。无初始化器时显式补 `= null`：
       // Dart 的空值只有 null，JS 的 `let x;` 是 undefined（判空会漏掉）。
-      final keyword = s.variables.isFinal || s.variables.isConst ? 'const' : 'let';
+      final keyword = s.variables.isFinal || s.variables.isConst
+          ? 'const'
+          : 'let';
       for (final v in s.variables.variables) {
         final name = v.name.lexeme;
         // 同步登记到 widget 层：方法体里随后 `return Text('$name')` 时，
@@ -3244,10 +3404,12 @@ String translateStmtList(
         );
         if (init == null) {
           // 变量没声明 → 后面引用它的语句（含插值）会连带失效，必须出声。
-          log.warning('[hot_patch_generator] '
-              '${sourceAt(scope.sourcePath, v)}: 局部变量声明无法翻译，已在 JS '
-              '产物中丢弃：${s.toSource()}'
-              '（原因：${v.initializer == null ? '初始化器缺失' : _expressionFailureReason(v.initializer!, scope, classes)}）');
+          log.warning(
+            '[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, v)}: 局部变量声明无法翻译，已在 JS '
+            '产物中丢弃：${s.toSource()}'
+            '（原因：${v.initializer == null ? '初始化器缺失' : _expressionFailureReason(v.initializer!, scope, classes)}）',
+          );
           continue;
         }
         out.add('${ind}$keyword $name = $init;');
@@ -3257,7 +3419,8 @@ String translateStmtList(
         // 与判空归一（`final error = vm.error;` 必须保留 `String?` 的可空性）。
         // 先取**原始**类型（保留 `?`），拿不到再退回擦除后的推断类型。
         final declaredType = s.variables.type?.toSource();
-        final inferred = declaredType ??
+        final inferred =
+            declaredType ??
             _rawExprType(v.initializer!, scope, classes) ??
             _staticTypeOf(v.initializer!, scope, classes);
         if (inferred != null) scope.localTypes[name] = inferred;
@@ -3288,9 +3451,11 @@ String translateStmtList(
       // （`var x = 1` 这类普通声明仍是 VariableDeclarationStatement）。
       final js = _patternDeclarationJs(s, scope, classes, renderer, depth);
       if (js == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: pattern 变量声明无法翻译，已在 JS '
-            '产物中丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: pattern 变量声明无法翻译，已在 JS '
+          '产物中丢弃：${s.toSource()}',
+        );
       } else {
         out.add(js);
       }
@@ -3298,9 +3463,11 @@ String translateStmtList(
       // 方法体内的局部函数 `void f(...) {...}` / `int f(...) => ...`
       final js = _localFunctionJs(s, scope, classes, renderer, depth);
       if (js == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: 局部函数无法翻译，已在 JS 产物中'
-            '丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: 局部函数无法翻译，已在 JS 产物中'
+          '丢弃：${s.toSource()}',
+        );
       } else {
         out.add(js);
       }
@@ -3313,16 +3480,20 @@ String translateStmtList(
         continue;
       }
       String? v;
-      if (renderer != null && returnsWidget && renderer.ctorJsClassFile(e) != null) {
+      if (renderer != null &&
+          returnsWidget &&
+          renderer.ctorJsClassFile(e) != null) {
         v = _widgetExprToJs(renderer, e, depth);
       }
       v ??= rhsToJs(e, scope, classes);
       if (v != null) {
         out.add('${ind}return $v;');
       } else {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: return 表达式无法翻译，已在 JS '
-            '产物中丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: return 表达式无法翻译，已在 JS '
+          '产物中丢弃：${s.toSource()}',
+        );
       }
     } else if (s is YieldStatement) {
       // 生成器产出：`yield e;` / `yield* e;`（委托）与 JS 同形，一比一发射。
@@ -3330,9 +3501,11 @@ String translateStmtList(
       // （见 [closureToJs] 与 dart2js 的方法渲染），否则 JS 侧是语法错误。
       final v = rhsToJs(s.expression, scope, classes);
       if (v == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: yield 表达式无法翻译，已在 JS '
-            '产物中丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: yield 表达式无法翻译，已在 JS '
+          '产物中丢弃：${s.toSource()}',
+        );
       } else {
         out.add('${ind}yield${s.star != null ? '*' : ''} $v;');
       }
@@ -3341,11 +3514,19 @@ String translateStmtList(
         // `if (x case P)` 的判据是模式匹配，不是条件表达式。统一交给
         // [_ifCaseStatementJs]（与 pattern 变量声明共用 [_compilePattern]）。
         final js = _ifCaseStatementJs(
-            s, scope, classes, renderer, depth, returnsWidget);
+          s,
+          scope,
+          classes,
+          renderer,
+          depth,
+          returnsWidget,
+        );
         if (js == null) {
-          log.warning('[hot_patch_generator] '
-              '${sourceAt(scope.sourcePath, s)}: if-case 模式匹配无法翻译，已在 JS '
-              '产物中丢弃：${s.toSource()}');
+          log.warning(
+            '[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: if-case 模式匹配无法翻译，已在 JS '
+            '产物中丢弃：${s.toSource()}',
+          );
         } else {
           out.add(js);
         }
@@ -3353,61 +3534,95 @@ String translateStmtList(
       }
       final condJs = exprToJs(s.expression, scope, classes);
       if (condJs == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: if 条件无法翻译，已在 JS 产物中'
-            '丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: if 条件无法翻译，已在 JS 产物中'
+          '丢弃：${s.toSource()}',
+        );
         continue;
       }
-      final thenStmts =
-          s.thenStatement is Block ? (s.thenStatement as Block).statements : [s.thenStatement];
-      var js = '$ind' 'if ($condJs) {\n'
+      final thenStmts = s.thenStatement is Block
+          ? (s.thenStatement as Block).statements
+          : [s.thenStatement];
+      var js =
+          '$ind'
+          'if ($condJs) {\n'
           '${translateStmtList(thenStmts, scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
           '$ind}';
       final els = s.elseStatement;
       if (els != null) {
         final elseStmts = els is Block ? els.statements : [els];
-        js += ' else {\n'
+        js +=
+            ' else {\n'
             '${translateStmtList(elseStmts, scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
             '$ind}';
       }
       out.add(js);
     } else if (s is ForStatement) {
-      final js = _forStatementJs(s, scope, classes, renderer, depth, returnsWidget);
+      final js = _forStatementJs(
+        s,
+        scope,
+        classes,
+        renderer,
+        depth,
+        returnsWidget,
+      );
       if (js == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: for 语句无法翻译，已在 JS 产物中'
-            '丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: for 语句无法翻译，已在 JS 产物中'
+          '丢弃：${s.toSource()}',
+        );
       } else {
         out.add(js);
       }
     } else if (s is WhileStatement) {
       final condJs = exprToJs(s.condition, scope, classes);
       if (condJs == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: while 条件无法翻译，已在 JS 产物'
-            '中丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: while 条件无法翻译，已在 JS 产物'
+          '中丢弃：${s.toSource()}',
+        );
         continue;
       }
-      out.add('$ind' 'while ($condJs) {\n'
-          '${translateStmtList(_bodyStmts(s.body), scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
-          '$ind}');
+      out.add(
+        '$ind'
+        'while ($condJs) {\n'
+        '${translateStmtList(_bodyStmts(s.body), scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+        '$ind}',
+      );
     } else if (s is DoStatement) {
       final condJs = exprToJs(s.condition, scope, classes);
       if (condJs == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: do-while 条件无法翻译，已在 JS '
-            '产物中丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: do-while 条件无法翻译，已在 JS '
+          '产物中丢弃：${s.toSource()}',
+        );
         continue;
       }
-      out.add('$ind' 'do {\n'
-          '${translateStmtList(_bodyStmts(s.body), scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
-          '$ind} while ($condJs);');
+      out.add(
+        '$ind'
+        'do {\n'
+        '${translateStmtList(_bodyStmts(s.body), scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+        '$ind} while ($condJs);',
+      );
     } else if (s is SwitchStatement) {
-      final js = _switchStatementJs(s, scope, classes, renderer, depth, returnsWidget);
+      final js = _switchStatementJs(
+        s,
+        scope,
+        classes,
+        renderer,
+        depth,
+        returnsWidget,
+      );
       if (js == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: switch 语句无法翻译（仅支持常量 '
-            'case），已在 JS 产物中丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: switch 语句无法翻译（仅支持常量 '
+          'case），已在 JS 产物中丢弃：${s.toSource()}',
+        );
       } else {
         out.add(js);
       }
@@ -3415,12 +3630,20 @@ String translateStmtList(
       // `outer: for (…) { … break outer; }`：JS 原生支持标签语句与带标签的
       // break / continue，一比一发射（标签加在被标记语句的首行前）。
       final prefix = [for (final l in s.labels) '${l.label.name}: '].join();
-      final inner = translateStmtList([s.statement], scope, classes, renderer,
-          depth: depth, returnsWidget: returnsWidget);
+      final inner = translateStmtList(
+        [s.statement],
+        scope,
+        classes,
+        renderer,
+        depth: depth,
+        returnsWidget: returnsWidget,
+      );
       if (inner.trim().isEmpty) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: label 语句无法翻译，已在 JS 产物中'
-            '丢弃：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: label 语句无法翻译，已在 JS 产物中'
+          '丢弃：${s.toSource()}',
+        );
       } else {
         out.add(inner.replaceFirst('$ind', '$ind$prefix'));
       }
@@ -3436,9 +3659,11 @@ String translateStmtList(
       // 生成器不改写语义，保持与 Dart 源码一比一。
       final condJs = exprToJs(s.condition, scope, classes);
       if (condJs == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: assert 条件无法翻译，已在 JS 产物'
-            '中跳过：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: assert 条件无法翻译，已在 JS 产物'
+          '中跳过：${s.toSource()}',
+        );
         continue;
       }
       String? msgJs;
@@ -3446,20 +3671,33 @@ String translateStmtList(
       if (message != null) {
         msgJs = rhsToJs(message, scope, classes);
         if (msgJs == null) {
-          log.warning('[hot_patch_generator] '
-              '${sourceAt(scope.sourcePath, message)}: assert 消息无法翻译，已在 JS 产物'
-              '中跳过：${s.toSource()}');
+          log.warning(
+            '[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, message)}: assert 消息无法翻译，已在 JS 产物'
+            '中跳过：${s.toSource()}',
+          );
           continue;
         }
       }
-      out.add('$ind' 'assert($condJs${msgJs == null ? '' : ', $msgJs'});');
+      out.add(
+        '$ind'
+        'assert($condJs${msgJs == null ? '' : ', $msgJs'});',
+      );
     } else if (s is TryStatement) {
-      final js =
-          _tryStatementJs(s, scope, classes, renderer, depth, returnsWidget);
+      final js = _tryStatementJs(
+        s,
+        scope,
+        classes,
+        renderer,
+        depth,
+        returnsWidget,
+      );
       if (js == null) {
-        log.warning('[hot_patch_generator] '
-            '${sourceAt(scope.sourcePath, s)}: try 语句无法翻译，已在 JS 产物中'
-            '跳过：${s.toSource()}');
+        log.warning(
+          '[hot_patch_generator] '
+          '${sourceAt(scope.sourcePath, s)}: try 语句无法翻译，已在 JS 产物中'
+          '跳过：${s.toSource()}',
+        );
       } else {
         out.add(js);
       }
@@ -3467,14 +3705,18 @@ String translateStmtList(
       // 空语句没有语义，跳过不需要告警。
     } else if (s is Block) {
       // 裸块语句：作用域语义在 JS 侧由 `{}` 保留，逐条递归即可。
-      out.add('$ind{\n'
-          '${translateStmtList(s.statements, scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
-          '$ind}');
+      out.add(
+        '$ind{\n'
+        '${translateStmtList(s.statements, scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+        '$ind}',
+      );
     } else {
       // 兜底：任何未覆盖的语句都必须出声，禁止静默丢代码。
       // 典型：try/catch、throw、assert、局部函数、pattern 声明、label 等。
-      log.warning('[hot_patch_generator] 不支持的语句类型 ${s.runtimeType}，'
-          '已在 JS 产物中跳过：${s.toSource()}');
+      log.warning(
+        '[hot_patch_generator] 不支持的语句类型 ${s.runtimeType}，'
+        '已在 JS 产物中跳过：${s.toSource()}',
+      );
     }
   }
   return out.join('\n');
@@ -3595,7 +3837,12 @@ String? _ifCaseStatementJs(
   // 避免方法后续语句里同名的字段被当成「已出块的局部变量」。
   final localVarsBefore = {...scope.localVars};
   if (!_compilePatternWithGuard(
-      guarded.pattern, guarded.whenClause?.expression, plan, scope, classes)) {
+    guarded.pattern,
+    guarded.whenClause?.expression,
+    plan,
+    scope,
+    classes,
+  )) {
     scope.localVars
       ..clear()
       ..addAll(localVarsBefore);
@@ -3619,15 +3866,30 @@ String? _ifCaseStatementJs(
   }
   b.writeln('${ind}  })();');
   b.writeln('${ind}  if (__ok) {');
-  b.writeln(translateStmtList(_bodyStmts(s.thenStatement), scope, classes,
+  b.writeln(
+    translateStmtList(
+      _bodyStmts(s.thenStatement),
+      scope,
+      classes,
       renderer,
-      depth: depth + 2, returnsWidget: returnsWidget));
+      depth: depth + 2,
+      returnsWidget: returnsWidget,
+    ),
+  );
   b.writeln('$ind  }');
   final els = s.elseStatement;
   if (els != null) {
     b.writeln('${ind}  else {');
-    b.writeln(translateStmtList(_bodyStmts(els), scope, classes, renderer,
-        depth: depth + 2, returnsWidget: returnsWidget));
+    b.writeln(
+      translateStmtList(
+        _bodyStmts(els),
+        scope,
+        classes,
+        renderer,
+        depth: depth + 2,
+        returnsWidget: returnsWidget,
+      ),
+    );
     b.writeln('$ind  }');
   }
   b.writeln('$ind}');
@@ -3653,7 +3915,12 @@ String? _patternDeclarationJs(
   if (init == null) return null;
   final plan = _PatternPlan();
   if (!_compilePatternWithGuard(
-      s.declaration.pattern, null, plan, scope, classes)) {
+    s.declaration.pattern,
+    null,
+    plan,
+    scope,
+    classes,
+  )) {
     return null;
   }
   for (final n in plan.names) {
@@ -3663,17 +3930,25 @@ String? _patternDeclarationJs(
   plan.lines.add('return true;');
   final ind = '  ' * depth;
   final b = StringBuffer()
-    ..writeln('$ind' 'var __v0 = $init;');
+    ..writeln(
+      '$ind'
+      'var __v0 = $init;',
+    );
   if (plan.names.isNotEmpty) {
-    b.writeln('$ind' 'var ${plan.names.toSet().join(', ')};');
+    b.writeln(
+      '$ind'
+      'var ${plan.names.toSet().join(', ')};',
+    );
   }
   b.writeln('${ind}if (!(() => {');
   for (final l in plan.lines) {
     b.writeln('${ind}  $l');
   }
   b.writeln('${ind}})()) {');
-  b.writeln('${ind}  throw new Error('
-      '${jsString('pattern 变量声明未匹配：${s.toSource()}')});');
+  b.writeln(
+    '${ind}  throw new Error('
+    '${jsString('pattern 变量声明未匹配：${s.toSource()}')});',
+  );
   b.writeln('$ind}');
   return b.toString().trimRight();
 }
@@ -3763,9 +4038,11 @@ bool _compilePattern(
     }
     plan.names.addAll({...left.names, ...right.names});
     final t = plan.temp();
-    plan.lines.add('const $t = (() => { ${left.lines.join(' ')} '
-        'return true; })() || (() => { ${right.lines.join(' ')} '
-        'return true; })();');
+    plan.lines.add(
+      'const $t = (() => { ${left.lines.join(' ')} '
+      'return true; })() || (() => { ${right.lines.join(' ')} '
+      'return true; })();',
+    );
     plan.lines.add('if (!$t) return false;');
     return true;
   }
@@ -3795,11 +4072,13 @@ bool _compilePattern(
       }
     }
     final fixed = restIndex >= 0 ? restIndex : els.length;
-    plan.lines.add(restIndex >= 0
-        ? 'if (!(Array.isArray($value) && $value.length >= $fixed)) '
-            'return false;'
-        : 'if (!(Array.isArray($value) && $value.length === $fixed)) '
-            'return false;');
+    plan.lines.add(
+      restIndex >= 0
+          ? 'if (!(Array.isArray($value) && $value.length >= $fixed)) '
+                'return false;'
+          : 'if (!(Array.isArray($value) && $value.length === $fixed)) '
+                'return false;',
+    );
     for (var i = 0; i < fixed; i++) {
       final el = els[i];
       if (el is! DartPattern) return false;
@@ -3826,8 +4105,10 @@ bool _compilePattern(
   // 类型，运行期本就没有额外信息）。
   if (p is RecordPattern) {
     if (p.fields.isEmpty) {
-      plan.lines.add('if ($value == null || typeof $value !== "object") '
-          'return false;');
+      plan.lines.add(
+        'if ($value == null || typeof $value !== "object") '
+        'return false;',
+      );
       return true;
     }
     var positional = 0;
@@ -3835,8 +4116,10 @@ bool _compilePattern(
       final fieldName = f.name;
       final name = fieldName?.name?.lexeme;
       final key = name ?? '\$${++positional}';
-      plan.lines.add('if ($value == null || typeof $value !== "object") '
-          'return false;');
+      plan.lines.add(
+        'if ($value == null || typeof $value !== "object") '
+        'return false;',
+      );
       final t = plan.temp();
       plan.lines.add('const $t = $value[${jsString(key)}];');
       if (!_compilePattern(f.pattern, t, plan, scope, classes)) return false;
@@ -3900,22 +4183,32 @@ String? _forStatementJs(
       pre.writeln('$indIn  $l');
     }
     pre.writeln('$indIn  })()) {');
-    pre.writeln('$indIn    throw new Error('
-        '${jsString('pattern for 未匹配：${parts.toSource()}')});');
+    pre.writeln(
+      '$indIn    throw new Error('
+      '${jsString('pattern for 未匹配：${parts.toSource()}')});',
+    );
     pre.writeln('$indIn}');
-    final bodyJs = translateStmtList(_bodyStmts(s.body), scope, classes, renderer,
-        depth: depth + 1, returnsWidget: returnsWidget);
+    final bodyJs = translateStmtList(
+      _bodyStmts(s.body),
+      scope,
+      classes,
+      renderer,
+      depth: depth + 1,
+      returnsWidget: returnsWidget,
+    );
     scope.localVars
       ..clear()
       ..addAll(before);
     final awaitKw = s.awaitKeyword != null ? 'await ' : '';
-    return '$ind' 'for $awaitKw(const __v of $it) {\n$pre$bodyJs\n$ind}';
+    return '$ind'
+        'for $awaitKw(const __v of $it) {\n$pre$bodyJs\n$ind}';
   } else if (parts is ForParts) {
     // 三段式：`for (var i = 0; i < n; i++)` → 一比一。
     final inits = <String>[];
     if (parts is ForPartsWithDeclarations) {
-      final keyword =
-          parts.variables.isFinal || parts.variables.isConst ? 'const' : 'let';
+      final keyword = parts.variables.isFinal || parts.variables.isConst
+          ? 'const'
+          : 'let';
       for (final v in parts.variables.variables) {
         final name = v.name.lexeme;
         scope.localVars.add(name);
@@ -3958,8 +4251,14 @@ String? _forStatementJs(
     header = header.replaceFirst('for (', 'for await (');
   }
   final ind = '  ' * depth;
-  final bodyJs = translateStmtList(_bodyStmts(s.body), scope, classes, renderer,
-      depth: depth + 1, returnsWidget: returnsWidget);
+  final bodyJs = translateStmtList(
+    _bodyStmts(s.body),
+    scope,
+    classes,
+    renderer,
+    depth: depth + 1,
+    returnsWidget: returnsWidget,
+  );
   return '$ind$header {\n$bodyJs\n$ind}';
 }
 
@@ -4013,20 +4312,23 @@ String? _tryStatementJs(
     var closed = false; // 已出现 catch-all（或类型不可判别）→ 后续子句不可达
     for (final clause in catches) {
       if (closed) {
-        log.warning('[hot_patch_generator] try 的 catch 子句位于 catch-all '
-            '之后（不可达），已跳过：${clause.toSource()}');
+        log.warning(
+          '[hot_patch_generator] try 的 catch 子句位于 catch-all '
+          '之后（不可达），已跳过：${clause.toSource()}',
+        );
         continue;
       }
       final type = clause.exceptionType;
       var isCatchAll = type == null;
       var cond = 'true';
       if (type != null) {
-        final test =
-            typeTestJs(type.toSource(), exName, knownClasses: known);
+        final test = typeTestJs(type.toSource(), exName, knownClasses: known);
         if (test == null) {
-          log.warning('[hot_patch_generator] catch 的 on 类型 '
-              '${type.toSource()} 在 JS 侧无法判别，已按 catch-all 翻译：'
-              '${clause.toSource()}');
+          log.warning(
+            '[hot_patch_generator] catch 的 on 类型 '
+            '${type.toSource()} 在 JS 侧无法判别，已按 catch-all 翻译：'
+            '${clause.toSource()}',
+          );
           isCatchAll = true;
         } else {
           cond = test;
@@ -4058,8 +4360,8 @@ String? _tryStatementJs(
       final head = isCatchAll && first
           ? null // 首个子句就是 catch-all：直接执行 body，无需 if/else 包装
           : (isCatchAll
-              ? '${ind}  else {'
-              : '${ind}  ${first ? 'if' : 'else if'} ($cond) {');
+                ? '${ind}  else {'
+                : '${ind}  ${first ? 'if' : 'else if'} ($cond) {');
       if (head == null) {
         lines.add(body);
       } else {
@@ -4114,13 +4416,22 @@ String? _switchStatementJs(
   // 纯常量 switch 保持原有 JS switch 产物（老路径行为不变）。
   if (_switchStatementNeedsPatternPath(s)) {
     return _patternSwitchStatementJs(
-        s, scope, classes, renderer, depth, returnsWidget);
+      s,
+      scope,
+      classes,
+      renderer,
+      depth,
+      returnsWidget,
+    );
   }
   final subj = exprToJs(s.expression, scope, classes);
   if (subj == null) return null;
   final ind = '  ' * depth;
   final caseInd = '  ' * (depth + 1);
-  final lines = <String>['$ind' 'switch ($subj) {'];
+  final lines = <String>[
+    '$ind'
+        'switch ($subj) {',
+  ];
   for (final member in s.members) {
     if (member.labels.isNotEmpty) return null; // 带标签的 break/continue 不支持
     String? label;
@@ -4150,18 +4461,29 @@ String? _switchStatementJs(
     }
     lines.add('$caseInd$label');
     for (final st in member.statements) {
-      final js = translateStmtList([st], scope, classes, renderer,
-          depth: depth + 2, returnsWidget: returnsWidget);
+      final js = translateStmtList(
+        [st],
+        scope,
+        classes,
+        renderer,
+        depth: depth + 2,
+        returnsWidget: returnsWidget,
+      );
       if (js.isEmpty) return null; // 某条语句翻译失败 → 整个 switch 丢弃
       lines.add(js);
     }
     if (member.statements.isNotEmpty) {
       final last = member.statements.last;
-      final terminated = last is ReturnStatement ||
+      final terminated =
+          last is ReturnStatement ||
           last is BreakStatement ||
           last is ContinueStatement ||
           (last is ExpressionStatement && last.expression is ThrowExpression);
-      if (!terminated) lines.add('$caseInd' 'break;');
+      if (!terminated)
+        lines.add(
+          '$caseInd'
+          'break;',
+        );
     }
   }
   lines.add('$ind}');
@@ -4279,7 +4601,12 @@ String? _patternSwitchStatementJs(
       final p = _PatternPlan();
       final scopeBefore = {...scope.localVars};
       if (!_compilePatternWithGuard(
-          gp.pattern, gp.whenClause?.expression, p, scope, classes)) {
+        gp.pattern,
+        gp.whenClause?.expression,
+        p,
+        scope,
+        classes,
+      )) {
         scope.localVars
           ..clear()
           ..addAll(scopeBefore);
@@ -4317,8 +4644,14 @@ String? _patternSwitchStatementJs(
     if (member.statements.isEmpty) continue;
     scope.localVars.addAll(namesByMember[i]);
     for (final st in member.statements) {
-      final js = translateStmtList([st], scope, classes, renderer,
-          depth: depth + 2, returnsWidget: returnsWidget);
+      final js = translateStmtList(
+        [st],
+        scope,
+        classes,
+        renderer,
+        depth: depth + 2,
+        returnsWidget: returnsWidget,
+      );
       if (js.isEmpty) {
         scope.localVars
           ..clear()
@@ -4331,11 +4664,16 @@ String? _patternSwitchStatementJs(
       ..clear()
       ..addAll(before);
     final last = member.statements.last;
-    final terminated = last is ReturnStatement ||
+    final terminated =
+        last is ReturnStatement ||
         last is BreakStatement ||
         last is ContinueStatement ||
         (last is ExpressionStatement && last.expression is ThrowExpression);
-    if (!terminated) lines.add('$caseInd' 'break;');
+    if (!terminated)
+      lines.add(
+        '$caseInd'
+        'break;',
+      );
   }
   lines.add('${ind}  }');
   lines.add('$ind}');
@@ -4370,7 +4708,12 @@ String? _patternSwitchExpressionJs(
     final p = _PatternPlan();
     final scopeBefore = {...scope.localVars};
     if (!_compilePatternWithGuard(
-        gp.pattern, gp.whenClause?.expression, p, scope, classes)) {
+      gp.pattern,
+      gp.whenClause?.expression,
+      p,
+      scope,
+      classes,
+    )) {
       scope.localVars
         ..clear()
         ..addAll(scopeBefore);
@@ -4394,8 +4737,10 @@ String? _patternSwitchExpressionJs(
   for (var i = 0; i < e.cases.length; i++) {
     b.write('    case ${conds[i]}: return ${values[i]};\n');
   }
-  b.write('    default: throw new Error('
-      '${jsString('switch 表达式未匹配：${e.toSource()}')});\n');
+  b.write(
+    '    default: throw new Error('
+    '${jsString('switch 表达式未匹配：${e.toSource()}')});\n',
+  );
   b.write('  }\n})()');
   return b.toString();
 }
@@ -4572,8 +4917,10 @@ String translateClassMethodBody(
   );
   // 形参前导：可选位置形参补默认值、具名形参从尾参对象 `__o` 解构。与闭包 /
   // 局部函数同一实现，避免三处默认值口径走样。
-  final paramPlan =
-      _functionParamPlan(m.parameters, (e) => rhsToJs(e, scope, classes));
+  final paramPlan = _functionParamPlan(
+    m.parameters,
+    (e) => rhsToJs(e, scope, classes),
+  );
   // 方法形参同步登记进 widget 层（方法体期间），使返回的 widget 树里
   // `Text(title)` 这类形参引用可解析；翻译结束即恢复，不污染同类其它方法。
   // 组件语境（构造走属性管线 / 静态类引用解析）由调用方在**整类方法翻译**上
@@ -4589,10 +4936,10 @@ String translateClassMethodBody(
       depth: depth,
     );
     if (paramPlan.prologue.isEmpty) return body;
-    final pro =
-        paramPlan.prologue.map((l) => '$ind$l').join('\n');
+    final pro = paramPlan.prologue.map((l) => '$ind$l').join('\n');
     return '$pro\n$body';
   }
+
   if (renderer == null || m.params.isEmpty) return run();
   return renderer.withMethodParams(m.params, run);
 }
@@ -4608,8 +4955,10 @@ String? _widgetExprToJs(ExprRenderer? renderer, Expression e, int depth) {
     // translate(Expression) → JSON Map / String；renderJs(json, depth) → JS
     return renderer.renderJs(renderer.translate(e), depth);
   } catch (err) {
-    log.warning('[hot_patch_generator] widget 表达式无法翻译，已在 JS 产物中'
-        '丢弃：${e.toSource()}（$err）');
+    log.warning(
+      '[hot_patch_generator] widget 表达式无法翻译，已在 JS 产物中'
+      '丢弃：${e.toSource()}（$err）',
+    );
     return null;
   }
 }

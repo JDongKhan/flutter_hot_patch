@@ -24,6 +24,7 @@ library;
 
 export 'src/services/js_runtime_manager.dart';
 export 'src/utils/env_flags.dart';
+export 'src/utils/hot_patch_assets.dart';
 export 'src/js_ui/capabilities/dialog/dialog_api.dart';
 export 'src/js_ui/js_ui_widget.dart';
 export 'src/js_ui/js_widget_registry.dart';

@@ -2963,6 +2963,14 @@ export class Completer {
   }
 }
 
+// ----- rootBundle ---------------------------------------------------------
+// 普通顶层对象调用原样产出；唯一的跨语言点是宿主通道 assetLoadString。
+export const rootBundle = {
+  loadString(key) {
+    return Future.__wrap(G._app_host_.invoke('assetLoadString', [key]));
+  },
+};
+
 class LazyIterable {
   constructor(factory) {
     this._factory = factory;

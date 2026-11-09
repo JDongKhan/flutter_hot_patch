@@ -18,6 +18,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/gestures.dart' show kDefaultMouseScrollToScaleFactor;
 import 'package:flutter/material.dart';
 
+import '../../../utils/hot_patch_assets.dart';
 import '../../js_widget_registry.dart';
 import '../../ui_fallback.dart';
 import '../core/from_json/dart_values_from_json.dart';
@@ -40,8 +41,13 @@ MaterialType? _materialTypeFromJson(Object? v) => switch ('$v') {
 
 /// 源字符串 → 图片 provider：`FadeInImage.assetNetwork` 的 placeholder 永远是
 /// 资源路径（[forceAsset]），其余按 `http` 前缀判网络 / 资源（与 `Image` 一致）。
+///
+/// 资源图统一走 [HotPatchAssets.bundle]：补丁包内同名图片优先，缺失回退
+/// Flutter assets。
 ImageProvider _imageProvider(String source, {bool forceAsset = false}) =>
-    (!forceAsset && source.startsWith('http')) ? NetworkImage(source) : AssetImage(source);
+    (!forceAsset && source.startsWith('http'))
+    ? NetworkImage(source)
+    : AssetImage(source, bundle: HotPatchAssets.bundle);
 
 /// 注册 Flutter 基础视觉组件的宿主侧映射。
 ///
@@ -97,8 +103,8 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       softWrap: c.bool_('softWrap') ?? true,
       overflow: overflowFromJson(c.props['overflow']) ?? TextOverflow.clip,
       maxLines: c.int_('maxLines'),
-      textScaler: textScalerFromJson(c.props['textScaler']) ??
-          TextScaler.noScaling,
+      textScaler:
+          textScalerFromJson(c.props['textScaler']) ?? TextScaler.noScaling,
       selectionColor: colorFromJson(c.props['selectionColor']),
     ),
   );
@@ -249,12 +255,18 @@ void registerBaseWidgets(JsWidgetRegistry r) {
 
   r.register(
     'Expanded',
-    (c) => Expanded(flex: c.int_('flex') ?? 1, child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink())),
+    (c) => Expanded(
+      flex: c.int_('flex') ?? 1,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+    ),
   );
 
   r.register(
     'Flexible',
-    (c) => Flexible(flex: c.int_('flex') ?? 1, child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink())),
+    (c) => Flexible(
+      flex: c.int_('flex') ?? 1,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+    ),
   );
 
   // Positioned 的命名构造由 `factory` 还原原生命名构造（与 Dart 一比一）：
@@ -324,7 +336,8 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'ColorFiltered',
     (c) => ColorFiltered(
-      colorFilter: colorFilterFromJson(c.props['colorFilter']) ??
+      colorFilter:
+          colorFilterFromJson(c.props['colorFilter']) ??
           const ColorFilter.mode(Color(0x00000000), BlendMode.dst),
       child: (c.children['child'] as Widget?),
     ),
@@ -334,7 +347,8 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   // 滤镜缺失（翻译失败）时用零 sigma 模糊兜底——零 sigma 等价于不变形。
   r.register('ImageFiltered', (c) {
     return ImageFiltered(
-      imageFilter: imageFilterFromJson(c.props['imageFilter']) ??
+      imageFilter:
+          imageFilterFromJson(c.props['imageFilter']) ??
           ImageFilter.blur(sigmaX: 0.0, sigmaY: 0.0),
       enabled: c.bool_('enabled') ?? true,
       child: (c.children['child'] as Widget?),
@@ -500,6 +514,7 @@ void registerBaseWidgets(JsWidgetRegistry r) {
           )
         : Image.asset(
             source,
+            bundle: HotPatchAssets.bundle,
             width: width,
             height: height,
             fit: fit,
@@ -518,14 +533,19 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register('FadeInImage', (c) {
     final assetNetwork = c.str('factory') == 'assetNetwork';
     return FadeInImage(
-      placeholder: _imageProvider(c.str('placeholder') ?? '', forceAsset: assetNetwork),
+      placeholder: _imageProvider(
+        c.str('placeholder') ?? '',
+        forceAsset: assetNetwork,
+      ),
       image: _imageProvider(c.str('image') ?? ''),
       fit: boxFitFromJson(c.props['fit']),
       placeholderFit: boxFitFromJson(c.props['placeholderFit']),
       fadeInDuration:
-          durationFromJson(c.props['fadeInDuration']) ?? const Duration(milliseconds: 300),
+          durationFromJson(c.props['fadeInDuration']) ??
+          const Duration(milliseconds: 300),
       fadeOutDuration:
-          durationFromJson(c.props['fadeOutDuration']) ?? const Duration(milliseconds: 300),
+          durationFromJson(c.props['fadeOutDuration']) ??
+          const Duration(milliseconds: 300),
       width: c.num_('width'),
       height: c.num_('height'),
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
@@ -566,8 +586,12 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   // `Size.fromHeight(h)` 的 width 是 +∞（JSON 里被折叠成 null），按 ∞ 还原。
   r.register('PreferredSize', (c) {
     final raw = c.map('preferredSize') ?? const <String, dynamic>{};
-    final w = raw['width'] is num ? (raw['width'] as num).toDouble() : double.infinity;
-    final h = raw['height'] is num ? (raw['height'] as num).toDouble() : kToolbarHeight;
+    final w = raw['width'] is num
+        ? (raw['width'] as num).toDouble()
+        : double.infinity;
+    final h = raw['height'] is num
+        ? (raw['height'] as num).toDouble()
+        : kToolbarHeight;
     return _JsPreferredSize(
       preferredSize: Size(w, h),
       child: c.children['child'] as Widget?,
@@ -850,7 +874,10 @@ void registerBaseWidgets(JsWidgetRegistry r) {
 
   r.register(
     'Opacity',
-    (c) => Opacity(opacity: c.num_('opacity') ?? 1, child: (c.children['child'] as Widget?)),
+    (c) => Opacity(
+      opacity: c.num_('opacity') ?? 1,
+      child: (c.children['child'] as Widget?),
+    ),
   );
 
   // Offstage：offstage=true 时不参与布局/绘制/命中测试（State 保活，Ticker 照跑）。
@@ -902,8 +929,10 @@ void registerBaseWidgets(JsWidgetRegistry r) {
 
   r.register(
     'AspectRatio',
-    (c) =>
-        AspectRatio(aspectRatio: c.num_('aspectRatio') ?? 1, child: (c.children['child'] as Widget?)),
+    (c) => AspectRatio(
+      aspectRatio: c.num_('aspectRatio') ?? 1,
+      child: (c.children['child'] as Widget?),
+    ),
   );
 
   r.register(
@@ -956,7 +985,8 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   // IconButton：普通构造读 `icon`；`.filled` / `.filledTonal` / `.outlined` 是
   // 命名构造（容器底色 / 描边不同），宿主按 `factory` 还原原生构造。
   r.register('IconButton', (c) {
-    final icon = (c.children['icon'] as Widget?) ?? const Icon(Icons.error_outline);
+    final icon =
+        (c.children['icon'] as Widget?) ?? const Icon(Icons.error_outline);
     final onPressed = c.on('onPressed');
     final color = colorFromJson(c.props['color']);
     final iconSize = c.num_('iconSize');
@@ -1017,8 +1047,7 @@ void registerBaseWidgets(JsWidgetRegistry r) {
           tooltip: tooltip,
           elevation: elevation,
           icon: (c.children['icon'] as Widget?),
-          label: (c.children['label'] as Widget?) ??
-              const SizedBox.shrink(),
+          label: (c.children['label'] as Widget?) ?? const SizedBox.shrink(),
         );
       case 'large':
         return FloatingActionButton.large(
@@ -1060,8 +1089,7 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       if (raw is! Map) continue;
       items.add(
         BottomNavigationBarItem(
-          icon: c.element(raw['icon']) ??
-              const Icon(Icons.error_outline),
+          icon: c.element(raw['icon']) ?? const Icon(Icons.error_outline),
           activeIcon: c.element(raw['activeIcon']),
           label: raw['label'] == null ? null : '${raw['label']}',
           tooltip: raw['tooltip'] == null ? null : '${raw['tooltip']}',
@@ -1113,7 +1141,8 @@ void registerBaseWidgets(JsWidgetRegistry r) {
           // enabled 缺省为 true（与 Flutter 默认一致）；alignment 走统一
           // 的枚举/常量协议（JS 侧 Alignment 常量即成员名字符串）。
           enabled: raw['enabled'] is bool ? raw['enabled'] as bool : true,
-          alignment: alignmentFromJson(raw['alignment']) ??
+          alignment:
+              alignmentFromJson(raw['alignment']) ??
               AlignmentDirectional.centerStart,
           child: c.element(raw['child']) ?? const SizedBox.shrink(),
         ),
@@ -1175,7 +1204,9 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     'Baseline',
     (c) => Baseline(
       baseline: c.num_('baseline') ?? 0,
-      baselineType: textBaselineFromJson(c.props['baselineType']) ?? TextBaseline.alphabetic,
+      baselineType:
+          textBaselineFromJson(c.props['baselineType']) ??
+          TextBaseline.alphabetic,
       child: c.children['child'] as Widget?,
     ),
   );
@@ -1254,8 +1285,12 @@ Map<String, dynamic> _scaleJson(dynamic d) {
     'localFocalPoint': <String, double>{'dx': local.dx, 'dy': local.dy},
     // ScaleStartDetails 只有 focalPoint（没有 scale 倍率），其余两个有。
     'scale': d.scale is double ? d.scale as double : 1.0,
-    'horizontalScale': d.horizontalScale is double ? d.horizontalScale as double : 1.0,
-    'verticalScale': d.verticalScale is double ? d.verticalScale as double : 1.0,
+    'horizontalScale': d.horizontalScale is double
+        ? d.horizontalScale as double
+        : 1.0,
+    'verticalScale': d.verticalScale is double
+        ? d.verticalScale as double
+        : 1.0,
     'rotation': d.rotation is double ? d.rotation as double : 0.0,
   };
 }

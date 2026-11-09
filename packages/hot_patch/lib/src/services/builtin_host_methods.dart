@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../js_ui/js_ui_store.dart';
+import '../utils/hot_patch_assets.dart';
 import '../utils/hot_patch_log.dart';
 import 'js_runtime_manager.dart';
 
@@ -34,7 +35,15 @@ void registerBuiltinHostMethods() {
   JsRuntimeManager.registerHostMethod('nativeToast', _nativeToast);
   JsRuntimeManager.registerHostMethod('jsuiCommit', _commit);
   JsRuntimeManager.registerHostMethod('jsuiRequestFrame', _requestFrame);
+  JsRuntimeManager.registerHostMethod('assetLoadString', _assetLoadString);
 }
+
+/// `assetLoadString`：JS 侧 `rootBundle.loadString(key)` 的宿主落点。
+///
+/// 解析顺序与图片一致：补丁包根下同名文件优先，缺失或读取失败回退 Flutter
+/// assets（见 [HotPatchAssets]）。
+Future<String> _assetLoadString(String key) =>
+    HotPatchAssets.bundle.loadString(key);
 
 /// `jsuiRequestFrame`：JS 侧有脏组件，请求在下一帧统一 flush。
 ///
@@ -57,11 +66,11 @@ void _log(String? level, Object? message) =>
     HotPatchLog.emit(_levelOf(level), '[js-log] $message');
 
 HotPatchLevel _levelOf(String? name) => switch (name) {
-      'debug' => HotPatchLevel.debug,
-      'warn' => HotPatchLevel.warn,
-      'error' => HotPatchLevel.error,
-      _ => HotPatchLevel.info,
-    };
+  'debug' => HotPatchLevel.debug,
+  'warn' => HotPatchLevel.warn,
+  'error' => HotPatchLevel.error,
+  _ => HotPatchLevel.info,
+};
 
 /// `nativeToast`：弹原生 SnackBar。context 由 [JsRuntimeManager.navigatorKey]
 /// 提供（全局服务，与页面无关）。
@@ -73,7 +82,9 @@ void _nativeToast({String? message}) {
     );
     return;
   }
-  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(message ?? '')));
+  ScaffoldMessenger.of(
+    ctx,
+  ).showSnackBar(SnackBar(content: Text(message ?? '')));
 }
 
 /// `jsuiCommit`：把 JS 算好的增量补丁按页面 key 应用到对应 [JsUiStore]。
@@ -81,8 +92,10 @@ void _commit({required String key, required List ops}) {
   final store = jsUiPageStores[key];
   if (store == null) {
     // 页面已销毁 / 还没登记：补丁无处可落，整批丢弃。属于正常竞态，但必须留痕。
-    HotPatchLog.debug('jsuiCommit: 页面 "$key" 已销毁或未登记，'
-        '${ops.length} 条补丁已丢弃');
+    HotPatchLog.debug(
+      'jsuiCommit: 页面 "$key" 已销毁或未登记，'
+      '${ops.length} 条补丁已丢弃',
+    );
     return;
   }
   store.apply(ops);

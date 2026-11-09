@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_js/flutter_js.dart';
 
+import '../utils/hot_patch_assets.dart';
 import '../utils/js_asset_resolver.dart';
 import '../utils/remote_asset_loader.dart';
 import '../js_ui/capabilities/js_ui_library.dart';
@@ -111,8 +112,10 @@ class JsRuntimeManager {
     // 同一通道注册两次会覆盖前一个实现，JS 侧调到的实现与预期不符且无从察觉。
     // debug 下直接断言让问题在启动时暴露；release 下断言被裁掉，但仍必须留痕。
     if (globalMessageHandlers.containsKey(channel)) {
-      HotPatchLog.warn('registerHostMethod: 通道 "$channel" 已注册，'
-          '本次注册将覆盖前一个实现（通道名必须唯一）');
+      HotPatchLog.warn(
+        'registerHostMethod: 通道 "$channel" 已注册，'
+        '本次注册将覆盖前一个实现（通道名必须唯一）',
+      );
       assert(
         false,
         'registerHostMethod: 通道 "$channel" 已被注册——'
@@ -122,8 +125,10 @@ class JsRuntimeManager {
     globalMessageHandlers[channel] = (dynamic args) async {
       final map = args is Map ? args : const {};
       if (args is! Map) {
-        HotPatchLog.warn('registerHostMethod("$channel"): 参数载荷不是对象'
-            '（${args.runtimeType}），按空参数调用');
+        HotPatchLog.warn(
+          'registerHostMethod("$channel"): 参数载荷不是对象'
+          '（${args.runtimeType}），按空参数调用',
+        );
       }
       final id = map['id']?.toString();
       final (positional, named) = _hostCallArgs(map['args']);
@@ -211,11 +216,14 @@ class JsRuntimeManager {
       '${jsonEncode(token)});',
     );
     // 兜底超时：运行时销毁 / 句柄中途释放时回程永不到达，条目不能永远悬着。
-    return completer.future.timeout(const Duration(seconds: 30), onTimeout: () {
-      _pendingEvents.remove(token);
-      HotPatchLog.warn('invokeAwait 超时（30s，token=$token），按 null 结算');
-      return null;
-    });
+    return completer.future.timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        _pendingEvents.remove(token);
+        HotPatchLog.warn('invokeAwait 超时（30s，token=$token），按 null 结算');
+        return null;
+      },
+    );
   }
 
   /// `invokeAwait` 的结果回传通道（JS 侧 `__sendEventResult`）。
@@ -230,7 +238,11 @@ class JsRuntimeManager {
   static void _ensureEventResultChannel() {
     if (_eventResultChannelRegistered) return;
     _eventResultChannelRegistered = true;
-    registerHostMethod(eventResultChannel, (String token, String resultJson, String? error) {
+    registerHostMethod(eventResultChannel, (
+      String token,
+      String resultJson,
+      String? error,
+    ) {
       final completer = _pendingEvents.remove(token);
       if (completer == null || completer.isCompleted) {
         // 超时后回程才到 / 重复回程：正常竞态，但必须留痕，否则「回调结果被
@@ -250,8 +262,10 @@ class JsRuntimeManager {
         try {
           value = jsonDecode(resultJson);
         } catch (e) {
-          HotPatchLog.warn('[jsui] invokeAwait 结果不是合法 JSON（token=$token），'
-              '按 null 结算: $e');
+          HotPatchLog.warn(
+            '[jsui] invokeAwait 结果不是合法 JSON（token=$token），'
+            '按 null 结算: $e',
+          );
           value = null;
         }
       }
@@ -336,7 +350,7 @@ class JsRuntimeManager {
     final code = reject
         ? '_app_host_.reject("$id", ${jsonEncode(error)});'
         : '_app_host_.resolve("$id", '
-            '${jsonEncode(value, toEncodable: _encodeHostValue)});';
+              '${jsonEncode(value, toEncodable: _encodeHostValue)});';
     final where = reject ? '_app_host_.reject' : '_app_host_.resolve';
     for (final m in _instances.toList()) {
       m._eval(code, where);
@@ -399,7 +413,11 @@ class JsRuntimeManager {
   /// 「重载 → 又判切换 → 再重载」的循环。
   ///
   /// 必须在 [ensureJsUiRuntime] / [loadModule] 之前调用（见 JsUiWidget 的 boot）。
-  bool syncBundleVersion(String? version, {required bool fresh}) {
+  bool syncBundleVersion(
+    String? version, {
+    required bool fresh,
+    String? localRoot,
+  }) {
     final loaded = _loadedBundleVersion;
     // 运行时还没初始化过 → 内存里没有可复用的东西，直接记录即可。
     // 已经初始化过且版本不同（含「asset 场景 null → remote 包」）→ 必须整体失效。
@@ -408,16 +426,28 @@ class JsRuntimeManager {
       if (loaded == null && version != null) _loadedBundleVersion = version;
       if (version == null && _jsUiInited && !_warnedMissingBundleVersion) {
         _warnedMissingBundleVersion = true;
-        HotPatchLog.warn('补丁包 manifest 缺少身份版本字段，'
-            '后续版本切换将无法判定（请用配套生成器重新产出 manifest）');
+        HotPatchLog.warn(
+          '补丁包 manifest 缺少身份版本字段，'
+          '后续版本切换将无法判定（请用配套生成器重新产出 manifest）',
+        );
       }
+      // 同一版本复用内存：资源根仍以本次加载的包为准（同一版本 = 同一份产物）。
+      HotPatchAssets.activate(localRoot);
       return false;
     }
-    HotPatchLog.log('补丁包版本变化：memory=${loaded ?? '(none)'} '
-        'bundle=${version ?? '(none)'} fresh=$fresh —— '
-        '清除内存并重新加载 JS 运行时');
+    HotPatchLog.log(
+      '补丁包版本变化：memory=${loaded ?? '(none)'} '
+      'bundle=${version ?? '(none)'} fresh=$fresh —— '
+      '清除内存并重新加载 JS 运行时',
+    );
     invalidateModules();
     _loadedBundleVersion = version;
+    // 切换后资源解析跟随新包；回到 asset 场景（localRoot=null）时恢复纯 assets。
+    if (localRoot != null) {
+      HotPatchAssets.activate(localRoot);
+    } else {
+      HotPatchAssets.reset();
+    }
     return true;
   }
 
@@ -464,8 +494,9 @@ class JsRuntimeManager {
     final result = _runtime.evaluate(code);
     if (result.isError) {
       final preview = code.replaceAll('\n', ' ').trim();
-      final brief =
-          preview.length > 80 ? '${preview.substring(0, 80)}…' : preview;
+      final brief = preview.length > 80
+          ? '${preview.substring(0, 80)}…'
+          : preview;
       HotPatchLog.error(
         'JS eval failed [$where]: ${result.stringResult} | code: $brief',
       );
@@ -487,7 +518,10 @@ class JsRuntimeManager {
   ///
   /// 幂等：进程内只初始化一次。`runtime.js` 内部另有 `G.__jsui` 守卫，
   /// 同一 JS 环境重复求值直接返回，不会产生两份运行时状态。
-  Future<void> ensureJsUiRuntime({String? localRoot, String? moduleAsset}) async {
+  Future<void> ensureJsUiRuntime({
+    String? localRoot,
+    String? moduleAsset,
+  }) async {
     if (_jsUiInited) return;
     // 编译模式 / 平台标志只有 Dart 侧知道（构建期无从得知），故在求值
     // runtime.js 之前以顶层全局注入，产物里裸引用 `kDebugMode` / `Platform`
@@ -574,7 +608,8 @@ class JsRuntimeManager {
   /// 编译期标志：`kDebugMode` / `kReleaseMode` / `kInJsRuntime` / `Platform.isXxx`，
   /// 与 Dart 产物里的裸引用同名（`globalThis` 属性即全局变量）。
   /// `kInJsRuntime` 恒为 true：本段只在 JS 环境求值，原生侧的同名常量是 false。
-  String _jsUiEnvSource() => '''
+  String _jsUiEnvSource() =>
+      '''
 (function () {
   var G = typeof globalThis !== 'undefined' ? globalThis : this;
   G.kDebugMode = $kDebugMode;
@@ -712,8 +747,10 @@ class JsRuntimeManager {
       // 远程包里缺模块却静默读内置 asset，会让新旧产物混装、行为无法解释。
       // 允许回退（保证老包可跑），但每个文件至少告警一次。
       if (_assetFallbackWarned.add(jsAsset)) {
-        HotPatchLog.warn('网络补丁缺少模块 "$jsAsset"（$localRoot），'
-            '已回退内置 asset —— 新旧产物可能混装');
+        HotPatchLog.warn(
+          '网络补丁缺少模块 "$jsAsset"（$localRoot），'
+          '已回退内置 asset —— 新旧产物可能混装',
+        );
       }
     }
     return rootBundle.loadString(jsAsset);
@@ -752,7 +789,8 @@ class JsRuntimeManager {
     return [
       for (final m in re.allMatches(source))
         (
-          m.group(1)!
+          m
+              .group(1)!
               .split(',')
               .map((e) => e.trim())
               .where((e) => e.isNotEmpty)
@@ -762,25 +800,22 @@ class JsRuntimeManager {
       for (final m in sideEffectRe.allMatches(source))
         (const <String>[], m.group(1)!),
       for (final m in namespaceRe.allMatches(source))
-        (const <String>[], _namespaceSource(m.group(0)!),),
+        (const <String>[], _namespaceSource(m.group(0)!)),
       for (final m in reExportRe.allMatches(source))
         (const <String>[], m.group(1)!),
     ];
   }
 
   /// 从 `import * as p from 'rel';` 里取出相对路径。
-  static String _namespaceSource(String line) =>
-      RegExp(r"from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]").firstMatch(line)!.group(1)!;
+  static String _namespaceSource(String line) => RegExp(
+    r"from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]",
+  ).firstMatch(line)!.group(1)!;
 
   /// 文本级预处理：export class -> class + 尾部 __modules 注册；
   /// import 语句 -> `const { A, B } = __modules['<解析后绝对路径>'];`。
   /// 模块注册 key 与实例化寻址都用**绝对资产路径**（assets/...），
   /// 与 JsUiWidget 的 jsAsset 一致。
-  static String _preprocessModule(
-    String source,
-    String jsAsset,
-    String base,
-  ) {
+  static String _preprocessModule(String source, String jsAsset, String base) {
     var out = source;
 
     // export class/const/function -> class/const/function（收集导出名，同名模块去重）。
@@ -790,18 +825,26 @@ class JsRuntimeManager {
     // 允许行首缩进：产物里的值类区（flutter.js）沿用片段源码的缩进，
     // `export` 不在第 0 列；只认 `^export` 会把它们漏成非法语法（Unexpected
     // keyword 'export'）。缩进原样保留，替换只吃关键字。
-    final exportReClass =
-        RegExp(r"^([ \t]*)export\s+class\s+(\w+)", multiLine: true);
-    final exportReVar =
-        RegExp(r"^([ \t]*)export\s+(const|function)\s+(\w+)", multiLine: true);
+    final exportReClass = RegExp(
+      r"^([ \t]*)export\s+class\s+(\w+)",
+      multiLine: true,
+    );
+    final exportReVar = RegExp(
+      r"^([ \t]*)export\s+(const|function)\s+(\w+)",
+      multiLine: true,
+    );
     final exportNames = <String>[
       for (final m in exportReClass.allMatches(out)) m.group(2)!,
       for (final m in exportReVar.allMatches(out)) m.group(3)!,
     ];
     out = out.replaceAllMapped(
-        exportReClass, (m) => '${m.group(1)}class ${m.group(2)}');
-    out = out.replaceAllMapped(exportReVar,
-        (m) => '${m.group(1)}${m.group(2)} ${m.group(3)}');
+      exportReClass,
+      (m) => '${m.group(1)}class ${m.group(2)}',
+    );
+    out = out.replaceAllMapped(
+      exportReVar,
+      (m) => '${m.group(1)}${m.group(2)} ${m.group(3)}',
+    );
 
     // barrel 转发：`export { A, B } from 'rel';`（本地依赖包入口产物）。
     // 依赖已由 [loadModule] 先求值；这里解构成局部绑定并计入本模块导出，
@@ -832,8 +875,9 @@ class JsRuntimeManager {
     out = out.replaceAllMapped(importRe, (m) {
       final inner = m.group(0)!;
       final namesMatch = RegExp(r"\{([^}]+)\}").firstMatch(inner)!;
-      final relMatch =
-          RegExp(r"from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]").firstMatch(inner)!;
+      final relMatch = RegExp(
+        r"from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]",
+      ).firstMatch(inner)!;
       final names = namesMatch
           .group(1)!
           .split(',')

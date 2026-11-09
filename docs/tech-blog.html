@@ -801,6 +801,7 @@ td code{font-size:11.5px}
       <div class="nav-label">开始</div>
       <a class="nav-link" href="#home"><span class="idx">00</span>首页 · 框架与架构图</a>
       <a class="nav-link" href="#quickstart"><span class="idx">01</span>快速开始</a>
+      <a class="nav-link" href="dart2js-compare.html"><span class="idx">↗</span>Dart → JS 对照</a>
     </div>
 
     <div class="nav-group">
@@ -901,6 +902,10 @@ td code{font-size:11.5px}
             <a class="btn btn-ghost" href="#capabilities">
               浏览能力目录
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <a class="btn btn-ghost" href="dart2js-compare.html">
+              Dart → JS 对照
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9-4 3 4 3M16 9l4 3-4 3"/></svg>
             </a>
           </div>
           <div class="hero-meta">
@@ -2920,7 +2925,9 @@ bash start_patch_server.sh
   var links = Array.prototype.slice.call(document.querySelectorAll('#toc a.nav-link'));
   var linkMap = {};
   links.forEach(function(a){
-    var id = a.getAttribute('href').slice(1);
+    var href = a.getAttribute('href');
+    if (!href || href.charAt(0) !== '#') return;
+    var id = href.slice(1);
     if (!linkMap[id]) linkMap[id] = [];
     linkMap[id].push(a);
   });

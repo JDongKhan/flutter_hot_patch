@@ -18,6 +18,7 @@
 - **`part` / `part of` 支持**：新增库视图 `libraryRootPathOf` / `libraryUnitsOf`（`part of` 支持 URI 与库名两种写法）。同一库的根 + 全部 part 共享命名空间（含私有名），产物统一合并到**库根**；part 输入**不产出独立模块**（不写空 JS）。类表、顶层常量 / 枚举 / 函数、extension、mixin、跨文件组件与依赖闭包按「同库 = sameFile」扫描；`ui_project_module` 同样按库合并。示例 `example/lib/grammar/part_library.dart` + `part_library_part.dart` 覆盖跨 part 私有常量 / 私有函数 / 模型构造，本地包 `module_symbols.dart` + `module_info_part.dart` 覆盖跨包 part。
 - **Symbol 明确不适用**：`#name` 与 `Symbol('name')` 在 `exprToJs` / `rhsToJs` 显式告警（「无 Symbol / noSuchMethod 承载」）并丢弃，不产出脚本模式下非法的 `#name`、也不会误译成 `new Symbol(...)`；本项目无 mirrors 反射桥，手册第 11 章登记为「不适用」。
 - **接受差异归档**：手册第 18 章新增「接受差异（不修复）」表（List 下标越界 / 泛型 extension 目标 / 跨库同名 extension），并清理全书残留的「不通过 / 未通过 / 未对齐」描述（Stream 以第 16 章与 behavior_probe A–S 为准）；状态标签新增「接受差异」（`st-acc`），目前全书无未决失败项。
+- **`rootBundle` 资源读取**：`rootBundle.loadString(key)` 按运行时注入的小写全局对象（`export const rootBundle`，`runtimeGlobalNamespaces`）识别，成员调用原样产出 `<对象>.<成员>(args)`；产物按名 `import { rootBundle }`。宿主通道 `assetLoadString` 走「补丁包同名资源优先，缺失/读取失败回退 Flutter assets」。手册第 18 章登记为「通过」；`load` / `loadStructuredData` 未实现，不做占位。
 - 示例新增 `example/lib/grammar/top_level_helper.dart`，`function_detail.dart` 覆盖同文件 / 跨文件、具名参数、跨文件模型构造与生成器调用；包出口 [hot_module_base.dart](../../module/hot_module_base/lib/hot_module_base.dart) 用 `export ... show` 转发 `module_symbols.dart`、用 `export ... hide` 转发 `module_internal.dart`，被挡掉的 `moduleBaseHigh` / `moduleHiddenTag` 仍按直接 import 产出但不经 barrel 转发，demo 见 `alias_detail.dart`。
 
 ## 0.13.0

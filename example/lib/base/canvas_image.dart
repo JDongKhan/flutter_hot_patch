@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
+import 'package:hot_patch/hot_patch.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// 宿主图片加载能力：把 url（http(s) 或 assets 路径）解析成 `ui.Image`。
@@ -17,11 +18,15 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 class CanvasImage {
   const CanvasImage._();
 
-  /// 加载图片（http(s) → [NetworkImage]，其余按 [AssetImage] 路径处理）。
+  /// 加载图片（http(s) → [NetworkImage]，其余按 assets 路径处理）。
+  ///
+  /// assets 统一走 [HotPatchAssets.bundle]：补丁包内同名图片优先，缺失回退
+  /// Flutter assets。
   @HostInjected('loadCanvasImage')
   static Future<ui.Image> load(String url) {
-    final ImageProvider provider =
-        url.startsWith('http') ? NetworkImage(url) : AssetImage(url);
+    final ImageProvider provider = url.startsWith('http')
+        ? NetworkImage(url)
+        : AssetImage(url, bundle: HotPatchAssets.bundle);
     final completer = Completer<ui.Image>();
     final stream = provider.resolve(ImageConfiguration.empty);
     late final ImageStreamListener listener;

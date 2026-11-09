@@ -1,5 +1,14 @@
 > 注：本文件是历史版本记录，早期协议名称可能与当前实现不同；当前协议见 `docs/项目架构文档.md`。
 
+## 0.4.1
+
+**加法：补丁包 assets 覆盖；无破坏性协议变更。**
+
+- **`HotPatchAssets` / `HotPatchAssetBundle`**：解析资源时优先读补丁包 `localRoot` 下同名文件，缺失或读取失败告警并回退 `rootBundle`；路径含 `..` / 绝对路径直接忽略并告警。补丁包切换时换新 bundle 实例，避免 `AssetImage` 缓存复用旧包图片。
+- **图片接入**：`_imageProvider`（`ImageIcon` / `CircleAvatar` / `FadeInImage`）、`Image.asset`、`decorationImageFromJson` 统一传入当前补丁包的 bundle。
+- **`rootBundle.loadString`**：新增宿主通道 `assetLoadString`，JS 侧同名顶层对象经该通道按同一规则读取文本资源（配套生成器 0.14.0）。
+- 示例新增 `AssetOverrideDetail`（图片 + JSON），补丁包 `patch/assets/` 下放同名文件即覆盖。
+
 ## 0.4.0
 
 **破坏性：配套生成器 0.8.0；provider 不再有宿主侧映射，`context.watch/read` 不再注册宿主 op。旧产物（含宿主 `ChangeNotifierProvider` / `Consumer` 结点）需重出补丁包。**

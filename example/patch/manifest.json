@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-09T15:27:55.194111",
+  "buildTime": "2026-11-09T15:48:31.254576",
   "resources": {
-    "flutter.js": "fb4d68f40e51646c2dbc1a3196272cab37322ade40fdbf642cc3bf92d3ca594d",
+    "flutter.js": "38bb1345972e31960c27da07956098df11054b1bac63d3a98d4727e83e1556df",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
     "runtime.js": "ebf00682c8e2ad9e6fc13345e4a504511464028800f2c65aaddc269e221619af",
     "packages/hot_module_base/hot_module_base.js": "397204db0ffae6f49766488bf2236abb9c8040573c05ef7a2fa9372a8b27220c",
@@ -106,6 +106,7 @@
     "components/drag_detail.js": "733192005ebfc27a9805cc814844d708dd90afaee73d54dd41a3f89d30d2bb4f",
     "components/color_filtered_detail.js": "56de9b2de2a6120302de267425f20a52c71bfbedcdfde8c9c347add194b696f9",
     "components/overlay_detail.js": "7406c94033435aad6d9449b379bcb457346d5f780b39ac1f7c0f34cdb642c319",
+    "components/asset_override_detail.js": "f4728412644df72f255bec7c962a8368e017d3fdd9f7df8d0052498a485b4fd4",
     "components/reorder_list_detail.js": "ff864f83a3a8ae707c86a018ff6b463eab8097cf2e78d8f8a92cbc76a85a1316",
     "components/sliver_detail.js": "3bb687e6442dd3128ab31f1e73f5bf6e12b4747e9b914252cde962f1088d9e4f",
     "components/stateless_card.js": "17c979ef79b001aaf6e1920313e7599e577c362e078aefd7de3ea6a91923797e",

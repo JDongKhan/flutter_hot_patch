@@ -6,6 +6,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../../../../utils/hot_patch_assets.dart';
 import 'dart_values_from_json.dart';
 import 'layout_from_json.dart';
 import 'widget_enum_from_json.dart';
@@ -28,7 +29,11 @@ ImageFilter? imageFilterFromJson(Object? v) {
       final sx = num_(v['sigmaX']);
       final sy = num_(v['sigmaY']);
       if (sx == null || sy == null) return null;
-      return ImageFilter.blur(sigmaX: sx, sigmaY: sy, tileMode: _tileModeFromJson(v['tileMode']));
+      return ImageFilter.blur(
+        sigmaX: sx,
+        sigmaY: sy,
+        tileMode: _tileModeFromJson(v['tileMode']),
+      );
     case 'dilate':
       final rx = num_(v['radiusX']);
       final ry = num_(v['radiusY']);
@@ -201,22 +206,22 @@ Gradient? gradientFromJson(Map<String, dynamic>? json) {
 
   return switch (json['kind']) {
     'radial' => RadialGradient(
-        colors: colors,
-        stops: stops,
-        center: alignmentFromJson(json['center']) ?? Alignment.center,
-        radius: radius() ?? 0.5,
-      ),
+      colors: colors,
+      stops: stops,
+      center: alignmentFromJson(json['center']) ?? Alignment.center,
+      radius: radius() ?? 0.5,
+    ),
     'sweep' => SweepGradient(
-        colors: colors,
-        stops: stops,
-        center: alignmentFromJson(json['center']) ?? Alignment.center,
-      ),
+      colors: colors,
+      stops: stops,
+      center: alignmentFromJson(json['center']) ?? Alignment.center,
+    ),
     _ => LinearGradient(
-        colors: colors,
-        stops: stops,
-        begin: alignmentFromJson(json['begin']) ?? Alignment.centerLeft,
-        end: alignmentFromJson(json['end']) ?? Alignment.centerRight,
-      ),
+      colors: colors,
+      stops: stops,
+      begin: alignmentFromJson(json['begin']) ?? Alignment.centerLeft,
+      end: alignmentFromJson(json['end']) ?? Alignment.centerRight,
+    ),
   };
 }
 
@@ -229,7 +234,7 @@ DecorationImage? decorationImageFromJson(Map<String, dynamic>? json) {
   return DecorationImage(
     image: source.startsWith('http')
         ? NetworkImage(source)
-        : AssetImage(source) as ImageProvider,
+        : AssetImage(source, bundle: HotPatchAssets.bundle) as ImageProvider,
     fit: boxFitFromJson(json['fit']),
   );
 }
@@ -248,11 +253,17 @@ OutlinedBorder? shapeFromJson(Object? v) {
     'stadium' => StadiumBorder(side: side),
     'circle' => CircleBorder(side: side),
     'beveled' => BeveledRectangleBorder(
-        borderRadius: radius ?? BorderRadius.zero, side: side),
+      borderRadius: radius ?? BorderRadius.zero,
+      side: side,
+    ),
     'continuous' => ContinuousRectangleBorder(
-        borderRadius: radius ?? BorderRadius.zero, side: side),
+      borderRadius: radius ?? BorderRadius.zero,
+      side: side,
+    ),
     _ => RoundedRectangleBorder(
-        borderRadius: radius ?? BorderRadius.zero, side: side),
+      borderRadius: radius ?? BorderRadius.zero,
+      side: side,
+    ),
   };
 }
 
