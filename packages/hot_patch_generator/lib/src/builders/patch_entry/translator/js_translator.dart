@@ -1993,23 +1993,44 @@ const Set<String> _jsBuiltinReceiverTypes = {
   'double',
 };
 
-/// 构建期成员改名表：**接收者内建类型 → { Dart 成员名: JS 产物成员名 }**。
-/// 只对可判定为该内建类型的接收者生效；自定义类 / 类型不可判定一律原样。
-/// 运行时在这些内建原型上挂 `_` 前缀实现（原生同名但语义不同，不覆盖原生）。
-/// 新增映射只改这张表，不在 `_memberCallName` 里加分支。
-const Map<String, Map<String, String>> _memberRenameByType = {
-  'List': {
-    'sort': '_sort',
-    'join': '_join',
-    'indexOf': '_indexOf',
-    'map': '_map',
+/// 构建期成员特殊处理配置：新增映射只改这里，不在翻译函数里加分支。
+/// - [call]：方法调用点的改名，键为接收者内建类型；`List` / `Iterable` 的
+///   同名方法语义与 JS 原生不同，运行时挂 `_` 前缀实现。
+/// - [property]：属性访问点的改名，键同上；`Map` 的 `keys` / `values` /
+///   `entries` 在 JS 是方法、Dart 是属性，改用 `_` 前缀 getter。
+/// 只对可判定为该内建类型的接收者生效；其它类型 / 不可判定一律原样。
+class _MemberRenameConfig {
+  const _MemberRenameConfig({required this.call, required this.property});
+
+  final Map<String, Map<String, String>> call;
+  final Map<String, Map<String, String>> property;
+
+  String? callName(String? type, String member) => call[type]?[member];
+  String? propertyName(String? type, String member) => property[type]?[member];
+}
+
+const _memberRenames = _MemberRenameConfig(
+  call: {
+    'List': {
+      'sort': '_sort',
+      'join': '_join',
+      'indexOf': '_indexOf',
+      'map': '_map',
+    },
+    // `map` 在 Iterable 接收者上同样要改名（运行时可能是 Array，原生 map 无法
+    // 覆盖成惰性）；`where` / `expand` / `take` / `skip` 的惰性由原型同名实现承接。
+    'Iterable': {
+      'map': '_map',
+    },
   },
-  // `map` 在 Iterable 接收者上同样要改名（运行时可能是 Array，原生 map 无法
-  // 覆盖成惰性）；`where` / `expand` / `take` / `skip` 的惰性由原型同名实现承接。
-  'Iterable': {
-    'map': '_map',
+  property: {
+    'Map': {
+      'keys': '_keys',
+      'values': '_values',
+      'entries': '_entries',
+    },
   },
-};
+);
 
 String _memberCallName(
   Expression? receiver,
@@ -2019,7 +2040,7 @@ String _memberCallName(
 ) {
   if (receiver == null) return member;
   final type = _staticTypeOf(receiver, scope, classes);
-  final renamed = _memberRenameByType[type]?[member];
+  final renamed = _memberRenames.callName(type, member);
   if (renamed != null) return renamed;
   // 可调用对象：显式 `obj.call(...)` 与声明侧同步改名为 `invoke`（手册
   // `call(...)` 行）；仅接收者静态类型可判定为「可调用类」时改写。该判断依赖
@@ -2064,18 +2085,12 @@ String _mapPropertyMember(
   String member,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-) {
-  if (_staticTypeOf(receiver, scope, classes) != 'Map') return member;
-  switch (member) {
-    case 'keys':
-      return '_keys';
-    case 'values':
-      return '_values';
-    case 'entries':
-      return '_entries';
-  }
-  return member;
-}
+) =>
+    _memberRenames.propertyName(
+      _staticTypeOf(receiver, scope, classes),
+      member,
+    ) ??
+    member;
 
 /// `<字段>.<属性>`（PrefixedIdentifier）→ JS 引用串（`this._count.value`）。
 ///
