@@ -121,7 +121,7 @@ export class _DemoScope extends InheritedWidget {
     return scope;
   }
   static read(context) {
-    return context.getInheritedWidgetOfExactType({ typeArguments: {"0": "_DemoScope"} });;
+    return context.getInheritedWidgetOfExactType({ typeArguments: {"0": "_DemoScope"} });
   }
   updateShouldNotify(oldWidget) {
     return ((this.count !== oldWidget.count) || (this.mode !== oldWidget.mode));

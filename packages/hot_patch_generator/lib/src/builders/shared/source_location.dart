@@ -46,6 +46,7 @@ AstNode? nodeSourceOf(Object? node) => node == null ? null : _nodeSources[node];
 ///
 /// [node] 为触发的 AST 结点（表达式 / 语句 / 声明均可）。
 String sourceAt(String path, AstNode? node) {
+  if (path.isEmpty) return '<unknown source>';
   final info = _sources[path];
   if (node == null || info == null) return path;
   // 定位到**声明本体**而不是文档注释 / 注解：带 `///` 的声明里，
@@ -56,5 +57,7 @@ String sourceAt(String path, AstNode? node) {
   final line = info.lineInfo.getLocation(offset).lineNumber;
   if (line <= 0 || line > info.lines.length) return '$path:$line';
   final code = info.lines[line - 1].trim();
-  return code.isEmpty ? '$path:$line' : '$path:$line  |  $code';
+  // 单行超长代码会撑爆终端并和并发告警交错，截断到 120 字符。
+  final snippet = code.length > 120 ? '${code.substring(0, 120)}…' : code;
+  return snippet.isEmpty ? '$path:$line' : '$path:$line  |  $snippet';
 }

@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-09T11:14:48.126730",
+  "buildTime": "2026-11-09T11:27:35.584998",
   "resources": {
     "flutter.js": "07fdf7109f0bed52b05dd6c2da81837686a17f7c774810e89ea23ffaa79fecc3",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
@@ -31,8 +31,8 @@
     "grammar/basic_api_detail.js": "3647025cf5ce8e4bc5e031e0c17add25ea359843e010208407259ddd3bfabbc2",
     "grammar/stream_detail.js": "6ef243f1a8ad36bce48c2a79e53496ed554a6687675d3c9a35292a2fb7556707",
     "grammar/expression_detail.js": "e557b981a4d843bfec754ea10de0f3f680ac9375b022cc83331de5274bffa757",
-    "grammar/mixin_detail.js": "e19595b3609f5cc8dafbd5ca5ceba86c48e52ad4824ac4867bf0ed2ed91a8c36",
-    "grammar/extension_detail.js": "af63f512bc6557b155945aa21dd177eab668a18c21768fdaa5446ef869d19d2f",
+    "grammar/mixin_detail.js": "2253be9ef2b2a50eda8efbfaf8b032f43791180b3893fddc6ab428cddf7c7386",
+    "grammar/extension_detail.js": "059d67902e55e13ed056c9e664d2662d19a00262fd8896a4a49c7a738721b44f",
     "grammar/generic_detail.js": "6f79c5942af0a0949fc54911ff4bf1ea2aacfae8345288109930bbb132019226",
     "grammar/array_detail.js": "c4823acd0700646f650aa83f234f088407d412dcf7f0bdb685aaa177482584b8",
     "grammar/async_detail.js": "30144327c1087ab8fcfe87b28e0f1bb2d89e59a10cabd2dff6abe0563760bb23",
@@ -115,7 +115,7 @@
     "components/scroll_detail.js": "f85485f3ef4317dbc69a89eef6c1304f3f6438e126657446ae742e1980321a2f",
     "components/hello_component.js": "a3ffc0eed0d9d344745d48e965cc8bf4349a45160757935bee825c3e74290123",
     "components/nested_scroll_view_detail.js": "7e549e229c6bdacc972f8dfa6e267636ba84f17ecf6e64ee8fbf506b6ec0d624",
-    "components/inherited_widget_demo.js": "f0423dc8df6744bba31552d866a9dc36b696043ae5171aff6763106ef350d84b",
+    "components/inherited_widget_demo.js": "1692e7d3c00e7867218cfeb7ab35b508abbf81f5cab8b40849b08da138a93e48",
     "components/page_view_detail.js": "493bf2f6ec45653fffd3464e5ea9702939038df8b297b03749504fdd6412ef18",
     "components/text_detail.js": "47b5f8eade14f7278a1c61a7d0da5b744a5ab79dcaa0251bd7f7972dd4b9d513",
     "components/hero_detail.js": "80441e25aeadf955a881ba0bcbea7cb9f2590eee819ef4ffa6f5156da7b7828a",

@@ -169,7 +169,7 @@ export class CounterM {
     this.hits = 0;
   }
   bump() {
-    return this.hits += 1;;
+    return this.hits += 1;
   }
   counterText() {
     return "hits=" + this.hits;

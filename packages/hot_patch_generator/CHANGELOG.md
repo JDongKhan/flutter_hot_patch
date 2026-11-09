@@ -7,6 +7,9 @@
 - **依赖以 JS 产物为准**：顶层函数 / 常量只从会产出的类 / 常量 / 函数引用闭包标记；`main.dart` / `app_log_console.dart` 等应用壳不再因 Dart 可达而产出空壳（规则写入手册第 01 章）。
 - **可读性**：枚举产物内部辅助名 `__mk` → `__makeEnumValue`、`__values` → `__enumValues`；新增内部辅助名必须语义完整（既有协议名 `__t` / `__o` / `__ta` 等保持不动），规则写入手册「实现总则」。
 - **告警补齐原因**：语句 / 局部变量 / 插值片段 / 顶层函数无法翻译时，告警末尾追加可读原因（如「赋值目标 `X` 的接收者不可解析」「标识符 `x` 不在可见作用域」「调用 `f(...)` 的接收者不可解析」），不再只给节点源码。
+- **告警格式**：无定位时前缀落成 `<unknown source>`（不再出现 `[hot_patch_generator] :` 空文件前缀）；单行源码超过 120 字符截断，避免与并发 builder 日志交错。
+- **extension 静态成员外部访问**：`CounterLevel.v = 7` / `CounterLevel.v += 1` / `CounterLevel.bump()` 按扩展命名空间对象原样发射（`_extensionStaticTargetJs`），此前被当作「接收者不可解析」丢弃。静态字段赋值、复合赋值、空合并赋值与静态方法调用同一套判据。
+- **箭头体去重分号**：有返回值语义的箭头体（如 `static set v(int next) => _v = next;`）在包 `return` 前去掉语句形态的结尾分号，产物不再出现 `return CounterLevel._v = next;;`（`translateMethodBody` + `_statementValueJs`）。
 - 示例新增 `example/lib/grammar/top_level_helper.dart`，`function_detail.dart` 覆盖同文件 / 跨文件、具名参数、跨文件模型构造与生成器调用。
 
 ## 0.13.0

@@ -903,6 +903,17 @@ function connect(__o) {
 }</code><button class="copy" type="button">复制</button></pre>
 
 
+<h3>函数体</h3>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td>箭头体 <code>int f() =&gt; e</code></td><td><code>f() { return e; }</code></td><td>语句级翻译（赋值 / 自增 / 调用）产出带结尾 <code>;</code> 的语句形态，不能直接放进 <code>return</code></td><td><span class="lv lv-care">注意</span> 有返回值语义时才包 <code>return</code>；包之前去掉语句结尾的分号</td><td><code>translateMethodBody</code> 的 <code>returnExpressionBody</code> 分支 + <code>_statementValueJs</code>（如静态 setter <code>static set v(int next) =&gt; _v = next;</code> → <code>set v(next) { return CounterLevel._v = next; }</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+  </tbody>
+</table>
+</div>
+
 <h3>函数值与 tear-off</h3>
 <div class="scroll">
 <table>
@@ -1066,7 +1077,7 @@ class Registry {
     <tr><td><code>x.m()</code>（隐式调用）</td><td><code>x.m()</code></td><td><span class="muted">—</span></td><td>调用点原样，成员装在原型上</td><td>成员由 <code>registerExtension</code> 装到目标原型，调用点无需改写；实例成员优先由 <code>name in proto</code> 承接。<b>已知限制</b>：两个库在同目标声明同名成员时，全局原型无法表达 import 可见性，运行期 <code>@conflict</code> 双方不安装并告警；显式 <code>E(x).m()</code> 不受影响</td><td><span class="st st-pass">通过</span></td><td>保持调用点同名</td></tr>
     <tr><td><code>E(x).m()</code> 显式调用</td><td><code>E.m.call(x, …)</code>（getter：<code>E.g.get.call(x)</code>）</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 按扩展名绑定，绕过实例成员与其它扩展</td><td><code>_explicitExtensionCallJs</code> / <code>_explicitExtensionGetterJs</code> / <code>_explicitExtensionSetterJs</code>：识别 <code>ExtensionOverride</code> 与裸名 <code>MethodInvocation</code> 两种形态，按 <code>extensionScopesInScope</code> 的成员种类集合选择 <code>.call(接收者)</code> / <code>.get.call(接收者)</code> / <code>.set.call(接收者, 值)</code>（命名空间由 <code>registerExtension</code> 返回，保存与原型同一份实现）；拦截点在 <code>rhsToJs</code> / <code>exprToJs</code> 的构造翻译之前（否则 <code>E(x)</code> 会被当成 <code>new E(...)</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td>getter / setter / operator</td><td>原型同名 getter / setter / <code>__op$xxx</code></td><td><span class="muted">—</span></td><td>运算符声明侧改名、调用点按接收者静态类型改写</td><td>getter / setter 已支持（同名 get/set 合并为一个 <code>{ get, set }</code> 描述符）；显式访问按身份分派（<code>E.g.get.call(x)</code> / <code>E.g.set.call(x, v)</code>，复合赋值、<code>??=</code>、<code>++</code>/<code>--</code> 统一「读 getter → 运算/判空 → 写 setter」）；运算符用与类运算符同一张映射表（<code>operatorJsName</code>），<code>extensionOperatorsInScope</code> 建立可见运算符表，调用点 <code>_operatorOwnerOf</code> 之后再查表</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>E.staticField</code></td><td>模块级变量 <code>E_staticField</code></td><td><span class="muted">—</span></td><td>或挂在命名空间对象上</td><td>staticsEntries 发射到 extension 命名空间对象</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>E.staticField</code> / <code>E.staticMethod()</code></td><td>命名空间对象成员 <code>E.staticField</code> / <code>E.staticMethod()</code></td><td><span class="muted">—</span></td><td>原样访问；命名空间对象由 <code>registerExtension</code> 返回</td><td>staticsEntries 发射到 extension 命名空间对象；外部读 / 写 / 复合赋值 / 调用（<code>E.v</code>、<code>E.v = 7</code>、<code>E.v += 1</code>、<code>E.v ??= 1</code>、<code>E.m()</code>）由 <code>_extensionStaticTargetJs</code> 识别为命名空间成员后原样发射（<code>exprStmtToJs</code> + <code>_assignValueJs</code>）；未识别时不再落到「接收者不可解析」</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td>extension 静态成员体（<code>static get/set</code>、引用静态字段）</td><td><code>statics: { get x() {…}, set x(v) {…} }</code></td><td><span class="muted">—</span></td><td>静态成员与实例成员共用同一发射规则，静态字段在成员体内可读</td><td><code>translateExtension</code> 先把静态字段 / 方法收进 <code>hostInfo</code>，成员体里的裸引用落成 <code>E.field</code> / <code>E.method</code>；静态成员按名字聚合槽位，<code>static set</code> 走 <code>jsLiteralAccessor(isGetter:false)</code>，与同名 getter 在同一对象字面量里并存。<code>registerExtension</code> 按**属性描述符**搬运 statics（不按值读，避免 getter 在命名空间初始化前求值）。<code>example/lib/grammar/extension_detail.dart</code> 的 <code>CounterLevel.v</code> / <code>bump()</code> 已验证 <code>7→8</code> 与 Dart 一致</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td>泛型 <code>extension E&lt;T&gt; on List&lt;T&gt;</code></td><td>类型参数擦除</td><td><span class="muted">—</span></td><td>运行时无 T 信息</td><td><b>部分实现</b>：类型参数擦除，<code>translateExtension</code> 取 <code>extendedType.name2.lexeme</code> 后挂到擦除类型（<code>List&lt;int&gt;</code> → <code>Array</code> 原型），成员对所有该类型实例可见，Dart 的“仅此实例化可调”约束丢失，无法还原。类型参数在<b>类型位置</b>（返回类型 / 形参类型）不受影响，<code>example/lib/grammar/generic_detail.dart</code> 的 <code>ListTail&lt;T&gt; on List&lt;T&gt;</code> / <code>TypeCodecLabel&lt;T&gt; on TypeCodec&lt;T&gt;</code> 已验证可注册可调用；成员体里把 <code>T</code> 按值使用（<code>T.toString()</code> / <code>T == int</code>）时接收者没有 <code>typeArguments</code> 元信息，<code>_TypeParamValueUse</code> 构建期出声。另：成员体内访问目标类型成员须写 <code>this.</code>（裸名与顶层函数无法静态区分）</td><td><span class="st st-fail">不通过</span></td><td>接受擦除限制（不处理）</td></tr>
     <tr><td><code>extension E on T?</code>（可空目标）</td><td>无原型可挂</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> null 接收者由静态分派承接</td><td><code>translateExtension</code> 检测 <code>extendedType.question != null</code>（如 <code>String?</code>）→ 构建期出声跳过，不产出必然失效的注册（当前原型方案无法在 null 上分派）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译（出声拒绝，不错误产出）</td></tr>
@@ -1114,7 +1125,7 @@ const b = '  '.isBlank;</code><button class="copy" type="button">复制</button>
 
 <div class="note">
   <span class="t">实测（2026-11-06，macOS example）</span>
-  跨包 <code>StringLogExtension.logText</code> 与 <code>VectorOps</code> 的 <code>+</code> / 一元 <code>-</code> / <code>%</code> 已跑通：产物落在 <code>patch/packages/&lt;包名&gt;/&lt;原路径&gt;.js</code>，调用方按文件 import，注册随声明文件求值。当前不通过项：① 泛型实例化目标（擦除的固有约束）；② 隐式调用在接收者静态类型不可判定时仍走原型，跨库同名扩展会 <code>TypeError</code>（字面量 / 方法返回值 / 无类型形参等）；③ extension 静态成员（<code>static set</code> 被发射成方法、静态字段引用被静默丢弃）。
+  跨包 <code>StringLogExtension.logText</code> 与 <code>VectorOps</code> 的 <code>+</code> / 一元 <code>-</code> / <code>%</code> 已跑通：产物落在 <code>patch/packages/&lt;包名&gt;/&lt;原路径&gt;.js</code>，调用方按文件 import，注册随声明文件求值。静态成员（get / set / 方法）在命名空间 <code>statics</code> 上按同名属性发射，外部 <code>E.v = ...</code> / <code>E.m()</code> 已支持。当前不通过项：① 泛型实例化目标（擦除的固有约束）；② 隐式调用在接收者静态类型不可判定时仍走原型，跨库同名扩展会 <code>TypeError</code>（字面量 / 方法返回值 / 无类型形参等）。
 </div>
 
 <h3>分派模型：静态分派优先，原型兜底</h3>

@@ -1572,6 +1572,7 @@ String _expressionFailureReason(
           scope.localVars.contains(recv) ||
           scope.params.contains(recv) ||
           classes.containsKey(recv) ||
+          scope.extensionNames.containsKey(recv) ||
           runtimeGlobalTypes().contains(recv) ||
           scope.className == recv;
       if (!known) {
@@ -1608,6 +1609,7 @@ String _expressionFailureReason(
           scope.localVars.contains(n) ||
           scope.params.contains(n) ||
           classes.containsKey(n) ||
+          scope.extensionNames.containsKey(n) ||
           runtimeGlobalTypes().contains(n) ||
           scope.className == n;
       if (!known) {
@@ -1638,7 +1640,8 @@ String _expressionFailureReason(
         scope.globalConsts.contains(n) ||
         scope.methods.contains(n) ||
         scope.staticFields.contains(n) ||
-        scope.staticMethods.contains(n);
+        scope.staticMethods.contains(n) ||
+        scope.extensionNames.containsKey(n);
     if (!known) {
       return '标识符 `$n` 不在可见作用域（可能来自被丢弃的声明 / 不可见 import）';
     }
@@ -2115,6 +2118,10 @@ String? _methodCallJs(
     if (classes.containsKey(target.name)) {
       return '${target.name}.$callMember($passed)';
     }
+    // extension 名称空间上的静态方法：`CounterLevel.bump()` → 同名命名空间对象。
+    if (scope.extensionNames.containsKey(target.name)) {
+      return '${target.name}.$callMember($passed)';
+    }
     // 类方法静态调用（`MediaQuery.of(context)` / `Theme.of(context)`）：
     // receiver 是**类定义在运行时注入里**的类（`G.MediaQuery = …`，见
     // [runtimeGlobalTypes]），原样产出 `X.m(args)`。判断只看「类定义在哪」，
@@ -2372,6 +2379,14 @@ String? _assignValueJs(
     return rewritten == null ? null : '($rewritten)';
   }
 
+  // extension 名称空间上的静态字段：`CounterLevel.v = 7` / `+=` / `??=`。
+  // 扩展静态成员产物是 `CounterLevel` 命名空间对象，成员名原样。
+  final extStatic = _extensionStaticTargetJs(lhs, scope);
+  if (extStatic != null) {
+    final rewritten = _compoundAssignJs(extStatic, op, rhs);
+    return rewritten == null ? null : '($rewritten)';
+  }
+
   // `super.x = v`：`super` 只能出现在成员访问位置、**不能作为值传递**（放进
   // IIFE 参数会变 SyntaxError），故直接发射成员赋值；JS class 语法天然支持。
   if (lhs is PropertyAccess && lhs.target is SuperExpression) {
@@ -2477,6 +2492,21 @@ String? _assignValueJs(
 /// 支持：`_x++ / _x-- / ++_x / --_x`（字段→this）、赋值 `_x = rhs / _x op= rhs`、
 /// 字段属性赋值/自增 `_x.y = rhs` / `_x.y++`（[`_prefixedFieldRef`]）、
 /// 方法调用（对象方法 / 白名单裸调）。不可翻译返回 null（由调用方丢弃）。
+/// extension 名称空间上的静态成员目标（`CounterLevel.v` / `CounterLevel.v = 7`）。
+String? _extensionStaticTargetJs(Expression lhs, FieldScope scope) {
+  if (lhs is PrefixedIdentifier &&
+      scope.extensionNames.containsKey(lhs.prefix.name)) {
+    return '${lhs.prefix.name}.${lhs.identifier.name}';
+  }
+  if (lhs is PropertyAccess && lhs.target is SimpleIdentifier) {
+    final n = (lhs.target as SimpleIdentifier).name;
+    if (scope.extensionNames.containsKey(n)) {
+      return '$n.${lhs.propertyName.name}';
+    }
+  }
+  return null;
+}
+
 String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
   // `throw <expr>;`：Dart 的 throw 在 AST 里是 ThrowExpression（包在
   // ExpressionStatement 里），JS 的 throw 是语句，这里直接产出 `throw ...;`。
@@ -2641,6 +2671,13 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     final len = _listLengthWriteJs(
         e.leftHandSide as PrefixedIdentifier, e.operator.lexeme, rhs, scope, classes);
     if (len != null) return '$len;';
+    // extension 名称空间静态字段：`CounterLevel.v = 7` → `CounterLevel.v = 7;`。
+    final extStatic = _extensionStaticTargetJs(e.leftHandSide, scope);
+    if (extStatic != null) {
+      final rewritten =
+          _compoundAssignJs(extStatic, e.operator.lexeme, rhs);
+      return rewritten == null ? null : '$rewritten;';
+    }
   }
   // 字段的属性赋值 / 自增（`_count.value = 5`、`_count.value++`）：
   // SDK 值对象（ValueNotifier / Listenable 代理类）的典型用法，LHS 是
@@ -3015,6 +3052,14 @@ String? _nullAwareUpdateJs(
 // 类 JS 声明渲染
 // ---------------------------------------------------------------------------
 
+/// [exprStmtToJs] 产出的是**语句**（结尾带 `;`）；箭头体的值位置需要的是
+/// **表达式**。包进 `return` 前去掉结尾分号，否则赋值型箭头体会产出
+/// `return this._x = 1;;`（如 `set v(int next) => _v = next;` 的静态 setter）。
+String _statementValueJs(String stmt) {
+  final t = stmt.trimRight();
+  return t.endsWith(';') ? t.substring(0, t.length - 1) : t;
+}
+
 /// **唯一**的「方法体 → JS」翻译器：组件动作/State 生命周期、模型方法、状态类
 /// 方法全部走这里。
 ///
@@ -3047,7 +3092,7 @@ String translateMethodBody(
     }
     t ??= _bodyExprStmtJs(e, scope, classes);
     if (t != null) {
-      out.add('$ind${returnExpressionBody ? 'return $t;' : t}');
+      out.add('$ind${returnExpressionBody ? 'return ${_statementValueJs(t)};' : t}');
     } else {
       // 语句级不认的表达式（switch 表达式、集合字面量、纯值表达式）：回退到
       // 通用表达式翻译。缺这一步会让「箭头体方法」静默产出空方法体
