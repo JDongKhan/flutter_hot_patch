@@ -943,8 +943,9 @@ td code{font-size:11.5px}
       <div style="margin-top:56px" id="home-intro">
         <div class="section-head">
           <div class="section-kicker"><span class="line"></span>00 / What &amp; Why</div>
-          <h2>它解决的不是“动态 UI”，而是线上修复</h2>
-          <p>面向「线上出 bug → 运行时切到 JS 补丁修复，无需发版」的场景。组件不需要做任何改造，注解只是构建期元数据；只有在需要热修复时，运行时才加载它的 JS 版本。</p>
+          <h2>首先解决线上修复，也具备动态 UI 能力</h2>
+          <p>当前主路径是「线上出 bug → 运行时切到 JS 补丁修复，无需发版」：组件不需要做任何改造，注解只是构建期元数据，只有在需要热修复时，运行时才加载它的 JS 版本。</p>
+          <p>但生成器做的是源码级 Dart → JS 翻译，运行时能独立执行 <code>setState</code>、provider 与重建，因此同一套基座并不局限于修 bug——它也具备 React Native 式动态 UI 的形态。后续计划沿「JS 驱动的界面动态化」继续演进，现阶段优先把热修复链路做稳。</p>
         </div>
         <div class="grid grid-3">
           <div class="card feature-card">
