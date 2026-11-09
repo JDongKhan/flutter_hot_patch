@@ -41,6 +41,9 @@ typedef TranslationScope = ({
   /// 符号级「需要写进产物的顶层常量」：文件 → 常量名集合。
   /// 只有被会产出的产物引用到的常量才写入，纯数据文件据此决定是否产出。
   Map<String, Set<String>> neededConsts,
+  /// 符号级「需要发射的顶层函数」：文件 → 函数名集合。
+  /// 只发射被会产出的类 / 常量 / 其它函数引用到的函数，纯应用文件不产出空壳。
+  Map<String, Set<String>> neededFunctions,
 });
 
 /// 计算当前包内全部源文件（+ 跨包依赖）的翻译范围。
@@ -96,6 +99,8 @@ Future<TranslationScope> componentTranslationScope(BuildStep buildStep) async {
     reachableFiles: reachable,
     neededClasses: needed,
     neededConsts: neededConsts,
+    neededFunctions:
+        _neededFunctions(units, reachable, needed, neededConsts),
   );
 }
 
@@ -438,6 +443,79 @@ Map<String, Set<String>> _neededConsts(
     }
   }
 
+  return needed;
+}
+
+/// 顶层函数引用闭包：从会产出的类 / 常量出发，只标记真正被引用到的函数。
+///
+/// 与 [neededConsts] 同一口径：函数体继续向其它函数传播；`main` 入口不参与。
+Map<String, Set<String>> _neededFunctions(
+  Map<String, CompilationUnit> units,
+  Set<String> reachableFiles,
+  Map<String, Set<String>> neededClasses,
+  Map<String, Set<String>> neededConsts,
+) {
+  // 可见性：file → 函数名 → (声明文件, 声明)。本文件含私有，import 只收公共。
+  final visible = <String, Map<String, (String, FunctionDeclaration)>>{};
+  for (final e in units.entries) {
+    final file = e.key;
+    final owners = <String, (String, FunctionDeclaration)>{};
+    for (final d in e.value.declarations.whereType<FunctionDeclaration>()) {
+      final n = d.name.lexeme;
+      if (n == 'main') continue;
+      owners[n] = (file, d);
+    }
+    for (final imported in resolveImportFiles(e.value, file)) {
+      final unit = units[imported];
+      if (unit == null) continue;
+      for (final d in unit.declarations.whereType<FunctionDeclaration>()) {
+        final n = d.name.lexeme;
+        if (n.startsWith('_') || n == 'main') continue;
+        owners.putIfAbsent(n, () => (imported, d));
+      }
+    }
+    visible[file] = owners;
+  }
+
+  final needed = <String, Set<String>>{};
+  final visited = <String>{};
+  void mark(String file, String name) {
+    final hit = visible[file]?[name];
+    if (hit == null) return;
+    final (owner, decl) = hit;
+    if (!visited.add('$owner#$name')) return;
+    (needed[owner] ??= <String>{}).add(name);
+    log.info('[neededFunctions] $owner#$name (from $file)');
+    // 只扫函数体，不扫声明名，避免“自己引用自己”把所有函数都标记进来。
+    final refs = _ConstRefCollector();
+    decl.functionExpression.body.accept(refs);
+    for (final dep in refs.names) {
+      mark(owner, dep);
+    }
+  }
+
+  void markAll(String file, AstNode node) {
+    final refs = _ConstRefCollector();
+    node.accept(refs);
+    for (final name in refs.names) {
+      mark(file, name);
+    }
+  }
+
+  // 种子 1：会产出的根类（@PatchEntry）——只从**真的会进入产物**的类出发；
+  // 普通可达类（如应用壳 main.dart 的 HotDemoApp）不在这里播种，避免其
+  // Dart 引用把从未进入 JS 的顶层函数拖进补丁。
+  for (final e in units.entries) {
+    for (final d in e.value.declarations.whereType<ClassDeclaration>()) {
+      if (findAnnotation(d.metadata, 'PatchEntry') == null) continue;
+      for (final cls in classAndStateDecls(d, e.value)) {
+        markAll(e.key, cls);
+      }
+    }
+  }
+  // 种子 2：顶层常量初始化器不参与函数引用：
+  //   Dart const 初始化器不能调用普通顶层函数；把 neededConsts 当种子会把
+  //   应用壳（main.dart / app_log_console.dart）里从未进入 JS 的引用拖进来。
   return needed;
 }
 

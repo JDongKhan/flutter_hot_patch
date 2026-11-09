@@ -1,3 +1,11 @@
+## 0.14.0
+
+**加法：顶层函数支持（与成员函数共用形参 / 函数体翻译）；无破坏性协议变更。**
+
+- **顶层函数**：收集同文件 / import 文件的 `FunctionDeclaration`，复用 `_functionParamPlan` + `closureToJs`，产物落成 `export const foo = <closure>`；支持具名参数、默认值、async、`sync*` / `async*`。调用点同名解析，跨文件按顶层常量机制 `import { foo }`。`main` 入口函数不参与补丁翻译；`@HostInjected` 顶层函数仍走 `_app_host_.invoke`。
+- **依赖收集**：函数体引用的跨文件类 / 常量沿用顶层常量的 import 收集；纯函数文件（无类 / 常量）也会产出模块。
+- 示例新增 `example/lib/grammar/top_level_helper.dart`，`statement_detail.dart` 覆盖同文件 / 跨文件、具名参数、跨文件模型构造与生成器调用。
+
 ## 0.13.0
 
 **加法：Dart `Iterable` 惰性语义对齐（调用点保持同名）；extension 静态成员修复；Stream 生命周期补齐。无破坏性协议变更。**

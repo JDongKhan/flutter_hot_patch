@@ -1482,6 +1482,18 @@ String? closureToJs(
   return null;
 }
 
+/// 顶层函数（无类承载）→ JS 函数表达式（箭头 / async / 生成器）。
+///
+/// 与成员函数、局部函数共用 [closureToJs] 的形参计划与语句翻译；差异只在
+/// 调用方如何发射（顶层函数产物落成 `export const name = <closure>`）。
+String? translateTopLevelFunctionJs(
+  FunctionDeclaration decl,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) =>
+    closureToJs(decl.functionExpression, scope, classes);
+
+///
 /// 泛型方法调用点能定位到的声明侧类型参数名。
 ///
 /// 1. receiver 是**类名**且类是项目类 / 运行时注入类（`C.parse<T>()`）：按静态
@@ -1911,6 +1923,10 @@ String? _methodCallJs(
     // 确实存在同名函数时才能翻译，原样产出同名调用（纯 JS 函数，可安全带元信息）。
     if (runtimeGlobalFunctions().contains(e.methodName.name)) {
       return '${e.methodName.name}(${globalFnArgsJs(posJs, tailJs)})';
+    }
+    // 项目顶层函数：产物里由 `export const name = <closure>` 承载，调用点同名。
+    if (scope.globalConsts.contains(name)) {
+      return '$name($passed)';
     }
     final member = scope.methodRef(e.methodName.name);
     if (member == null) return null;

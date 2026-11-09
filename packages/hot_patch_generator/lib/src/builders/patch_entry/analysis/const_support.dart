@@ -19,6 +19,7 @@ import '../translator/js_translator.dart';
 import '../translator/js_value.dart';
 import '../../shared/source_index.dart';
 import '../../shared/source_location.dart';
+import '../../shared/host_injected.dart';
 import 'class_table.dart';
 
 /// 本文件可见的顶层常量表（值已在解析期翻译为 JS）。
@@ -34,6 +35,9 @@ class TopLevelConstResolver {
 
   /// 全部可见名字：注入 [FieldScope.globalConsts]。
   Set<String> get names => {...sameFile.keys, ...importedFileOf.keys};
+
+  /// 本文件产出的顶层函数名（用于「只有函数的文件」仍产出模块）。
+  final Set<String> functionNames = {};
 
   /// 跨文件顶层常量的声明源文件；同文件返回 null（直接内联，不 import）。
   String? sourceFileOf(String name) => importedFileOf[name];
@@ -66,6 +70,9 @@ TopLevelConstResolver buildTopLevelConstResolver(
   // （如 `kMineMenu = [MenuEntry(...)]`——MenuEntry 在 app_models.dart，只被
   // app_data.dart import，组件文件本身不一定直接 import）。
   final foreignUnits = <(CompilationUnit, String)>[];
+  // 顶层函数：同文件参与发射；跨文件只登记名字 / 来源，由声明文件自己发射。
+  final sameFileFunctions = <String, FunctionDeclaration>{};
+  final importedFunctions = <String, String>{};
 
   void add(CompilationUnit u, String file, {required bool sameFile}) {
     // 枚举 → JS 常量对象。可见性口径与顶层常量一致：同文件含私有名，
@@ -93,6 +100,18 @@ TopLevelConstResolver buildTopLevelConstResolver(
         if (exprs.containsKey(name)) continue;
         exprs[name] = init;
         if (!sameFile) importedOf[name] = file;
+      }
+    }
+    for (final d in u.declarations.whereType<FunctionDeclaration>()) {
+      final name = d.name.lexeme;
+      // Dart 入口函数不参与补丁翻译（宿主已经启动；翻译它只会产出无效代码）。
+      if (name == 'main') continue;
+      if (!sameFile && name.startsWith('_')) continue;
+      if (exprs.containsKey(name) || enumJs.containsKey(name)) continue;
+      if (sameFile) {
+        sameFileFunctions.putIfAbsent(name, () => d);
+      } else if (!importedOf.containsKey(name)) {
+        importedFunctions[name] = file;
       }
     }
     if (!sameFile) return;
@@ -168,6 +187,46 @@ TopLevelConstResolver buildTopLevelConstResolver(
       resolver.importedFileOf[e.key] = file; // 跨文件：import
     }
   }
+
+  // 顶层函数：与成员函数共用 closureToJs 的形参计划 / 语句翻译。同文件函数
+  // 落成 `export const name = <closure>`；跨文件只登记来源，由声明文件自己发射。
+  final functionNames = <String>{...sameFileFunctions.keys};
+  final allNames = {...translated.keys, ...functionNames};
+  final hostFunctions = buildHostFunctions(unit, sourcePath);
+  for (final e in sameFileFunctions.entries) {
+    final js = translateTopLevelFunctionJs(
+      e.value,
+      FieldScope(
+        sourcePath: sourcePath,
+        globalConsts: allNames,
+        hostFunctions: hostFunctions,
+      ),
+      classTable,
+    );
+    if (js == null) {
+      log.warning('[hot_patch_generator] ${sourceAt(sourcePath, e.value)}: '
+          '顶层函数 ${e.key} 无法翻译，已跳过');
+      continue;
+    }
+    resolver.sameFile[e.key] = js;
+    resolver.functionNames.add(e.key);
+  }
+  for (final e in importedFunctions.entries) {
+    if (resolver.importedFileOf.containsKey(e.key)) continue;
+    resolver.importedFileOf[e.key] = e.value;
+  }
+  // 函数体里构造 / 引用的跨文件类：与常量初始化器同一口径补 import。
+  final fnUsed = _IdentifierCollector();
+  for (final d in sameFileFunctions.values) {
+    d.functionExpression.body.accept(fnUsed);
+  }
+  resolver.sameFileConstClasses.addAll([
+    for (final e in classTable.entries)
+      if (!e.value.isComponent &&
+          e.value.sourceFile != sourcePath &&
+          fnUsed.names.contains(e.key))
+        e.key,
+  ]);
   return resolver;
 }
 

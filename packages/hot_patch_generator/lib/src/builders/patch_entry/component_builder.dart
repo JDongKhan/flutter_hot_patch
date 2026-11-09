@@ -229,10 +229,14 @@ class ComponentBuilder implements Builder {
     }
     // 没有根类但有 `@PatchIgnore(isComponent: true)` 包装类：仍按常规路径产出
     // （包装类 + 顶层常量一起写），否则使用方的 `new X(...)` 缺类定义。
+    final hasFunctions = parsed.unit.declarations
+        .whereType<FunctionDeclaration>()
+        .isNotEmpty;
     if (roots.isEmpty &&
         mixinDecls.isEmpty &&
         wrapperClasses.isEmpty &&
-        !hasExtensions) {
+        !hasExtensions &&
+        !hasFunctions) {
       // 纯数据文件（如 lib/app/service/app_data.dart）：文件里没有任何可翻译的类，
       // 只有顶层常量 → 产出「顶层常量」产物（`export const kBanners = [...]`），
       // 组件产物才能 import 到这些值（与类产物同一个文件级产物路径）。
@@ -242,27 +246,28 @@ class ComponentBuilder implements Builder {
       // 宿主代码使用的私有常量）。
       final neededConsts =
           scope!.neededConsts[inputId.path] ?? const <String>{};
-      if (neededConsts.isEmpty) return;
       final constResolver =
           buildTopLevelConstResolver(parsed.unit, inputId.path, classTable);
+      final neededFunctions =
+          scope.neededFunctions[inputId.path] ?? const <String>{};
+      if (neededConsts.isEmpty && neededFunctions.isEmpty) return;
       final consts = <String, String>{
         for (final e in constResolver.sameFile.entries)
-          if (neededConsts.contains(e.key)) e.key: e.value,
+          if (neededConsts.contains(e.key) || neededFunctions.contains(e.key))
+            e.key: e.value,
       };
       if (consts.isEmpty) return;
       final importByFile = <String, Set<String>>{};
       // 跨文件依赖只按**实际写入产物**的常量计算：未被引用的常量不写，
       // 它依赖的产物也不会产出，按全文件扫描会 import 到不存在的模块。
-      final usedNames = constRefNames(parsed.unit, consts.keys.toSet());
+      final usedNames = {
+        ...referencedImportedConsts(parsed.unit, constResolver),
+        ...neededFunctions,
+      };
       _addConstImports(importByFile, constResolver,
           constResolver.importedFileOf.keys.where(usedNames.contains).toSet());
-      _addClassImports(importByFile, classTable, {
-        for (final e in classTable.entries)
-          if (!e.value.isComponent &&
-              e.value.sourceFile != inputId.path &&
-              usedNames.contains(e.key))
-            e.key,
-      });
+      _addClassImports(
+          importByFile, classTable, constResolver.sameFileConstClasses);
       final text = renderTopLevelConstProduct(
         inputId.path,
         consts: consts,
@@ -280,6 +285,10 @@ class ComponentBuilder implements Builder {
     final constResolver =
         buildTopLevelConstResolver(parsed.unit, inputId.path, classTable);
     final globalConsts = constResolver.names;
+    // 顶层函数按符号级引用过滤：根文件（@PatchEntry）没有 scope，直接发射本文件
+    // 全部函数；非根文件按 neededFunctions 过滤。
+    final neededFunctions = scope?.neededFunctions[inputId.path] ??
+        constResolver.functionNames;
 
     // 逐个根类翻译：JS 类名 = Dart 类名；State 合并、字段 / 方法 / 依赖处理
     // 全部在 translateClass 内部完成，builder 只决定「以组件身份还是普通类身份」。
@@ -577,7 +586,12 @@ class ComponentBuilder implements Builder {
         inputId.path,
         exportedClasses: exportedClasses,
         inlineClasses: inlineClasses.values.toList(),
-        consts: constResolver.sameFile,
+        consts: {
+          for (final e in constResolver.sameFile.entries)
+            if (!constResolver.functionNames.contains(e.key) ||
+                neededFunctions.contains(e.key))
+              e.key: e.value,
+        },
         globalConsts: globalConsts,
         dependencyImports: dedupedImports,
         extraUsedWidgets: extraUsedWidgets,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
+import 'top_level_helper.dart';
+
 /// 语句语法 demo：多 catch 子句 + `on Type` 过滤、`rethrow`、label + `break`。
 @PatchEntry('StatementDetail')
 class StatementDetail extends StatelessWidget {
@@ -18,7 +20,7 @@ class StatementDetail extends StatelessWidget {
         parts.add('其它:$e');
       }
     }
-    return 'try/catch：${parts.join('，')}';
+    return '${topLevelPrefix('try/catch')}/${topLevelGreet(name: 'x')}/${topLevelCounter().count}/${topLevelNums().length}：${parts.join('，')}';
   }
 
   /// rethrow：catch 内原样重抛原始异常，外层继续捕获。
