@@ -15,3 +15,17 @@ export 'src/model/user.dart';
 export 'src/network.dart';
 export 'src/state_log_mixin.dart';
 export 'src/int_extension.dart';
+
+/// `show`：只转发公开的顶层常量 / 枚举 / 函数与模型类；
+/// `moduleBaseHigh` 虽是公共声明，但不在白名单里，包出口不暴露。
+export 'src/module_symbols.dart'
+    show
+        ModuleBaseInfo,
+        ModuleBaseLevel,
+        moduleBaseInfo,
+        moduleBaseLabel,
+        moduleBaseLevelText,
+        moduleBaseTag;
+
+/// `hide`：只挡住 [moduleHiddenTag]，其余照常转发。
+export 'src/module_internal.dart' hide moduleHiddenTag;

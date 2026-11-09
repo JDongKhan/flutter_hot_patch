@@ -126,6 +126,9 @@ class ProjectModuleBuilder implements Builder {
           renderProjectPackageFile(
             e.key,
             neededNames: scope.neededClasses[e.key] ?? const {},
+            neededConsts: scope.neededConsts[e.key] ?? const {},
+            neededFunctions: scope.neededFunctions[e.key] ?? const {},
+            emittedScope: scope,
             ownerOf: ownerOf,
           ),
         ),
@@ -150,12 +153,18 @@ String? _sourceFileOfProductPath(String path) {
 
 /// 一个依赖包源文件的产物（`patch/packages/<package>/<rel>.js`）。
 ///
-/// [neededNames] 是全局「需要产出的类 / mixin」中属于本文件的部分；产物同时
-/// 承载本文件声明的 `extension` 注册语句（与声明处一对一，见
-/// [translateExtension]）。[ownerOf] 是类名 → 声明文件身份（跨文件 import 用）。
+/// [neededNames] / [neededConsts] / [neededFunctions] 是本文件里**真正被引用**的
+/// 类 / 顶层常量 / 顶层函数（来自 [componentTranslationScope]）；产物同时承载本
+/// 文件声明的 `extension` 注册语句（与声明处一对一，见 [translateExtension]）。
+/// [emittedScope] 用于判断跨文件依赖（类 / 常量 / 函数）是否真的被产出——
+/// barrel re-export 与 const import 都只指向已产出的符号，避免引用空模块。
+/// [ownerOf] 是类名 → 声明文件身份（跨文件 import 用）。
 String renderProjectPackageFile(
   String sourceFile, {
   required Set<String> neededNames,
+  required Set<String> neededConsts,
+  required Set<String> neededFunctions,
+  required TranslationScope emittedScope,
   required Map<String, String> ownerOf,
 }) {
   final package = packageNameOf(sourceFile) ?? '';
@@ -172,7 +181,12 @@ String renderProjectPackageFile(
     return b.toString();
   }
   final table = buildClassTable(unit, sourceFile);
-  final consts = buildTopLevelConstResolver(unit, sourceFile, table);
+  final consts = buildTopLevelConstResolver(
+    unit,
+    sourceFile,
+    table,
+    emitFunctions: neededFunctions,
+  );
   final extensionOperators = extensionOperatorsInScope(unit, sourceFile);
   final extensionNames = extensionScopesInScope(unit, sourceFile);
   warnExtensionConflicts(extensionNames, sourceFile);
@@ -182,6 +196,25 @@ String renderProjectPackageFile(
     for (final d in unit.declarations.whereType<MixinDeclaration>())
       d.name.lexeme,
   };
+
+  // 本文件真正写进产物的顶层常量 / 枚举 / 函数（只取被引用到的）。初始化器
+  // 引用同文件类的常量必须排在类声明之后（`const k = Foo()` → `new Foo()`，
+  // 类有 TDZ），其余常量先写，保证类的静态字段引用顶层常量时不触发 TDZ。
+  final emittedConsts = <String, String>{
+    for (final e in consts.sameFile.entries)
+      if (neededConsts.contains(e.key) || neededFunctions.contains(e.key))
+        e.key: e.value,
+  };
+  final earlyConsts = <String, String>{};
+  final deferredConsts = <String, String>{};
+  for (final e in emittedConsts.entries) {
+    final refs = <String>{
+      ...constRefNames(unit, {e.key}),
+      ...topLevelFunctionRefNames(unit, {e.key}),
+    };
+    (refs.any(localNames.contains) ? deferredConsts : earlyConsts)[e.key] =
+        e.value;
+  }
 
   // 本文件里被引用到的类 / mixin：只取本文件声明，跨文件由 import 承接。
   final decls = <String, AstNode>{};
@@ -244,11 +277,27 @@ String renderProjectPackageFile(
 
   // barrel（只有 export 转发、没有声明，如包入口 `lib/hot_module_base.dart`）：
   // 产物负责把目标文件的符号 re-export 出来，供 `import ... as p` 的命名空间
-  // 引用（`p.User`）继续可用。
-  final barrelExports = _barrelExportLines(unit, sourceFile, ownProduct);
+  // 引用（`p.User` / `p.moduleTag()`）继续可用。只转发**目标产物真的导出**的
+  // 名字：跨包产物按「被引用」决定符号，转发一个没产出的名字会让运行时
+  // `__modules[...]` 里缺少绑定。
+  bool emittedInFile(String file, String name) {
+    if (file == sourceFile) {
+      return neededNames.contains(name) || emittedConsts.containsKey(name);
+    }
+    return emittedScope.neededClasses[file]?.contains(name) == true ||
+        emittedScope.neededConsts[file]?.contains(name) == true ||
+        emittedScope.neededFunctions[file]?.contains(name) == true;
+  }
 
-  if (decls.isEmpty && extensions.isEmpty && barrelExports.isEmpty) {
-    b.writeln('// 本文件没有被项目引用的类 / mixin，也没有 extension，空模块。');
+  final barrelExports =
+      _barrelExportLines(unit, sourceFile, ownProduct, emittedInFile);
+
+  if (decls.isEmpty &&
+      extensions.isEmpty &&
+      barrelExports.isEmpty &&
+      emittedConsts.isEmpty) {
+    b.writeln('// 本文件没有被项目引用的类 / mixin / 顶层常量 / 函数，'
+        '也没有 extension，空模块。');
     return b.toString();
   }
 
@@ -342,11 +391,39 @@ String renderProjectPackageFile(
     namespaceImports.addAll(e.namespaceImports);
   }
 
+  // 顶层常量 / 函数体依赖：跨文件类走 `deps`，跨文件常量单独按「目标产物真的
+  // 导出」过滤后 import；与 barrel re-export 同一可见性口径。
+  final importedConstRefs = <String, Set<String>>{};
+  if (emittedConsts.isNotEmpty) {
+    for (final name in consts.sameFileConstClasses) {
+      if (decls.containsKey(name)) continue;
+      final owner = ownerOf[name];
+      if (owner == null || !emittedInFile(owner, name)) continue;
+      if (importResolver(name) != null) deps.add(name);
+    }
+    final valueRefs = <String>{
+      ...constRefNames(unit, emittedConsts.keys.toSet()),
+      ...topLevelFunctionRefNames(unit, neededFunctions),
+    };
+    for (final name in valueRefs) {
+      final owner = consts.importedFileOf[name];
+      if (owner == null || !emittedInFile(owner, name)) continue;
+      (importedConstRefs[owner] ??= <String>{}).add(name);
+    }
+  }
+
   final appLayers = [for (final a in applications) a.layer];
   final layerNames = {for (final a in applications) a.layer.name};
 
   // 类体先写进独立缓冲：import 需要按**实际出现的名字**收集（见下 usedValues）。
   final body = StringBuffer();
+  // 不引用同文件类的顶层常量 / 枚举 / 函数先写（与项目产物同一形态）；
+  // 引用同文件类的常量在类声明之后补写（类有 TDZ）。
+  if (earlyConsts.isNotEmpty) {
+    body
+      ..writeln()
+      ..write(renderTopLevelConstBody(earlyConsts));
+  }
   // 基类在前（class 有 TDZ；Dart 不要求基类先声明）。
   for (final info in orderClassesByBase(
     [...classInfos, ...appLayers],
@@ -365,6 +442,12 @@ String renderProjectPackageFile(
   // 类晚，类之间调用会触发 TDZ）。
   for (final a in applications) {
     body.writeln('__mixinHard(${a.layer.name}, ${a.mixinName});');
+  }
+  // 引用同文件类的顶层常量（构造 / 静态调用）：类声明之后再求值。
+  if (deferredConsts.isNotEmpty) {
+    body
+      ..writeln()
+      ..write(renderTopLevelConstBody(deferredConsts));
   }
   // 扩展注册语句：与 Dart 声明处一对一，调用方 import 本产物即完成注册。
   for (final e in extensions) {
@@ -402,6 +485,12 @@ String renderProjectPackageFile(
     imports.add("import * as ${e.key} from "
         "'${relativeProduct(ownProduct, e.value)}';");
   }
+  // 顶层常量 / 函数体引用的跨文件常量（同文件常量已内联）。
+  for (final e in importedConstRefs.entries) {
+    final names = e.value.toList()..sort();
+    imports.add("import { ${names.join(', ')} } from "
+        "'${relativeProduct(ownProduct, productPath(e.key))}';");
+  }
   final deduped = <String>[];
   for (final line in imports..sort()) {
     if (!deduped.contains(line)) deduped.add(line);
@@ -415,11 +504,15 @@ String renderProjectPackageFile(
 /// barrel 文件的 re-export 行：`export { A, B } from './src/a.js';`
 ///
 /// 只对本地依赖包内的目标生效（框架包 / `dart:` 由宿主模块承接，不在这里
-/// 转发）；`show` / `hide` 按声明名过滤，私有名不导出。
+/// 转发）；`show` / `hide` 按声明名过滤，私有名不导出。转发集合覆盖产物里
+/// 真正导出的**类 / mixin / extension / 枚举 / 顶层常量 / 顶层函数**；
+/// [emitted] 用于剔除「声明了但本次没被引用、产物里不存在」的名字（extension
+/// 例外：声明处一定会写 `registerExtension`，故始终转发）。
 List<String> _barrelExportLines(
   CompilationUnit unit,
   String sourceFile,
   String ownProduct,
+  bool Function(String file, String name) emitted,
 ) {
   final out = <String>[];
   for (final d in unit.directives.whereType<ExportDirective>()) {
@@ -431,8 +524,14 @@ List<String> _barrelExportLines(
     if (pkg != null && !isFileLayoutPackage(pkg)) continue;
     final targetUnit = parseUnitFile(target);
     if (targetUnit == null) continue;
-    final names = _publicDeclarationNames(targetUnit);
-    var shown = names;
+    final extensionNames = {
+      for (final e in targetUnit.declarations.whereType<ExtensionDeclaration>())
+        if (e.name?.lexeme case final n?) n,
+    };
+    var shown = {
+      for (final n in _exportedDeclarationNames(targetUnit))
+        if (extensionNames.contains(n) || emitted(target, n)) n,
+    };
     for (final c in d.combinators) {
       if (c is ShowCombinator) {
         shown = shown.where((n) => c.shownNames.any((s) => s.name == n)).toSet();
@@ -448,18 +547,23 @@ List<String> _barrelExportLines(
   return out;
 }
 
-/// 文件里可被 re-export 的公共顶层声明（类 / mixin / 具名 extension）。
-Set<String> _publicDeclarationNames(CompilationUnit unit) {
+/// 文件里可被 re-export 的公共顶层声明：类 / mixin / 具名 extension / 枚举 /
+/// 顶层常量 / 顶层函数（`main` 除外）。typedef 只参与类型检查，不进产物。
+Set<String> _exportedDeclarationNames(CompilationUnit unit) {
   final out = <String>{};
   for (final d in unit.declarations) {
-    final name = d is ClassDeclaration
-        ? d.name.lexeme
-        : d is MixinDeclaration
-            ? d.name.lexeme
-            : d is ExtensionDeclaration
-                ? d.name?.lexeme
-                : null;
-    if (name != null && !name.startsWith('_')) out.add(name);
+    Iterable<String> names = const [];
+    if (d is ClassDeclaration || d is MixinDeclaration || d is EnumDeclaration) {
+      names = [(d as NamedCompilationUnitMember).name.lexeme];
+    } else if (d is ExtensionDeclaration) {
+      final n = d.name?.lexeme;
+      names = n == null ? const [] : [n];
+    } else if (d is FunctionDeclaration) {
+      names = d.name.lexeme == 'main' ? const [] : [d.name.lexeme];
+    } else if (d is TopLevelVariableDeclaration) {
+      names = [for (final v in d.variables.variables) v.name.lexeme];
+    }
+    out.addAll(names.where((n) => !n.startsWith('_')));
   }
   return out;
 }

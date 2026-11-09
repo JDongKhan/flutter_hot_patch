@@ -11,7 +11,9 @@
 - **extension 静态成员外部访问**：`CounterLevel.v = 7` / `CounterLevel.v += 1` / `CounterLevel.bump()` 按扩展命名空间对象原样发射（`_extensionStaticTargetJs`），此前被当作「接收者不可解析」丢弃。静态字段赋值、复合赋值、空合并赋值与静态方法调用同一套判据。
 - **箭头体去重分号**：有返回值语义的箭头体（如 `static set v(int next) => _v = next;`）在包 `return` 前去掉语句形态的结尾分号，产物不再出现 `return CounterLevel._v = next;;`（`translateMethodBody` + `_statementValueJs`）。
 - **import `show` / `hide`**：新增库命名空间过滤（`source_index` 的 `exportedSymbolsOf` / `importedSymbolsOf` / `directiveAllowsSymbol` / `importedSymbolVisible`）。barrel 的 `export ... show/hide` 逐层应用并把符号归到声明文件；`import ... as p` 不进入未限定名表。类表、顶层常量 / 枚举 / 函数、具名 extension、mixin、跨文件组件、依赖闭包与 `@HostInjected` 顶层函数统一按可见性过滤，未 show / 被 hide 的符号不再进入产物。
-- 示例新增 `example/lib/grammar/top_level_helper.dart`，`function_detail.dart` 覆盖同文件 / 跨文件、具名参数、跨文件模型构造与生成器调用。
+- **export `show` / `hide` 补全**：barrel re-export 覆盖类 / mixin / 具名 extension / 枚举 / 顶层常量 / 顶层函数（`main` 与 typedef 除外），并按 `componentTranslationScope` 的产出集合剔除未产出的名字；`ui_project_module` 的跨包产物开始发射被引用到的顶层常量 / 枚举 / 函数（初始化器引用同文件类的常量排在类声明之后，避免 class TDZ），类 / 常量 / 函数三者做引用闭包迭代（函数体引用的常量与类会一并产出）。
+- **运行时模块加载器支持 `export { … } from`**：`js_runtime_manager` 的 `_parseImports` / `_preprocessModule` 把 barrel 转发行预处理为「递归加载目标模块 + 解构绑定 + 计入本模块导出」，此前该行在脚本模式下是非法语法。
+- 示例新增 `example/lib/grammar/top_level_helper.dart`，`function_detail.dart` 覆盖同文件 / 跨文件、具名参数、跨文件模型构造与生成器调用；包出口 [hot_module_base.dart](../../module/hot_module_base/lib/hot_module_base.dart) 用 `export ... show` 转发 `module_symbols.dart`、用 `export ... hide` 转发 `module_internal.dart`，被挡掉的 `moduleBaseHigh` / `moduleHiddenTag` 仍按直接 import 产出但不经 barrel 转发，demo 见 `alias_detail.dart`。
 
 ## 0.13.0
 

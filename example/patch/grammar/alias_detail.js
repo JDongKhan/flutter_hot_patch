@@ -2,6 +2,8 @@
 // 由 hot_patch_generator 从 lib/grammar/alias_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { moduleBaseHigh, moduleBaseLabel, moduleBaseLevelText, moduleBaseTag } from '../packages/hot_module_base/src/module_symbols.js';
+import { moduleHiddenTag, modulePublicTag } from '../packages/hot_module_base/src/module_internal.js';
 import { Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, Row, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 import * as base from '../packages/hot_module_base/hot_module_base.js';
 import * as p from '../packages/provider.js';
@@ -62,6 +64,12 @@ export class AliasDetail extends StatelessWidget {
         }),
         new Text({
           "data": "包前缀的同名类 → " + remote.name + " / " + remote.age
+        }),
+        new Text({
+          "data": "包前缀的顶层符号 → " + moduleBaseTag + " / " + moduleBaseLabel() + " / " + moduleBaseLevelText()
+        }),
+        new Text({
+          "data": "barrel 组合子 → show 保留 " + modulePublicTag + " / " + "hide 挡掉 " + moduleHiddenTag + " / show 外 " + moduleBaseHigh
         }),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12

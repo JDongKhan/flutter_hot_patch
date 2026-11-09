@@ -81,26 +81,35 @@ Future<TranslationScope> componentTranslationScope(BuildStep buildStep) async {
 
   final reachable = _reachableFiles(units);
   var needed = _neededClasses(units, reachable);
-  var neededConsts = _neededConsts(units, reachable, needed);
-  // 顶层常量与类互相引用：常量初始化器里 `new M()` / 静态调用引用到的类必须
-  // 一起产出，这些类的方法体又可能引用新的常量。迭代到集合不再增长为止
-  // （文件 / 类 / 常量都是有限集，最多几轮）。
+  var neededFunctions = _neededFunctions(units, reachable, needed);
+  var neededConsts = _neededConsts(units, reachable, needed,
+      neededFunctions: neededFunctions);
+  // 类 / 顶层常量 / 顶层函数互相引用：常量初始化器里 `new M()`、函数体里
+  // 构造类或引用常量，而这些类的方法体又可能引用新的常量。「已发射的值」
+  // 都要纳入传播，迭代到三个集合不再增长为止（有限集，最多几轮）。
   //
   // 这一步替代了旧实现里「可达文件的**所有**顶层常量都先按依赖标记类」的
   // 保守做法：那个做法会让没人引用的常量（如 App 基础设施的 Zone 配置）
   // 把整个文件拖进产物（app_log_console 就是被这样带出来的）。
   for (var i = 0; i < 10; i++) {
-    final next = _neededClasses(units, reachable, neededConsts: neededConsts);
-    if (_neededSetsEqual(next, needed)) break;
-    needed = next;
-    neededConsts = _neededConsts(units, reachable, needed);
+    final nextClasses = _neededClasses(units, reachable,
+        neededConsts: neededConsts, neededFunctions: neededFunctions);
+    final nextFunctions = _neededFunctions(units, reachable, nextClasses);
+    final nextConsts = _neededConsts(units, reachable, nextClasses,
+        neededFunctions: nextFunctions);
+    final stable = _neededSetsEqual(nextClasses, needed) &&
+        _neededSetsEqual(nextConsts, neededConsts) &&
+        _neededSetsEqual(nextFunctions, neededFunctions);
+    needed = nextClasses;
+    neededFunctions = nextFunctions;
+    neededConsts = nextConsts;
+    if (stable) break;
   }
   return (
     reachableFiles: reachable,
     neededClasses: needed,
     neededConsts: neededConsts,
-    neededFunctions:
-        _neededFunctions(units, reachable, needed, neededConsts),
+    neededFunctions: neededFunctions,
   );
 }
 
@@ -172,6 +181,8 @@ Map<String, Set<String>> _neededClasses(
   /// 已确认要写进产物的顶层常量（文件 → 常量名）。只对它们传播「常量初始化器
   /// 里引用到的类」，避免可达文件里没人引用的常量把整个文件拖进产物。
   Map<String, Set<String>> neededConsts = const {},
+  /// 已确认要发射的顶层函数（文件 → 函数名）：函数体里构造 / 引用的类同样要产出。
+  Map<String, Set<String>> neededFunctions = const {},
 }) {
   // 类声明索引：file → 类名 → 声明（可翻译的类，含私有类）。
   final ownDecls = <String, Map<String, ClassDeclaration>>{};
@@ -288,6 +299,19 @@ Map<String, Set<String>> _neededClasses(
     }
   }
 
+  // 种子 4：**已经被发射的顶层函数**体里构造 / 引用的类（`Foo make() => Foo()`）。
+  // 与常量同一口径，只看真正会进产物的函数。
+  for (final e in neededFunctions.entries) {
+    final unit = units[e.key];
+    if (unit == null) continue;
+    for (final d in unit.declarations.whereType<FunctionDeclaration>()) {
+      if (!e.value.contains(d.name.lexeme)) continue;
+      for (final name in dependenciesOf(d)) {
+        markVisible(e.key, name);
+      }
+    }
+  }
+
   // 引用闭包：类引用到的其它类（字段类型 / 构造 / 静态调用 / `is`）同样要产出。
   // 每个类只入队一次，有限集，不会无限展开。
   while (queue.isNotEmpty) {
@@ -362,8 +386,11 @@ bool _isTranslationStop(CompilationUnit unit) =>
 Map<String, Set<String>> _neededConsts(
   Map<String, CompilationUnit> units,
   Set<String> reachableFiles,
-  Map<String, Set<String>> neededClasses,
-) {
+  Map<String, Set<String>> neededClasses, {
+  /// 已确认要发射的顶层函数：函数体里引用的常量 / 枚举必须一起进产物，
+  /// 否则函数产物里是未定义引用。
+  Map<String, Set<String>> neededFunctions = const {},
+}) {
   // 可见常量表：同文件含私有名（产物内联）；import 文件只收公共名（私有名
   // 不可能被跨文件引用，与类可见性同口径）。枚举与顶层常量同一口径，
   // 值用 null 初始器表示（枚举值不依赖其它常量）。
@@ -457,6 +484,16 @@ Map<String, Set<String>> _neededConsts(
     }
   }
 
+  // 种子 3：会发射的顶层函数体里引用的常量 / 枚举（函数产物按名引用它们）。
+  for (final e in neededFunctions.entries) {
+    final unit = units[e.key];
+    if (unit == null) continue;
+    for (final d in unit.declarations.whereType<FunctionDeclaration>()) {
+      if (!e.value.contains(d.name.lexeme)) continue;
+      markAll(e.key, d.functionExpression.body);
+    }
+  }
+
   return needed;
 }
 
@@ -467,7 +504,6 @@ Map<String, Set<String>> _neededFunctions(
   Map<String, CompilationUnit> units,
   Set<String> reachableFiles,
   Map<String, Set<String>> neededClasses,
-  Map<String, Set<String>> neededConsts,
 ) {
   // 可见性：file → 函数名 → (声明文件, 声明)。本文件含私有，import 只收公共。
   final visible = <String, Map<String, (String, FunctionDeclaration)>>{};

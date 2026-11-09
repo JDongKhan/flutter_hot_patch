@@ -8,3 +8,5 @@ export { User } from 'src/model/user.js';
 export { Network } from 'src/network.js';
 export { StateLogMixin } from 'src/state_log_mixin.js';
 export { IntExtension } from 'src/int_extension.js';
+export { ModuleBaseInfo, ModuleBaseLevel, moduleBaseInfo, moduleBaseLabel, moduleBaseLevelText, moduleBaseTag } from 'src/module_symbols.js';
+export { modulePublicTag } from 'src/module_internal.js';

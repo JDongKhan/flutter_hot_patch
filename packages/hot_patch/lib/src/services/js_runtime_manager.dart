@@ -742,6 +742,13 @@ class JsRuntimeManager {
       r"[\x27\x22][^\x27\x22]+[\x27\x22]\s*;[ \t]*$",
       multiLine: true,
     );
+    // barrel 的转发：`export { A, B } from 'rel';`（本地依赖包入口产物）。
+    // 目标模块必须先求值，本模块才能从 __modules 里取到这些名字再转发。
+    final reExportRe = RegExp(
+      r"^[ \t]*export\s*\{[^}]+\}\s*from\s*"
+      r"[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
+      multiLine: true,
+    );
     return [
       for (final m in re.allMatches(source))
         (
@@ -756,6 +763,8 @@ class JsRuntimeManager {
         (const <String>[], m.group(1)!),
       for (final m in namespaceRe.allMatches(source))
         (const <String>[], _namespaceSource(m.group(0)!),),
+      for (final m in reExportRe.allMatches(source))
+        (const <String>[], m.group(1)!),
     ];
   }
 
@@ -793,6 +802,28 @@ class JsRuntimeManager {
         exportReClass, (m) => '${m.group(1)}class ${m.group(2)}');
     out = out.replaceAllMapped(exportReVar,
         (m) => '${m.group(1)}${m.group(2)} ${m.group(3)}');
+
+    // barrel 转发：`export { A, B } from 'rel';`（本地依赖包入口产物）。
+    // 依赖已由 [loadModule] 先求值；这里解构成局部绑定并计入本模块导出，
+    // 完成「原样透出」——否则 `export ... from` 在脚本模式下是非法语法。
+    final reExportRe = RegExp(
+      r"^([ \t]*)export\s*\{([^}]+)\}\s*from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
+      multiLine: true,
+    );
+    List<String> reExportNames(Match m) => m
+        .group(2)!
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    for (final m in reExportRe.allMatches(out)) {
+      exportNames.addAll(reExportNames(m));
+    }
+    out = out.replaceAllMapped(reExportRe, (m) {
+      final abs = JsAssetResolver.resolve(base, m.group(3)!);
+      return "${m.group(1)}const { ${reExportNames(m).join(', ')} } = "
+          "__modules['$abs'];";
+    });
 
     // import { A, B } from 'rel' -> const { A, B } = __modules['abs'];
     final importRe = RegExp(

@@ -273,6 +273,17 @@ Set<String> constRefNames(CompilationUnit unit, Set<String> names) {
   return used.names;
 }
 
+/// 指定顶层函数体里出现的全部标识符名（跨文件常量 / 类的 import 判定）。
+Set<String> topLevelFunctionRefNames(CompilationUnit unit, Set<String> names) {
+  if (names.isEmpty) return const {};
+  final used = _IdentifierCollector();
+  for (final d in unit.declarations.whereType<FunctionDeclaration>()) {
+    if (!names.contains(d.name.lexeme)) continue;
+    d.functionExpression.body.accept(used);
+  }
+  return used.names;
+}
+
 /// 顶层常量 → 数据产物 JS 文本（无可用常量时返回空串）。
 ///
 /// [consts] 为同文件顶层常量（名字 → 已译 JS 值）；[imports] 为已拼好的 import 行。

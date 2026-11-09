@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hot_module_base/hot_module_base.dart' as base;
+import 'package:hot_module_base/hot_module_base.dart'
+    show moduleBaseLabel, moduleBaseLevelText, moduleBaseTag, modulePublicTag;
+// 包出口用 `show` / `hide` 挡掉的符号：只能从声明文件直接 import。
+// ignore: implementation_imports
+import 'package:hot_module_base/src/module_internal.dart' show moduleHiddenTag;
+// ignore: implementation_imports
+import 'package:hot_module_base/src/module_symbols.dart' show moduleBaseHigh;
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import 'package:provider/provider.dart' as p;
 
@@ -48,6 +55,10 @@ class AliasDetail extends StatelessWidget {
         const SizedBox(height: 12),
         Text('本地同名类 → ${local.describe()}'),
         Text('包前缀的同名类 → ${remote.name} / ${remote.age}'),
+        Text('包前缀的顶层符号 → $moduleBaseTag / '
+            '${moduleBaseLabel()} / ${moduleBaseLevelText()}'),
+        Text('barrel 组合子 → show 保留 $modulePublicTag / '
+            'hide 挡掉 $moduleHiddenTag / show 外 $moduleBaseHigh'),
         const SizedBox(height: 12),
         p.ChangeNotifierProvider<vm.CounterVm>.value(
           value: counter,
