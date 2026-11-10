@@ -47,6 +47,14 @@ void registerBuiltinHostMethods() {
     'methodChannelHandler',
     _methodChannelHandler,
   );
+  JsRuntimeManager.registerHostMethod(
+    'basicMessageChannelSend',
+    _basicMessageChannelSend,
+  );
+  JsRuntimeManager.registerHostMethod(
+    'basicMessageChannelHandler',
+    _basicMessageChannelHandler,
+  );
 }
 
 /// JS 侧 `MethodChannel` 的宿主实例缓存。
@@ -100,13 +108,7 @@ Future<Object?> _methodChannelHandler(
       {'__fn': handlerId},
       [call.method, call.arguments],
     );
-    if (raw is Map && raw.containsKey('__mcError')) {
-      throw PlatformException(
-        code: 'js_error',
-        message: '${raw['__mcError']}',
-      );
-    }
-    return raw is Map ? raw['value'] : null;
+    return _unwrapJsHandlerResult(raw);
   });
   return null;
 }
@@ -125,6 +127,109 @@ MethodCodec _codecOf(String name) => switch (name) {
   'json' => const JSONMethodCodec(),
   _ => const StandardMethodCodec(),
 };
+
+/// JS 回调结果的统一解包（MethodChannel / BasicMessageChannel 共用）。
+///
+/// JS 侧把返回值包成 `{value}`、异常包成 `{__mcError}`（见生成器的
+/// `method_channel_js.dart` / `basic_message_channel_js.dart`），因为
+/// `invokeAwait` 本身会把异常折叠成 null，宿主无法区分。
+Object? _unwrapJsHandlerResult(Object? raw) {
+  if (raw is Map && raw.containsKey('__mcError')) {
+    throw PlatformException(
+      code: 'js_error',
+      message: '${raw['__mcError']}',
+    );
+  }
+  return raw is Map ? raw['value'] : null;
+}
+
+/// `name#codec` → 当前注册的 JS 消息回调句柄 id。
+final Map<String, String> _basicMessageHandlerIds = {};
+
+/// `basicMessageChannelSend`：JS 侧 `BasicMessageChannel.send(message)` 的宿主落点。
+///
+/// 只支持 Standard / JSON / String 三种内置 codec；Binary（ByteData）需要
+/// 二进制承载，当前桥是 JSON，显式报错而不是静默降级。
+Future<Object?> _basicMessageChannelSend(
+  String name,
+  String codec,
+  Object? message,
+) async {
+  switch (codec) {
+    case 'string':
+      return BasicMessageChannel<String>(name, const StringCodec())
+          .send(message == null ? '' : '$message');
+    case 'json':
+      return BasicMessageChannel<dynamic>(name, const JSONMessageCodec())
+          .send(message);
+    case 'standard':
+      return BasicMessageChannel<dynamic>(name, const StandardMessageCodec())
+          .send(message);
+    default:
+      throw UnsupportedError(
+        'BasicMessageChannel codec "$codec" 暂不支持'
+        '（仅 standard / json / string）',
+      );
+  }
+}
+
+/// `basicMessageChannelHandler`：JS 侧 `setMessageHandler` 的宿主落点。
+///
+/// 原生发来消息时经 `invokeAwait` 执行 JS 回调，返回值即 native 收到的
+/// reply；JS 抛错则转 `PlatformException`。
+Future<Object?> _basicMessageChannelHandler(
+  String name,
+  String codec,
+  String? handlerId,
+) async {
+  final key = '$name#$codec';
+  if (handlerId == null) {
+    _basicMessageHandlerIds.remove(key);
+    _basicSetMessageHandler(name, codec, null);
+    return null;
+  }
+  _basicMessageHandlerIds[key] = handlerId;
+  _basicSetMessageHandler(name, codec, (message) async {
+    if (_basicMessageHandlerIds[key] != handlerId) return null;
+    final raw = await JsRuntimeManager.invokeAwait(
+      {'__fn': handlerId},
+      [message],
+    );
+    return _unwrapJsHandlerResult(raw);
+  });
+  return null;
+}
+
+/// 按 codec 选择具体泛型的 `BasicMessageChannel` 注册消息回调。
+void _basicSetMessageHandler(
+  String name,
+  String codec,
+  Future<Object?> Function(Object?)? handler,
+) {
+  switch (codec) {
+    case 'string':
+      BasicMessageChannel<String>(name, const StringCodec()).setMessageHandler(
+        handler == null
+            ? null
+            : (m) async => ((await handler(m)) as String?) ?? '',
+      );
+    case 'json':
+      BasicMessageChannel<dynamic>(name, const JSONMessageCodec())
+          .setMessageHandler(
+        handler == null ? null : (m) async => handler(m),
+      );
+    case 'standard':
+      BasicMessageChannel<dynamic>(name, const StandardMessageCodec())
+          .setMessageHandler(
+        handler == null ? null : (m) async => handler(m),
+      );
+    default:
+      throw UnsupportedError(
+        'BasicMessageChannel codec "$codec" 暂不支持'
+        '（仅 standard / json / string）',
+      );
+  }
+}
 
 /// `assetLoadString`：JS 侧 `rootBundle.loadString(key)` 的宿主落点。
 ///

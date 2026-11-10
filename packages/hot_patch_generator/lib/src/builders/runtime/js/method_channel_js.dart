@@ -63,7 +63,9 @@ const String methodChannelJsSource = r'''
       }
       var id = null;
       if (typeof handler === 'function') {
-        id = G.__core.__createFnHandle(__methodChannelHandlerWrapper(handler));
+        // __createFnHandle 返回信封 {__fn: id}，宿主只认 id。
+        var env = G.__core.__createFnHandle(__methodChannelHandlerWrapper(handler));
+        id = env.__fn;
         __methodChannelHandlerIds[key] = id;
       }
       // 与 Dart 一致：setMethodCallHandler 是 void（注册失败只留日志）。

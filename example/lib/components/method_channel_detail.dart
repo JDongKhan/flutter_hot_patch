@@ -24,6 +24,7 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
   String _deviceInfo = '未调用';
   String _counter = '未调用';
   String _handlerResult = '未调用';
+  String _messageResult = '未调用';
   bool _busy = false;
 
   Future<void> _readDeviceInfo() async {
@@ -109,6 +110,48 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
     }
   }
 
+  Future<void> _echoMessage() async {
+    setState(() {
+      _busy = true;
+      _messageResult = '调用中…';
+    });
+    try {
+      final value = await HotPluginDeviceInfo.echoMessage('hello');
+      if (!mounted) return;
+      setState(() {
+        _messageResult = value;
+        _busy = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messageResult = '调用失败：' + e.toString();
+        _busy = false;
+      });
+    }
+  }
+
+  Future<void> _reverseMessage() async {
+    setState(() {
+      _busy = true;
+      _messageResult = '调用中…';
+    });
+    try {
+      final value = await HotPluginDeviceInfo.reverseMessage();
+      if (!mounted) return;
+      setState(() {
+        _messageResult = value;
+        _busy = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messageResult = '调用失败：' + e.toString();
+        _busy = false;
+      });
+    }
+  }
+
   Widget _card({
     required String title,
     required String channel,
@@ -167,6 +210,27 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
                   _readDeviceInfo();
                 },
                 child: const Text('读取设备信息'),
+              ),
+            ],
+          ),
+          _card(
+            title: '插件 A · BasicMessageChannel',
+            channel: 'hot_patch/demo/device_info_msg（send / setMessageHandler）',
+            result: _messageResult,
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  if (_busy) return;
+                  _echoMessage();
+                },
+                child: const Text('send echo'),
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  if (_busy) return;
+                  _reverseMessage();
+                },
+                child: const Text('原生回调 JS'),
               ),
             ],
           ),

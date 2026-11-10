@@ -8,6 +8,24 @@ class HotPluginDeviceInfo {
   static const MethodChannel _channel =
       MethodChannel('hot_patch/demo/device_info');
 
+  /// 同一插件里的第二种通道：BasicMessageChannel（独立名字，互不影响）。
+  static const BasicMessageChannel<dynamic> _messageChannel =
+      BasicMessageChannel<dynamic>(
+    'hot_patch/demo/device_info_msg',
+    StandardMessageCodec(),
+  );
+
+  static bool _messageBound = false;
+
+  static void _bindMessageHandler() {
+    if (_messageBound) return;
+    _messageBound = true;
+    _messageChannel.setMessageHandler((message) async {
+      if (message == 'ping') return 'dart:pong';
+      return null;
+    });
+  }
+
   static Future<String> platformVersion() async {
     final value = await _channel.invokeMethod('platformVersion');
     return value == null ? 'unknown' : value.toString();
@@ -16,5 +34,19 @@ class HotPluginDeviceInfo {
   static Future<String> deviceName() async {
     final value = await _channel.invokeMethod('deviceName');
     return value == null ? 'unknown' : value.toString();
+  }
+
+  /// BasicMessageChannel 正向：JS/Dart send → 原生 reply。
+  static Future<String> echoMessage(String text) async {
+    final reply = await _messageChannel.send('echo:' + text);
+    return reply == null ? '' : reply.toString();
+  }
+
+  /// BasicMessageChannel 反向：原生 send → JS/Dart handler → reply 回原生，
+  /// 回执再作为本次 send 的 reply。
+  static Future<String> reverseMessage() async {
+    _bindMessageHandler();
+    final reply = await _messageChannel.send('reverse');
+    return reply == null ? '' : reply.toString();
   }
 }

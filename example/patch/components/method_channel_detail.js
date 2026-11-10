@@ -4,7 +4,7 @@
 
 import { HotPluginDeviceInfo } from '../packages/hot_plugin_device_info/hot_plugin_device_info.js';
 import { HotPluginCounter } from '../packages/hot_plugin_counter/hot_plugin_counter.js';
-import { Card, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, OutlinedButton, Padding, SizedBox, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
+import { BasicMessageChannel, Card, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, OutlinedButton, Padding, SizedBox, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
 
 // 组件 MethodChannelDetail
 export class MethodChannelDetail extends StatefulWidget {
@@ -13,6 +13,7 @@ export class MethodChannelDetail extends StatefulWidget {
     this._deviceInfo = "未调用";
     this._counter = "未调用";
     this._handlerResult = "未调用";
+    this._messageResult = "未调用";
     this._busy = false;
   }
   async _readDeviceInfo() {
@@ -114,6 +115,56 @@ export class MethodChannelDetail extends StatefulWidget {
       });
     }
   }
+  async _echoMessage() {
+    this.setState(() => {
+      this._busy = true;
+      this._messageResult = "调用中…";
+    });
+    try {
+      const value = await HotPluginDeviceInfo.echoMessage("hello");
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => {
+        this._messageResult = value;
+        this._busy = false;
+      });
+    } catch (__e) {
+      const e = __e;
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => {
+        this._messageResult = ("调用失败：" + e.toString());
+        this._busy = false;
+      });
+    }
+  }
+  async _reverseMessage() {
+    this.setState(() => {
+      this._busy = true;
+      this._messageResult = "调用中…";
+    });
+    try {
+      const value = await HotPluginDeviceInfo.reverseMessage();
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => {
+        this._messageResult = value;
+        this._busy = false;
+      });
+    } catch (__e) {
+      const e = __e;
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => {
+        this._messageResult = ("调用失败：" + e.toString());
+        this._busy = false;
+      });
+    }
+  }
   _card(__o) {
     let title = (__o && __o.title !== undefined) ? __o.title : null;
     let channel = (__o && __o.channel !== undefined) ? __o.channel : null;
@@ -190,12 +241,29 @@ export class MethodChannelDetail extends StatefulWidget {
                   "data": "读取设备信息"
                 })))
               })] }),
+          this._card({ "title": "插件 A · BasicMessageChannel", "channel": "hot_patch/demo/device_info_msg（send / setMessageHandler）", "result": this._messageResult, "actions": [new ElevatedButton({
+                "onPressed": () => { if (this._busy) {
+                    return;
+                  }
+                  this._echoMessage(); },
+                "child": (this.__k9 || (this.__k9 = new Text({
+                  "data": "send echo"
+                })))
+              }), new OutlinedButton({
+                "onPressed": () => { if (this._busy) {
+                    return;
+                  }
+                  this._reverseMessage(); },
+                "child": (this.__k10 || (this.__k10 = new Text({
+                  "data": "原生回调 JS"
+                })))
+              })] }),
           this._card({ "title": "插件 B · hot_plugin_counter", "channel": "hot_patch/demo/counter", "result": this._counter, "actions": [new ElevatedButton({
                 "onPressed": () => { if (this._busy) {
                     return;
                   }
                   this._increment(1); },
-                "child": (this.__k9 || (this.__k9 = new Text({
+                "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "+1"
                 })))
               }), new ElevatedButton({
@@ -203,7 +271,7 @@ export class MethodChannelDetail extends StatefulWidget {
                     return;
                   }
                   this._increment(5); },
-                "child": (this.__k10 || (this.__k10 = new Text({
+                "child": (this.__k12 || (this.__k12 = new Text({
                   "data": "+5"
                 })))
               }), new OutlinedButton({
@@ -211,7 +279,7 @@ export class MethodChannelDetail extends StatefulWidget {
                     return;
                   }
                   this._resetCounter(); },
-                "child": (this.__k11 || (this.__k11 = new Text({
+                "child": (this.__k13 || (this.__k13 = new Text({
                   "data": "重置"
                 })))
               })] }),
@@ -220,7 +288,7 @@ export class MethodChannelDetail extends StatefulWidget {
                     return;
                   }
                   this._pingFromNative(); },
-                "child": (this.__k12 || (this.__k12 = new Text({
+                "child": (this.__k10 || (this.__k10 = new Text({
                   "data": "原生回调 JS"
                 })))
               })] })
