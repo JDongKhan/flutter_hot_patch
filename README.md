@@ -1,8 +1,26 @@
 # flutter_hot_patch
 
-「注解组件 → JS 热更」框架的 monorepo（Dart **pub workspace**）。
+[English](README_EN.md) | 简体中文
 
-## 目录结构
+**Flutter 组件热更新框架**：线上组件出 bug 时，不发版也能修复。
+
+Flutter 的 AOT 编译产物无法热更，线上缺陷只能等应用商店审核、重新发版。本框架把「可能出问题的
+组件」在编译期翻译成等价的 JS，运行时由 JS 引擎加载补丁并驱动其逻辑，**渲染仍由原生 Flutter
+完成**——因此修复一个组件只需下发一份 JS 补丁，无需重新发版。
+
+组件本身不需要任何改造：被热更的类始终是一个完全正常的 Flutter widget，只有真正需要修复时才加载
+它的 JS 版本。
+
+## 工作方式
+
+1. 给组件加 `@PatchEntry` 注解（注解来自 `hot_patch_annotations`）；
+2. 构建期由 `hot_patch_generator` 把它**静态翻译**为等价的 JS 模块（不执行 Dart 代码）；
+3. 运行时由 `hot_patch` 的 `JsUiWidget` 加载这份 JS 补丁：**逻辑在 JS 中执行**，
+   结点渲染回落到原生 Flutter。
+
+## 仓库结构
+
+本仓库是一个 Dart **pub workspace** 形式的 monorepo，三块职责按包拆分：
 
 | 目录 | 说明 |
 |---|---|
@@ -28,20 +46,6 @@ bash start_patch_server.sh
 cd example && flutter run
 ```
 
-## 发布
-
-```bash
-# 预检并发布三个包（已发布的版本自动跳过）
-bash publish_packages.sh
-
-# 只做发布预检，不上传
-bash publish_packages.sh --dry-run
-```
-
-脚本固定使用 `PUB_HOSTED_URL=https://pub.dev`：本机默认的 `pub.flutter-io.cn`
-是只读镜像，不能直接上传（会报 `Authentication failed`）；发布到 pub.dev 后
-镜像会自动同步。凭证失效时先执行 `dart pub login`。
-
 ## 文档
 
 | 文档 | 内容 |
@@ -51,6 +55,6 @@ bash publish_packages.sh --dry-run
 | [组件支持文档](docs/组件支持文档.md) | 组件支持矩阵、样式/值/事件协议、通用翻译能力、已知限制、JS 引擎能力基线 |
 | [TODO.md](TODO.md) | 待办任务、实施顺序、详细 TODO 与暂缓项 |
 | [app-prototype.html](docs/app-prototype.html) | 示例 App 原型（HTML） |
-| [hot_patch_annotations](packages/hot_patch_annotations/README.md) | 注解包：`@PatchEntry` / `@PatchIgnore` |
-| [hot_patch_generator](packages/hot_patch_generator/README.md) | 生成器：产物布局、配置项、翻译设计原则、新增 widget 支持 |
-| [hot_patch](packages/hot_patch/README.md) | 运行时：补丁加载、宿主能力桥、日志 |
+| [hot_patch_annotations](packages/hot_patch_annotations/README_ZH.md) | 注解包：`@PatchEntry` / `@PatchIgnore` |
+| [hot_patch_generator](packages/hot_patch_generator/README_ZH.md) | 生成器：产物布局、配置项、翻译设计原则、新增 widget 支持 |
+| [hot_patch](packages/hot_patch/README_ZH.md) | 运行时：补丁加载、宿主能力桥、日志 |
