@@ -2971,6 +2971,25 @@ export const rootBundle = {
   },
 };
 
+// ----- MethodChannel ------------------------------------------------------
+export class StandardMethodCodec {
+  constructor() { this.__codec = 'standard'; }
+}
+export class JSONMethodCodec {
+  constructor() { this.__codec = 'json'; }
+}
+export class MethodChannel {
+  constructor(args) {
+    this.name = (args && args.name !== undefined) ? args.name : '';
+    var codec = args && args.codec;
+    this.codec = (codec && codec.__codec) ? codec.__codec : 'standard';
+  }
+  invokeMethod(method, args) {
+    return Future.__wrap(G._app_host_.invoke(
+    'methodChannel', [this.name, this.codec, method, args]));
+  }
+}
+
 class LazyIterable {
   constructor(factory) {
     this._factory = factory;

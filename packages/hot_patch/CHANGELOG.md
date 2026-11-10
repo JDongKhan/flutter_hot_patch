@@ -1,5 +1,14 @@
 > 注：本文件是历史版本记录，早期协议名称可能与当前实现不同；当前协议见 `docs/项目架构文档.md`。
 
+## 0.4.2
+
+**加法：`MethodChannel` 宿主通道；无破坏性协议变更。**
+
+- **宿主通道 `methodChannel`**：JS 侧 `MethodChannel.invokeMethod` 经唯一出口 `_app_host_.invoke('methodChannel', [name, codec, method, args])` 交给宿主，宿主再调真正的 Flutter `MethodChannel(name, codec).invokeMethod` → 原生（不绕过、不新开 JS↔原生通道）。
+- **实例绑定**：宿主按 `name#codec` 缓存 Dart 侧 `MethodChannel` 实例；channel 身份即该键，无运行时句柄、无 acquire / release（MethodChannel 无状态、无 dispose，同名实例共享 messenger 路由）。
+- **codec**：镜像 `StandardMethodCodec` / `JSONMethodCodec`；未知标记回落标准 codec。参数与返回值走 JSON（`Map` 经运行时的 `toJSON` 归一）。
+- 示例：`module/hot_plugin_device_info`（设备信息）、`module/hot_plugin_counter`（原生计数）两个模拟三方库插件，各持独立 channel；`example` 新增 `MethodChannelDetail` 展示页。
+
 ## 0.4.1
 
 **加法：补丁包 assets 覆盖；无破坏性协议变更。**

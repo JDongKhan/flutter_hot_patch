@@ -16,3 +16,6 @@ workspace:
   - example
   # 示例 App 的模块化基座包（网络请求 / 工具类），用于验证跨包翻译。
   - module/hot_module_base
+  # 模拟三方库的 MethodChannel 插件（各自独立 channel + 原生实现）。
+  - module/hot_plugin_device_info
+  - module/hot_plugin_counter

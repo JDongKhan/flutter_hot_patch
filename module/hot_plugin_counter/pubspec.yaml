@@ -1,0 +1,24 @@
+name: hot_plugin_counter
+description: "示例三方库 B：通过 MethodChannel 做原生计数（模拟三方插件）。"
+publish_to: 'none'
+version: 1.0.0
+# 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
+resolution: workspace
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.example.hot_plugin_counter
+        pluginClass: HotPluginCounterPlugin
+      ios:
+        pluginClass: HotPluginCounterPlugin
+      macos:
+        pluginClass: HotPluginCounterPlugin

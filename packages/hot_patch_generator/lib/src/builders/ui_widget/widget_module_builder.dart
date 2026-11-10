@@ -34,6 +34,7 @@ import '../runtime/js/enum_values_js.dart';
 import '../runtime/js/icon_values_js.dart';
 import '../runtime/js/keyboard_listener_js.dart';
 import '../runtime/js/media_query_js.dart';
+import '../runtime/js/method_channel_js.dart';
 import '../runtime/js/navigator_js.dart';
 import '../runtime/js/overlay_portal_js.dart';
 import '../runtime/js/scroll_controller_js.dart';
@@ -73,6 +74,9 @@ String flutterValueClassesSource() => [
   futureJsSource,
   // rootBundle（assets 读取）：方法返回 Future，紧随其定义之后。
   assetBundleJsSource,
+  // MethodChannel（flutter/services 同名镜像）：invokeMethod 返回 Future，
+  // 依赖 Future.__wrap 与宿主通道 methodChannel。
+  methodChannelJsSource,
   // Dart `Iterable` 的惰性载体：`__iterMap` / `__iterWhere` / … 与
   // `LazyIterable`（Array 立即求值，语义不同；生成器按静态类型改写）。
   iterableJsSource,

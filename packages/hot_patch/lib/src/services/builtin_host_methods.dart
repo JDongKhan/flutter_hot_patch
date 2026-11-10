@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../js_ui/js_ui_store.dart';
 import '../utils/hot_patch_assets.dart';
@@ -9,7 +10,7 @@ import 'js_runtime_manager.dart';
 // 框架内建宿主方法（通道）注册
 //
 // 与业务 @HostInjected 方法共用唯一入口 JsRuntimeManager.registerHostMethod
-// 与唯一处理器表；JS 侧也只有唯一出口 `_app_host_.invoke`。四条内建通道：
+// 与唯一处理器表；JS 侧也只有唯一出口 `_app_host_.invoke`。六条内建通道：
 //   - `log`          ← Dart 日志全局（JS 侧 print/debugPrint → __log →
 //                      _app_host_.invoke('log', [..])）
 //   - `nativeToast`  ← 生成器把 SnackBar 形式动作译为
@@ -18,6 +19,11 @@ import 'js_runtime_manager.dart';
 //   - `jsuiRequestFrame` ← JS 侧 setState 后请求一帧；宿主在 begin frame 统一
 //                      flush，把同一帧内的多次 setState 合并成一次 build
 //                      （与 Flutter 的 setState 语义一致）
+//   - `assetLoadString` ← JS 侧 `rootBundle.loadString(key)` 的宿主落点
+//   - `methodChannel`  ← JS 侧 `MethodChannel.invokeMethod` 的宿主落点：
+//                      一个通用入口承接所有 channel（name / codec 是参数，
+//                      不是注册项），宿主按 `name#codec` 缓存 Dart 侧实例，
+//                      再调用真正的 Flutter MethodChannel → 原生
 //
 // 幂等（全局一次）：由 JsUiWidget 启动时调用。
 // ===========================================================================
@@ -36,7 +42,39 @@ void registerBuiltinHostMethods() {
   JsRuntimeManager.registerHostMethod('jsuiCommit', _commit);
   JsRuntimeManager.registerHostMethod('jsuiRequestFrame', _requestFrame);
   JsRuntimeManager.registerHostMethod('assetLoadString', _assetLoadString);
+  JsRuntimeManager.registerHostMethod('methodChannel', _methodChannel);
 }
+
+/// JS 侧 `MethodChannel` 的宿主实例缓存。
+///
+/// 键是 channel 身份 `name#codec`，不是运行时句柄：Dart 的 MethodChannel
+/// 无状态、无 dispose，同名实例共享 binaryMessenger 的 channel 路由，因此
+/// 「一个 JS channel 对象对应一个 Dart 实例」用该键即可精确表达，且重载
+/// 补丁 / 页面销毁都不需要释放。
+final Map<String, MethodChannel> _methodChannels = {};
+
+/// `methodChannel`：把 JS 侧的 `(channel, codec, method, args)` 还原成
+/// Dart 侧 `MethodChannel(name, codec).invokeMethod(method, args)`，由 Flutter
+/// 的 binaryMessenger 继续发往原生——不绕过、也不新开 JS↔原生通道。
+Future<Object?> _methodChannel(
+  String name,
+  String codec,
+  String method, [
+  Object? arguments,
+]) {
+  final channel = _methodChannels.putIfAbsent(
+    '$name#$codec',
+    () => MethodChannel(name, _codecOf(codec)),
+  );
+  return channel.invokeMethod<Object?>(method, arguments);
+}
+
+/// codec 只镜像 Standard / JSON 两种（见生成器的 `JSONMethodCodec` /
+/// `StandardMethodCodec` 同名类）；未知标记回落标准 codec。
+MethodCodec _codecOf(String name) => switch (name) {
+  'json' => const JSONMethodCodec(),
+  _ => const StandardMethodCodec(),
+};
 
 /// `assetLoadString`：JS 侧 `rootBundle.loadString(key)` 的宿主落点。
 ///

@@ -22,6 +22,11 @@ dependencies:
   # 模块化基座包（网络请求 / 工具类）：独立 Dart 包，跨包引用用于验证跨包翻译。
   hot_module_base:
     path: ../module/hot_module_base
+  # 模拟三方库的 MethodChannel 插件（A：设备信息 / B：原生计数）。
+  hot_plugin_device_info:
+    path: ../module/hot_plugin_device_info
+  hot_plugin_counter:
+    path: ../module/hot_plugin_counter
   hot_patch:
     path: ../packages/hot_patch
   hot_patch_annotations:

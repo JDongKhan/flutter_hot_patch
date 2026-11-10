@@ -18,6 +18,7 @@ import 'image_detail.dart';
 import 'input_detail.dart';
 import 'key_detail.dart';
 import 'layout_detail.dart';
+import 'method_channel_detail.dart';
 import 'notifier_card.dart';
 import 'page_view_detail.dart';
 import 'progress_detail.dart';
@@ -295,6 +296,13 @@ class WidgetShowcase extends StatelessWidget {
         'DialogDetail',
       ),
     ]),
+    _Group('平台通道', [
+      _Entry(
+        'MethodChannel × 2',
+        '两个独立三方库插件各自 channel：设备信息 / 原生计数（原生与 JS 同链路）',
+        'MethodChannelDetail',
+      ),
+    ]),
     _Group('进度指示', [
       _Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail'),
     ]),
@@ -453,6 +461,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'KeyboardListenerDetail': 'components/keyboard_listener_detail.js',
     'LayoutDetail': 'components/layout_detail.js',
     'LayoutMoreDetail': 'components/layout_more_detail.js',
+    'MethodChannelDetail': 'components/method_channel_detail.js',
     'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
     'NotifierCard': 'components/notifier_card.js',
     'OrientationBuilderDetail': 'components/orientation_builder_detail.js',
@@ -546,6 +555,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'ImageIconDetail' => const ImageIconDetail(),
       'KeyboardListenerDetail' => const KeyboardListenerDetail(),
       'LayoutMoreDetail' => const LayoutMoreDetail(),
+      'MethodChannelDetail' => const MethodChannelDetail(),
       'NestedScrollViewDetail' => const NestedScrollViewDetail(),
       'OrientationBuilderDetail' => const OrientationBuilderDetail(),
       'OverlayDetail' => const OverlayDetail(),
