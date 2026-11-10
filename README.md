@@ -53,9 +53,9 @@ cd example && flutter run
 
 | Document | Content |
 |---|---|
-| [使用手册](docs/使用手册.md) | Integration steps, annotation cheatsheet, build configuration, runtime integration, local debugging, FAQ |
-| [项目架构文档](docs/项目架构文档.md) | Core design laws, architecture overview, core mechanisms, design red lines, extension guide, key file index |
-| [组件支持文档](docs/组件支持文档.md) | Widget support matrix, style/value/event protocol, generic translation capabilities, known limitations, JS engine capability baseline |
+| [User Manual](docs/使用手册.md) | Integration steps, annotation cheatsheet, build configuration, runtime integration, local debugging, FAQ |
+| [Architecture Guide](docs/项目架构文档.md) | Core design laws, architecture overview, core mechanisms, design red lines, extension guide, key file index |
+| [Widget Support Reference](docs/组件支持文档.md) | Widget support matrix, style/value/event protocol, generic translation capabilities, known limitations, JS engine capability baseline |
 | [TODO.md](TODO.md) | Pending tasks, implementation order, detailed TODOs and deferred items |
 | [app-prototype.html](docs/app-prototype.html) | Example app prototype (HTML) |
 | [hot_patch_annotations](packages/hot_patch_annotations/README.md) | Annotations package: `@PatchEntry` / `@PatchIgnore` |
