@@ -285,7 +285,7 @@ class MineView extends StatelessWidget {
               _DevRow(
                 icon: Icons.compare_arrows,
                 title: '热更 Demo 列表',
-                subtitle: 'HelloCard / ProviderCard / WatchDemo 等对比',
+                subtitle: 'HelloCard / ProviderCard 等对比',
                 onTap: () => AppRouter.openDemoList(),
               ),
             ],

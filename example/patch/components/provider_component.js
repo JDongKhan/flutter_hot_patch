@@ -4,24 +4,20 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
-import { Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
-import { ChangeNotifierProvider, Consumer, MultiProvider } from '../packages/provider.js';
+import { Builder, Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { ChangeNotifierProvider, Consumer, MultiProvider, Selector } from '../packages/provider.js';
 
 // 组件 ProviderCard
 export class ProviderCard extends StatefulWidget {
   constructor(args) {
     super(args);
-    this._modelA = new CounterVm();
-    this._modelB = new NetworkVm();
-  }
-  _incA() {
-    this._modelA.inc();
-  }
-  _resetA() {
-    this._modelA.reset();
+    this._counter = new CounterVm();
+    this._network = new NetworkVm();
+    this._consumerBuilds = 0;
+    this._selectorBuilds = 0;
   }
   _loadUser() {
-    this._modelB.loadUserInfo({ "params": new Map([["h", 1]]) });
+    this._network.loadUserInfo({ "params": new Map([["h", 1]]) });
   }
   build(context) {
     return new Card({
@@ -32,81 +28,122 @@ export class ProviderCard extends StatefulWidget {
         "child": new MultiProvider({
           "providers": [
             new ChangeNotifierProvider({
-              "create": (_) => { return this._modelA; },
+              "create": (_) => { return this._counter; },
               "typeArguments": {"T": "CounterVm"}
             }),
             ChangeNotifierProvider.value({
-              "value": this._modelB,
+              "value": this._network,
               "typeArguments": {"T": "NetworkVm"}
             })
           ],
           "child": new Column({
             "mainAxisSize": MainAxisSize.min,
             "children": [
-              this._buildText(),
-              this._modelA.buildText(),
+              new Builder({
+                "builder": (context) => {
+                  var model = context.watch({ typeArguments: {"T": "CounterVm"} });
+                  return new Column({
+                    "mainAxisSize": MainAxisSize.min,
+                    "children": [
+                      new Text({
+                        "style": (this.__k1 || (this.__k1 = new TextStyle({
+                          "color": Colors.orange,
+                          "fontSize": 20,
+                          "fontWeight": FontWeight.bold
+                        }))),
+                        "data": "context.watch：count = " + model.count
+                      }),
+                      new Row({
+                        "mainAxisAlignment": MainAxisAlignment.center,
+                        "children": [
+                          new ElevatedButton({
+                            "onPressed": () => { return model.inc(); },
+                            "child": (this.__k2 || (this.__k2 = new Text({
+                              "data": "+1"
+                            })))
+                          }),
+                          (this.__k3 || (this.__k3 = new SizedBox({
+                            "width": 12
+                          }))),
+                          new ElevatedButton({
+                            "onPressed": () => { context.read({ typeArguments: {"T": "CounterVm"} }).reset(); },
+                            "child": (this.__k4 || (this.__k4 = new Text({
+                              "data": "Reset"
+                            })))
+                          })
+                        ]
+                      })
+                    ]
+                  });
+                }
+              }),
+              (this.__k5 || (this.__k5 = new SizedBox({
+                "height": 12
+              }))),
               new Consumer({
-                "builder": (context, value, child) => this._buildBadge(),
+                "builder": (context, model, child) => { this._consumerBuilds += 1;
+                  return new Text({
+                    "style": (this.__k6 || (this.__k6 = new TextStyle({
+                      "color": Colors.green,
+                      "fontSize": 20,
+                      "fontWeight": FontWeight.bold
+                    }))),
+                    "data": "Consumer：builder 执行 " + this._consumerBuilds + " 次" + "（count = " + model.count + "）"
+                  }); },
                 "typeArguments": {"T": "CounterVm"}
               }),
-              (this.__k1 || (this.__k1 = new Text({
-                "data": "MultiProvider · 两个模型各自局部重建"
+              (this.__k5 || (this.__k5 = new SizedBox({
+                "height": 12
               }))),
-              (this.__k2 || (this.__k2 = new SizedBox({
-                "height": 8
+              new Selector({
+                "selector": (_, model) => { return (model.count >= 5); },
+                "child": (this.__k7 || (this.__k7 = new Text({
+                  "data": "child：跨重建复用的固定子树",
+                  "style": new TextStyle({
+                    "fontSize": 12,
+                    "color": Colors.grey
+                  })
+                }))),
+                "builder": (context, isHigh, child) => { this._selectorBuilds += 1;
+                  return new Column({
+                    "mainAxisSize": MainAxisSize.min,
+                    "children": [
+                      new Text({
+                        "style": (this.__k6 || (this.__k6 = new TextStyle({
+                          "color": Colors.green,
+                          "fontSize": 20,
+                          "fontWeight": FontWeight.bold
+                        }))),
+                        "data": "Selector：builder 执行 " + this._selectorBuilds + " 次" + "（count ≥ 5 为 " + (isHigh ? "true" : "false") + "）"
+                      }),
+                      (child ?? new SizedBox())
+                    ]
+                  }); },
+                "typeArguments": {"A": "CounterVm", "S": "bool"}
+              }),
+              (this.__k5 || (this.__k5 = new SizedBox({
+                "height": 12
               }))),
               new Consumer({
-                "builder": (context, value, child) => new Text({
-                  "style": (this.__k3 || (this.__k3 = new TextStyle({
-                    "color": Colors.blue,
-                    "fontSize": 22,
-                    "fontWeight": FontWeight.bold
-                  }))),
-                  "data": "加载用户信息："
-                }),
+                "builder": (context, model, child) => (this.__k8 || (this.__k8 = new Text({
+                  "data": "NetworkVm：ChangeNotifierProvider.value 由 State 手动 dispose",
+                  "style": new TextStyle({
+                    "fontSize": 14,
+                    "color": Colors.blue
+                  })
+                }))),
                 "typeArguments": {"T": "NetworkVm"}
               }),
+              (this.__k9 || (this.__k9 = new SizedBox({
+                "height": 8
+              }))),
               new Row({
                 "mainAxisAlignment": MainAxisAlignment.center,
                 "children": [
                   new ElevatedButton({
                     "onPressed": () => this._loadUser(),
-                    "child": (this.__k4 || (this.__k4 = new Text({
+                    "child": (this.__k10 || (this.__k10 = new Text({
                       "data": "加载用户信息"
-                    })))
-                  })
-                ]
-              }),
-              (this.__k2 || (this.__k2 = new SizedBox({
-                "height": 8
-              }))),
-              new Consumer({
-                "builder": (context, value, child) => new Text({
-                  "style": (this.__k5 || (this.__k5 = new TextStyle({
-                    "color": Colors.green,
-                    "fontSize": 22,
-                    "fontWeight": FontWeight.bold
-                  }))),
-                  "data": "B = " + value.count
-                }),
-                "typeArguments": {"T": "CounterVm"}
-              }),
-              new Row({
-                "mainAxisAlignment": MainAxisAlignment.center,
-                "children": [
-                  new ElevatedButton({
-                    "onPressed": () => this._incA(),
-                    "child": (this.__k6 || (this.__k6 = new Text({
-                      "data": "B +1"
-                    })))
-                  }),
-                  (this.__k7 || (this.__k7 = new SizedBox({
-                    "width": 12
-                  }))),
-                  new ElevatedButton({
-                    "onPressed": () => this._resetA(),
-                    "child": (this.__k8 || (this.__k8 = new Text({
-                      "data": "B Reset"
                     })))
                   })
                 ]
@@ -117,39 +154,8 @@ export class ProviderCard extends StatefulWidget {
       })
     });
   }
-  _buildText() {
-    return new Text({
-      "data": "test 1"
-    });
-  }
-  _buildBadge() {
-    let label = "";
-    switch (this._modelA.count) {
-      case 0:
-      label = "B·零";
-      break;
-      case 1:
-      case 2:
-      label = "B·少";
-      break;
-      case 3:
-      case 4:
-      label = "B·多";
-      break;
-      default:
-      label = "B·爆表";
-      break;
-    }
-    let dots = "";
-    for (let i = 0; (i < this._modelA.count); (i++)) {
-      dots = dots + "·";
-    }
-    return new Text({
-      "data": label + dots
-    });
-  }
   dispose() {
-    this._modelB.dispose();
+    this._network.dispose();
     super.dispose();
   }
 }
