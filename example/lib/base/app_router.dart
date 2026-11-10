@@ -31,6 +31,7 @@ class AppRouter {
       JsRuntimeManager.navigatorKey?.currentState;
 
   static void _push(Widget page) {
+    assert(_navigator != null, 'Navigator 未初始化');
     _navigator?.push(MaterialPageRoute(builder: (_) => page));
   }
 
@@ -123,6 +124,7 @@ class AppRouter {
   /// 返回上一页。
   @HostInjected()
   static Future<void> pop() async {
+    assert(_navigator != null, 'Navigator 未初始化');
     _navigator?.maybePop();
   }
 
