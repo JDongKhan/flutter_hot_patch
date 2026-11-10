@@ -17,7 +17,7 @@ export class BannerCard extends StatefulWidget {
   }
   bump() {
     this.setState(() => {
-      this._views += 1;
+      this._views++;
     });
   }
   build(context) {

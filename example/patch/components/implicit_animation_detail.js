@@ -392,7 +392,7 @@ export class ImplicitAnimationDetail extends StatefulWidget {
         }),
         new TextButton({
           "onPressed": () => { this.setState(() => {
-              this._switchIndex += 1;
+              this._switchIndex++;
             }); },
           "child": (this.__k21 || (this.__k21 = new Text({
             "data": "切换子组件（带 ValueKey）"

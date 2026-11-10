@@ -13,7 +13,7 @@ export class DashboardCard extends StatefulWidget {
   }
   tick() {
     this.setState(() => {
-      this._ticks += 1;
+      this._ticks++;
     });
   }
   build(context) {

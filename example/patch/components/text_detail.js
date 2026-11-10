@@ -12,7 +12,7 @@ export class TextDetail extends StatefulWidget {
   }
   bump() {
     this.setState(() => {
-      this._count += 1;
+      this._count++;
     });
   }
   build(context) {

@@ -2695,27 +2695,21 @@ String? exprStmtToJs(
   // 捕获子句的唯一绑定名是 `__e`（见 [_tryStatementJs]），闭包内同样可见，
   // 因此一比一发射 `throw __e;`（不重建 Error，栈保持原样）。
   if (e is RethrowExpression) return 'throw __e;';
-  // _x++ / ++_x / _x--（只认自增 / 自减；`x!` 是空断言，不能按 -= 1 处理）
+  // `_x++` / `++_x` / `_x--` / `--_x`（只认自增 / 自减；`x!` 是空断言）。
+  // 与 `_x += 1`（AssignmentExpression）是两种 AST 节点，**按源码写法同名发射**
+  // （`_x++` → `this._x++`），不归一成复合赋值。
   if (e is PostfixExpression &&
       _isPlainIdentifier(e.operand) &&
-      (e.operator.type.name == 'PLUS_PLUS' ||
-          e.operator.type.name == 'MINUS_MINUS')) {
+      (e.operator.lexeme == '++' || e.operator.lexeme == '--')) {
     final ref = scope.fieldRef((e.operand as Identifier).name);
-    if (ref != null) {
-      final delta = e.operator.type.name == 'PLUS_PLUS' ? '1' : '-1';
-      return '$ref += $delta;';
-    }
+    if (ref != null) return '$ref${e.operator.lexeme};';
     return null;
   }
   if (e is PrefixExpression &&
       _isPlainIdentifier(e.operand) &&
-      (e.operator.type.name == 'PLUS_PLUS' ||
-          e.operator.type.name == 'MINUS_MINUS')) {
+      (e.operator.lexeme == '++' || e.operator.lexeme == '--')) {
     final ref = scope.fieldRef((e.operand as Identifier).name);
-    if (ref != null) {
-      final delta = e.operator.type.name == 'PLUS_PLUS' ? '1' : '-1';
-      return '$ref += $delta;';
-    }
+    if (ref != null) return '${e.operator.lexeme}$ref;';
     return null;
   }
   // 独立空断言语句 `s!;`：项目口径忽略断言，仅保留操作数求值。
@@ -2900,11 +2894,10 @@ String? exprStmtToJs(
     }
     final lhs = _prefixedFieldRef(operand, scope);
     if (lhs != null) {
-      final delta = op.type.name == 'PLUS_PLUS' ? '1' : '-1';
-      return '$lhs += $delta;';
+      return e is PostfixExpression ? '$lhs${op.lexeme};' : '${op.lexeme}$lhs;';
     }
-    // 普通下标 / 属性自增（`a[i]++` / `a.b++`）：语句位置不关心返回值，
-    // 直接落成 `+= 1` / `-= 1`（接收者与下标都只求值一次）。
+    // 普通下标 / 属性自增（`a[i]++` / `a.b++`）：同样按源码写法同名发射
+    // （接收者与下标都只求值一次，语句位置不关心返回值）。
     if (operand is IndexExpression || operand is PropertyAccess) {
       final target = operand is IndexExpression
           ? operand.target
@@ -2920,8 +2913,9 @@ String? exprStmtToJs(
       } else {
         member = '.${(operand as PropertyAccess).propertyName.name}';
       }
-      final delta = op.type.name == 'PLUS_PLUS' ? '1' : '-1';
-      return '$recv$member += $delta;';
+      return e is PostfixExpression
+          ? '$recv$member${op.lexeme};'
+          : '${op.lexeme}$recv$member;';
     }
   }
   // 独立语句 `await <expr>;`：await 的翻译统一在 rhsToJs 里。

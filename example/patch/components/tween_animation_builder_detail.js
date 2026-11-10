@@ -15,7 +15,7 @@ export class TweenAnimationBuilderDetail extends StatefulWidget {
   }
   _onEnd() {
     this.setState(() => {
-      this._ended += 1;
+      this._ended++;
     });
   }
   build(context) {

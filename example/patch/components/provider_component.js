@@ -81,7 +81,7 @@ export class ProviderCard extends StatefulWidget {
                 "height": 12
               }))),
               new Consumer({
-                "builder": (context, model, child) => { this._consumerBuilds += 1;
+                "builder": (context, model, child) => { this._consumerBuilds++;
                   return new Text({
                     "style": (this.__k6 || (this.__k6 = new TextStyle({
                       "color": Colors.green,
@@ -104,7 +104,7 @@ export class ProviderCard extends StatefulWidget {
                     "color": Colors.grey
                   })
                 }))),
-                "builder": (context, isHigh, child) => { this._selectorBuilds += 1;
+                "builder": (context, isHigh, child) => { this._selectorBuilds++;
                   return new Column({
                     "mainAxisSize": MainAxisSize.min,
                     "children": [

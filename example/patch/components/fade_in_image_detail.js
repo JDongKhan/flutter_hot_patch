@@ -69,7 +69,7 @@ export class FadeInImageDetail extends StatefulWidget {
           "alignment": Alignment.centerLeft,
           "child": new OutlinedButton({
             "onPressed": () => { this.setState(() => {
-                this._seed += 1;
+                this._seed++;
               }); },
             "child": (this.__k10 || (this.__k10 = new Text({
               "data": "重新加载"

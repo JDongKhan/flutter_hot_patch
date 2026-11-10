@@ -12,7 +12,7 @@ export class GetxCounterVm extends GetxController {
     this.reactiveCount = new RxInt({initial: 0});
   }
   inc() {
-    this.count += 1;
+    this.count++;
     if ((this.count >= 10)) {
       this.count = 0;
     }
@@ -20,12 +20,12 @@ export class GetxCounterVm extends GetxController {
   }
   reset() {
     while ((this.count > 0)) {
-      this.count += -1;
+      this.count--;
     }
     this.update();
   }
   incReactive() {
-    this.reactiveCount.value += 1;
+    this.reactiveCount.value++;
     if ((this.reactiveCount.value >= 10)) {
       this.reactiveCount.value = 0;
     }

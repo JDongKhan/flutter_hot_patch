@@ -28,7 +28,7 @@ export class GetXCard extends StatefulWidget {
           "mainAxisSize": MainAxisSize.min,
           "children": [
             new GetBuilder({
-              "builder": (vm) => { this._builderBuilds += 1;
+              "builder": (vm) => { this._builderBuilds++;
                 return new Column({
                   "mainAxisSize": MainAxisSize.min,
                   "children": [
@@ -68,7 +68,7 @@ export class GetXCard extends StatefulWidget {
               "height": 12
             }))),
             new Obx({
-              "builder": () => { this._obxBuilds += 1;
+              "builder": () => { this._obxBuilds++;
                 return new Column({
                   "mainAxisSize": MainAxisSize.min,
                   "children": [

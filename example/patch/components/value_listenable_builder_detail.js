@@ -60,7 +60,7 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
           }))),
           new ValueListenableBuilder({
             "valueListenable": this._active,
-            "builder": (context, value, child) => { this._builds += 1;
+            "builder": (context, value, child) => { this._builds++;
               return new Column({
                 "crossAxisAlignment": CrossAxisAlignment.stretch,
                 "children": [

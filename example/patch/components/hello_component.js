@@ -75,7 +75,7 @@ export class HelloCard extends _HelloCard_StatefulWidget_TestMixin_TestMixin2 {
   inc() {
     debugPrint("inc: count=" + this._count);
     this.setState(() => {
-      this._count += 1;
+      this._count++;
     });
   }
   async loadUser() {

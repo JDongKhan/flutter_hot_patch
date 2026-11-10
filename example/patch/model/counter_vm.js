@@ -15,7 +15,7 @@ export class CounterVm extends ChangeNotifier {
     return this._count;
   }
   async inc() {
-    this._count += 1;
+    this._count++;
     if ((this._count >= 10)) {
       this._count = 0;
     }
@@ -23,7 +23,7 @@ export class CounterVm extends ChangeNotifier {
   }
   reset() {
     while ((this._count > 0)) {
-      this._count += -1;
+      this._count--;
     }
     this.notifyListeners();
   }

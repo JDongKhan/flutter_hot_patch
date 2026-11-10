@@ -54,7 +54,7 @@ export class VisibilityDetail extends StatefulWidget {
   }
   _onTap() {
     this.setState(() => {
-      this._taps += 1;
+      this._taps++;
     });
   }
   build(context) {

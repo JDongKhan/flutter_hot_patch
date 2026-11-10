@@ -68,7 +68,7 @@ export class KeyDetail extends StatefulWidget {
   }
   _rebuildParent() {
     this.setState(() => {
-      this._rebuildSeq += 1;
+      this._rebuildSeq++;
     });
   }
   _objectKeyRows() {
@@ -90,7 +90,7 @@ export class KeyDetail extends StatefulWidget {
   }
   _bumpUnique() {
     this.setState(() => {
-      this._uniqueSeq += 1;
+      this._uniqueSeq++;
     });
   }
   _flipStore() {

@@ -12,7 +12,7 @@ export class ButtonDetail extends StatefulWidget {
   }
   onTap() {
     this.setState(() => {
-      this._pressed += 1;
+      this._pressed++;
     });
   }
   build(context) {
