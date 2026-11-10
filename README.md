@@ -53,11 +53,10 @@ cd example && flutter run
 
 | Document | Content |
 |---|---|
-| [User Manual](docs/使用手册.md) | Integration steps, annotation cheatsheet, build configuration, runtime integration, local debugging, FAQ |
-| [Architecture Guide](docs/项目架构文档.md) | Core design laws, architecture overview, core mechanisms, design red lines, extension guide, key file index |
-| [Widget Support Reference](docs/组件支持文档.md) | Widget support matrix, style/value/event protocol, generic translation capabilities, known limitations, JS engine capability baseline |
+| [User Manual (Chinese)](docs/使用手册.md) | Integration steps, annotation cheatsheet, build configuration, runtime integration, local debugging, FAQ |
+| [Architecture Guide (Chinese)](docs/项目架构文档.md) | Core design laws, architecture overview, core mechanisms, design red lines, extension guide, key file index |
+| [Widget Support Reference (Chinese)](docs/组件支持文档.md) | Widget support matrix, style/value/event protocol, generic translation capabilities, known limitations, JS engine capability baseline |
 | [TODO.md](TODO.md) | Pending tasks, implementation order, detailed TODOs and deferred items |
-| [app-prototype.html](docs/app-prototype.html) | Example app prototype (HTML) |
 | [hot_patch_annotations](packages/hot_patch_annotations/README.md) | Annotations package: `@PatchEntry` / `@PatchIgnore` |
 | [hot_patch_generator](packages/hot_patch_generator/README.md) | Generator: artifact layout, options, translation design principles, adding widget support |
 | [hot_patch](packages/hot_patch/README.md) | Runtime: patch loading, host capability bridge, logging |

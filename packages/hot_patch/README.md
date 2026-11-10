@@ -33,7 +33,7 @@ dependencies:
 JS engine baseline: ES2020 + partial ES2021 (iOS 15+ JSC / Android QuickJS 2021-03-27).
 `Object.hasOwn`, `.at`, `findLast`, `static {}` blocks, top-level `await`, `structuredClone`,
 `WeakRef` are **unavailable** in the engines. See
-[Widget Support Reference §7](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/组件支持文档.md) for the full baseline.
+[Widget Support Reference §7 (Chinese)](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/组件支持文档.md) for the full baseline.
 
 #### Usage limitations (hard constraints)
 
@@ -51,7 +51,7 @@ JS engine baseline: ES2020 + partial ES2021 (iOS 15+ JSC / Android QuickJS 2021-
    need `registerNativeComponent(name, build)`; `Image.memory` / dynamic bytes, `SnackBar`,
    `showMenu` / `showSearch` / date pickers, `RadioGroup`, `Container.transform`, synchronous-return
    callbacks (`DragTarget.onWillAccept*`), `Theme.of(context)` value reads etc. are **not supported**
-   (full list: [Widget Support Reference §6](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/组件支持文档.md)). Uncovered Dart syntax fails with a
+   (full list: [Widget Support Reference §6 (Chinese)](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/组件支持文档.md)). Uncovered Dart syntax fails with a
    build-time warning instead of a silent fallback. Deprecated Flutter APIs are not supported.
 5. **The patch does not execute arbitrary Dart.** Only statically translated JS runs in the engine;
    no `dart:mirrors` / no dynamic Dart evaluation. Native capabilities must be bridged through
@@ -158,7 +158,7 @@ HotPatchLog.enabled = false; // only turns off local printing (default kDebugMod
 Dart's `print` / `debugPrint` are translated 1:1 to same-named JS globals and bridged to
 the same exit with levels (`info` / `debug`; `debugPrint` only emits in kDebugMode). The host
 prefixes them with `[js-log] `. For the full level description and typical sources see
-[User Manual §4.3](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/使用手册.md).
+[User Manual §4.3 (Chinese)](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/使用手册.md).
 
 ### Related packages
 
