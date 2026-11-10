@@ -18,6 +18,49 @@ dependencies:
   hot_patch: ^0.4.0
 ```
 
+### Requirements & limitations
+
+#### Environment / platform
+
+| Item | Requirement |
+| --- | --- |
+| Dart SDK | `^3.11.5` |
+| Flutter | `>=3.38.4` (developed & verified on `3.41.8`, see `.fvmrc`) |
+| Android | Supported. Engine: QuickJS (bundled, `minSdk 21`; the app itself uses `flutter.minSdkVersion`). ABI (flutter_js `abiFilters`): `armeabi-v7a` / `arm64-v8a` / `x86` / `x86_64` |
+| iOS | Supported. JavaScriptCore; ES2020 output syntax requires **iOS 15+** as the effective minimum (flutter_js podspec itself declares iOS 8.0) |
+| macOS | Supported for development / debugging (JavaScriptCore; example sets `10.15`) |
+| Windows / Linux | Not verified (flutter_js declares these platforms, but this package has not validated them) |
+| Web | **Not supported** (flutter_js is a native FFI engine; the host uses `dart:io` for downloads / files) |
+
+JS engine baseline: ES2020 + partial ES2021 (iOS 15+ JSC / Android QuickJS 2021-03-27).
+`Object.hasOwn`, `.at`, `findLast`, `static {}` blocks, top-level `await`, `structuredClone`,
+`WeakRef` are **unavailable** in the engines. See
+[组件支持文档 §7](../../docs/组件支持文档.md) for the full baseline.
+
+#### Usage limitations (hard constraints)
+
+1. **Build-time static translation is required.** JS is not written by hand: annotate widgets with
+   `@PatchEntry` and run `build_runner` (with `hot_patch_generator`) to generate the `patch/` output.
+   The entry component name must be passed via `?component=` in `jsAsset`.
+2. **The runtime is a process-wide singleton** (`JsRuntimeManager.instance`): multiple `JsUiWidget`
+   instances share one engine and one global module registry (`__modules`). A fresh remote bundle
+   invalidates loaded modules of **every** page — two pages must not depend on different versions of
+   the same module path. Creating extra engines is not supported.
+3. **Protocol major must match.** The runtime refuses patch bundles whose `manifest.json` `protocol`
+   major version differs from what the app supports; after upgrading `hot_patch` across a major
+   version, patches must be rebuilt with the matching `hot_patch_generator`.
+4. **Rendering is limited to the supported widget / API matrix.** Widgets without a host renderer
+   need `registerNativeComponent(name, build)`; `Image.memory` / dynamic bytes, `SnackBar`,
+   `showMenu` / `showSearch` / date pickers, `RadioGroup`, `Container.transform`, synchronous-return
+   callbacks (`DragTarget.onWillAccept*`), `Theme.of(context)` value reads etc. are **not supported**
+   (full list: [组件支持文档 §6](../../docs/组件支持文档.md)). Uncovered Dart syntax fails with a
+   build-time warning instead of a silent fallback. Deprecated Flutter APIs are not supported.
+5. **The patch does not execute arbitrary Dart.** Only statically translated JS runs in the engine;
+   no `dart:mirrors` / no dynamic Dart evaluation. Native capabilities must be bridged through
+   `@HostInjected` / `registerHostMethod` (async channel calls).
+6. **Remote patches need network & zip.** `http(s)://...zip` bundles are downloaded, unzipped and
+   cached under the app documents directory; offline first launch must fall back to bundled assets.
+
 ### Usage
 
 ```dart
@@ -142,6 +185,45 @@ prefixes them with `[js-log] `. For the full level description and typical sourc
 dependencies:
   hot_patch: ^0.4.0
 ```
+
+### 支持范围与使用限制
+
+#### 环境 / 平台
+
+| 项 | 要求 |
+| --- | --- |
+| Dart SDK | `^3.11.5` |
+| Flutter | `>=3.38.4`（开发与验证环境为 `3.41.8`，见 `.fvmrc`） |
+| Android | 支持。引擎：QuickJS（内置，`minSdk 21`；应用本身用 `flutter.minSdkVersion`）。ABI（flutter_js `abiFilters`）：`armeabi-v7a` / `arm64-v8a` / `x86` / `x86_64` |
+| iOS | 支持。引擎：JavaScriptCore；产物为 ES2020 语法，**有效最低 iOS 15+**（flutter_js podspec 自身声明 iOS 8.0） |
+| macOS | 支持（开发 / 调试；引擎 JavaScriptCore，example 设为 `10.15`） |
+| Windows / Linux | 未验证（flutter_js 声明了这两个平台，但本包未实测） |
+| Web | **不支持**（flutter_js 是原生 FFI 引擎；宿主下载 / 文件走 `dart:io`） |
+
+JS 引擎基线：ES2020 + 部分 ES2021（iOS 15+ JSC / Android QuickJS 2021-03-27）。
+引擎**未实现** `Object.hasOwn`、`.at`、`findLast`、`static {}` 块、top-level `await`、
+`structuredClone`、`WeakRef`，产物与运行时均禁止使用。
+完整基线见 [组件支持文档 §7](../../docs/组件支持文档.md)。
+
+#### 使用限制（硬约束）
+
+1. **必须构建期静态翻译**。JS 不手写：组件加 `@PatchEntry` 注解后跑 `build_runner`
+   （配 `hot_patch_generator`）生成 `patch/` 产物；入口组件名必须经 `jsAsset` 的
+   `?component=` 传入。
+2. **运行时是进程级单例**（`JsRuntimeManager.instance`）：多个 `JsUiWidget` 共用一个引擎与
+   全局模块注册表（`__modules`）。任一远程包 fresh 会清空**全部页面**已加载的模块——两个页面
+   不能依赖同一模块路径的不同版本；不允许另建引擎实例。
+3. **协议主版本必须匹配**。运行时拒绝 `manifest.json` 中 `protocol` 主版本与应用不支持的包；
+   `hot_patch` 跨主版本升级后，必须用配套的 `hot_patch_generator` 重新生成补丁。
+4. **渲染受组件 / API 支持矩阵限制**。宿主无 renderer 的 widget 需 `registerNativeComponent(name, build)`
+   注册；`Image.memory` / 动态字节、`SnackBar`、`showMenu` / `showSearch` / 日期选择器、`RadioGroup`、
+   `Container.transform`、需同步返回值的回调（`DragTarget.onWillAccept*`）、`Theme.of(context)` 取值等
+   **均不支持**（完整清单见 [组件支持文档 §6](../../docs/组件支持文档.md)）。未覆盖的 Dart 写法
+   构建期告警，不做静默兜底；Flutter 废弃 API 不支持。
+5. **补丁不执行任意 Dart**。引擎里只跑静态翻译出的 JS，无 `dart:mirrors` / 无动态 Dart 求值；
+   原生能力必须经 `@HostInjected` / `registerHostMethod` 桥接（通道调用为异步）。
+6. **远程补丁依赖网络与 zip**。`http(s)://...zip` 包下载解压后缓存到应用文档目录；
+   离线首启必须回退到随包 asset。
 
 ### 使用
 
