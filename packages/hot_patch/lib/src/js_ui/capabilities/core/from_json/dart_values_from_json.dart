@@ -17,6 +17,10 @@ Color? colorFromJson(Object? v) {
 }
 
 /// JSON → Size（{'width':..,'height':..}）。
+///
+/// 取不到的维度按 0 处理：`Size.fromHeight` / `Size.fromWidth` 的一侧是
+/// `double.infinity`，JSON 无法表达（`JSON.stringify(Infinity)` 为 `null`），
+/// 落到这里就是缺省值。
 Size? sizeFromJson(Object? v) {
   if (v is! Map) return null;
   double? d(Object? x) {
@@ -24,9 +28,8 @@ Size? sizeFromJson(Object? v) {
     return double.tryParse('$x');
   }
 
-  final w = d(v['width']);
-  final h = d(v['height']);
-  if (w == null || h == null) return null;
+  final w = d(v['width']) ?? 0;
+  final h = d(v['height']) ?? 0;
   return Size(w, h);
 }
 

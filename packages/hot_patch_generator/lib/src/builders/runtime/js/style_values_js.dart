@@ -451,6 +451,30 @@ const String styleValuesJsSource = r'''
     }
   }
 
+  // ----- 状态属性对象（ButtonStyle 等字段的 WidgetStateProperty）-------------
+  // Dart 侧 `WidgetStatePropertyAll<T>` = 所有状态同一个值；`WidgetStateProperty<T>`
+  // 是它的静态入口（`WidgetStateProperty.all(v)`）。
+  //
+  // 宿主协议：`buttonStyleFromJson` 等对 ButtonStyle 字段统一按**裸值**接收并自行
+  // 包成 `WidgetStatePropertyAll`，所以这里 toJSON 直接透传内部值（透明包装），
+  // `ButtonStyle(padding: WidgetStatePropertyAll(x))` 与 `ButtonStyle(padding: x)`
+  // 的产物完全一致。
+  //
+  // `WidgetStateProperty.resolveWith(...)` 依赖闭包按状态求值，跨桥不可表达，
+  // 因此不提供该静态方法（调用会落空，手册登记为「不适用」）。
+  export class WidgetStateProperty {
+    static all(value) { return new WidgetStatePropertyAll({ value: value }); }
+  }
+  export class WidgetStatePropertyAll {
+    constructor(props) {
+      // 只认形参名 `value`（位置实参已由 `__positionalArgs` 归一）；
+      // `typeArguments` 等尾参不进实例字段。
+      props = __positionalArgs(props, ['value']);
+      this.value = props.value !== undefined ? props.value : null;
+    }
+    toJSON() { return this.value; }
+  }
+
   // ----- 组件配置值对象（可携带嵌套 Widget）----------------------------------
   // 这类类型在 Dart 里是普通值对象（`@immutable` 模型），**不是 Widget**：
   // 构造实参原样成为字段，toJSON 直出宿主协议；字段值是 Widget 时经

@@ -3,6 +3,7 @@ import 'package:build/build.dart' show log;
 
 import '../class_info.dart';
 import '../../shared/ctor_signatures.dart';
+import '../../shared/host_types.dart';
 import '../../shared/runtime_global_types.dart';
 import '../../shared/sdk_enum_index.dart';
 import '../../shared/source_location.dart';
@@ -1716,6 +1717,7 @@ String _expressionFailureReason(
           scope.params.contains(n) ||
           classes.containsKey(n) ||
           scope.extensionNames.containsKey(n) ||
+          hostWidgetTypes().contains(n) ||
           runtimeGlobalTypes().contains(n) ||
           runtimeGlobalNamespaces().contains(n) ||
           scope.className == n;
@@ -2244,6 +2246,13 @@ String? _methodCallJs(
     }
     // extension 名称空间上的静态方法：`CounterLevel.bump()` → 同名命名空间对象。
     if (scope.extensionNames.containsKey(target.name)) {
+      return '${target.name}.$callMember($passed)';
+    }
+    // 宿主包装类的静态方法（`FilledButton.styleFrom(...)`）：宿主注册表里的
+    // 类型在 flutter.js / 对应 package 模块里生成了同名类，静态方法同样挂在
+    // 类上（`static styleFrom(props) { return new ButtonStyle(props); }`），
+    // 原样产出 `X.m(args)`。放在项目类之后，用户自定义同名类优先。
+    if (hostWidgetTypes().contains(target.name)) {
       return '${target.name}.$callMember($passed)';
     }
     // 类方法静态调用（`MediaQuery.of(context)` / `Theme.of(context)`）：

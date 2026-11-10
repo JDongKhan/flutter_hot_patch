@@ -12,6 +12,8 @@
 - **`EventChannel`**：JS 镜像 `receiveBroadcastStream(args)` 返回运行时 `StreamController.broadcast`。首个订阅者出现时经宿主通道 `eventChannelListen` 订阅 Dart `EventChannel`，data / error / done 经 `__jsui.invoke` 转成 Stream 事件；订阅者归零或页面销毁时经 `eventChannelCancel` 取消订阅（回调句柄按 page scope 登记，release 钩子兜底）。示例：`module/hot_plugin_device_info`（原生每 500ms 推送计数）。
 - 示例：`module/hot_plugin_device_info`（设备信息）、`module/hot_plugin_counter`（原生计数 + 原生回调 JS）两个模拟三方库插件，各持独立 channel；`example` 新增 `MethodChannelDetail` 展示页。
 - **新能力 `capabilities/cupertino_picker/`**：`CupertinoPicker` 宿主渲染（`.builder` 的 `__items` 逐项还原 itemExtent / 放大 / squeeze / 选中框 / 选中回调）+ `FixedExtentScrollController` 句柄桥（kind `ctrl/FixedExtent`，`selectedItem` 回传镜像、`jumpToItem` 走通用 `call` op、释放走通用 release）。核心文件零改动，只新增能力模块并注册进 `JsUiLibrary`。
+- **`sizeFromJson` 缺省维度按 0**：`Size.fromHeight` / `Size.fromWidth` 的一侧是 `double.infinity`，JSON 无法表达（`JSON.stringify(Infinity)` → `null`）；取不到的维度按 `0` 还原，`ButtonStyle.minimumSize` / `maximumSize` / `fixedSize` 不再因一侧为 null 整个字段丢失（配套生成器 0.14.0 的 `FilledButton.styleFrom` 支持）。
+- **`ButtonStyle` 经 `styleFrom` 下发**：`buttonStyleFromJson` 对 ButtonStyle 各字段按裸值接收并包 `WidgetStatePropertyAll`（原有协议不变）；配套生成器 0.14.0 的 `WidgetStatePropertyAll.toJSON` 透传裸值，`WidgetStatePropertyAll(x)` 与裸值 `x` 两种写法产物一致。
 
 ## 0.4.1
 

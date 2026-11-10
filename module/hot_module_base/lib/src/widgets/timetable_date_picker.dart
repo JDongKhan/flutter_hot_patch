@@ -62,17 +62,12 @@ Future<DateTime?> showTimetableDatePicker(BuildContext context, {DateTime? initi
                 color: Colors.white,
                 boxShadow: const [BoxShadow(color: Color(0xffefefef), offset: Offset(0, -2), blurRadius: 15)],
               ),
-              // 跨包产物里宿主 widget 的静态方法（`FilledButton.styleFrom`）
-              // 暂不可解析，`ButtonStyle.minimumSize` 又需要 WidgetStateProperty；
-              // 直接用 SizedBox 给定按钮高度，两端口径一致。
-              child: SizedBox(
-                height: 48,
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop(pickerKey.currentState?.selectedDate ?? DateTime.now());
-                  },
-                  child: const Text('确定', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
+              child: FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                onPressed: () {
+                  Navigator.of(sheetContext).pop(pickerKey.currentState?.selectedDate ?? DateTime.now());
+                },
+                child: const Text('确定', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ),
