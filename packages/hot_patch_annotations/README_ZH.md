@@ -1,0 +1,165 @@
+# hot_patch_annotations（简体中文）
+
+[English](https://github.com/JDongKhan/flutter_hot_patch/blob/main/packages/hot_patch_annotations/README.md)
+
+声明式注解包：把一个**完全正常的 Flutter widget** 标记为「可动态下发的 UI 组件」。
+
+注解只是**构建期元数据**，不会改变组件的任何运行时行为——组件照旧在被引用处正常工作；
+线上出问题时，再由运行时加载对应的 JS 版本做热修复，无需发版。
+
+## 安装
+
+```yaml
+dependencies:
+  hot_patch_annotations: ^0.1.5
+```
+
+## 使用
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+
+@PatchEntry('Counter')
+class Counter extends StatefulWidget {
+  const Counter({super.key});
+
+  @override
+  State<Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<Counter> {
+  int _count = 0;
+
+  void _inc() => setState(() => _count++);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('count = $_count'),
+        ElevatedButton(onPressed: _inc, child: const Text('+1')),
+      ],
+    );
+  }
+}
+```
+
+这个类仍然是一个普通的 `StatefulWidget`，可以直接使用。把 `hot_patch_generator`
+加进 `dev_dependencies` 后，`build_runner` 会在构建期把它翻译成同名的 JS 模块，
+由 `hot_patch` 的 `JsUiWidget` 在运行时加载渲染。
+
+## 注解
+
+### `@PatchEntry()` / `@PatchEntry(name)`
+
+标记一个类为可动态下发的 UI 组件。
+
+- `name`：组件名，**可省略**；不传（写 `@PatchEntry()`）时组件名即**类名**。
+  运行时通过 `JsUiWidget` 的 `jsAsset` query 参数传入
+  （如 `jsAsset: 'assets/patch/components/counter.js?component=Counter'`）。
+- 热更基于**整个 widget**，不做字段/方法级标注。生成器默认全量收集：
+  - 所有非 static 字段 → JS 实例状态（字段名原样保留：`_count` → `_count`）
+  - 所有方法（除 build / 生命周期）→ 由事件触发的 JS 方法（事件统一翻译为构建期箭头闭包，
+    `this.__bindFn(位点号, 捕获值, 箭头闭包)`，捕获构建期局部变量的语义与 Dart 闭包一致）
+  - `build()` → JS 渲染入口
+  - SnackBar 形式的方法 → 自动识别为原生通道
+    （`_app_host_.invoke('nativeToast', {message})`）
+
+### `@PatchIgnore()`
+
+标记一个组件「不参与连带转换」。
+
+默认情况下，`@PatchEntry` 组件 build 里用到的本文件私有组件或无注解公共组件，
+会被生成器**连带翻译**成 JS 类注册进同一产物。标上本注解后：
+
+- 生成器跳过该组件（不生成 JS 类、不注册）；
+- build 树里引用它的位置保留**具体类型名**的结点（无 import、不降级成统一的 `Component`
+  占位），运行时由业务方在 `main()` 里注册的原生实现渲染（`registerNativeComponent(名字, 构造)`）。
+
+适用场景：组件逻辑复杂 / 含原生依赖，不适合翻译成 JS，希望线上热更时始终使用原生实现。
+
+### `@HostInjected()` / `@HostInjected(name)`
+
+标记一个 **static 方法（或顶层函数）**为「宿主注入」（Host Injected）能力，让它在
+JS 组件（`@PatchEntry`）的方法体里可以被调用。
+
+这类方法的实现**留在 Dart 侧**（可访问缓存、网络、路由、WebView 等原生能力）。类上的方法
+会被照常翻译：类本身仍是同名 JS 类、被标注的方法也仍在类里，只有**方法体**整体换成
+宿主通道调用；**调用点与 Dart 一比一**：
+
+```dart
+// Dart 源码：实现留在宿主侧，照旧可直接调用
+class AccountCenter {
+  @HostInjected()                          // 通道名缺省 = 方法名 'getUserName'
+  static Future<String> getUserName() async => '22';
+}
+
+class Network {
+  @HostInjected()
+  static Future<Map> post({required String url, dynamic params}) async {
+    return {'data': params, 'code': 200};
+  }
+}
+```
+
+```js
+// 翻译产物（JS 侧）
+//   class AccountCenter { static async getUserName() { return _app_host_.invoke("getUserName", ...); } }
+//   class Network       { static async post(...)       { return _app_host_.invoke("post", ...); } }
+// 调用点保持原样：
+//   AccountCenter.getUserName()      →  AccountCenter.getUserName()
+//   Network.post(url: u, params: p)  →  Network.post({"url": u, "params": p})
+```
+
+要点：
+
+- `name`：消息**通道名**，**可省略**；不传（写 `@HostInjected()`）时通道名即**方法名**。
+- **只有 static 方法 / 顶层函数可用**。实例方法的 receiver 在 JS 侧是 JS 对象、回不到宿主
+  实例，私有声明又跨库不可见——这两类标了注解也不生效。
+- **宿主注入类在 JS 里只保留「类 + 被标注的方法」**：字段 / 其它方法 / import 不产出（它们只服务于
+  宿主实现）。
+- **顶层函数是唯一例外**：它没有 JS 类可承载，因此仍由调用点翻译成通道调用。
+- **参数载荷按实参形态给**：纯位置 → 数组；纯具名 → 对象；混合 → 对象 + `"@args"` 键装位置
+  实参。宿主侧按 `Function.apply(fn, 位置实参, 具名实参)` 还原 Dart 调用语义，因此位置/具名
+  实参个数不限、未传参数走实现自身的默认值，返回值类型也不限。
+- 调用返回 **Promise，可 `await`**；宿主实现抛错时异常抛回 JS 调用者；通道未注册也会回填
+  `null` 收尾，不留悬空 Promise。
+- 依赖扫描会**跳过 `@HostInjected` 方法的方法体**，只在其中用到的类型不会被连带翻译。
+
+宿主侧注册由 `hot_patch_generator` 自动完成：它扫描全包的 `@HostInjected` 方法，把注册调用
+集中生成到一个 Dart 文件 `lib/generated/host_methods.dart`，业务在 `main()` 里调用一次即可：
+
+```dart
+import 'package:my_app/generated/host_methods.dart';
+
+void main() {
+  registerHostMethods();          // 注册本包全部 @HostInjected 通道
+  runApp(const MyApp());
+}
+```
+
+注册目标默认指向配套运行时 `package:hot_patch/hot_patch.dart` 的
+`JsRuntimeManager.registerHostMethod(channel, fn)`，**无需任何配置**；仅当换用别的运行时实现时
+才在自己的 `build.yaml` 里用 `register_import` / `register_call` 覆盖。也可以手动注册任意通道：
+
+```dart
+JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);
+```
+
+适用场景：组件大部分逻辑要热更，但涉及的能力（网络 / 路由 / WebView / 原生 SDK）只能由宿主执行。
+
+示例 App 的实际产物（生成的 JS 文件）可在线查看：
+[example/patch/](https://github.com/JDongKhan/flutter_hot_patch/tree/main/example/patch)。
+
+## 相关包
+
+| 包 | 作用 |
+| --- | --- |
+| `hot_patch_annotations` | 本包：注解 |
+| `hot_patch_generator` | 构建期把注解组件静态翻译为 JS 模块（dev_dependency） |
+| `hot_patch` | 运行时加载 JS 补丁渲染组件，由 JS 驱动逻辑 |
+
+## License
+
+MIT
