@@ -4,12 +4,14 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { Builder, Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
-import { ChangeNotifierProvider } from '../packages/provider.js';
+import { ChangeNotifierProvider, Consumer, Selector } from '../packages/provider.js';
 
 // 组件 WatchDemo
 export class WatchDemo extends StatefulWidget {
   constructor(args) {
     super(args);
+    this._consumerBuilds = 0;
+    this._selectorBuilds = 0;
   }
   build(context) {
     return new Card({
@@ -69,7 +71,49 @@ export class WatchDemo extends StatefulWidget {
               (this.__k7 || (this.__k7 = new SizedBox({
                 "height": 12
               }))),
-              (this.__k8 || (this.__k8 = new WatchCountLabel({})))
+              (this.__k8 || (this.__k8 = new WatchCountLabel({}))),
+              (this.__k7 || (this.__k7 = new SizedBox({
+                "height": 12
+              }))),
+              new Consumer({
+                "builder": (context, model, child) => { this._consumerBuilds += 1;
+                  return new Text({
+                    "style": (this.__k9 || (this.__k9 = new TextStyle({
+                      "color": Colors.purple,
+                      "fontSize": 14
+                    }))),
+                    "data": "Consumer 的 builder 执行 " + this._consumerBuilds + " 次（count = " + model.count + "）"
+                  }); },
+                "typeArguments": {"T": "CounterVm"}
+              }),
+              (this.__k3 || (this.__k3 = new SizedBox({
+                "height": 8
+              }))),
+              new Selector({
+                "selector": (_, model) => { return (model.count >= 5); },
+                "child": (this.__k10 || (this.__k10 = new Text({
+                  "data": "child：跨重建复用的固定子树",
+                  "style": new TextStyle({
+                    "fontSize": 12,
+                    "color": Colors.grey
+                  })
+                }))),
+                "builder": (context, isHigh, child) => { this._selectorBuilds += 1;
+                  return new Column({
+                    "mainAxisSize": MainAxisSize.min,
+                    "children": [
+                      new Text({
+                        "style": (this.__k11 || (this.__k11 = new TextStyle({
+                          "color": Colors.green,
+                          "fontSize": 14
+                        }))),
+                        "data": "Selector 的 builder 执行 " + this._selectorBuilds + " 次" + "（选中值：count ≥ 5 为 " + (isHigh ? "true" : "false") + "）"
+                      }),
+                      (child ?? new SizedBox())
+                    ]
+                  }); },
+                "typeArguments": {"A": "CounterVm", "S": "bool"}
+              })
             ]
           }),
           "typeArguments": {"T": "CounterVm"}

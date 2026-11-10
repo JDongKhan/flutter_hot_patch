@@ -96,6 +96,44 @@ export class Consumer extends Component {
   }
 }
 
+// Selector：Consumer 的「按选中值过滤重建」版本。
+//
+// 取值与 Consumer 相同（本位置最近的作用域模型），但先经
+// `props.selector(context, model)` 折算成只含所需字段的选中值；模型通知时先
+// 重算选中值，**没变就完全不重建**（builder 子树不重跑），变了才标脏。判定
+// 口径与 provider 一致：
+//   - 传了 `props.shouldRebuild(previous, next)` 就用它；
+//   - 否则按 provider 默认的 DeepCollectionEquality 深比较（List / Set / Map /
+//     record 结构相等；其余对象按同一性，即 Dart 默认 `==`）。
+// 作用域换实例（provider 的 value 被替换）由依赖登记照常触发重建并重订阅。
+export class Selector extends Component {
+  build(context) {
+    var props = this.props;
+    var builder = props.builder;
+    if (typeof builder !== 'function') {
+      __warn('[Selector] builder 不是闭包');
+      return null;
+    }
+    var scope = context.dependOnInheritedWidgetOfExactType({
+      typeArguments: props.typeArguments,
+    });
+    if (scope == null) {
+      __warnMissingScope(this, props, 'Selector');
+      return builder(context, undefined, props.child);
+    }
+    var model = scope.value;
+    __subscribeSelected(this, context, model);
+    var selected = __selectOf(this, context, model);
+    this.__selected = selected;
+    this.__hasSelected = true;
+    return builder(context, selected, props.child);
+  }
+
+  dispose() {
+    __unsubscribeSelected(this);
+  }
+}
+
 // ── provider 自有的运行期登记（跟本模块的类同一文件，随模块求值生效）──
 var G = typeof globalThis !== 'undefined' ? globalThis : Function('return this')();
 var __core = G.__core;
@@ -106,6 +144,7 @@ var __subscribeListenable = __core.__subscribeListenable;
 var JsBuildContext = __core.JsBuildContext;
 // 告警走核心导出的通用日志入口（debug 生效、release 零开销），不新开通道。
 function __warn(text) { __core.log('warn', text); }
+function __error(text) { __core.log('error', text); }
 
 // 同一个消费位置重复重建时不刷屏：按 (api, 类型名) 只告警一次。
 function __warnMissingScope(anchor, props, api) {
@@ -118,6 +157,119 @@ function __warnMissingScope(anchor, props, api) {
   if (seen) { seen[key] = true; }
   __warn('[provider] ' + api + '(' + type + ') 未找到提供者'
     + '（消费点可能不在 provider 子树内）');
+}
+
+// ---- Selector 的选中值 / 订阅 ----
+
+// 选中值：`props.selector(context, model)`。selector 必须是闭包；异常出声并
+// 按 undefined 处理（不静默吞掉，也不让一次失败拖垮整棵树）。
+function __selectOf(inst, context, model) {
+  var fn = inst.props.selector;
+  if (typeof fn !== 'function') {
+    __warn('[Selector] selector 不是闭包');
+    return undefined;
+  }
+  try {
+    return fn(context, model);
+  } catch (e) {
+    __error('[Selector] selector 执行失败: ' + String(e));
+    return undefined;
+  }
+}
+
+// 选中值是否需要重建：优先 `props.shouldRebuild(previous, next)`，否则按
+// provider 默认的 DeepCollectionEquality 口径。
+function __selectedChanged(inst, previous, next) {
+  var fn = inst.props.shouldRebuild;
+  if (typeof fn === 'function') {
+    try {
+      return fn(previous, next) === true;
+    } catch (e) {
+      __error('[Selector] shouldRebuild 执行失败: ' + String(e));
+      return true;
+    }
+  }
+  return !__deepEquals(previous, next);
+}
+
+// 在 [model] 上挂「重算选中值 → 变了才标脏」的监听；订阅由选择器实例自己
+// 持有，模型实例被替换时先精确退订旧的，避免悬空监听继续标脏。
+function __subscribeSelected(inst, context, model) {
+  if (!model || typeof model.addListener !== 'function') {
+    __unsubscribeSelected(inst);
+    return;
+  }
+  if (inst.__selValue === model && inst.__selListener) { return; }
+  __unsubscribeSelected(inst);
+  inst.__selValue = model;
+  inst.__selListener = function () {
+    var next = __selectOf(inst, context, model);
+    if (inst.__hasSelected && !__selectedChanged(inst, inst.__selected, next)) {
+      return;
+    }
+    inst.__selected = next;
+    inst.__hasSelected = true;
+    inst.setState(function () {});
+  };
+  model.addListener(inst.__selListener);
+}
+
+function __unsubscribeSelected(inst) {
+  if (inst.__selValue && inst.__selListener &&
+      typeof inst.__selValue.removeListener === 'function') {
+    inst.__selValue.removeListener(inst.__selListener);
+  }
+  inst.__selValue = null;
+  inst.__selListener = null;
+}
+
+// provider 默认比较口径（collection 的 DeepCollectionEquality）：List / Set /
+// Map / record 结构相等；其它对象沿用 Dart 默认 `==`（同一性）。
+function __deepEquals(a, b) {
+  if (a === b) { return true; }
+  if (a == null || b == null) { return false; }
+  if (typeof a !== 'object' || typeof b !== 'object') { return false; }
+  var i, j;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) { return false; }
+    for (i = 0; i < a.length; i++) {
+      if (!__deepEquals(a[i], b[i])) { return false; }
+    }
+    return true;
+  }
+  if (a instanceof Set || b instanceof Set) {
+    if (!(a instanceof Set) || !(b instanceof Set) || a.size !== b.size) { return false; }
+    var xs = [], ys = [], used = [];
+    a.forEach(function (v) { xs.push(v); });
+    b.forEach(function (v) { ys.push(v); });
+    for (i = 0; i < xs.length; i++) {
+      var hit = false;
+      for (j = 0; j < ys.length; j++) {
+        if (used[j]) { continue; }
+        if (__deepEquals(xs[i], ys[j])) { used[j] = true; hit = true; break; }
+      }
+      if (!hit) { return false; }
+    }
+    return true;
+  }
+  if (a instanceof Map || b instanceof Map) {
+    if (!(a instanceof Map) || !(b instanceof Map) || a.size !== b.size) { return false; }
+    var same = true;
+    a.forEach(function (v, k) {
+      if (!b.has(k) || !__deepEquals(v, b.get(k))) { same = false; }
+    });
+    return same;
+  }
+  // record / 普通对象字面量：自有键结构相等（位置字段 `$1…$N`、命名字段原名）。
+  if (a.constructor !== Object || b.constructor !== Object) { return false; }
+  var ka = Object.keys(a), kb = Object.keys(b);
+  if (ka.length !== kb.length) { return false; }
+  for (i = 0; i < ka.length; i++) {
+    var k = ka[i];
+    if (!Object.prototype.hasOwnProperty.call(b, k)) { return false; }
+    if (!__deepEquals(a[k], b[k])) { return false; }
+  }
+  return true;
 }
 
 // ---- extension BuildContextX on BuildContext ----
