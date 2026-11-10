@@ -10,6 +10,7 @@ import { BasicMessageChannel, Card, Colors, Column, CrossAxisAlignment, EdgeInse
 export class MethodChannelDetail extends StatefulWidget {
   constructor(args) {
     super(args);
+    this.__applyProps(args);
     this._deviceInfo = "未调用";
     this._counter = "未调用";
     this._handlerResult = "未调用";
@@ -18,6 +19,9 @@ export class MethodChannelDetail extends StatefulWidget {
     this._tick = 0;
     this._tickSub = null;
     this._busy = false;
+  }
+  __applyProps(args) {
+    this.channelTag = (args && args.channelTag !== undefined) ? args.channelTag : "";
   }
   dispose() {
     this._tickSub?.cancel();
@@ -28,7 +32,7 @@ export class MethodChannelDetail extends StatefulWidget {
     this.setState(() => {
       this._tickState = "订阅中（每 500ms）";
     });
-    this._tickSub = HotPluginDeviceInfo.ticks().listen((event) => { if ((!!this.__unmounted)) {
+    this._tickSub = HotPluginDeviceInfo.ticks(this.channelTag).listen((event) => { if ((!!this.__unmounted)) {
         return;
       }
       this.setState(() => {
@@ -284,7 +288,7 @@ export class MethodChannelDetail extends StatefulWidget {
                   "data": "原生回调 JS"
                 })))
               })] }),
-          this._card({ "title": "插件 A · EventChannel", "channel": "hot_patch/demo/device_info_events（原生推送）", "result": ((this._tickState + " · tick=") + this._tick.toString()), "actions": [new ElevatedButton({
+          this._card({ "title": "插件 A · EventChannel", "channel": (("hot_patch/demo/device_info_events" + this.channelTag) + "（原生推送）"), "result": ((this._tickState + " · tick=") + this._tick.toString()), "actions": [new ElevatedButton({
                 "onPressed": () => { this._startTicks(); },
                 "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "订阅"

@@ -34,10 +34,14 @@ public class HotPluginDeviceInfoPlugin: NSObject, FlutterPlugin {
       }
     }
 
-    let eventChannel = FlutterEventChannel(
-      name: "hot_patch/demo/device_info_events",
-      binaryMessenger: registrar.messenger())
-    eventChannel.setStreamHandler(DeviceInfoStreamHandler())
+    // 后缀对应 Dart 侧 `ticks(tag)`：同名平台通道只能有一个活跃流，
+    // 原生 / JS 两栏对比各用独立 channel 名。
+    for suffix in ["", "_native", "_js"] {
+      let eventChannel = FlutterEventChannel(
+        name: "hot_patch/demo/device_info_events" + suffix,
+        binaryMessenger: registrar.messenger())
+      eventChannel.setStreamHandler(DeviceInfoStreamHandler())
+    }
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

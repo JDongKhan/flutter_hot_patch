@@ -21,9 +21,6 @@ class HotPluginDeviceInfoPlugin :
     MethodCallHandler {
     private lateinit var channel: MethodChannel
     private lateinit var messageChannel: BasicMessageChannel<Any?>
-    private lateinit var eventChannel: EventChannel
-    private var timer: Timer? = null
-    private var tick = 0
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(binding.binaryMessenger, "hot_patch/demo/device_info")
@@ -47,27 +44,15 @@ class HotPluginDeviceInfoPlugin :
             }
         }
 
-        eventChannel = EventChannel(
-            binding.binaryMessenger,
-            "hot_patch/demo/device_info_events")
-        eventChannel.setStreamHandler(object : EventChannel.StreamHandler {
-            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                tick = 0
-                timer?.cancel()
-                timer = Timer()
-                timer?.scheduleAtFixedRate(object : TimerTask() {
-                    override fun run() {
-                        tick += 1
-                        Handler(Looper.getMainLooper()).post { events?.success(tick) }
-                    }
-                }, 0L, 500L)
-            }
-
-            override fun onCancel(arguments: Any?) {
-                timer?.cancel()
-                timer = null
-            }
-        })
+        // 后缀对应 Dart 侧 `ticks(tag)`：同名平台通道只能有一个活跃流，
+        // 原生 / JS 两栏对比各用独立 channel 名。每个 channel 用独立的
+        // StreamHandler 实例，计时器互不影响。
+        for (suffix in listOf("", "_native", "_js")) {
+            val eventChannel = EventChannel(
+                binding.binaryMessenger,
+                "hot_patch/demo/device_info_events" + suffix)
+            eventChannel.setStreamHandler(DeviceInfoEventStreamHandler())
+        }
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
@@ -81,7 +66,27 @@ class HotPluginDeviceInfoPlugin :
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
         messageChannel.setMessageHandler(null)
-        eventChannel.setStreamHandler(null)
+    }
+}
+
+/// 原生侧事件源：onListen 启动计时器，onCancel 停止（每个 channel 一份）。
+private class DeviceInfoEventStreamHandler : EventChannel.StreamHandler {
+    private var timer: Timer? = null
+    private var tick = 0
+
+    override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+        tick = 0
+        timer?.cancel()
+        timer = Timer()
+        timer?.scheduleAtFixedRate(object : TimerTask() {
+            override fun run() {
+                tick += 1
+                Handler(Looper.getMainLooper()).post { events?.success(tick) }
+            }
+        }, 0L, 500L)
+    }
+
+    override fun onCancel(arguments: Any?) {
         timer?.cancel()
         timer = null
     }

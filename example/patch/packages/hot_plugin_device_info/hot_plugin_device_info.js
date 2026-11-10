@@ -8,12 +8,11 @@ import { BasicMessageChannel, EventChannel, MethodChannel, StandardMessageCodec 
 export class HotPluginDeviceInfo {
   static _channel = new MethodChannel({name: "hot_patch/demo/device_info"});
   static _messageChannel = new BasicMessageChannel({name: "hot_patch/demo/device_info_msg", codec: new StandardMessageCodec(), typeArguments: {"T": "dynamic"}});
-  static _eventChannel = new EventChannel({name: "hot_patch/demo/device_info_events"});
   static _messageBound = false;
   constructor() {
   }
-  static ticks() {
-    return HotPluginDeviceInfo._eventChannel.receiveBroadcastStream();
+  static ticks(tag) {
+    return new EventChannel({name: ("hot_patch/demo/device_info_events" + tag)}).receiveBroadcastStream();
   }
   static _bindMessageHandler() {
     if (HotPluginDeviceInfo._messageBound) {

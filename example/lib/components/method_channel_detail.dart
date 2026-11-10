@@ -16,7 +16,11 @@ import 'package:hot_plugin_device_info/hot_plugin_device_info.dart';
 /// 同一份原生实现。
 @PatchEntry('MethodChannelDetail')
 class MethodChannelDetail extends StatefulWidget {
-  const MethodChannelDetail({super.key});
+  const MethodChannelDetail({super.key, this.channelTag = ''});
+
+  /// EventChannel 名后缀。同名平台通道只能有一个活跃流，showcase 的原生 /
+  /// JS 两栏各传一个 tag，避免两个实例互相顶掉订阅。
+  final String channelTag;
 
   @override
   State<MethodChannelDetail> createState() => _MethodChannelDetailState();
@@ -43,7 +47,7 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
     setState(() {
       _tickState = '订阅中（每 500ms）';
     });
-    _tickSub = HotPluginDeviceInfo.ticks().listen((event) {
+    _tickSub = HotPluginDeviceInfo.ticks(widget.channelTag).listen((event) {
       if (!mounted) return;
       setState(() {
         _tick = event is int ? event : 0;
@@ -268,7 +272,9 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
           ),
           _card(
             title: '插件 A · EventChannel',
-            channel: 'hot_patch/demo/device_info_events（原生推送）',
+            channel: 'hot_patch/demo/device_info_events' +
+                widget.channelTag +
+                '（原生推送）',
             result: _tickState + ' · tick=' + _tick.toString(),
             actions: [
               ElevatedButton(

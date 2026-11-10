@@ -16,11 +16,12 @@ class HotPluginDeviceInfo {
   );
 
   /// 第三种通道：EventChannel（原生主动推送的事件流）。
-  static const EventChannel _eventChannel =
-      EventChannel('hot_patch/demo/device_info_events');
-
-  /// 原生每 500ms 推送一次的计数流；取消订阅即停止原生计时器。
-  static Stream<dynamic> ticks() => _eventChannel.receiveBroadcastStream();
+  ///
+  /// [tag] 是 channel 名后缀：同名平台通道只能有一个活跃流，同一进程里原生 /
+  /// JS 两栏对比时各传一个 tag，避免两个实例互相顶掉订阅。
+  static Stream<dynamic> ticks(String tag) =>
+      EventChannel('hot_patch/demo/device_info_events' + tag)
+          .receiveBroadcastStream();
 
   static bool _messageBound = false;
 
