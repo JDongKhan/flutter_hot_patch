@@ -11,6 +11,7 @@
 - **`BasicMessageChannel`**：JS 镜像 `send` / `setMessageHandler` 对应宿主通道 `basicMessageChannelSend` / `basicMessageChannelHandler`。`send` 调 Dart `BasicMessageChannel.send`；反向由原生发消息，`invokeAwait` 执行 JS 回调并把返回值作为 reply。支持 `StandardMessageCodec` / `StringCodec` / `JSONMessageCodec`；`BinaryCodec` 需要二进制承载，当前显式报错。示例：`module/hot_plugin_device_info`（同插件内第二种通道）。
 - **`EventChannel`**：JS 镜像 `receiveBroadcastStream(args)` 返回运行时 `StreamController.broadcast`。首个订阅者出现时经宿主通道 `eventChannelListen` 订阅 Dart `EventChannel`，data / error / done 经 `__jsui.invoke` 转成 Stream 事件；订阅者归零或页面销毁时经 `eventChannelCancel` 取消订阅（回调句柄按 page scope 登记，release 钩子兜底）。示例：`module/hot_plugin_device_info`（原生每 500ms 推送计数）。
 - 示例：`module/hot_plugin_device_info`（设备信息）、`module/hot_plugin_counter`（原生计数 + 原生回调 JS）两个模拟三方库插件，各持独立 channel；`example` 新增 `MethodChannelDetail` 展示页。
+- **新能力 `capabilities/cupertino_picker/`**：`CupertinoPicker` 宿主渲染（`.builder` 的 `__items` 逐项还原 itemExtent / 放大 / squeeze / 选中框 / 选中回调）+ `FixedExtentScrollController` 句柄桥（kind `ctrl/FixedExtent`，`selectedItem` 回传镜像、`jumpToItem` 走通用 `call` op、释放走通用 release）。核心文件零改动，只新增能力模块并注册进 `JsUiLibrary`。
 
 ## 0.4.1
 

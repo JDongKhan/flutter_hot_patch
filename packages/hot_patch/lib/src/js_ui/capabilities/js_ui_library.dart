@@ -47,6 +47,7 @@ import 'change_notifier/change_notifier_library.dart';
 import 'core/dart_values_library.dart';
 import 'core/dart_errors_library.dart';
 import 'core/color_library.dart';
+import 'cupertino_picker/cupertino_picker_library.dart';
 import 'dialog/dialog_library.dart';
 import 'dismissible/dismissible_library.dart';
 import 'drag/drag_library.dart';
@@ -151,6 +152,8 @@ void _seedBuiltins() {
   // 动画值类 / AnimationController 镜像：显式动画经此逐帧回传 value。
   registerJsUiLibrary(const AnimationLibrary());
   registerJsUiLibrary(const ScrollControllerLibrary());
+  // CupertinoPicker：FixedExtentScrollController 句柄 + 滚轮组件宿主渲染。
+  registerJsUiLibrary(const CupertinoPickerLibrary());
   // AnimatedList：currentState 命令经 key 桥接的 state op 扩展点接入。
   registerJsUiLibrary(const AnimatedListLibrary());
   // Dismissible：confirmDismiss 需要 JS→宿主的异步回程通道。

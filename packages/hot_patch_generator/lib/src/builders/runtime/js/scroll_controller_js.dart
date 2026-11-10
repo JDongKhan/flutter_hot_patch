@@ -1,4 +1,5 @@
-// ScrollController / PageController 的 JS 片段（随 flutter.js 发布）。
+// ScrollController / PageController / FixedExtentScrollController 的 JS 片段
+// （随 flutter.js 发布）。
 //
 // 生成器把 Dart 侧 `final ScrollController _scrollController = ScrollController();`
 // 翻译成 `this._scrollController = new ScrollController()`；实例与宿主侧真实
@@ -99,6 +100,40 @@ const String scrollControllerJsSource = r'''
       if (this.__id == null) { return; }
       var a = this.__animateArgs(opts, curveArg);
       __handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
+    }
+    get hasClients() { return this.__id != null; }
+  }
+
+  // ===== FixedExtentScrollController 代理类（对应 Flutter 官方同名类）=====
+  // 供 `CupertinoPicker` / `ListWheelScrollView` 这类「整项滚动」组件使用：
+  //   - selectedItem：**宿主回传的镜像**（picker 滚动 → 宿主 listener → 回传
+  //     选中项 → 本实例更新并通知 listeners），业务侧只读；
+  //   - jumpToItem：走通用 op（call），宿主按 `itemIndex` 计算偏移并跳转；
+  //   - initialItem / itemExtent 随 toJSON 下发，宿主据此创建真实 controller。
+  export class FixedExtentScrollController extends ControllerBase {
+    constructor(opts) {
+      super();
+      var o = opts || {};
+      this.initialItem = (o.initialItem != null) ? o.initialItem : 0;
+      this.itemExtent = (o.itemExtent != null) ? o.itemExtent : null;
+      this.selectedItem = this.initialItem;
+      this.__bindHandle('ctrl/FixedExtent', {
+        onHost: function (self, p) {
+          if (p && p.selectedItem != null) { self.selectedItem = p.selectedItem; }
+          self.__notify();
+        },
+        meta: function (self) {
+          return { initialItem: self.initialItem, itemExtent: self.itemExtent };
+        },
+        extraJSON: function (self) {
+          return { initialItem: self.initialItem, itemExtent: self.itemExtent };
+        }
+      });
+    }
+    jumpToItem(index) {
+      if (this.__id != null) {
+        __handleOp(this.__id, 'call', { method: 'jumpToItem', args: [index] });
+      }
     }
     get hasClients() { return this.__id != null; }
   }

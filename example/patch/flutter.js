@@ -1004,6 +1004,43 @@ export class Builder extends Component {
   }
 }
 
+export class CupertinoPicker extends Component {
+  constructor(props) {
+    super(props);
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    if (!this.__hasBuilder()) {
+      return Component.host('CupertinoPicker', this.props, false);
+    }
+  }
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
+  }
+  build(context) {
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      __warn('[CupertinoPicker] itemBuilder 不是闭包，按普通构造渲染');
+      return Component.host('CupertinoPicker', this.props, false);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
+    var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
+    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    p.__builder = {
+      item: item,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.childCount || 0,
+      ctx: context
+    };
+    return Component.host('CupertinoPicker', p, false);
+  }
+  static builder(props) { return new CupertinoPicker(Object.assign({}, props, { factory: 'builder' })); }
+  static separated(props) { return new CupertinoPicker(Object.assign({}, props, { factory: 'separated' })); }
+
+}
+
 export class DragTarget extends Component {
   __targetProps(context) {
     var self = this;
@@ -8379,6 +8416,40 @@ export class PageController extends ControllerBase {
     if (this.__id == null) { return; }
     var a = this.__animateArgs(opts, curveArg);
     __handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
+  }
+  get hasClients() { return this.__id != null; }
+}
+
+// ===== FixedExtentScrollController 代理类（对应 Flutter 官方同名类）=====
+// 供 `CupertinoPicker` / `ListWheelScrollView` 这类「整项滚动」组件使用：
+//   - selectedItem：**宿主回传的镜像**（picker 滚动 → 宿主 listener → 回传
+//     选中项 → 本实例更新并通知 listeners），业务侧只读；
+//   - jumpToItem：走通用 op（call），宿主按 `itemIndex` 计算偏移并跳转；
+//   - initialItem / itemExtent 随 toJSON 下发，宿主据此创建真实 controller。
+export class FixedExtentScrollController extends ControllerBase {
+  constructor(opts) {
+    super();
+    var o = opts || {};
+    this.initialItem = (o.initialItem != null) ? o.initialItem : 0;
+    this.itemExtent = (o.itemExtent != null) ? o.itemExtent : null;
+    this.selectedItem = this.initialItem;
+    this.__bindHandle('ctrl/FixedExtent', {
+      onHost: function (self, p) {
+        if (p && p.selectedItem != null) { self.selectedItem = p.selectedItem; }
+        self.__notify();
+      },
+      meta: function (self) {
+        return { initialItem: self.initialItem, itemExtent: self.itemExtent };
+      },
+      extraJSON: function (self) {
+        return { initialItem: self.initialItem, itemExtent: self.itemExtent };
+      }
+    });
+  }
+  jumpToItem(index) {
+    if (this.__id != null) {
+      __handleOp(this.__id, 'call', { method: 'jumpToItem', args: [index] });
+    }
   }
   get hasClients() { return this.__id != null; }
 }

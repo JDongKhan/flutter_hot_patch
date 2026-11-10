@@ -3,12 +3,30 @@
 // 重新生成：dart run build_runner build
 
 import { TimetableDatePicker } from '../packages/hot_module_base/src/widgets/timetable_date_picker.js';
-import { Border, BorderRadius, BoxDecoration, Color, Colors, Column, Container, CrossAxisAlignment, DateTime, Duration, EdgeInsets, FontWeight, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
+import { showTimetableDatePicker } from '../packages/hot_module_base/src/widgets/timetable_date_picker.js';
+import { Border, BorderRadius, BoxDecoration, Color, Colors, Column, Container, CrossAxisAlignment, DateTime, Duration, EdgeInsets, FilledButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 TimetablePickerDetail
-export class TimetablePickerDetail extends StatelessWidget {
+export class TimetablePickerDetail extends StatefulWidget {
   constructor(args) {
     super(args);
+    this._picked = null;
+  }
+  async _openPicker() {
+    const result = await showTimetableDatePicker(this.context);
+    if ((!!this.__unmounted)) {
+      return;
+    }
+    this.setState(() => {
+      this._picked = result;
+    });
+  }
+  get _pickedLabel() {
+    const picked = this._picked;
+    if ((__nn(picked) == null)) {
+      return "未选择日期";
+    }
+    return "已选择：" + picked.year + "年" + picked.month + "月" + picked.day + "日";
   }
   build(context) {
     const today = DateTime.now();
@@ -69,7 +87,26 @@ export class TimetablePickerDetail extends StatelessWidget {
             "fontSize": 12,
             "color": Colors.black54
           })
-        })))
+        }))),
+        (this.__k6 || (this.__k6 = new SizedBox({
+          "height": 16
+        }))),
+        new FilledButton({
+          "onPressed": () => this._openPicker(),
+          "child": (this.__k7 || (this.__k7 = new Text({
+            "data": "弹窗选择日期"
+          })))
+        }),
+        (this.__k8 || (this.__k8 = new SizedBox({
+          "height": 8
+        }))),
+        new Text({
+          "style": (this.__k9 || (this.__k9 = new TextStyle({
+            "color": Colors.black54,
+            "fontSize": 12
+          }))),
+          "data": this._pickedLabel
+        })
       ]
     });
   }

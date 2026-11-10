@@ -2,7 +2,10 @@
 // 跨包产物（package: hot_module_base）：由 hot_patch_generator 生成
 // 源文件：package:hot_module_base/src/widgets/timetable_date_picker.dart（一个源文件一份产物）
 
-import { Component, DateTime, Expanded, IgnorePointer, Row, SizedBox, StatefulWidget, ValueKey } from '../../../../flutter.js';
+import { Border, BorderRadius, BorderSide, BoxDecoration, BoxShadow, Center, Color, Colors, Column, Container, CrossAxisAlignment, CupertinoPicker, DateTime, Duration, EdgeInsets, Expanded, FilledButton, FixedExtentScrollController, FontWeight, Future, GestureDetector, GlobalKey, HitTestBehavior, IgnorePointer, MainAxisSize, Navigator, Offset, Padding, Radius, RoundedRectangleBorder, Row, SafeArea, SizedBox, StatefulWidget, Text, TextAlign, TextOverflow, TextStyle, ValueKey, showModalBottomSheet } from '../../../../flutter.js';
+
+const _themeBorder = () => { return Border.all({color: new Color({value: 0xFFE0E0E0}), width: 0.5}); };
+const _todayLabel = () => { return "今天"; };
 
 // 组件 TimetableDatePicker
 export class TimetableDatePicker extends StatefulWidget {
@@ -176,9 +179,116 @@ export class TimetableDatePicker extends StatefulWidget {
   }
 }
 
-// 原生组件包装 TimetableWheelColumn（@PatchIgnore(isComponent: true)）
-export class TimetableWheelColumn extends Component {
-  // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  static __fnProps = ["onSelectedItemChanged"];
+// 组件 TimetableWheelColumn
+export class TimetableWheelColumn extends StatefulWidget {
+  constructor(args) {
+    super(args);
+    this.__applyProps(args);
+    this._controller = null;
+  }
+  __applyProps(args) {
+    this.items = (args && args.items !== undefined) ? args.items : [];
+    this.initialItem = (args && args.initialItem !== undefined) ? args.initialItem : 0;
+    this.itemHeight = (args && args.itemHeight !== undefined) ? args.itemHeight : 0;
+    this.onSelectedItemChanged = (args && args.onSelectedItemChanged !== undefined) ? args.onSelectedItemChanged : null;
+    this.selectedColor = (args && args.selectedColor !== undefined) ? args.selectedColor : 0xFFE53935;
+    this.unselectedColor = (args && args.unselectedColor !== undefined) ? args.unselectedColor : 0xFF000000;
+    this.fontSize = (args && args.fontSize !== undefined) ? args.fontSize : 32;
+  }
+  initState() {
+    super.initState();
+    this._controller = this._createController();
+    this._controller.addListener((...args) => this._onScroll(...args));
+  }
+  _createController() {
+    const maxItem = (this.items.isEmpty ? 0 : (this.items.length - 1));
+    return new FixedExtentScrollController({initialItem: this.initialItem.clamp(0, maxItem)});
+  }
+  didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    const maxItem = (this.items.isEmpty ? 0 : (this.items.length - 1));
+    const target = this.initialItem.clamp(0, maxItem);
+    if ((oldWidget.items.length !== this.items.length)) {
+      this._replaceController();
+    } else {
+      if (this._controller.hasClients) {
+        if ((__nn(this._controller.selectedItem) !== __nn(target))) {
+          this._controller.jumpToItem(target);
+        }
+      } else {
+        if ((oldWidget.initialItem !== this.initialItem)) {
+          this._replaceController();
+        }
+      }
+    }
+  }
+  _replaceController() {
+    const old = this._controller;
+    this._controller = this._createController();
+    this._controller.addListener((...args) => this._onScroll(...args));
+    Future.delayed(new Duration({milliseconds: 32}), () => { old.dispose(); });
+  }
+  _onScroll() {
+    if (!this.__unmounted) {
+      this.setState(() => {});
+    }
+  }
+  dispose() {
+    this._controller.removeListener((...args) => this._onScroll(...args));
+    this._controller.dispose();
+    super.dispose();
+  }
+  get _selectedStyle() {
+    return new TextStyle({fontSize: this.fontSize, color: new Color({value: this.selectedColor}), fontWeight: FontWeight.bold});
+  }
+  get _unselectedStyle() {
+    return new TextStyle({fontSize: this.fontSize, color: new Color({value: this.unselectedColor})});
+  }
+  build(context) {
+    return CupertinoPicker.builder({
+      "scrollController": this._controller,
+      "itemExtent": this.itemHeight,
+      "onSelectedItemChanged": this.onSelectedItemChanged,
+      "magnification": 1.2,
+      "squeeze": 1,
+      "diameterRatio": 4,
+      "useMagnifier": true,
+      "selectionOverlay": new Container({
+        "decoration": new BoxDecoration({
+          "border": new Border({
+            "top": new BorderSide({
+              "color": (this.__k0 || (this.__k0 = new Color({
+                "value": 0xffe4e4e4
+              }))),
+              "width": 0.5
+            }),
+            "bottom": new BorderSide({
+              "color": (this.__k0 || (this.__k0 = new Color({
+                "value": 0xffe4e4e4
+              }))),
+              "width": 0.5
+            })
+          })
+        })
+      }),
+      "childCount": this.items.length,
+      "itemBuilder": (context, index) => {
+        return new Center({
+          "child": new Text({
+            "maxLines": 1,
+            "overflow": TextOverflow.ellipsis,
+            "style": (this._controller.selectedItem === index) ? this._selectedStyle : this._unselectedStyle,
+            "data": this.items[index]
+          })
+        });
+      },
+      "key": new ValueKey({value: this._controller})
+    });
+  }
 }
+
+export const showTimetableDatePicker = (context, __o) => { let initialDate = (__o && __o.initialDate !== undefined) ? __o.initialDate : null; const pickerKey = new GlobalKey({typeArguments: {"T": "_TimetableDatePickerState"}});
+  const today = DateTime.now();
+  const firstDate = new DateTime({year: today.year, month: today.month, day: (today.day - 30)});
+  const lastDate = new DateTime({year: today.year, month: today.month, day: (today.day + 365)});
+  return showModalBottomSheet({"context": context, "isScrollControlled": true, "backgroundColor": Colors.white, "shape": new RoundedRectangleBorder({borderRadius: BorderRadius.vertical({top: Radius.circular({radius: 16})})}), "builder": (sheetContext) => { return new Column({mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [new Padding({padding: EdgeInsets.symmetric({vertical: 16}), child: new Text({data: "时间选择器", textAlign: TextAlign.center, style: new TextStyle({fontSize: 16, fontWeight: FontWeight.bold})})}), new SizedBox({height: 12}), new Padding({padding: EdgeInsets.symmetric({horizontal: 24}), child: new Container({decoration: new BoxDecoration({border: _themeBorder(), borderRadius: BorderRadius.circular({radius: 16})}), padding: EdgeInsets.symmetric({vertical: 48, horizontal: 12}), child: new Column({mainAxisSize: MainAxisSize.min, children: [new TimetableDatePicker({key: pickerKey, initialDate: initialDate, firstDate: firstDate, lastDate: lastDate}), new SizedBox({height: 48}), new GestureDetector({onTap: () => { pickerKey.currentState?.resetToToday(); }, behavior: HitTestBehavior.opaque, child: new Container({decoration: new BoxDecoration({border: _themeBorder(), borderRadius: BorderRadius.circular({radius: 8})}), padding: EdgeInsets.symmetric({vertical: 10, horizontal: 18}), child: new Text({data: _todayLabel(), style: new TextStyle({fontWeight: FontWeight.bold})})})})]})})}), new SizedBox({height: 60}), new SafeArea({top: false, child: new Container({padding: EdgeInsets.only({top: 20, left: 12, right: 12}), decoration: new BoxDecoration({color: Colors.white, boxShadow: [new BoxShadow({color: new Color({value: 0xffefefef}), offset: new Offset({dx: 0, dy: (-2)}), blurRadius: 15})]}), child: new SizedBox({height: 48, child: new FilledButton({onPressed: () => { Navigator.of(sheetContext).pop((pickerKey.currentState?.selectedDate ?? DateTime.now())); }, child: new Text({data: "确定", style: new TextStyle({fontSize: 16, fontWeight: FontWeight.bold})})})})})})]}); }, typeArguments: {"T": "DateTime"}}); };

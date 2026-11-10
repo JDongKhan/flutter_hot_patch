@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// @author jd
 /// 时刻表专用日期选择弹窗：仅选择日期，无出发/到达选项卡
@@ -25,7 +24,7 @@ Future<DateTime?> showTimetableDatePicker(BuildContext context, {DateTime? initi
             child: Text('时间选择器', textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 12),
-          //日期区域
+          // 日期区域
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Container(
@@ -52,21 +51,28 @@ Future<DateTime?> showTimetableDatePicker(BuildContext context, {DateTime? initi
             ),
           ),
           const SizedBox(height: 60),
-          //确认按钮
+          // 确认按钮
           SafeArea(
             top: false,
             child: Container(
               padding: const EdgeInsets.only(top: 20, left: 12, right: 12),
               decoration: BoxDecoration(
-                color: Theme.of(sheetContext).colorScheme.surface,
+                // 不用 `Theme.of(...).colorScheme.surface`：JS 侧没有主题查询能力，
+                // 与底部弹窗自身的白底保持一致即可。
+                color: Colors.white,
                 boxShadow: const [BoxShadow(color: Color(0xffefefef), offset: Offset(0, -2), blurRadius: 15)],
               ),
-              child: FilledButton(
-                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                onPressed: () {
-                  Navigator.of(sheetContext).pop(pickerKey.currentState?.selectedDate ?? DateTime.now());
-                },
-                child: const Text('确定', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              // 跨包产物里宿主 widget 的静态方法（`FilledButton.styleFrom`）
+              // 暂不可解析，`ButtonStyle.minimumSize` 又需要 WidgetStateProperty；
+              // 直接用 SizedBox 给定按钮高度，两端口径一致。
+              child: SizedBox(
+                height: 48,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop(pickerKey.currentState?.selectedDate ?? DateTime.now());
+                  },
+                  child: const Text('确定', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
               ),
             ),
           ),
@@ -281,13 +287,10 @@ class _TimetableDatePickerState extends State<TimetableDatePicker> {
   }
 }
 
-/// 单列滚轮：内部持有 [FixedExtentScrollController]（原生交互组件）。
+/// 单列滚轮：内部持有 [FixedExtentScrollController]，配合 [CupertinoPicker.builder]。
 ///
-/// 标 `@PatchIgnore(isComponent: true)`：翻译产物保留类型名，运行期由宿主
-/// `registerNativeComponent('TimetableWheelColumn', …)` 用原生实现渲染。
-/// 上层只传「选项 / 初始下标 / 单行高度 / 回调」，不跨语言共享 controller，
-/// 避免把 Cupertino 的滚动控制器也翻译到 JS 侧。
-@PatchIgnore(isComponent: true)
+/// 与上层只交换「选项 / 初始下标 / 单行高度 / 回调」，controller 由本列自己持有；
+/// 它随本类一起翻译成 JS（JS 侧 controller 是宿主真实 controller 的镜像句柄）。
 class TimetableWheelColumn extends StatefulWidget {
   const TimetableWheelColumn({
     super.key,
@@ -347,7 +350,11 @@ class _TimetableWheelColumnState extends State<TimetableWheelColumn> {
     final old = _controller;
     _controller = _createController();
     _controller.addListener(_onScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    // 旧 controller 仍被上一帧的 picker 持有：延后一拍再释放（JS 侧没有
+    // WidgetsBinding.addPostFrameCallback，用等价的「下一帧后」延迟）。
+    Future.delayed(const Duration(milliseconds: 32), () {
+      old.dispose();
+    });
   }
 
   void _onScroll() {
@@ -363,10 +370,15 @@ class _TimetableWheelColumnState extends State<TimetableWheelColumn> {
     super.dispose();
   }
 
+  /// 选中项样式（用 getter：builder 闭包里引用时才折算得成字段引用）。
+  TextStyle get _selectedStyle =>
+      TextStyle(fontSize: widget.fontSize, color: Color(widget.selectedColor), fontWeight: FontWeight.bold);
+
+  /// 未选中项样式。
+  TextStyle get _unselectedStyle => TextStyle(fontSize: widget.fontSize, color: Color(widget.unselectedColor));
+
   @override
   Widget build(BuildContext context) {
-    final selectedStyle = TextStyle(fontSize: widget.fontSize, color: Color(widget.selectedColor), fontWeight: FontWeight.bold);
-    final unselectedStyle = TextStyle(fontSize: widget.fontSize, color: Color(widget.unselectedColor));
     return CupertinoPicker.builder(
       key: ValueKey(_controller),
       scrollController: _controller,
@@ -391,7 +403,7 @@ class _TimetableWheelColumnState extends State<TimetableWheelColumn> {
             widget.items[index],
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: _controller.selectedItem == index ? selectedStyle : unselectedStyle,
+            style: _controller.selectedItem == index ? _selectedStyle : _unselectedStyle,
           ),
         );
       },

@@ -49,6 +49,9 @@ const Set<String> builderFormTypes = {
   'SliverList',
   'SliverGrid',
   'PageView',
+  // 滚轮：`CupertinoPicker.builder(itemBuilder:, childCount:)` 与滚动视图同协议
+  // （闭包在代理类里展开成有序子结点，实例走 FixedExtentScrollController 句柄）。
+  'CupertinoPicker',
   // 普通构造里就带 builder 回调（`AnimatedList(itemBuilder:, initialItemCount:)`）。
   // 与 ListView.builder 同一协议：闭包在代理类里展开成有序子结点，不进宿主 props。
   'AnimatedList',
@@ -60,6 +63,8 @@ const Set<String> builderFormTypes = {
 /// 这是**产物协议配置**（JS 代理展开时读取哪个形参），不是运行时类型表。
 const Map<String, String> builderCountPropKeys = {
   'AnimatedList': 'initialItemCount',
+  // `CupertinoPicker.builder` 的项数形参名。
+  'CupertinoPicker': 'childCount',
 };
 
 /// 某类型的「项数」props 键。
