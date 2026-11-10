@@ -6,6 +6,7 @@ import 'package:hot_patch/hot_patch.dart';
 import 'app/app.dart';
 import 'base/app_log_console.dart';
 import 'components/composite_component.dart';
+import 'components/getx_component.dart';
 import 'components/hello_component.dart';
 import 'components/inherited_widget_demo.dart';
 import 'components/provider_component.dart';
@@ -146,6 +147,15 @@ class DemoListPage extends StatelessWidget {
         // provider 状态处理在 JS 侧（js/provider.js → patch/packages/provider.js）：
         // 经 JsUiWidget 新运行时渲染，宿主不实现任何 provider 语义。
         js: JsUiWidget(jsAsset: _patchUrl('ProviderCard', 'components/provider_component.js')),
+      ),
+    ),
+    _DemoEntry(
+      'GetXCard · 原生 vs JS 热更',
+      'Get.put/find + GetBuilder.update + Obx/Rx：手动通知与自动追踪',
+      _CompareTest(
+        native: GetXCard(),
+        // GetX 状态处理在 JS 侧（js/get.js → patch/packages/get.js）。
+        js: JsUiWidget(jsAsset: _patchUrl('GetXCard', 'components/getx_component.js')),
       ),
     ),
     _DemoEntry(

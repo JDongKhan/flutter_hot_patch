@@ -92,6 +92,13 @@ class CtorSignatures {
   /// typedef 名 → 是否函数类型别名（解析结果缓存，每个名字只解析一次）。
   final Map<String, bool> _typedefIsFunction = {};
 
+  /// 顶层变量名 → 候选源文件绝对路径（与 [classFiles] 同一次扫描建立）。
+  ///
+  /// 三方库的顶层单例（如 GetX 的 `final Get = _GetImpl();`）在语法上是
+  /// `<名字>.<方法>(...)`，名字既不是类也不是本文件的值；翻译层需要按源码
+  /// 事实确认它是「某个包的顶层变量」，才能原样引用并登记对应 JS 模块 import。
+  final Map<String, List<String>> _topLevelValueFiles = {};
+
   /// **泛型方法声明**索引：方法名 → 候选源文件。
   ///
   /// 由 [_ensureIndex] 的正则扫描建立（`T watch<T>(…)` / `List<T> map<T>(…)`）。
@@ -280,6 +287,18 @@ class CtorSignatures {
   Set<String> declaringPackagesOf(String className) {
     final out = <String>{};
     for (final file in _ensureIndex()[className] ?? const <String>[]) {
+      final pkg = _sources?.packageOfFile(file);
+      if (pkg != null) out.add(pkg);
+    }
+    return out;
+  }
+
+  /// 顶层变量声明的**所在包**（同名顶层变量可能存在于多个包，全部返回）。
+  ///
+  /// 与 [declaringPackagesOf] 同一口径：只读源码事实（声明文件 → 包）。
+  Set<String> declaringPackagesOfTopLevelValue(String name) {
+    final out = <String>{};
+    for (final file in _topLevelValueFiles[name] ?? const <String>[]) {
       final pkg = _sources?.packageOfFile(file);
       if (pkg != null) out.add(pkg);
     }
@@ -598,6 +617,12 @@ class CtorSignatures {
             _enumFiles.putIfAbsent(name, () => []).add(entity.path);
           }
         }
+        for (final m in _topLevelValueDecl.allMatches(content)) {
+          final name = m.group(1);
+          if (name != null) {
+            _topLevelValueFiles.putIfAbsent(name, () => []).add(entity.path);
+          }
+        }
         for (final m in _genericMethodDecl.allMatches(content)) {
           final name = m.group(1);
           if (name == null) continue;
@@ -625,6 +650,16 @@ class CtorSignatures {
   static final _enumDecl = RegExp(
     r'^[ \t]*(?:@[\w.]+(?:[ \t]*\([^)]*\))?[ \t]*\r?\n[ \t]*)*'
     r'enum[ \t]+([A-Za-z_$][\w$]*)',
+    multiLine: true,
+  );
+
+  /// **顶层变量声明**（`final Get = _GetImpl();` / `const k = 1;` / `var x;`）。
+  ///
+  /// 只认**行首无缩进**的声明：类内字段与函数体内的局部变量都有缩进，
+  /// 据此把「包的顶层值」与「成员 / 局部值」区分开，不维护任何名字表。
+  static final _topLevelValueDecl = RegExp(
+    r'^(?:late[ \t]+final|final|const|var)[ \t]+'
+    r'(?:[^=;\n]*[ \t]+)?([A-Za-z_$][\w$]*)[ \t]*[=;]',
     multiLine: true,
   );
 

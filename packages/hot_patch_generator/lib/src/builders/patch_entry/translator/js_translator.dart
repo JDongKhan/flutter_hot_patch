@@ -2207,7 +2207,21 @@ String? _methodCallJs(
       return '$name($passed)';
     }
     final member = scope.methodRef(e.methodName.name);
-    if (member == null) return null;
+    if (member == null) {
+      // 首字母类名（`DateTime(...)` / `TextStyle(...)`）可能是无 `new` 的构造：
+      // 构造兜底在调用方（`valueCtorJs` → `modelCtorToJs`），这里必须返回 null
+      // 让位，不能当实例方法发射。
+      final isCtorName =
+          CtorSignatures.instance?.isClass(e.methodName.name) ?? false;
+      // 基类在 JS 侧有实现（SDK / 项目类 / 三方包）时，本类能裸调的实例方法
+      // 只可能来自继承链：Dart 静态分析已保证它存在，JS 侧同名方法随基类
+      // `extends` 一起可见，原样发射 `this.<name>(...)`。顶层函数已在上面各表
+      // 命中，不落到这里。
+      if (!isCtorName && scope.hasJsBase) {
+        return 'this.${e.methodName.name}($passed)';
+      }
+      return null;
+    }
     return '$member($passed)';
   }
   if (target is Identifier) {
@@ -2236,7 +2250,10 @@ String? _methodCallJs(
     }
     // receiver 是「类定义在某个产物模块里的类型」（`Overlay.of(context)` 等）：
     // 产出 `<类引用>.m(args)`，类引用串由钩子给出（含 import 登记）。
-    final clsRef = classRefHook?.call(target.name);
+    // 泛型参数名（`T.toString()`）不是值符号，先排除，避免被当成三方包顶层值。
+    final clsRef = scope.typeParams.containsKey(target.name)
+        ? null
+        : classRefHook?.call(target.name);
     if (clsRef != null) return '$clsRef.$callMember($passed)';
     // 项目类（模型 / 静态类 / 组件）的静态方法调用（`HomeFeed.fromJson(e)`）：
     // JS 侧就是同名 class，静态方法挂在类上，1:1 产出 `X.m(args)`。类表的键

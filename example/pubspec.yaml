@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
+  # GetX 状态管理（DI / GetBuilder / Obx）：JS 侧实现见宿主 js/get.js。
+  get: ^4.6.6
   # 下拉刷新（easy_refresh 能力）：宿主侧桥接见
   # hot_patch/lib/src/js_ui/capabilities/easy_refresh/。
   easy_refresh: ^3.4.0

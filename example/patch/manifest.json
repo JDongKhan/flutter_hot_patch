@@ -1,9 +1,10 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-10T17:29:24.790391",
+  "buildTime": "2026-11-10T18:34:32.699967",
   "resources": {
     "flutter.js": "81f855b3b6d1a05e3298f51419faecacb36368613dbd5735585df424e965f08b",
+    "packages/get.js": "f8aa6f3b477af33cdf3214a64e46d1a98f8d96aaa06dbeb2be5a1bf0a8aa7027",
     "packages/provider.js": "998f91ba6314dff5b811a88baacffdb07a6b35f0901eb5a04e5e8f1d65d93414",
     "runtime.js": "c9922af948eb83ea98b2b27c2e9e835f5fb121d0e76ed31dd1241fc58bb1c790",
     "packages/hot_module_base/hot_module_base.js": "290a1651bbbace19d379f64d2970e0eecc0bdd3b67ab0fe4c131393f53dc04ed",
@@ -118,6 +119,7 @@
     "components/explicit_animation_detail.js": "1aa88580b767d47aadddc09692d9b2bccf2a32589475120196d0272f493ac20c",
     "components/keyboard_listener_detail.js": "8feb77db28b4f0a4cf3aff62fbfd684cadc54c4f7d3c6bd204a04d1d2fadafb0",
     "components/image_detail.js": "519e42521fa1c89f986f58a05a2a13a0f52e88857ddc0f4909ab1880ac6c07e3",
+    "components/getx_component.js": "4f38461cc840fa00f6d99329868032b277640b1ca9bc48e0d9c168c8446dd848",
     "components/spacer_detail.js": "d4ea8437788eeca8d5d3f1d4871cab163a8919a9b31d045b1fb38a840cb2427e",
     "components/implicit_animation_detail.js": "3c865089599bac7e4f9e856c2007b766ca295141fb3864ee702c21cf1cbdd2d0",
     "components/progress_detail.js": "070662add851e61573e8e47a33c74effd53918945b1368c6a8687188f00dc78d",
@@ -133,6 +135,7 @@
     "components/image_icon_detail.js": "b9fbb6396f35fc8c37e652c2593a7b04593ef4330d6ef6a86fbe87211215b3d2",
     "model/network_vm.js": "0162bfe78a7a3680b8601a8c0cb84d05ab8508ae8ad0005b986ae54c198df0c1",
     "model/counter_vm.js": "0541360274009cb3f5a17c26cb7f4c4cff46a876abe3d5ef0af1d9854312d883",
+    "model/getx_counter_vm.js": "134cd02227fc4394a42121fa24c00ab96839db92a0cef438b4bd0189a481b761",
     "base/canvas_image.js": "903379c7a8a93053d1ed1a9ce65e410e09ff9d70328c170ecedef4b04ffd8623",
     "base/app_router.js": "49bddfad3670613d57985a623fc85af9f37930a09304b88289a23caca22d6efb",
     "base/web_view.js": "ed4cfc2b46fd3928dbe87a84069b8403ba875aaafa657b1e4cdeae83e9aaaff7"

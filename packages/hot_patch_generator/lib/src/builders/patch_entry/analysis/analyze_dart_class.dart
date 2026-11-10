@@ -15,6 +15,7 @@ import 'package:build/build.dart' show log;
 import '../class_info.dart';
 import '../../shared/ctor_signatures.dart';
 import '../../shared/host_injected.dart';
+import '../../shared/js_class_defs.dart';
 import '../translator/js_translator.dart';
 import '../translator/js_value.dart';
 import '../../shared/source_index.dart';
@@ -383,6 +384,16 @@ Set<String> referencedClassNames(AstNode decl) {
   return dependenciesOf(decl);
 }
 
+/// 任意声明节点里**值位置**引用的符号（构造 / 静态调用 / 顶层值前缀）。
+///
+/// 用于三方包 import 登记：只收产物里确实以值出现的名字，类型注解（JS 侧
+/// 被擦除）不算，避免给模块 import 一堆未导出的符号。
+Set<String> referencedValueNames(AstNode decl) {
+  final collector = _TypeRefCollector();
+  decl.accept(collector);
+  return collector.valueNames;
+}
+
 /// 任意声明节点里出现的**全部类型引用**——依赖发现的唯一收集入口。
 ///
 /// 以声明为节点整棵子树扫一遍，凡可能让产物产生「对另一个类的运行时引用」的
@@ -404,6 +415,12 @@ Set<String> dependenciesOf(AstNode node) {
 class _TypeRefCollector extends RecursiveAstVisitor<void> {
   final names = <String>{};
 
+  /// 产物里**值位置**真实引用的符号（构造 / 静态调用 / 顶层值前缀）。
+  ///
+  /// 与 [names] 的区别：类型注解只进 [names]（JS 侧多被擦除），只有这里收的
+  /// 名字才一定以值的形式出现在产物里，可安全用于三方包 import 登记。
+  final valueNames = <String>{};
+
   /// `@HostInjected` 方法：Dart 实现留在宿主，JS 侧方法体只有
   /// `_app_host_.invoke(...)`，因此方法体里引用到的类型**不会**出现在产物里
   /// （不参与依赖传播 / import 生成）。
@@ -415,7 +432,12 @@ class _TypeRefCollector extends RecursiveAstVisitor<void> {
 
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
-    names.add(node.constructorName.type.name2.lexeme);
+    final type = node.constructorName.type;
+    final name = type.name2.lexeme;
+    names.add(name);
+    // 带 import 前缀的构造（`p.X(...)`）在产物里保留 `p.X`，前缀 import 已经
+    // 覆盖该符号，不需要也不应该再补一条具名 import。
+    if (type.importPrefix == null) valueNames.add(name);
     super.visitInstanceCreationExpression(node);
   }
 
@@ -427,8 +449,10 @@ class _TypeRefCollector extends RecursiveAstVisitor<void> {
     final target = node.target;
     if (target == null && node.typeArguments == null) {
       _addClassLikeName(node.methodName.name);
+      _addValueName(node.methodName.name);
     } else if (target is SimpleIdentifier) {
       _addClassLikeName(target.name);
+      _addValueName(target.name);
     }
     super.visitMethodInvocation(node);
   }
@@ -436,13 +460,17 @@ class _TypeRefCollector extends RecursiveAstVisitor<void> {
   @override
   void visitPrefixedIdentifier(PrefixedIdentifier node) {
     _addClassLikeName(node.prefix.name);
+    _addValueName(node.prefix.name);
     super.visitPrefixedIdentifier(node);
   }
 
   @override
   void visitPropertyAccess(PropertyAccess node) {
     final target = node.target;
-    if (target is SimpleIdentifier) _addClassLikeName(target.name);
+    if (target is SimpleIdentifier) {
+      _addClassLikeName(target.name);
+      _addValueName(target.name);
+    }
     super.visitPropertyAccess(node);
   }
 
@@ -463,6 +491,10 @@ class _TypeRefCollector extends RecursiveAstVisitor<void> {
 
   void _addClassLikeName(String n) {
     if (n.isNotEmpty && n[0] == n[0].toUpperCase()) names.add(n);
+  }
+
+  void _addValueName(String n) {
+    if (n.isNotEmpty && n[0] == n[0].toUpperCase()) valueNames.add(n);
   }
 }
 
@@ -1092,6 +1124,32 @@ ClassInfo translateClass(
     }
   }
 
+  final thirdPartyBase = _thirdPartyBaseOf(proto);
+
+  // 三方包符号登记：值位置引用到的名字，若其声明属于「有宿主 JS 模块」的包，
+  // 产物里必然以同名符号出现（构造 `RxInt(0)`、顶层值 `Get.put`），必须 import。
+  final thirdPartyRefs = <String, Set<String>>{};
+  void collectThirdPartyValues(AstNode node) {
+    for (final name in referencedValueNames(node)) {
+      final pkg = thirdPartyPackageOf(name);
+      if (pkg != null) (thirdPartyRefs[pkg] ??= <String>{}).add(name);
+    }
+  }
+
+  collectThirdPartyValues(hostClass);
+  for (final (ref, _, _) in mixinInfos) {
+    collectThirdPartyValues(ref.node);
+  }
+  final usedWidgetPackages = <String, Set<String>>{
+    for (final e in parseCtx.usedWidgetPackages.entries) e.key: {...e.value},
+  };
+  for (final e in thirdPartyRefs.entries) {
+    (usedWidgetPackages[e.key] ??= <String>{}).addAll(e.value);
+  }
+  if (thirdPartyBase != null) {
+    (usedWidgetPackages[thirdPartyBase.$1] ??= <String>{}).add(thirdPartyBase.$2);
+  }
+
   return ClassInfo(
     name: decl.name.lexeme,
     sourceFile: sourcePath,
@@ -1119,10 +1177,23 @@ ClassInfo translateClass(
       ...used.keys,
       if (_projectBaseName(proto.widgetSuperType, classTable) case final b?) b,
     },
-    usedWidgetPackages: parseCtx.usedWidgetPackages,
+    usedWidgetPackages: usedWidgetPackages,
     namespaceImports: parseCtx.namespaceImports,
     mixinApplications: mixinApps,
   );
+}
+
+/// 基类来自三方包时 → (包名, 基类名)；否则 null。
+///
+/// 与 [jsBaseClassOf] 的三方分支同一判据（声明文件 → 包 → 宿主 `js/` 有模块）。
+/// 该类在 JS 侧按原生 `extends` 继承基类，产物必须 import 这个符号。
+(String, String)? _thirdPartyBaseOf(ClassInfo proto) {
+  final t = proto.superType;
+  if (t == null) return null;
+  final name = t.split('<').first.trim();
+  if (name.isEmpty) return null;
+  final pkg = thirdPartyPackageOf(name);
+  return pkg == null ? null : (pkg, name);
 }
 
 /// 纯 `mixin M { ... }` → 独立类产物（按声明源文件路径落盘）。

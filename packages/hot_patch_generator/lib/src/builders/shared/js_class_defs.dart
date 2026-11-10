@@ -213,6 +213,35 @@ String? _resolveThirdPartyPackage(String type) {
   return hits.isEmpty ? null : hits.first;
 }
 
+/// 顶层变量 → 持有其 JS 值的三方包（null = 不是「有三方 JS 模块的包」的顶层值）。
+///
+/// 与 [thirdPartyPackageOf] 同一判据，只是把「类声明」换成「顶层变量声明」：
+/// 三方库的单例（GetX 的 `final Get = _GetImpl();`）不是类，但它在 JS 侧由
+/// 该包的模块导出，翻译层需要按源码事实确认归属才能 import。
+String? thirdPartyValuePackageOf(String name) =>
+    _thirdPartyValuePackageCache.putIfAbsent(
+      name,
+      () => _resolveThirdPartyValuePackage(name),
+    );
+
+final Map<String, String?> _thirdPartyValuePackageCache = {};
+
+String? _resolveThirdPartyValuePackage(String name) {
+  final modules = thirdPartyJsPackages;
+  if (modules.isEmpty) return null;
+  final packages =
+      CtorSignatures.instance?.declaringPackagesOfTopLevelValue(name) ??
+          const <String>{};
+  final hits = packages.where(modules.contains).toSet();
+  if (hits.length > 1) {
+    // ignore: avoid_print - 构建期日志
+    print('[hot_patch_generator] 顶层变量 $name 同时声明在多个三方包 '
+        '${hits.join(' / ')}，无法判定 JS 模块归属，按项目内值处理');
+    return null;
+  }
+  return hits.isEmpty ? null : hits.first;
+}
+
 /// 类型的 package 归属（默认 [nodeHelperPackage]）。
 ///
 /// 内建类型（宿主包装类 / 逻辑组件 / builder 代理）固定归 flutter；其余才按

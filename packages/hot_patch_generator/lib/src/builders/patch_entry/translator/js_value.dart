@@ -373,8 +373,12 @@ String? jsBaseClassOf(ClassInfo info, Map<String, ClassInfo> classTable) {
   if (t == null) return null;
   final name = t.split('<').first.trim();
   final base = classTable[name];
-  if (base == null || base.name == info.name) return null;
-  return name;
+  if (base != null && base.name != info.name) return name;
+  // 三方库基类（`extends GetxController`）：基类声明在某个三方包、且宿主
+  // `js/<package>.js` 提供了该包模块，则该模块里有同名导出 → 原样 extends。
+  // 判据只看「声明文件 → 包 → 是否有宿主模块」，不维护库 / 类型表。
+  if (thirdPartyPackageOf(name) != null) return name;
+  return null;
 }
 
 /// Dart 基类名 → JS 基类名（运行时注入同名类）。

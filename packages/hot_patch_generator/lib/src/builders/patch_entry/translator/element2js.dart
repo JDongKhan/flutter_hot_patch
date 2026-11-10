@@ -1156,6 +1156,16 @@ class ElementTranslateContext implements ExprRenderer {
           return '${target.name}.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList, activeScope)})';
         }
+        // 三方包顶层值（`Get.find<T>()`）：JS 侧是该模块导出的同名符号，
+        // 原样 `Get.find(...)`；不能补 `this.`（实例上没有这个字段）。
+        // 泛型参数名不是值符号，先排除。
+        if (target is Identifier && !activeScope.typeParams.containsKey(target.name)) {
+          final symbol = _thirdPartyValueRefJs(target.name);
+          if (symbol != null) {
+            return '$symbol.${inner.methodName.name}'
+                '(${_eventArgsJs(inner.argumentList, activeScope)})';
+          }
+        }
         if (target is Identifier) {
           return 'this.${target.name}.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList, activeScope)})';
@@ -1422,11 +1432,24 @@ class ElementTranslateContext implements ExprRenderer {
       }
     }
     final file = jsClassFileOf(className);
-    if (file == null) return null;
+    if (file == null) return _thirdPartyValueRefJs(className);
     if (importResolver?.call(className) == null) {
       _registerWidgetImport(className, className);
     }
     return className;
+  }
+
+  /// 三方包**顶层变量**的引用（`Get.put(...)` 的 `Get`）→ 符号名并登记 import。
+  ///
+  /// 顶层变量不是类（[jsClassFileOf] 不命中），但它由该包的 JS 模块导出；
+  /// 归属只由「变量声明文件 → 包 → 宿主 `js/` 是否有模块」判定。项目内同名值
+  /// （[importResolver] 命中）优先走依赖 import，不在此处理。
+  String? _thirdPartyValueRefJs(String name) {
+    final pkg = thirdPartyValuePackageOf(name);
+    if (pkg == null) return null;
+    if (importResolver?.call(name) != null) return null;
+    (usedWidgetPackages[pkg] ??= <String>{}).add(name);
+    return name;
   }
 
   /// 实参位置的构造表达式 → 属性管线（与 children 里的子结点同一条路径）。
