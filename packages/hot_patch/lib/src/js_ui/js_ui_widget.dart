@@ -678,17 +678,9 @@ Widget _renderStoreNode(JsUiStore store, String id, String pageKey) {
     );
   }
   final widget = builder(_renderContextOf(store, node, pageKey, declared));
-  // renderer 把**同一个 key** 挂到了真实 widget 上（`key: c.key`）时不再包
-  // KeyedSubtree：`GlobalKey.currentContext / currentState` 因此指向真实 widget
-  // 的 Element，与原生 Flutter 里「key 挂在业务 widget 上」一致（VisibilityDetector
-  // 这类构造上就要求 key 的组件）。
-  // 例外：能力层会把外层 key 换成另一把（`hostStateKey`，如 AnimatedList /
-  // Dismissible），此时仍需 KeyedSubtree 承载元素身份，wrapper 不能省。
-  // 未迁移的 renderer（widget 无 key）同样走 KeyedSubtree 兜底，行为不变。
-  if (declared == null || widget.key == declared) return widget;
   // 未声明 key 时交给 Flutter 的默认语义（按位置 + 类型复用 element），与原生
   // 一致；声明了 key 才套一层 KeyedSubtree（保证列表重排时 element 跟着 key 走）。
-  return KeyedSubtree(key: declared, child: widget);
+  return declared == null ? widget : KeyedSubtree(key: declared, child: widget);
 }
 
 /// 结点 → renderer 的输入：props + 按 Dart 实参原名索引的 slot

@@ -37,7 +37,7 @@ void closeOpenDrawer() {
 ///
 /// 只在抽屉内容被构建（= 抽屉打开）期间存在，卸载即注销。
 class _JsDrawerScope extends StatefulWidget {
-  const _JsDrawerScope({super.key, required this.child});
+  const _JsDrawerScope({required this.child});
 
   final Widget child;
 
@@ -83,7 +83,6 @@ class _JsDrawerScopeState extends State<_JsDrawerScope> {
 void registerDrawerWidgets(JsWidgetRegistry r) {
   // Drawer：真实 Drawer + 关闭作用域包装。
   r.register('Drawer', (c) => _JsDrawerScope(
-        key: c.key,
         child: Drawer(
           backgroundColor: colorFromJson(c.props['backgroundColor']),
           elevation: c.num_('elevation'),
@@ -96,7 +95,6 @@ void registerDrawerWidgets(JsWidgetRegistry r) {
   // DrawerHeader：decoration / padding / margin + child（缺省 padding/margin
   // 与 Flutter 默认一致）。
   r.register('DrawerHeader', (c) => DrawerHeader(
-        key: c.key,
         decoration: boxDecorationFromJson(c.map('decoration')),
         padding: nullableEdgeInsets(c.map('padding')) ??
             const EdgeInsets.fromLTRB(16, 16, 16, 8),

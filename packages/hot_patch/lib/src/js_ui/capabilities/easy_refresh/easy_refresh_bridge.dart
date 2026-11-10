@@ -198,7 +198,6 @@ Future<void> _runAwaitableEvent(Object? handler) async {
 /// 按 ScrollController 同一套句柄层支持（见 [_easyRefreshBridge]）。
 class _JsEasyRefresh extends StatelessWidget {
   const _JsEasyRefresh({
-    super.key,
     required this.controller,
     required this.onRefresh,
     required this.onLoad,
@@ -250,7 +249,6 @@ void registerEasyRefreshWidgets(JsWidgetRegistry r) {
             ),
           );
     return _JsEasyRefresh(
-      key: c.key,
       controller: controller,
       onRefresh: c.props['onRefresh'],
       onLoad: c.props['onLoad'],

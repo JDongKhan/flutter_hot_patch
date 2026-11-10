@@ -20,7 +20,6 @@ void registerLayoutBuilderWidgets(JsWidgetRegistry r) {
   r.register(
     'LayoutBuilder',
     (c) => _JsLayoutBuilder(
-      key: c.key,
       builder: c.props['builder'],
       child: c.children['child'] as Widget?,
     ),
@@ -30,7 +29,6 @@ void registerLayoutBuilderWidgets(JsWidgetRegistry r) {
 /// 承载 LayoutBuilder：布局阶段把父约束交给 JS 的 builder 句柄。
 class _JsLayoutBuilder extends StatefulWidget {
   const _JsLayoutBuilder({
-    super.key,
     required this.builder,
     required this.child,
   });

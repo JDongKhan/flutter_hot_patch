@@ -71,7 +71,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     if (c.str('factory') == 'rich') {
       return Text.rich(
         textSpanFromJson(c.props['textSpan']) ?? const TextSpan(),
-        key: c.key,
         style: style,
         textAlign: textAlign,
         overflow: overflow,
@@ -84,7 +83,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     }
     return Text(
       c.str('data') ?? '',
-      key: c.key,
       style: style,
       textAlign: textAlign,
       overflow: overflow,
@@ -99,7 +97,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'RichText',
     (c) => RichText(
-      key: c.key,
       text: textSpanFromJson(c.props['text']) ?? const TextSpan(),
       textAlign: textAlignFromJson(c.props['textAlign']) ?? TextAlign.start,
       textDirection: textDirectionFromJson(c.props['textDirection']),
@@ -115,7 +112,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Column',
     (c) => Column(
-      key: c.key,
       mainAxisAlignment:
           mainAxisAlignmentFromJson(c.props['mainAxisAlignment']) ??
           MainAxisAlignment.start,
@@ -132,7 +128,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Row',
     (c) => Row(
-      key: c.key,
       mainAxisAlignment:
           mainAxisAlignmentFromJson(c.props['mainAxisAlignment']) ??
           MainAxisAlignment.start,
@@ -149,7 +144,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Stack',
     (c) => Stack(
-      key: c.key,
       alignment:
           alignmentFromJson(c.props['alignment']) ??
           AlignmentDirectional.topStart,
@@ -163,7 +157,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'IndexedStack',
     (c) => IndexedStack(
-      key: c.key,
       // index 是状态字段（`this._index`），切换后只重下发 props、子结点原位复用，
       // 因此各 tab 页的状态（滚动位置、输入内容）都能保留。
       index: c.int_('index') ?? 0,
@@ -177,7 +170,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Wrap',
     (c) => Wrap(
-      key: c.key,
       direction: axisFromJson(c.props['direction']) ?? Axis.horizontal,
       spacing: c.num_('spacing') ?? 0,
       runSpacing: c.num_('runSpacing') ?? 0,
@@ -199,7 +191,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         ? Clip.none
         : (clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.none);
     return Container(
-      key: c.key,
       width: c.num_('width'),
       height: c.num_('height'),
       // color 与 decoration 同传会断言：decoration 优先（其内可含 color）。
@@ -217,21 +208,16 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Padding',
     (c) => Padding(
-      key: c.key,
       padding: edgeInsetsFromJson(c.map('padding')),
       child: (c.children['child'] as Widget?),
     ),
   );
 
-  r.register(
-    'Center',
-    (c) => Center(key: c.key, child: (c.children['child'] as Widget?)),
-  );
+  r.register('Center', (c) => Center(child: (c.children['child'] as Widget?)));
 
   r.register(
     'Align',
     (c) => Align(
-      key: c.key,
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
       child: (c.children['child'] as Widget?),
     ),
@@ -244,28 +230,22 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     final child = c.children['child'] as Widget?;
     switch (c.str('factory')) {
       case 'shrink':
-        return SizedBox.shrink(key: c.key, child: child);
+        return SizedBox.shrink(child: child);
       case 'expand':
-        return SizedBox.expand(key: c.key, child: child);
+        return SizedBox.expand(child: child);
       case 'square':
-        return SizedBox.square(
-          key: c.key,
-          dimension: c.num_('dimension'),
-          child: child,
-        );
+        return SizedBox.square(dimension: c.num_('dimension'), child: child);
       case 'fromSize':
         final size = c.map('size') ?? const <String, dynamic>{};
         final w = size['width'];
         final h = size['height'];
         return SizedBox(
-          key: c.key,
           width: w is num ? w.toDouble() : null,
           height: h is num ? h.toDouble() : null,
           child: child,
         );
       default:
         return SizedBox(
-          key: c.key,
           width: c.num_('width'),
           height: c.num_('height'),
           child: child,
@@ -276,7 +256,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Expanded',
     (c) => Expanded(
-      key: c.key,
       flex: c.int_('flex') ?? 1,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
@@ -285,7 +264,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Flexible',
     (c) => Flexible(
-      key: c.key,
       flex: c.int_('flex') ?? 1,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
@@ -300,7 +278,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     switch (c.str('factory')) {
       case 'fill':
         return Positioned.fill(
-          key: c.key,
           left: c.num_('left') ?? 0,
           top: c.num_('top') ?? 0,
           right: c.num_('right') ?? 0,
@@ -309,7 +286,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       case 'directional':
         return Positioned.directional(
-          key: c.key,
           textDirection:
               textDirectionFromJson(c.props['textDirection']) ??
               TextDirection.ltr,
@@ -323,7 +299,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       default:
         return Positioned(
-          key: c.key,
           left: c.num_('left'),
           top: c.num_('top'),
           right: c.num_('right'),
@@ -338,7 +313,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register('ClipRRect', (c) {
     final radius = c.num_('borderRadius');
     return ClipRRect(
-      key: c.key,
       borderRadius: radius == null
           ? BorderRadius.zero
           : BorderRadius.all(Radius.circular(radius)),
@@ -351,7 +325,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'ClipOval',
     (c) => ClipOval(
-      key: c.key,
       clipBehavior:
           clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
       child: (c.children['child'] as Widget?),
@@ -363,7 +336,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'ColorFiltered',
     (c) => ColorFiltered(
-      key: c.key,
       colorFilter:
           colorFilterFromJson(c.props['colorFilter']) ??
           const ColorFilter.mode(Color(0x00000000), BlendMode.dst),
@@ -375,7 +347,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   // 滤镜缺失（翻译失败）时用零 sigma 模糊兜底——零 sigma 等价于不变形。
   r.register('ImageFiltered', (c) {
     return ImageFiltered(
-      key: c.key,
       imageFilter:
           imageFilterFromJson(c.props['imageFilter']) ??
           ImageFilter.blur(sigmaX: 0.0, sigmaY: 0.0),
@@ -390,7 +361,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Material',
     (c) => Material(
-      key: c.key,
       type: _materialTypeFromJson(c.props['type']) ?? MaterialType.canvas,
       color: colorFromJson(c.props['color']),
       elevation: c.num_('elevation') ?? 0,
@@ -414,7 +384,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     switch (c.str('factory')) {
       case 'rotate':
         return Transform.rotate(
-          key: c.key,
           angle: c.num_('angle') ?? 0,
           origin: origin,
           alignment: alignment,
@@ -422,7 +391,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       case 'scale':
         return Transform.scale(
-          key: c.key,
           scale: c.num_('scale'),
           scaleX: c.num_('scaleX'),
           scaleY: c.num_('scaleY'),
@@ -432,7 +400,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       case 'flip':
         return Transform.flip(
-          key: c.key,
           flipX: c.bool_('flipX') ?? false,
           flipY: c.bool_('flipY') ?? false,
           origin: origin,
@@ -442,11 +409,7 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         final offset = c.map('offset') ?? const <String, dynamic>{};
         final dx = (offset['dx'] as num?)?.toDouble() ?? 0;
         final dy = (offset['dy'] as num?)?.toDouble() ?? 0;
-        return Transform.translate(
-          key: c.key,
-          offset: Offset(dx, dy),
-          child: child,
-        );
+        return Transform.translate(offset: Offset(dx, dy), child: child);
     }
   });
 
@@ -463,7 +426,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     switch (c.str('factory')) {
       case 'filled':
         return Card.filled(
-          key: c.key,
           elevation: elevation,
           margin: margin,
           color: color,
@@ -474,7 +436,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       case 'outlined':
         return Card.outlined(
-          key: c.key,
           elevation: elevation,
           margin: margin,
           color: color,
@@ -485,7 +446,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       default:
         return Card(
-          key: c.key,
           elevation: elevation,
           // 缺省必须是 null（走 Card 主题默认 EdgeInsets.all(4)）——`edgeInsetsFromJson`
           // 对 null 返回 zero，会把 item 之间的默认间隙抹平（原生 vs JS 并排可见）。
@@ -506,7 +466,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     if (icon == null) return uiFallback('Icon.icon 无法还原为 IconData');
     return Icon(
       icon,
-      key: c.key,
       size: c.num_('size'),
       color: colorFromJson(c.props['color']),
     );
@@ -519,7 +478,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     final source = c.str('image') ?? '';
     return ImageIcon(
       source.isEmpty ? null : _imageProvider(source),
-      key: c.key,
       size: c.num_('size'),
       color: colorFromJson(c.props['color']),
       semanticLabel: c.str('semanticLabel'),
@@ -546,7 +504,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     return isNetwork
         ? Image.network(
             source,
-            key: c.key,
             width: width,
             height: height,
             fit: fit,
@@ -557,7 +514,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
           )
         : Image.asset(
             source,
-            key: c.key,
             bundle: HotPatchAssets.bundle,
             width: width,
             height: height,
@@ -577,7 +533,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register('FadeInImage', (c) {
     final assetNetwork = c.str('factory') == 'assetNetwork';
     return FadeInImage(
-      key: c.key,
       placeholder: _imageProvider(
         c.str('placeholder') ?? '',
         forceAsset: assetNetwork,
@@ -606,7 +561,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register('Hero', (c) {
     final tag = c.props['tag'];
     return Hero(
-      key: c.key,
       tag: tag ?? '',
       transitionOnUserGestures: c.bool_('transitionOnUserGestures') ?? false,
       child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
@@ -616,7 +570,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register('CircleAvatar', (c) {
     final bgImage = c.str('backgroundImage');
     return CircleAvatar(
-      key: c.key,
       radius: c.num_('radius'),
       minRadius: c.num_('minRadius'),
       maxRadius: c.num_('maxRadius'),
@@ -640,7 +593,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         ? (raw['height'] as num).toDouble()
         : kToolbarHeight;
     return _JsPreferredSize(
-      key: c.key,
       preferredSize: Size(w, h),
       child: c.children['child'] as Widget?,
     );
@@ -649,7 +601,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Divider',
     (c) => Divider(
-      key: c.key,
       height: c.num_('height'),
       thickness: c.num_('thickness'),
       indent: c.num_('indent'),
@@ -658,13 +609,12 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     ),
   );
 
-  r.register('Spacer', (c) => Spacer(key: c.key, flex: c.int_('flex') ?? 1));
+  r.register('Spacer', (c) => Spacer(flex: c.int_('flex') ?? 1));
 
   // label 现在是结点（props['label']），运行时用 propChild 取。
   r.register(
     'Chip',
     (c) => Chip(
-      key: c.key,
       label: (c.children['label'] as Widget?) ?? const SizedBox.shrink(),
       labelStyle: textStyleFromJson(c.map('labelStyle')),
       avatar: (c.children['avatar'] as Widget?),
@@ -684,7 +634,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   // title / subtitle / leading / trailing 都是结点（props 里的 element prop）。
   r.register('ListTile', (c) {
     return ListTile(
-      key: c.key,
       title: (c.children['title'] as Widget?),
       subtitle: (c.children['subtitle'] as Widget?),
       leading: (c.children['leading'] as Widget?),
@@ -711,7 +660,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     final style = buttonStyleFromJson(c.styleMap('style'));
     if (c.str('factory') == 'icon') {
       return ElevatedButton.icon(
-        key: c.key,
         onPressed: onPressed,
         style: style,
         icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
@@ -719,7 +667,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       );
     }
     return ElevatedButton(
-      key: c.key,
       onPressed: onPressed,
       style: style,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
@@ -731,7 +678,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     final style = buttonStyleFromJson(c.styleMap('style'));
     if (c.str('factory') == 'icon') {
       return TextButton.icon(
-        key: c.key,
         onPressed: onPressed,
         style: style,
         icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
@@ -739,7 +685,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       );
     }
     return TextButton(
-      key: c.key,
       onPressed: onPressed,
       style: style,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
@@ -752,7 +697,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     switch (c.str('factory')) {
       case 'icon':
         return FilledButton.icon(
-          key: c.key,
           onPressed: onPressed,
           style: style,
           icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
@@ -760,14 +704,12 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       case 'tonal':
         return FilledButton.tonal(
-          key: c.key,
           onPressed: onPressed,
           style: style,
           child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
         );
       case 'tonalIcon':
         return FilledButton.tonalIcon(
-          key: c.key,
           onPressed: onPressed,
           style: style,
           icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
@@ -775,7 +717,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       default:
         return FilledButton(
-          key: c.key,
           onPressed: onPressed,
           style: style,
           child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
@@ -788,7 +729,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     final style = buttonStyleFromJson(c.styleMap('style'));
     if (c.str('factory') == 'icon') {
       return OutlinedButton.icon(
-        key: c.key,
         onPressed: onPressed,
         style: style,
         icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
@@ -796,7 +736,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       );
     }
     return OutlinedButton(
-      key: c.key,
       onPressed: onPressed,
       style: style,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
@@ -806,7 +745,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register('InkWell', (c) {
     final radius = c.num_('borderRadius');
     return InkWell(
-      key: c.key,
       onTap: c.on('onTap'),
       onLongPress: c.on('onLongPress'),
       onDoubleTap: c.on('onDoubleTap'),
@@ -820,7 +758,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'GestureDetector',
     (c) => GestureDetector(
-      key: c.key,
       onTap: c.on('onTap'),
       onLongPress: c.on('onLongPress'),
       onDoubleTap: c.on('onDoubleTap'),
@@ -832,7 +769,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Switch',
     (c) => Switch(
-      key: c.key,
       value: c.bool_('value') ?? false,
       onChanged: c.on1<bool?>('onChanged'),
       // 协议键仍叫 activeColor（生成器侧），Flutter 新版改名为 activeThumbColor
@@ -846,7 +782,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Checkbox',
     (c) => Checkbox(
-      key: c.key,
       value: c.bool_('value'),
       tristate: c.bool_('tristate') ?? false,
       onChanged: c.on1<bool?>('onChanged'),
@@ -858,7 +793,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Slider',
     (c) => Slider(
-      key: c.key,
       value: c.num_('value') ?? 0,
       min: c.num_('min') ?? 0,
       max: c.num_('max') ?? 1,
@@ -879,7 +813,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register('Scaffold', (c) {
     final appBar = (c.children['appBar'] as Widget?);
     return Scaffold(
-      key: c.key,
       backgroundColor: colorFromJson(c.props['backgroundColor']),
       // appBar 已经是 PreferredSizeWidget（真实 AppBar / PreferredSize 结点）时
       // 原样使用：PreferredSize 的全部意义就是自定义占位高度，套一层固定
@@ -904,7 +837,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     final actions =
         (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
     return AppBar(
-      key: c.key,
       leading: (c.children['leading'] as Widget?),
       title: (c.children['title'] as Widget?),
       flexibleSpace: (c.children['flexibleSpace'] as Widget?),
@@ -925,7 +857,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'SafeArea',
     (c) => SafeArea(
-      key: c.key,
       left: c.bool_('left') ?? true,
       top: c.bool_('top') ?? true,
       right: c.bool_('right') ?? true,
@@ -944,7 +875,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Opacity',
     (c) => Opacity(
-      key: c.key,
       opacity: c.num_('opacity') ?? 1,
       child: (c.children['child'] as Widget?),
     ),
@@ -954,7 +884,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Offstage',
     (c) => Offstage(
-      key: c.key,
       offstage: c.bool_('offstage') ?? false,
       child: (c.children['child'] as Widget?),
     ),
@@ -973,10 +902,9 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         (c.children['replacement'] as Widget?) ?? const SizedBox.shrink();
     final child = (c.children['child'] as Widget);
     if (c.str('factory') == 'maintain') {
-      return Visibility.maintain(key: c.key, visible: visible, child: child);
+      return Visibility.maintain(visible: visible, child: child);
     }
     return Visibility(
-      key: c.key,
       visible: visible,
       maintainState: c.bool_('maintainState') ?? false,
       maintainAnimation: c.bool_('maintainAnimation') ?? false,
@@ -992,7 +920,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'ConstrainedBox',
     (c) => ConstrainedBox(
-      key: c.key,
       constraints:
           boxConstraintsFromJson(c.map('constraints')) ??
           const BoxConstraints(),
@@ -1003,7 +930,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'AspectRatio',
     (c) => AspectRatio(
-      key: c.key,
       aspectRatio: c.num_('aspectRatio') ?? 1,
       child: (c.children['child'] as Widget?),
     ),
@@ -1012,7 +938,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'FractionallySizedBox',
     (c) => FractionallySizedBox(
-      key: c.key,
       widthFactor: c.num_('widthFactor'),
       heightFactor: c.num_('heightFactor'),
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
@@ -1023,7 +948,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'DecoratedBox',
     (c) => DecoratedBox(
-      key: c.key,
       decoration:
           boxDecorationFromJson(c.map('decoration')) ?? const BoxDecoration(),
       child: (c.children['child'] as Widget?),
@@ -1037,7 +961,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'CircularProgressIndicator',
     (c) => CircularProgressIndicator(
-      key: c.key,
       value: c.num_('value'),
       color: colorFromJson(c.props['color']),
       backgroundColor: colorFromJson(c.props['backgroundColor']),
@@ -1048,7 +971,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'LinearProgressIndicator',
     (c) => LinearProgressIndicator(
-      key: c.key,
       value: c.num_('value'),
       color: colorFromJson(c.props['color']),
       backgroundColor: colorFromJson(c.props['backgroundColor']),
@@ -1072,7 +994,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     switch (c.str('factory')) {
       case 'filled':
         return IconButton.filled(
-          key: c.key,
           onPressed: onPressed,
           icon: icon,
           color: color,
@@ -1081,7 +1002,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       case 'filledTonal':
         return IconButton.filledTonal(
-          key: c.key,
           onPressed: onPressed,
           icon: icon,
           color: color,
@@ -1090,7 +1010,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       case 'outlined':
         return IconButton.outlined(
-          key: c.key,
           onPressed: onPressed,
           icon: icon,
           color: color,
@@ -1099,7 +1018,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       default:
         return IconButton(
-          key: c.key,
           icon: icon,
           onPressed: onPressed,
           color: color,
@@ -1123,7 +1041,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     switch (c.str('factory')) {
       case 'extended':
         return FloatingActionButton.extended(
-          key: c.key,
           onPressed: onPressed,
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
@@ -1134,7 +1051,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       case 'large':
         return FloatingActionButton.large(
-          key: c.key,
           onPressed: onPressed,
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
@@ -1144,7 +1060,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       case 'small':
         return FloatingActionButton.small(
-          key: c.key,
           onPressed: onPressed,
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
@@ -1154,7 +1069,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         );
       default:
         return FloatingActionButton(
-          key: c.key,
           onPressed: onPressed,
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
@@ -1183,7 +1097,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       );
     }
     return BottomNavigationBar(
-      key: c.key,
       items: items,
       currentIndex: c.int_('currentIndex') ?? 0,
       onTap: c.on1<int>('onTap'),
@@ -1198,7 +1111,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'RadioGroup',
     (c) => RadioGroup<dynamic>(
-      key: c.key,
       groupValue: c.props['groupValue'],
       onChanged: c.on1<dynamic>('onChanged') ?? (dynamic _) {},
       child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
@@ -1208,7 +1120,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Radio',
     (c) => Radio<dynamic>(
-      key: c.key,
       value: c.props['value'],
       // ignore: deprecated_member_use
       groupValue: c.props['groupValue'],
@@ -1238,7 +1149,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       );
     }
     return DropdownButton<dynamic>(
-      key: c.key,
       value: c.props['value'],
       items: items,
       onChanged: c.on1<dynamic>('onChanged'),
@@ -1254,7 +1164,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'Tooltip',
     (c) => Tooltip(
-      key: c.key,
       message: c.str('message') ?? '',
       waitDuration: durationFromJson(c.props['waitDuration']),
       showDuration: durationFromJson(c.props['showDuration']),
@@ -1273,7 +1182,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'IgnorePointer',
     (c) => IgnorePointer(
-      key: c.key,
       ignoring: c.bool_('ignoring') ?? true,
       child: c.children['child'] as Widget?,
     ),
@@ -1282,7 +1190,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'AbsorbPointer',
     (c) => AbsorbPointer(
-      key: c.key,
       absorbing: c.bool_('absorbing') ?? true,
       child: c.children['child'] as Widget?,
     ),
@@ -1290,13 +1197,12 @@ void registerBaseWidgets(JsWidgetRegistry r) {
 
   r.register(
     'RepaintBoundary',
-    (c) => RepaintBoundary(key: c.key, child: c.children['child'] as Widget?),
+    (c) => RepaintBoundary(child: c.children['child'] as Widget?),
   );
 
   r.register(
     'Baseline',
     (c) => Baseline(
-      key: c.key,
       baseline: c.num_('baseline') ?? 0,
       baselineType:
           textBaselineFromJson(c.props['baselineType']) ??
@@ -1308,7 +1214,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'FittedBox',
     (c) => FittedBox(
-      key: c.key,
       fit: boxFitFromJson(c.props['fit']) ?? BoxFit.contain,
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
       clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.none,
@@ -1319,7 +1224,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'RotatedBox',
     (c) => RotatedBox(
-      key: c.key,
       quarterTurns: c.int_('quarterTurns') ?? 0,
       child: c.children['child'] as Widget?,
     ),
@@ -1328,7 +1232,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   r.register(
     'IntrinsicWidth',
     (c) => IntrinsicWidth(
-      key: c.key,
       stepWidth: c.num_('stepWidth'),
       stepHeight: c.num_('stepHeight'),
       child: c.children['child'] as Widget?,
@@ -1337,13 +1240,12 @@ void registerBaseWidgets(JsWidgetRegistry r) {
 
   r.register(
     'IntrinsicHeight',
-    (c) => IntrinsicHeight(key: c.key, child: c.children['child'] as Widget?),
+    (c) => IntrinsicHeight(child: c.children['child'] as Widget?),
   );
 
   r.register(
     'LimitedBox',
     (c) => LimitedBox(
-      key: c.key,
       maxWidth: c.num_('maxWidth') ?? double.infinity,
       maxHeight: c.num_('maxHeight') ?? double.infinity,
       child: c.children['child'] as Widget?,
@@ -1359,7 +1261,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     final update = c.on1<Map<String, dynamic>>('onInteractionUpdate');
     final end = c.on1<Map<String, dynamic>>('onInteractionEnd');
     return InteractiveViewer(
-      key: c.key,
       minScale: c.num_('minScale') ?? 0.8,
       maxScale: c.num_('maxScale') ?? 2.5,
       panEnabled: c.bool_('panEnabled') ?? true,
@@ -1412,7 +1313,7 @@ class _JsAppBarAdaptor extends StatelessWidget implements PreferredSizeWidget {
 /// `PreferredSize` 承载：把 JS 子树声明成 `PreferredSizeWidget`，尺寸由 props
 /// 的 preferredSize 决定（Scaffold.appBar 等位置据此占位）。
 class _JsPreferredSize extends StatelessWidget implements PreferredSizeWidget {
-  const _JsPreferredSize({super.key, required this.preferredSize, this.child});
+  const _JsPreferredSize({required this.preferredSize, this.child});
 
   @override
   final Size preferredSize;

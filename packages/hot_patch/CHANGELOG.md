@@ -16,8 +16,7 @@
 - **`ButtonStyle` 经 `styleFrom` 下发**：`buttonStyleFromJson` 对 ButtonStyle 各字段按裸值接收并包 `WidgetStatePropertyAll`（原有协议不变）；配套生成器 0.14.0 的 `WidgetStatePropertyAll.toJSON` 透传裸值，`WidgetStatePropertyAll(x)` 与裸值 `x` 两种写法产物一致。
 - **`WidgetsBinding` 帧回调宿主支持**：`jsuiRequestFrame` 的 begin-frame 回调在 `flushJsUiPending()` 之后新增 `JsRuntimeManager.tickJsUiFrames(timeStamp)`，把帧开始回传给所有活跃 runtime 的 `__jsui.frameTick(ms)`，供 JS 侧 `addPersistentFrameCallback` 逐帧派发（回调里的 setState 会再次请求下一帧，形成逐帧节奏）；新增内建通道 `jsuiEndOfFrame`，直接 `await WidgetsBinding.instance.endOfFrame` 结算 JS 的 `endOfFrame` Promise（真正的帧末，空闲时自动催帧）。两者都是加法，既有通道与协议不变。
 - **公开能力接入 API**：`hot_patch.dart` 导出 `capabilities/js_ui_library.dart`（`JsUiLibrary` / `registerJsUiLibrary`），业务方可在自己的 `lib/custom/**` 里注册自定义宿主组件能力，无需 `package:hot_patch/src/...` 实现级 import。
-- **`JsRenderContext.key`**：原生注入 / 自定义组件的 renderer 可直接取到结点声明式 `key`（JS 侧 `new UniqueKey()` / `ValueKey(...)` / `GlobalKey()`）对应的**宿主 Flutter Key 实例**——GlobalKey / UniqueKey 与 JS 句柄是同一实例（跨帧稳定），ValueKey 等按值现造；未声明 key 时为 null。此前只能拿到序列化 props、自定义组件被迫自己造 key，导致原生侧身份与 JS 侧不一致。
-- **key 挂到真实 widget**：renderer 把 `c.key` 传给真实 widget 构造（`TextButton(key: c.key, …)`）时，运行时不再额外包 `KeyedSubtree`，`GlobalKey.currentContext / currentState` 直接指向真实 widget 的 Element（与原生 Flutter 一致）；未传 key 的 renderer 继续用 `KeyedSubtree` 兜底，行为不变。基础组件（`base_widget`）已全部迁移；需要真实 State 的宿主能力（AnimatedList / Dismissible）继续用 `hostStateKey` 换 key，wrapper 身份不丢。
+- **`JsRenderContext.key`**：原生注入 / 自定义组件的 renderer 可直接取到结点声明式 `key`（JS 侧 `new UniqueKey()` / `ValueKey(...)` / `GlobalKey()`）对应的**宿主 Flutter Key 实例**——GlobalKey / UniqueKey 与 JS 句柄是同一实例（跨帧稳定），ValueKey 等按值现造；未声明 key 时为 null。此前只能拿到序列化 props、自定义组件被迫自己造 key，导致原生侧身份与 JS 侧不一致。元素身份仍由运行时统一用 `KeyedSubtree` 承载。
 
 ## 0.4.1
 
