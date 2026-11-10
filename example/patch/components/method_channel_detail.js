@@ -4,7 +4,7 @@
 
 import { HotPluginDeviceInfo } from '../packages/hot_plugin_device_info/hot_plugin_device_info.js';
 import { HotPluginCounter } from '../packages/hot_plugin_counter/hot_plugin_counter.js';
-import { Card, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, ListView, OutlinedButton, Padding, SizedBox, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
+import { Card, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, OutlinedButton, Padding, SizedBox, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
 
 // 组件 MethodChannelDetail
 export class MethodChannelDetail extends StatefulWidget {
@@ -139,55 +139,58 @@ export class MethodChannelDetail extends StatefulWidget {
     });
   }
   build(context) {
-    return new ListView({
+    return new Padding({
       "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
         "value": 16
       }))),
-      "children": [
-        (this.__k6 || (this.__k6 = new Text({
-          "data": "同一页面同时调用两个独立三方库的 channel；" + "原生模式与 JS 热更模式会分别走各自链路，结果一致。",
-          "style": new TextStyle({
-            "color": Colors.grey
-          })
-        }))),
-        (this.__k7 || (this.__k7 = new SizedBox({
-          "height": 16
-        }))),
-        this._card({ "title": "插件 A · hot_plugin_device_info", "channel": "hot_patch/demo/device_info", "result": this._deviceInfo, "actions": [new ElevatedButton({
-              "onPressed": () => { if (this._busy) {
-                  return;
-                }
-                this._readDeviceInfo(); },
-              "child": (this.__k8 || (this.__k8 = new Text({
-                "data": "读取设备信息"
-              })))
-            })] }),
-        this._card({ "title": "插件 B · hot_plugin_counter", "channel": "hot_patch/demo/counter", "result": this._counter, "actions": [new ElevatedButton({
-              "onPressed": () => { if (this._busy) {
-                  return;
-                }
-                this._increment(1); },
-              "child": (this.__k9 || (this.__k9 = new Text({
-                "data": "+1"
-              })))
-            }), new ElevatedButton({
-              "onPressed": () => { if (this._busy) {
-                  return;
-                }
-                this._increment(5); },
-              "child": (this.__k10 || (this.__k10 = new Text({
-                "data": "+5"
-              })))
-            }), new OutlinedButton({
-              "onPressed": () => { if (this._busy) {
-                  return;
-                }
-                this._resetCounter(); },
-              "child": (this.__k11 || (this.__k11 = new Text({
-                "data": "重置"
-              })))
-            })] })
-      ]
+      "child": new Column({
+        "crossAxisAlignment": CrossAxisAlignment.start,
+        "children": [
+          (this.__k6 || (this.__k6 = new Text({
+            "data": "同一页面同时调用两个独立三方库的 channel；" + "原生模式与 JS 热更模式会分别走各自链路，结果一致。",
+            "style": new TextStyle({
+              "color": Colors.grey
+            })
+          }))),
+          (this.__k7 || (this.__k7 = new SizedBox({
+            "height": 16
+          }))),
+          this._card({ "title": "插件 A · hot_plugin_device_info", "channel": "hot_patch/demo/device_info", "result": this._deviceInfo, "actions": [new ElevatedButton({
+                "onPressed": () => { if (this._busy) {
+                    return;
+                  }
+                  this._readDeviceInfo(); },
+                "child": (this.__k8 || (this.__k8 = new Text({
+                  "data": "读取设备信息"
+                })))
+              })] }),
+          this._card({ "title": "插件 B · hot_plugin_counter", "channel": "hot_patch/demo/counter", "result": this._counter, "actions": [new ElevatedButton({
+                "onPressed": () => { if (this._busy) {
+                    return;
+                  }
+                  this._increment(1); },
+                "child": (this.__k9 || (this.__k9 = new Text({
+                  "data": "+1"
+                })))
+              }), new ElevatedButton({
+                "onPressed": () => { if (this._busy) {
+                    return;
+                  }
+                  this._increment(5); },
+                "child": (this.__k10 || (this.__k10 = new Text({
+                  "data": "+5"
+                })))
+              }), new OutlinedButton({
+                "onPressed": () => { if (this._busy) {
+                    return;
+                  }
+                  this._resetCounter(); },
+                "child": (this.__k11 || (this.__k11 = new Text({
+                  "data": "重置"
+                })))
+              })] })
+        ]
+      })
     });
   }
 }

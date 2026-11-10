@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-10T08:44:18.786556",
+  "buildTime": "2026-11-10T09:06:09.613072",
   "resources": {
     "flutter.js": "694b6eee8ae991e3bb08e00d4e7ba8c66e97725b59033557f97475ca06146374",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
@@ -100,7 +100,7 @@
     "components/phone_label.js": "06393f12b130fb9a3710db30a509e40adcc4a5b53beaf57de0ee5aaa6d708291",
     "components/input_detail.js": "c24b79bfbeef0405ac0193ad361dfc01e3cc73f97085d3ca4251eae6d785b993",
     "components/focus_detail.js": "e810b1b10f0eee3e20023d8bc1bb6e45842422261bd612543a0acba89dc98992",
-    "components/method_channel_detail.js": "0aea3bf9788a80adce1eaff80720de9a47f78107523d4636ff5d5b9434f57fec",
+    "components/method_channel_detail.js": "3146d2e6db8cad9035de005196e9452a419625ea334290497b20bab279f9a265",
     "components/rich_text_detail.js": "019ad3cf29f0942028f97725668abf7b9e915a16cb9aefb412fd4a28ec4e4e79",
     "components/test_widget.js": "23899cd79717b2fb1e7fafd330ea5f667c7e73154ad6a95c1fadf8e19eb232d3",
     "components/layout_detail.js": "62b1c324c208999c2ad42e199aecf09dcc2355cffc344510947791a38bd3b46f",

@@ -121,58 +121,63 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    // 详情页由 showcase 包在 SingleChildScrollView 里，这里只能用 Column，
+    // 不能再嵌 ListView（无界高度会触发布局断言）。
+    return Padding(
       padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          '同一页面同时调用两个独立三方库的 channel；'
-          '原生模式与 JS 热更模式会分别走各自链路，结果一致。',
-          style: TextStyle(color: Colors.grey),
-        ),
-        const SizedBox(height: 16),
-        _card(
-          title: '插件 A · hot_plugin_device_info',
-          channel: 'hot_patch/demo/device_info',
-          result: _deviceInfo,
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                if (_busy) return;
-                _readDeviceInfo();
-              },
-              child: const Text('读取设备信息'),
-            ),
-          ],
-        ),
-        _card(
-          title: '插件 B · hot_plugin_counter',
-          channel: 'hot_patch/demo/counter',
-          result: _counter,
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                if (_busy) return;
-                _increment(1);
-              },
-              child: const Text('+1'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (_busy) return;
-                _increment(5);
-              },
-              child: const Text('+5'),
-            ),
-            OutlinedButton(
-              onPressed: () {
-                if (_busy) return;
-                _resetCounter();
-              },
-              child: const Text('重置'),
-            ),
-          ],
-        ),
-      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '同一页面同时调用两个独立三方库的 channel；'
+            '原生模式与 JS 热更模式会分别走各自链路，结果一致。',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          _card(
+            title: '插件 A · hot_plugin_device_info',
+            channel: 'hot_patch/demo/device_info',
+            result: _deviceInfo,
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  if (_busy) return;
+                  _readDeviceInfo();
+                },
+                child: const Text('读取设备信息'),
+              ),
+            ],
+          ),
+          _card(
+            title: '插件 B · hot_plugin_counter',
+            channel: 'hot_patch/demo/counter',
+            result: _counter,
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  if (_busy) return;
+                  _increment(1);
+                },
+                child: const Text('+1'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (_busy) return;
+                  _increment(5);
+                },
+                child: const Text('+5'),
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  if (_busy) return;
+                  _resetCounter();
+                },
+                child: const Text('重置'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
