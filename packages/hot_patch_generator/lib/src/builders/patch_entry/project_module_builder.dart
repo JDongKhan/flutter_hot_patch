@@ -34,6 +34,7 @@ import '../shared/package_sources.dart';
 import '../shared/paths.dart';
 import '../shared/runtime_global_types.dart';
 import '../shared/source_index.dart';
+import '../ui_widget/widget_module_builder.dart' show hostWrapperSource;
 import 'analysis/analyze_dart_class.dart';
 import 'analysis/class_table.dart';
 import 'analysis/component_scope.dart';
@@ -462,6 +463,17 @@ String? renderProjectPackageFile(
   // 类晚，类之间调用会触发 TDZ）。
   for (final a in applications) {
     body.writeln('__mixinHard(${a.layer.name}, ${a.mixinName});');
+  }
+  // `@PatchIgnore(isComponent: true)`：类本身不翻译，但在**它自己的源文件产物**
+  // 里生成同名包装类（`class X extends Component {}`，构造即宿主元素，宿主持久化
+  // 后由原生实现渲染），使用方按 Dart 一比一 `new 类名({...})` 构造。
+  // 与项目内产物（component_builder）同一规则：跨包产物同样需要包装类，
+  // 否则使用方引用到未定义的类名。
+  for (final type in ignoredComponentClassNames(unit, sourceFile)) {
+    body
+      ..writeln()
+      ..writeln('// 原生组件包装 $type（@PatchIgnore(isComponent: true)）')
+      ..writeln(hostWrapperSource(type, exported: !type.startsWith('_')));
   }
   // 引用同文件类的顶层常量（构造 / 静态调用）：类声明之后再求值。
   if (deferredConsts.isNotEmpty) {

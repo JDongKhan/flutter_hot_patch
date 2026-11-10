@@ -15,6 +15,7 @@ export 'src/model/user.dart';
 export 'src/network.dart';
 export 'src/state_log_mixin.dart';
 export 'src/int_extension.dart';
+export 'src/widgets/timetable_date_picker.dart';
 
 /// `show`：只转发公开的顶层常量 / 枚举 / 函数与模型类；
 /// `moduleBaseHigh` 虽是公共声明，但不在白名单里，包出口不暴露。

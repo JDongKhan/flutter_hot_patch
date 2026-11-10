@@ -29,6 +29,7 @@ import 'sliver_detail.dart';
 import 'stateless_card.dart';
 import 'tab_detail.dart';
 import 'text_detail.dart';
+import 'timetable_picker_detail.dart';
 import '../grammar/alias_detail.dart';
 import '../grammar/array_detail.dart';
 import '../grammar/async_detail.dart';
@@ -250,6 +251,11 @@ class WidgetShowcase extends StatelessWidget {
         'TextField / Radio / Dropdown',
         '输入框、单选、下拉、开关、勾选、滑块',
         'InputDetail',
+      ),
+      _Entry(
+        'TimetableDatePicker',
+        '时刻表日期选择：年 / 月 / 日 / 周四列联动滚轮',
+        'TimetablePickerDetail',
       ),
     ]),
     _Group('焦点交互', [
@@ -485,6 +491,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'StatelessCard': 'components/stateless_card.js',
     'TabDetail': 'components/tab_detail.js',
     'TextDetail': 'components/text_detail.js',
+    'TimetablePickerDetail': 'components/timetable_picker_detail.js',
     'VisibilityDetail': 'components/visibility_detail.js',
     'TweenAnimationBuilderDetail':
         'components/tween_animation_builder_detail.js',
@@ -535,6 +542,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     return switch (widget.component) {
       'TextDetail' => const TextDetail(),
       'RichTextDetail' => const RichTextDetail(),
+      'TimetablePickerDetail' => const TimetablePickerDetail(),
       'ButtonDetail' => const ButtonDetail(),
       'LayoutDetail' => const LayoutDetail(),
       'ImageDetail' => const ImageDetail(),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:hot_module_base/hot_module_base.dart';
 import 'package:hot_patch/hot_patch.dart';
 
 import 'app/app.dart';
@@ -40,6 +41,22 @@ void main() {
         child: c.children['child'] as Widget?,
       ),
     );
+    // TimetableDatePicker 的单列滚轮：内部持有 Cupertino 的
+    // FixedExtentScrollController，控制器不跨语言共享，JS 侧只下发选项 /
+    // 初始下标 / 单行高度 / 选中回调，由原生实现渲染滚轮。
+    registerNativeComponent('TimetableWheelColumn', (c) {
+      final rawItems = c.props['items'];
+      final items = rawItems is List ? rawItems.map((e) => '$e').toList() : const <String>[];
+      return TimetableWheelColumn(
+        items: items,
+        initialItem: c.int_('initialItem') ?? 0,
+        itemHeight: c.num_('itemHeight') ?? 44.0,
+        selectedColor: c.int_('selectedColor') ?? 0xFFE53935,
+        unselectedColor: c.int_('unselectedColor') ?? 0xFF000000,
+        fontSize: c.num_('fontSize') ?? 32,
+        onSelectedItemChanged: c.on1<int>('onSelectedItemChanged') ?? (_) {},
+      );
+    });
     // 入口是 Demo 列表页，其中的两条「完整 App」入口分别渲染**原生外壳**与
     // **JS 热更外壳**（AppShell，见 lib/app/app.dart）。
     runApp(const HotDemoApp());
