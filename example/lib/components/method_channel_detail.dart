@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import 'package:hot_plugin_counter/hot_plugin_counter.dart';
@@ -25,7 +27,37 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
   String _counter = '未调用';
   String _handlerResult = '未调用';
   String _messageResult = '未调用';
+  String _tickState = '未订阅';
+  int _tick = 0;
+  StreamSubscription<dynamic>? _tickSub;
   bool _busy = false;
+
+  @override
+  void dispose() {
+    _tickSub?.cancel();
+    super.dispose();
+  }
+
+  void _startTicks() {
+    _tickSub?.cancel();
+    setState(() {
+      _tickState = '订阅中（每 500ms）';
+    });
+    _tickSub = HotPluginDeviceInfo.ticks().listen((event) {
+      if (!mounted) return;
+      setState(() {
+        _tick = event is int ? event : 0;
+      });
+    });
+  }
+
+  void _stopTicks() {
+    _tickSub?.cancel();
+    _tickSub = null;
+    setState(() {
+      _tickState = '已取消';
+    });
+  }
 
   Future<void> _readDeviceInfo() async {
     setState(() {
@@ -231,6 +263,25 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
                   _reverseMessage();
                 },
                 child: const Text('原生回调 JS'),
+              ),
+            ],
+          ),
+          _card(
+            title: '插件 A · EventChannel',
+            channel: 'hot_patch/demo/device_info_events（原生推送）',
+            result: _tickState + ' · tick=' + _tick.toString(),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  _startTicks();
+                },
+                child: const Text('订阅'),
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  _stopTicks();
+                },
+                child: const Text('取消'),
               ),
             ],
           ),

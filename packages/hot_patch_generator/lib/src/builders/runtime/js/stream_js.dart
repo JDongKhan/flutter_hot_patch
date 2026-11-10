@@ -2,7 +2,7 @@
 //
 // 产物按 Dart 写法原样发射，翻译层不认识这些类型名：
 //   `StreamController<T>()`        → `new StreamController({typeArguments: …})`
-//   `StreamController.broadcast()` → `new StreamController.broadcast({})`
+//   `StreamController.broadcast()` → `StreamController.broadcast({})`
 //   `s.listen(onData, onError: e)` → `s.listen(onData, {onError: e})`
 //   `async*` 方法 / 闭包            → `Stream.fromAsyncGenerator((async function* () {…}).bind(this)())`
 //   `await for (final x in s)`     → `for await (const x of s)`

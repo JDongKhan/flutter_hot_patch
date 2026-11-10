@@ -15,6 +15,13 @@ class HotPluginDeviceInfo {
     StandardMessageCodec(),
   );
 
+  /// 第三种通道：EventChannel（原生主动推送的事件流）。
+  static const EventChannel _eventChannel =
+      EventChannel('hot_patch/demo/device_info_events');
+
+  /// 原生每 500ms 推送一次的计数流；取消订阅即停止原生计时器。
+  static Stream<dynamic> ticks() => _eventChannel.receiveBroadcastStream();
+
   static bool _messageBound = false;
 
   static void _bindMessageHandler() {

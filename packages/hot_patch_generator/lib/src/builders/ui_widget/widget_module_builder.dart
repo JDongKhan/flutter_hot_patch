@@ -35,6 +35,7 @@ import '../runtime/js/icon_values_js.dart';
 import '../runtime/js/keyboard_listener_js.dart';
 import '../runtime/js/media_query_js.dart';
 import '../runtime/js/basic_message_channel_js.dart';
+import '../runtime/js/event_channel_js.dart';
 import '../runtime/js/method_channel_js.dart';
 import '../runtime/js/navigator_js.dart';
 import '../runtime/js/overlay_portal_js.dart';
@@ -87,6 +88,9 @@ String flutterValueClassesSource() => [
   // Future（Future.__wrap 包装终止操作）与 __durationMs（periodic），
   // 故紧随 Future 之后。
   streamJsSource,
+  // EventChannel：receiveBroadcastStream → StreamController.broadcast，
+  // 依赖 StreamController / 页面句柄（release 钩子取消宿主订阅）。
+  eventChannelJsSource,
   // 控制器基类（句柄层）：各 Controller 继承它，必须排在它们之前。
   controllerBaseJsSource,
   // SDK 枚举值类（按源码 `enum` 声明自动生成）：翻译层已改为对

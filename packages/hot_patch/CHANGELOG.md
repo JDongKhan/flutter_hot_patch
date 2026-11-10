@@ -9,6 +9,7 @@
 - **codec**：镜像 `StandardMethodCodec` / `JSONMethodCodec`；未知标记回落标准 codec。参数与返回值走 JSON（`Map` 经运行时的 `toJSON` 归一）。
 - **`setMethodCallHandler`（反向）**：JS 侧用 `G.__core.__createFnHandle` 登记回调，宿主通道 `methodChannelHandler` 在原生调用到达时经 `JsRuntimeManager.invokeAwait` 执行 JS handler；结果包成 `{value}` / `{__mcError}`，后者转 `PlatformException` 回给原生。handler 按 `name#codec` 唯一（同名新注册覆盖旧注册，旧 JS 句柄释放）。同时补齐 `invokeListMethod` / `invokeMapMethod`。
 - **`BasicMessageChannel`**：JS 镜像 `send` / `setMessageHandler` 对应宿主通道 `basicMessageChannelSend` / `basicMessageChannelHandler`。`send` 调 Dart `BasicMessageChannel.send`；反向由原生发消息，`invokeAwait` 执行 JS 回调并把返回值作为 reply。支持 `StandardMessageCodec` / `StringCodec` / `JSONMessageCodec`；`BinaryCodec` 需要二进制承载，当前显式报错。示例：`module/hot_plugin_device_info`（同插件内第二种通道）。
+- **`EventChannel`**：JS 镜像 `receiveBroadcastStream(args)` 返回运行时 `StreamController.broadcast`。首个订阅者出现时经宿主通道 `eventChannelListen` 订阅 Dart `EventChannel`，data / error / done 经 `__jsui.invoke` 转成 Stream 事件；订阅者归零或页面销毁时经 `eventChannelCancel` 取消订阅（回调句柄按 page scope 登记，release 钩子兜底）。示例：`module/hot_plugin_device_info`（原生每 500ms 推送计数）。
 - 示例：`module/hot_plugin_device_info`（设备信息）、`module/hot_plugin_counter`（原生计数 + 原生回调 JS）两个模拟三方库插件，各持独立 channel；`example` 新增 `MethodChannelDetail` 展示页。
 
 ## 0.4.1

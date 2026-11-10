@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../js_ui/js_ui_store.dart';
+import '../js_ui/js_widget_registry.dart';
 import '../utils/hot_patch_assets.dart';
 import '../utils/hot_patch_log.dart';
 import 'js_runtime_manager.dart';
@@ -54,6 +57,14 @@ void registerBuiltinHostMethods() {
   JsRuntimeManager.registerHostMethod(
     'basicMessageChannelHandler',
     _basicMessageChannelHandler,
+  );
+  JsRuntimeManager.registerHostMethod(
+    'eventChannelListen',
+    _eventChannelListen,
+  );
+  JsRuntimeManager.registerHostMethod(
+    'eventChannelCancel',
+    _eventChannelCancel,
   );
 }
 
@@ -229,6 +240,37 @@ void _basicSetMessageHandler(
         '（仅 standard / json / string）',
       );
   }
+}
+
+/// 活跃的 EventChannel 订阅：subId（JS 侧租约）→ Dart 侧 StreamSubscription。
+final Map<String, StreamSubscription<dynamic>> _eventChannelSubs = {};
+
+/// `eventChannelListen`：JS 侧 `receiveBroadcastStream()` 首个订阅者出现时注册。
+///
+/// 宿主把原生事件按参数数组回传 JS：`['data', v]` / `['error', msg]` /
+/// `['done']`（见 `event_channel_js.dart` 的回调包装）。
+Future<Object?> _eventChannelListen(
+  String subId,
+  String name,
+  String codec,
+  Object? arguments,
+  String handlerId,
+) async {
+  _eventChannelSubs.remove(subId)?.cancel();
+  final channel = EventChannel(name, _codecOf(codec));
+  _eventChannelSubs[subId] = channel.receiveBroadcastStream(arguments).listen(
+    (value) => invokeJsHandler({'__fn': handlerId}, ['data', value]),
+    onError: (Object e, StackTrace st) =>
+        invokeJsHandler({'__fn': handlerId}, ['error', '$e']),
+    onDone: () => invokeJsHandler({'__fn': handlerId}, ['done']),
+  );
+  return null;
+}
+
+/// `eventChannelCancel`：JS 侧订阅者归零 / 页面销毁时取消宿主订阅。
+Future<Object?> _eventChannelCancel(String subId) async {
+  _eventChannelSubs.remove(subId)?.cancel();
+  return null;
 }
 
 /// `assetLoadString`：JS 侧 `rootBundle.loadString(key)` 的宿主落点。

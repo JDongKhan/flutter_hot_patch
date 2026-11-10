@@ -4,7 +4,7 @@
 
 import { HotPluginDeviceInfo } from '../packages/hot_plugin_device_info/hot_plugin_device_info.js';
 import { HotPluginCounter } from '../packages/hot_plugin_counter/hot_plugin_counter.js';
-import { BasicMessageChannel, Card, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, OutlinedButton, Padding, SizedBox, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
+import { BasicMessageChannel, Card, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, EventChannel, FontWeight, OutlinedButton, Padding, SizedBox, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
 
 // 组件 MethodChannelDetail
 export class MethodChannelDetail extends StatefulWidget {
@@ -14,7 +14,33 @@ export class MethodChannelDetail extends StatefulWidget {
     this._counter = "未调用";
     this._handlerResult = "未调用";
     this._messageResult = "未调用";
+    this._tickState = "未订阅";
+    this._tick = 0;
+    this._tickSub = null;
     this._busy = false;
+  }
+  dispose() {
+    this._tickSub?.cancel();
+    super.dispose();
+  }
+  _startTicks() {
+    this._tickSub?.cancel();
+    this.setState(() => {
+      this._tickState = "订阅中（每 500ms）";
+    });
+    this._tickSub = HotPluginDeviceInfo.ticks().listen((event) => { if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => {
+        this._tick = ((Number.isInteger(event)) ? event : 0);
+      }); });
+  }
+  _stopTicks() {
+    this._tickSub?.cancel();
+    this._tickSub = null;
+    this.setState(() => {
+      this._tickState = "已取消";
+    });
   }
   async _readDeviceInfo() {
     this.setState(() => {
@@ -258,12 +284,23 @@ export class MethodChannelDetail extends StatefulWidget {
                   "data": "原生回调 JS"
                 })))
               })] }),
+          this._card({ "title": "插件 A · EventChannel", "channel": "hot_patch/demo/device_info_events（原生推送）", "result": ((this._tickState + " · tick=") + this._tick.toString()), "actions": [new ElevatedButton({
+                "onPressed": () => { this._startTicks(); },
+                "child": (this.__k11 || (this.__k11 = new Text({
+                  "data": "订阅"
+                })))
+              }), new OutlinedButton({
+                "onPressed": () => { this._stopTicks(); },
+                "child": (this.__k12 || (this.__k12 = new Text({
+                  "data": "取消"
+                })))
+              })] }),
           this._card({ "title": "插件 B · hot_plugin_counter", "channel": "hot_patch/demo/counter", "result": this._counter, "actions": [new ElevatedButton({
                 "onPressed": () => { if (this._busy) {
                     return;
                   }
                   this._increment(1); },
-                "child": (this.__k11 || (this.__k11 = new Text({
+                "child": (this.__k13 || (this.__k13 = new Text({
                   "data": "+1"
                 })))
               }), new ElevatedButton({
@@ -271,7 +308,7 @@ export class MethodChannelDetail extends StatefulWidget {
                     return;
                   }
                   this._increment(5); },
-                "child": (this.__k12 || (this.__k12 = new Text({
+                "child": (this.__k14 || (this.__k14 = new Text({
                   "data": "+5"
                 })))
               }), new OutlinedButton({
@@ -279,7 +316,7 @@ export class MethodChannelDetail extends StatefulWidget {
                     return;
                   }
                   this._resetCounter(); },
-                "child": (this.__k13 || (this.__k13 = new Text({
+                "child": (this.__k15 || (this.__k15 = new Text({
                   "data": "重置"
                 })))
               })] }),

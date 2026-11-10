@@ -1,7 +1,8 @@
 import FlutterMacOS
 import Foundation
 
-/// 示例三方库 A 的 macOS 原生实现（MethodChannel + BasicMessageChannel）。
+/// 示例三方库 A 的 macOS 原生实现
+/// （MethodChannel + BasicMessageChannel + EventChannel）。
 public class HotPluginDeviceInfoPlugin: NSObject, FlutterPlugin {
   private var messageChannel: FlutterBasicMessageChannel?
 
@@ -33,6 +34,11 @@ public class HotPluginDeviceInfoPlugin: NSObject, FlutterPlugin {
         reply(nil)
       }
     }
+
+    let eventChannel = FlutterEventChannel(
+      name: "hot_patch/demo/device_info_events",
+      binaryMessenger: registrar.messenger)
+    eventChannel.setStreamHandler(DeviceInfoStreamHandler())
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -45,5 +51,30 @@ public class HotPluginDeviceInfoPlugin: NSObject, FlutterPlugin {
     default:
       result(FlutterMethodNotImplemented)
     }
+  }
+}
+
+/// 原生侧事件源：onListen 启动计时器，onCancel 停止。
+private final class DeviceInfoStreamHandler: NSObject, FlutterStreamHandler {
+  private var timer: Timer?
+  private var count = 0
+
+  func onListen(
+    withArguments arguments: Any?,
+    eventSink events: @escaping FlutterEventSink
+  ) -> FlutterError? {
+    count = 0
+    timer?.invalidate()
+    timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+      self.count += 1
+      events(self.count)
+    }
+    return nil
+  }
+
+  func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    timer?.invalidate()
+    timer = nil
+    return nil
   }
 }

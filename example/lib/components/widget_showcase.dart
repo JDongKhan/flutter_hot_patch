@@ -527,6 +527,12 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'GridDetail',
   };
 
+  /// 只能单栏运行的 demo：同一 channel 名只能有一个活跃 EventChannel 流，
+  /// 原生 / JS 两栏同时订阅会互相顶掉（取消时报 No active stream to cancel）。
+  static const Set<String> _singleSideCompare = {
+    'MethodChannelDetail',
+  };
+
   /// 拼接补丁 URL：component 动态、entry 按源文件，走 query 参数。
   String get _jsAsset =>
       '$_jsZip?component=${widget.component}&entry=${Uri.encodeComponent(_jsEntry)}';
@@ -635,6 +641,24 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
   Widget build(BuildContext context) {
     final js = JsUiWidget(jsAsset: _jsAsset, props: _jsProps());
     if (widget.fullPage) return js;
+    if (_singleSideCompare.contains(widget.component)) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.component),
+          actions: [
+            TextButton.icon(
+              onPressed: () => setState(() => _narrowShowJs = !_narrowShowJs),
+              icon: Icon(
+                _narrowShowJs ? Icons.construction : Icons.bolt,
+                size: 18,
+              ),
+              label: Text(_narrowShowJs ? 'JS 热更' : '原生组件'),
+            ),
+          ],
+        ),
+        body: _narrowShowJs ? js : _native(),
+      );
+    }
 
     // 窄屏（手机）默认 JS 热更版，右上角开关切原生组件对照；宽屏始终双栏对比。
     final narrow = MediaQuery.sizeOf(context).width < 700;
