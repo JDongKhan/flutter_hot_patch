@@ -357,8 +357,8 @@ class _TimetableWheelColumnState extends State<TimetableWheelColumn> {
     final old = _controller;
     _controller = _createController();
     _controller.addListener(_onScroll);
-    // 旧 controller 仍被上一帧的 picker 持有：延后一拍再释放（JS 侧没有
-    // WidgetsBinding.addPostFrameCallback，用等价的「下一帧后」延迟）。
+    // 旧 controller 仍被上一帧的 picker 持有：延后一拍再释放（宿主下一帧
+    // 重建完 picker 之后再 dispose，避免释放时仍被引用）。
     Future.delayed(const Duration(milliseconds: 32), () {
       old.dispose();
     });

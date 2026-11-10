@@ -9116,6 +9116,44 @@ export class Navigator {
   canPop() { return Panel.of(this.__context) !== null; }
 }
 
+export class WidgetsBinding {
+  static __instance = null;
+  // 同一轮「帧后」待执行的回调；`__scheduled` 保证一批只排一个定时器。
+  static __queue = [];
+  static __scheduled = false;
+
+  static get instance() {
+    if (WidgetsBinding.__instance == null) {
+      WidgetsBinding.__instance = new WidgetsBinding();
+    }
+    return WidgetsBinding.__instance;
+  }
+
+  // `addPostFrameCallback(FrameCallback cb)`：当前任务结束后执行一次。
+  // 形参与 Dart 一致（Duration 时间戳）；非函数实参直接忽略（与 Dart 的
+  // 空回调类型约束一致，不在这里抛业务错）。
+  addPostFrameCallback(cb) {
+    if (typeof cb !== 'function') { return; }
+    WidgetsBinding.__queue.push(cb);
+    if (WidgetsBinding.__scheduled) { return; }
+    WidgetsBinding.__scheduled = true;
+    setTimeout(function () {
+      WidgetsBinding.__scheduled = false;
+      var pending = WidgetsBinding.__queue;
+      WidgetsBinding.__queue = [];
+      var timestamp = new Duration({ milliseconds: Date.now() });
+      for (var i = 0; i < pending.length; i++) {
+        pending[i](timestamp);
+      }
+    }, 0);
+  }
+
+  // 宿主负责帧循环：JS 侧没有可催的帧，保持空操作（不伪造调度）。
+  scheduleFrame() {}
+
+  ensureVisualUpdate() { this.scheduleFrame(); }
+}
+
 // ── data 身份表 + 事件详情还原：全部收在 DragData 里（唯一入口）──
 export class DragData {
   static __seq = 0;

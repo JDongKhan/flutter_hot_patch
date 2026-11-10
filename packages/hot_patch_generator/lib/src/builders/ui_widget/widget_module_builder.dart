@@ -46,6 +46,7 @@ import '../runtime/js/style_values_js.dart';
 import '../runtime/js/tab_controller_js.dart';
 import '../runtime/js/text_editing_controller_js.dart';
 import '../runtime/js/timer_js.dart';
+import '../runtime/js/widgets_binding_js.dart';
 
 /// Dart 值类区源码（`patch/flutter.js` 尾部，从 runtime.js 迁入）。
 ///
@@ -111,6 +112,9 @@ String flutterValueClassesSource() => [
   // Flutter SDK 的 API 面放这里，runtime.js 不留任何弹层知识。
   dialogsJsSource,
   navigatorJsSource,
+  // WidgetsBinding（帧调度 API 面）：`addPostFrameCallback` 用一次性
+  // setTimeout 承接「当前任务之后」；scheduleFrame 由宿主帧循环负责。
+  widgetsBindingJsSource,
   // 拖拽：data 身份表与事件详情还原（Draggable / DragTarget 的组件类
   // 在同一模块里引用这里的函数）。
   dragJsSource,
