@@ -213,7 +213,14 @@ export class TimetableWheelColumn extends StatefulWidget {
     } else {
       if (this._controller.hasClients) {
         if ((__nn(this._controller.selectedItem) !== __nn(target))) {
-          this._controller.jumpToItem(target);
+          Future.delayed(new Duration({milliseconds: 1}), () => { if (((!!this.__unmounted) || (!this._controller.hasClients))) {
+              return;
+            }
+            const maxIndex = (this.items.isEmpty ? 0 : (this.items.length - 1));
+            const next = this.initialItem.clamp(0, maxIndex);
+            if ((__nn(this._controller.selectedItem) !== __nn(next))) {
+              this._controller.jumpToItem(next);
+            } });
         }
       } else {
         if ((oldWidget.initialItem !== this.initialItem)) {

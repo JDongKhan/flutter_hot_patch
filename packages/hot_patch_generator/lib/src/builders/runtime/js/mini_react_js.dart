@@ -368,6 +368,12 @@ const String _miniReactReconcilerUtilsSource = r'''
         ? __contextOf(inst)
         : new JsBuildContext(null, null, k.__id);
     k.__attachContext(ctx);
+    // StatefulWidget 组件：实例即 State，一并交给 key（`currentState` 取值用）。
+    // 判据是基类原型上的标记，reconciler 不认识具体组件类。
+    if (inst.__k === __COMP && inst.__stateful === true &&
+        typeof k.__attachState === 'function') {
+      k.__attachState(inst);
+    }
     inst.__keyCtx = ctx;
     inst.__keyOwner = k;
   }
@@ -380,6 +386,7 @@ const String _miniReactReconcilerUtilsSource = r'''
     var k = inst.__keyOwner;
     if (!k) { return; }
     if (typeof k.__detachContext === 'function') { k.__detachContext(inst.__keyCtx); }
+    if (typeof k.__detachState === 'function') { k.__detachState(inst); }
     inst.__keyCtx = null;
     inst.__keyOwner = null;
   }

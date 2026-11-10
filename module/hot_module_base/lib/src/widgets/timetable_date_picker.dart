@@ -334,7 +334,19 @@ class _TimetableWheelColumnState extends State<TimetableWheelColumn> {
       _replaceController();
     } else if (_controller.hasClients) {
       if (_controller.selectedItem != target) {
-        _controller.jumpToItem(target);
+        // 不能在 didUpdateWidget 里同步 jumpToItem：它会立刻派发滚动通知，
+        // 上层 onSelectedItemChanged 随即 setState，撞上「build 中 setState」
+        // 断言（原生与 JS 两侧同一条规则）。延后一拍再跳。
+        Future.delayed(const Duration(milliseconds: 1), () {
+          if (!mounted || !_controller.hasClients) {
+            return;
+          }
+          final maxIndex = widget.items.isEmpty ? 0 : widget.items.length - 1;
+          final next = widget.initialItem.clamp(0, maxIndex);
+          if (_controller.selectedItem != next) {
+            _controller.jumpToItem(next);
+          }
+        });
       }
     } else if (oldWidget.initialItem != widget.initialItem) {
       _replaceController();

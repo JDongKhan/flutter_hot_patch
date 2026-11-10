@@ -1,11 +1,11 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-10T16:35:48.004720",
+  "buildTime": "2026-11-10T16:47:02.558514",
   "resources": {
-    "flutter.js": "bfc4e71839458fc367502a7e5a6cecf2a0315e1c0da874b0bde46288aa7415b7",
+    "flutter.js": "1219d5f65b207be2fab975b3833732bb3ef884f7dc6b2bd36d1930f1b827d45a",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
-    "runtime.js": "ebf00682c8e2ad9e6fc13345e4a504511464028800f2c65aaddc269e221619af",
+    "runtime.js": "c9922af948eb83ea98b2b27c2e9e835f5fb121d0e76ed31dd1241fc58bb1c790",
     "packages/hot_module_base/hot_module_base.js": "290a1651bbbace19d379f64d2970e0eecc0bdd3b67ab0fe4c131393f53dc04ed",
     "packages/hot_module_base/src/account_center.js": "1e0b2389c45cf44f37d762ca12dcbbbc6b0d96f7ba1df7256f9481a251ef006e",
     "packages/hot_module_base/src/guide_bubble_widget.js": "8fc9270c7b523dc7d185a055456beab601232530b00377370114659814c4bb22",
@@ -15,7 +15,7 @@
     "packages/hot_module_base/src/module_symbols.js": "2f61b973703f6c2437d406a2ef41fb0d7f7ebf6a833dc60ece3ef8ca3096de6b",
     "packages/hot_module_base/src/network.js": "79c5f2f797d4d9f92043e6c3bbed01dee82594e064af652d8f1da9994dd20ef5",
     "packages/hot_module_base/src/state_log_mixin.js": "2486342a1861df9968412dcf1439043e549113bf1adf26c96b3be6d43b68e081",
-    "packages/hot_module_base/src/widgets/timetable_date_picker.js": "9fb261b3ecfdc8bcef104af616a49a3589d4266bdb32e40b0ded7e91d94a646e",
+    "packages/hot_module_base/src/widgets/timetable_date_picker.js": "75a3b518611f041e55b8c10f6238602bef0ff4af7b493a1bd277b682d6bf6160",
     "packages/hot_plugin_counter/hot_plugin_counter.js": "9fcbbd6b54786f721779eff339df934196bc306df47a8ee04dae86b891fdf0f2",
     "packages/hot_plugin_device_info/hot_plugin_device_info.js": "0d60ab3a2a37c47440bfd02827b3a75bbe5a2f99ce6c3a37668501f293546547",
     "grammar/statement_detail.js": "bb560baf4983c571769fa1de29aab6a1d63ed3ab58340766f30bdc58795891d8",

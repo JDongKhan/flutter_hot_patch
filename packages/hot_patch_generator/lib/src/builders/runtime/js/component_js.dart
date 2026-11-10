@@ -126,6 +126,9 @@ const String componentJsSource = r'''
   // 本模型里 widget 与 state 合并为一个实例，二者不携带额外语义。
   export class StatelessWidget extends Component {}
   export class StatefulWidget extends Component {}
+  // `GlobalKey.currentState` 只对 StatefulWidget 有意义：reconciler 只认这个
+  // 原型标记（不认识具体类），据此把挂载中的实例（= State）挂到 GlobalKey 上。
+  StatefulWidget.prototype.__stateful = true;
 
   // Flutter `InheritedWidget`：纯数据共享结点，**没有宿主渲染语义**——build
   // 结果就是自身的 child；子孙用 `context.getInheritedWidgetOfExactType` /

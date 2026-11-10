@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 5c5e28ab） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 b050c266） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '5c5e28ab') { return; }
-  G.__jsuiVersion = '5c5e28ab';
+  if (G.__jsui && G.__jsuiVersion === 'b050c266') { return; }
+  G.__jsuiVersion = 'b050c266';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -1294,6 +1294,12 @@ __defineProtoMember(Map.prototype, {
         ? __contextOf(inst)
         : new JsBuildContext(null, null, k.__id);
     k.__attachContext(ctx);
+    // StatefulWidget 组件：实例即 State，一并交给 key（`currentState` 取值用）。
+    // 判据是基类原型上的标记，reconciler 不认识具体组件类。
+    if (inst.__k === __COMP && inst.__stateful === true &&
+        typeof k.__attachState === 'function') {
+      k.__attachState(inst);
+    }
     inst.__keyCtx = ctx;
     inst.__keyOwner = k;
   }
@@ -1306,6 +1312,7 @@ __defineProtoMember(Map.prototype, {
     var k = inst.__keyOwner;
     if (!k) { return; }
     if (typeof k.__detachContext === 'function') { k.__detachContext(inst.__keyCtx); }
+    if (typeof k.__detachState === 'function') { k.__detachState(inst); }
     inst.__keyCtx = null;
     inst.__keyOwner = null;
   }

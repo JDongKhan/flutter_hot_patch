@@ -127,6 +127,9 @@ export class Component {
 // 本模型里 widget 与 state 合并为一个实例，二者不携带额外语义。
 export class StatelessWidget extends Component {}
 export class StatefulWidget extends Component {}
+// `GlobalKey.currentState` 只对 StatefulWidget 有意义：reconciler 只认这个
+// 原型标记（不认识具体类），据此把挂载中的实例（= State）挂到 GlobalKey 上。
+StatefulWidget.prototype.__stateful = true;
 
 // Flutter `InheritedWidget`：纯数据共享结点，**没有宿主渲染语义**——build
 // 结果就是自身的 child；子孙用 `context.getInheritedWidgetOfExactType` /
@@ -9339,7 +9342,15 @@ export class GlobalKey {
     // （元素换位 / 旧结点卸载晚于新结点挂载），此时不能清掉新绑定。
     if (this.__ctx === ctx) { this.__ctx = null; }
   }
+  // JS 组件（翻译产物的 StatefulWidget）实例即 State：挂载期由 reconciler
+  // 经这两个方法绑定 / 摘除，`currentState` 直接返回它。宿主组件没有 JS
+  // 实例，`__state` 始终为空，走下面的句柄代理。
+  __attachState(inst) { this.__state = inst; }
+  __detachState(inst) {
+    if (this.__state === inst) { this.__state = null; }
+  }
   get currentState() {
+    if (this.__state != null) { return this.__state; }
     if (this.__id == null) { return null; }
     // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
     // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
