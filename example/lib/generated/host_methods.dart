@@ -12,6 +12,8 @@ import 'package:hot_patch/hot_patch.dart';
 
 import '../base/app_router.dart';
 import '../base/canvas_image.dart';
+import '../base/host_http.dart';
+import '../base/platform_tools.dart';
 import '../base/web_view.dart';
 import 'package:hot_module_base/src/account_center.dart';
 import 'package:hot_module_base/src/network.dart';
@@ -34,6 +36,12 @@ void registerHostMethods() {
   JsRuntimeManager.registerHostMethod('pop', AppRouter.pop);
   JsRuntimeManager.registerHostMethod('toast', AppRouter.toast);
   JsRuntimeManager.registerHostMethod('loadCanvasImage', CanvasImage.load);
+  JsRuntimeManager.registerHostMethod('httpGet', HostHttp.get);
+  JsRuntimeManager.registerHostMethod('appVersion', PlatformTools.appVersion);
+  JsRuntimeManager.registerHostMethod('documentsPath', PlatformTools.documentsPath);
+  JsRuntimeManager.registerHostMethod('photoPermissionStatus', PlatformTools.photoPermissionStatus);
+  JsRuntimeManager.registerHostMethod('requestPhotoPermission', PlatformTools.requestPhotoPermission);
+  JsRuntimeManager.registerHostMethod('tempPath', PlatformTools.tempPath);
   JsRuntimeManager.registerHostMethod('open', WebView.open);
   JsRuntimeManager.registerHostMethod('getUserName', AccountCenter.getUserName);
   JsRuntimeManager.registerHostMethod('post', Network.post);

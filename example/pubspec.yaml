@@ -33,6 +33,11 @@ dependencies:
     path: ../packages/hot_patch
   hot_patch_annotations:
     path: ../packages/hot_patch_annotations
+  path_provider: ^2.1.6
+  permission_handler: ^13.0.2
+  dio: ^5.11.1
+  package_info_plus: ^10.2.2
+  uuid: ^4.6.0
 
 dev_dependencies:
   flutter_test:

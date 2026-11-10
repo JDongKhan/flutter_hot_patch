@@ -5,15 +5,15 @@ import 'package:hot_patch/hot_patch.dart';
 
 import 'app/app.dart';
 import 'base/app_log_console.dart';
+import 'components/compare_test.dart';
 import 'components/composite_component.dart';
-import 'components/getx_component.dart';
 import 'components/hello_component.dart';
 import 'components/inherited_widget_demo.dart';
-import 'components/provider_component.dart';
 import 'components/widget_showcase.dart';
 import 'components/test_widget.dart';
 import 'generated/host_methods.dart';
 import 'grammar/grammar_showcase.dart';
+import 'third_party/third_party_showcase.dart';
 
 void main() {
   // 日志捕获：print / debugPrint（含 Flutter 框架与 hot_patch 的 HotPatchLog，
@@ -120,7 +120,7 @@ class DemoListPage extends StatelessWidget {
     _DemoEntry(
       'HelloCard · 原生 vs JS 热更',
       '同屏对比：正常组件与 JS 补丁的渲染与逻辑',
-      _CompareTest(
+      CompareTest(
         native: HelloCard(),
         js: JsUiWidget(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js')),
       ),
@@ -128,7 +128,7 @@ class DemoListPage extends StatelessWidget {
     _DemoEntry(
       'DashboardCard · 原生 vs JS 热更',
       '复合组件：内嵌 BannerCard（注解）+ 私有/非私有自定义 widget 双路径',
-      _CompareTest(
+      CompareTest(
         native: DashboardCard(),
         js: JsUiWidget(
           jsAsset: _patchUrl('DashboardCard', 'components/composite_component.js'),
@@ -140,28 +140,14 @@ class DemoListPage extends StatelessWidget {
       ),
     ),
     _DemoEntry(
-      'ProviderCard · 原生 vs JS 热更',
-      'MultiProvider / Consumer / Selector / context.watch·read：订阅局部重建',
-      _CompareTest(
-        native: ProviderCard(),
-        // provider 状态处理在 JS 侧（js/provider.js → patch/packages/provider.js）：
-        // 经 JsUiWidget 新运行时渲染，宿主不实现任何 provider 语义。
-        js: JsUiWidget(jsAsset: _patchUrl('ProviderCard', 'components/provider_component.js')),
-      ),
-    ),
-    _DemoEntry(
-      'GetXCard · 原生 vs JS 热更',
-      'Get.put/find + GetBuilder.update + Obx/Rx：手动通知与自动追踪',
-      _CompareTest(
-        native: GetXCard(),
-        // GetX 状态处理在 JS 侧（js/get.js → patch/packages/get.js）。
-        js: JsUiWidget(jsAsset: _patchUrl('GetXCard', 'components/getx_component.js')),
-      ),
+      '三方库 · 列表',
+      'provider / getx 状态管理 + path_provider / permission_handler / dio 工具类 + uuid 同名类',
+      const ThirdPartyShowcase(),
     ),
     _DemoEntry(
       'InheritedCard · 原生 vs JS 热更',
       'InheritedWidget：祖先数据共享，updateShouldNotify 精确重建依赖者',
-      _CompareTest(
+      CompareTest(
         native: InheritedCard(),
         js: JsUiWidget(jsAsset: _patchUrl('InheritedCard', 'components/inherited_widget_demo.js')),
       ),
@@ -179,7 +165,7 @@ class DemoListPage extends StatelessWidget {
     _DemoEntry(
       'TestWidget · 局部 widget 变量',
       'Text text = Text(); final items = [Text(), Text()]; 局部变量与列表按元素翻译',
-      _CompareTest(
+      CompareTest(
         native: const TestWidget(),
         js: JsUiWidget(
           jsAsset: _patchUrl('TestWidget', 'components/test_widget.js'),
@@ -257,36 +243,6 @@ class _SimpleDemoPage extends StatelessWidget {
     return Scaffold(
       appBar: hasAppBar ? AppBar(title: Text(title)) : null,
       body: child,
-    );
-  }
-}
-
-/// 原生 vs JS 热更同屏对比：一页上下两块，方便肉眼对照。
-class _CompareTest extends StatelessWidget {
-  const _CompareTest({required this.native, required this.js});
-
-  final Widget native;
-  final Widget js;
-
-  @override
-  Widget build(BuildContext context) {
-    // 可滚动：对比块里既有紧凑组件，也可能出现固定高度/多段区块，整页高度
-    // 会超出一屏，需可滚动避免 RenderFlex 溢出。
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('原生组件', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-          const SizedBox(height: 8),
-          native,
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          Text('JS 热更（JsUiWidget）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-          const SizedBox(height: 8),
-          js,
-        ],
-      ),
     );
   }
 }
