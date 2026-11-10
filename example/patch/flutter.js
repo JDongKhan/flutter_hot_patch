@@ -9121,12 +9121,48 @@ export class WidgetsBinding {
   // 同一轮「帧后」待执行的回调；`__scheduled` 保证一批只排一个定时器。
   static __queue = [];
   static __scheduled = false;
+  // 持久帧回调：{ cb, root }。root 是注册时所在页面/弹层根的 key，页面销毁后
+  // 由 frameTick 自动摘除；注册发生在无构建上下文时记 null（跟随整个 runtime）。
+  static __persistent = [];
 
   static get instance() {
     if (WidgetsBinding.__instance == null) {
       WidgetsBinding.__instance = new WidgetsBinding();
     }
     return WidgetsBinding.__instance;
+  }
+
+  // 注册时所在根的 key：build 期优先，其次当前活动根（挂载 / flush 期）。
+  static __rootKey() {
+    var inst = G.__core.building;
+    var root = inst && inst.__root ? inst.__root : G.__core.activeRoot;
+    return root ? root.key : null;
+  }
+
+  // 请求宿主在下一帧回调 `__jsui.frameTick`（复用既有的唯一帧请求通道）。
+  static __requestFrame() {
+    if (typeof sendMessage === 'function' && G._app_host_) {
+      G._app_host_.invoke('jsuiRequestFrame', []);
+    }
+  }
+
+  // 宿主每帧回调入口：派发持久帧回调；仍有存活回调时续帧。
+  static frameTick(ms) {
+    var timestamp = new Duration({ milliseconds: ms });
+    var alive = [];
+    for (var i = 0; i < WidgetsBinding.__persistent.length; i++) {
+      var entry = WidgetsBinding.__persistent[i];
+      // 根已销毁：回调随页面一起丢弃（生命周期单入口，不需要核心额外清理）。
+      if (entry.root != null && !__roots[entry.root]) { continue; }
+      alive.push(entry);
+      try {
+        entry.cb(timestamp);
+      } catch (e) {
+        __error('WidgetsBinding.addPersistentFrameCallback: ' + String(e));
+      }
+    }
+    WidgetsBinding.__persistent = alive;
+    if (alive.length > 0) { WidgetsBinding.__requestFrame(); }
   }
 
   // `addPostFrameCallback(FrameCallback cb)`：当前任务结束后执行一次。
@@ -9148,11 +9184,35 @@ export class WidgetsBinding {
     }, 0);
   }
 
+  // `addPersistentFrameCallback(FrameCallback cb)`：宿主每帧回调一次，直到
+  // 注册它的页面根销毁。Dart 侧没有移除接口，这里同样不提供。
+  addPersistentFrameCallback(cb) {
+    if (typeof cb !== 'function') { return; }
+    WidgetsBinding.__persistent.push({
+      cb: cb,
+      root: WidgetsBinding.__rootKey()
+    });
+    WidgetsBinding.__requestFrame();
+  }
+
+  // `Future<void> get endOfFrame`：宿主用 Flutter 的 endOfFrame 结算，返回
+  // Promise，帧结束（post-frame 之后）时完成；空闲时由宿主自动催一帧。
+  get endOfFrame() {
+    if (typeof sendMessage !== 'function' || !G._app_host_) {
+      return Promise.resolve();
+    }
+    return G._app_host_.invoke('jsuiEndOfFrame', []);
+  }
+
   // 宿主负责帧循环：JS 侧没有可催的帧，保持空操作（不伪造调度）。
   scheduleFrame() {}
 
   ensureVisualUpdate() { this.scheduleFrame(); }
 }
+
+// 宿主每帧回调入口（与 panelMount 同口径：宿主调用点带存在性守卫，
+// 早于本模块加载时是 no-op；而注册持久回调必然先经过本模块）。
+G.__jsui.frameTick = WidgetsBinding.frameTick;
 
 // ── data 身份表 + 事件详情还原：全部收在 DragData 里（唯一入口）──
 export class DragData {

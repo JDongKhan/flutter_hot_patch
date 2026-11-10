@@ -21,7 +21,10 @@ import 'js_runtime_manager.dart';
 //   - `jsuiCommit`   ← JS 增量补丁，payload 带页面 key，路由到对应 JsUiStore
 //   - `jsuiRequestFrame` ← JS 侧 setState 后请求一帧；宿主在 begin frame 统一
 //                      flush，把同一帧内的多次 setState 合并成一次 build
-//                      （与 Flutter 的 setState 语义一致）
+//                      （与 Flutter 的 setState 语义一致）；flush 后同帧回调
+//                      JS 的持久帧回调（`__jsui.frameTick`）
+//   - `jsuiEndOfFrame` ← JS 侧 `WidgetsBinding.instance.endOfFrame` 的宿主落点
+//                      （复用 Flutter 的帧末 Future）
 //   - `assetLoadString` ← JS 侧 `rootBundle.loadString(key)` 的宿主落点
 //   - `methodChannel`  ← JS 侧 `MethodChannel.invokeMethod` 的宿主落点：
 //                      一个通用入口承接所有 channel（name / codec 是参数，
@@ -44,6 +47,7 @@ void registerBuiltinHostMethods() {
   JsRuntimeManager.registerHostMethod('nativeToast', _nativeToast);
   JsRuntimeManager.registerHostMethod('jsuiCommit', _commit);
   JsRuntimeManager.registerHostMethod('jsuiRequestFrame', _requestFrame);
+  JsRuntimeManager.registerHostMethod('jsuiEndOfFrame', _endOfFrame);
   JsRuntimeManager.registerHostMethod('assetLoadString', _assetLoadString);
   JsRuntimeManager.registerHostMethod('methodChannel', _methodChannel);
   JsRuntimeManager.registerHostMethod(
@@ -288,10 +292,22 @@ Future<String> _assetLoadString(String key) =>
 void _requestFrame() {
   if (_flushScheduled) return;
   _flushScheduled = true;
-  WidgetsBinding.instance.scheduleFrameCallback((_) {
+  WidgetsBinding.instance.scheduleFrameCallback((Duration timeStamp) {
     _flushScheduled = false;
     JsRuntimeManager.flushJsUiPending();
+    // flush 之后再回传帧回调：JS 侧持久帧回调看到的是本帧已应用的树；回调里的
+    // setState 会再次请求下一帧（见 widgets_binding_js 的 frameTick）。
+    JsRuntimeManager.tickJsUiFrames(timeStamp);
   });
+}
+
+/// `jsuiEndOfFrame`：JS 侧 `WidgetsBinding.instance.endOfFrame` 的宿主落点。
+///
+/// 直接复用 Flutter 的 `WidgetsBinding.instance.endOfFrame`：当前帧结束时完成，
+/// 空闲时自动催一帧——与 Dart 的 `endOfFrame` 语义一致；帧末之后桥回填 Promise。
+Future<Object?> _endOfFrame() async {
+  await WidgetsBinding.instance.endOfFrame;
+  return null;
 }
 
 /// `log`：JS 侧 `print` / `debugPrint` → HotPatchLog。级别由 JS 侧一并传来

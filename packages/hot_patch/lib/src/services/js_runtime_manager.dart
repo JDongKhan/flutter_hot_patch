@@ -287,6 +287,18 @@ class JsRuntimeManager {
     }
   }
 
+  /// 帧回调：宿主 begin frame 阶段把「帧已开始」回传给所有活跃 runtime
+  /// （`__jsui.frameTick(ms)`），供 JS 侧 `WidgetsBinding
+  /// .addPersistentFrameCallback` 派发。与 [flushJsUiPending] 同入口、同帧：
+  /// JS 侧回调里的 setState 会再次请求下一帧（见 widgets_binding_js）。
+  static void tickJsUiFrames(Duration timeStamp) {
+    final ms = timeStamp.inMilliseconds;
+    evaluateAll(
+      'if (typeof __jsui !== "undefined" && __jsui.frameTick) '
+      '__jsui.frameTick($ms);',
+    );
+  }
+
   /// 对所有活跃 runtime 求值一次（宿主侧主动推送，如动画帧回传 value）。
   ///
   /// 与 [_settleHost] 同口径：持有目标句柄的 runtime 生效，其余按 id 查不到即

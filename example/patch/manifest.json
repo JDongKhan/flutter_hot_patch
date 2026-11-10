@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-10T16:57:13.294546",
+  "buildTime": "2026-11-10T17:05:31.633045",
   "resources": {
-    "flutter.js": "0a8a1c3d041804f74e3f3c80c88856fa23d0822f08ad5bb84c753a1604888fb5",
+    "flutter.js": "81f855b3b6d1a05e3298f51419faecacb36368613dbd5735585df424e965f08b",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
     "runtime.js": "c9922af948eb83ea98b2b27c2e9e835f5fb121d0e76ed31dd1241fc58bb1c790",
     "packages/hot_module_base/hot_module_base.js": "290a1651bbbace19d379f64d2970e0eecc0bdd3b67ab0fe4c131393f53dc04ed",

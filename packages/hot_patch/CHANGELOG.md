@@ -14,6 +14,7 @@
 - **新能力 `capabilities/cupertino_picker/`**：`CupertinoPicker` 宿主渲染（`.builder` 的 `__items` 逐项还原 itemExtent / 放大 / squeeze / 选中框 / 选中回调）+ `FixedExtentScrollController` 句柄桥（kind `ctrl/FixedExtent`，`selectedItem` 回传镜像、`jumpToItem` 走通用 `call` op、释放走通用 release）。核心文件零改动，只新增能力模块并注册进 `JsUiLibrary`。
 - **`sizeFromJson` 缺省维度按 0**：`Size.fromHeight` / `Size.fromWidth` 的一侧是 `double.infinity`，JSON 无法表达（`JSON.stringify(Infinity)` → `null`）；取不到的维度按 `0` 还原，`ButtonStyle.minimumSize` / `maximumSize` / `fixedSize` 不再因一侧为 null 整个字段丢失（配套生成器 0.14.0 的 `FilledButton.styleFrom` 支持）。
 - **`ButtonStyle` 经 `styleFrom` 下发**：`buttonStyleFromJson` 对 ButtonStyle 各字段按裸值接收并包 `WidgetStatePropertyAll`（原有协议不变）；配套生成器 0.14.0 的 `WidgetStatePropertyAll.toJSON` 透传裸值，`WidgetStatePropertyAll(x)` 与裸值 `x` 两种写法产物一致。
+- **`WidgetsBinding` 帧回调宿主支持**：`jsuiRequestFrame` 的 begin-frame 回调在 `flushJsUiPending()` 之后新增 `JsRuntimeManager.tickJsUiFrames(timeStamp)`，把帧开始回传给所有活跃 runtime 的 `__jsui.frameTick(ms)`，供 JS 侧 `addPersistentFrameCallback` 逐帧派发（回调里的 setState 会再次请求下一帧，形成逐帧节奏）；新增内建通道 `jsuiEndOfFrame`，直接 `await WidgetsBinding.instance.endOfFrame` 结算 JS 的 `endOfFrame` Promise（真正的帧末，空闲时自动催帧）。两者都是加法，既有通道与协议不变。
 
 ## 0.4.1
 
