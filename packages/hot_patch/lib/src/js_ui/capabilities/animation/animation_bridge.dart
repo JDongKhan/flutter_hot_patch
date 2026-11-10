@@ -172,6 +172,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register('AnimatedContainer', (c) {
     final deco = boxDecorationFromJson(c.map('decoration'));
     return AnimatedContainer(
+      key: c.key,
       duration: _animationDuration(c, 'AnimatedContainer'),
       curve: curveFromJson(c.props['curve']),
       width: c.num_('width'),
@@ -192,6 +193,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register(
     'AnimatedOpacity',
     (c) => AnimatedOpacity(
+      key: c.key,
       opacity: c.num_('opacity') ?? 1,
       duration: _animationDuration(c, 'AnimatedOpacity'),
       curve: curveFromJson(c.props['curve']),
@@ -203,6 +205,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register(
     'AnimatedPadding',
     (c) => AnimatedPadding(
+      key: c.key,
       padding: edgeInsetsFromJson(c.map('padding')),
       duration: _animationDuration(c, 'AnimatedPadding'),
       curve: curveFromJson(c.props['curve']),
@@ -213,6 +216,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register(
     'AnimatedAlign',
     (c) => AnimatedAlign(
+      key: c.key,
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
       duration: _animationDuration(c, 'AnimatedAlign'),
       curve: curveFromJson(c.props['curve']),
@@ -223,6 +227,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register(
     'AnimatedScale',
     (c) => AnimatedScale(
+      key: c.key,
       scale: c.num_('scale') ?? 1,
       duration: _animationDuration(c, 'AnimatedScale'),
       curve: curveFromJson(c.props['curve']),
@@ -234,6 +239,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register(
     'AnimatedRotation',
     (c) => AnimatedRotation(
+      key: c.key,
       turns: c.num_('turns') ?? 0,
       duration: _animationDuration(c, 'AnimatedRotation'),
       curve: curveFromJson(c.props['curve']),
@@ -245,6 +251,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register(
     'AnimatedSlide',
     (c) => AnimatedSlide(
+      key: c.key,
       offset: offsetFromJson(c.props['offset']) ?? Offset.zero,
       duration: _animationDuration(c, 'AnimatedSlide'),
       curve: curveFromJson(c.props['curve']),
@@ -255,6 +262,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register(
     'AnimatedSize',
     (c) => AnimatedSize(
+      key: c.key,
       duration: _animationDuration(c, 'AnimatedSize'),
       curve: curveFromJson(c.props['curve']),
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
@@ -268,6 +276,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     // 映射无法回调它——出声而不是静默丢弃（默认过渡仍由 Flutter 提供）。
     _warnUnsupportedProps(c, 'AnimatedSwitcher', const ['transitionBuilder']);
     return AnimatedSwitcher(
+      key: c.key,
       duration: _animationDuration(c, 'AnimatedSwitcher'),
       reverseDuration: durationFromJson(c.props['reverseDuration']),
       switchInCurve: curveFromJson(c.props['switchInCurve']),
@@ -280,6 +289,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     final first = (c.children['firstChild'] as Widget?) ?? const SizedBox.shrink();
     final second = (c.children['secondChild'] as Widget?) ?? const SizedBox.shrink();
     return AnimatedCrossFade(
+      key: c.key,
       firstChild: first,
       secondChild: second,
       crossFadeState: crossFadeStateFromJson(c.props['crossFadeState']),
@@ -295,6 +305,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register('AnimatedDefaultTextStyle', (c) {
     final style = textStyleFromJson(c.map('style'));
     return AnimatedDefaultTextStyle(
+      key: c.key,
       style: style ?? const TextStyle(),
       duration: _animationDuration(c, 'AnimatedDefaultTextStyle'),
       curve: curveFromJson(c.props['curve']),
@@ -309,6 +320,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register(
     'AnimatedPositioned',
     (c) => AnimatedPositioned(
+      key: c.key,
       left: c.num_('left'),
       top: c.num_('top'),
       right: c.num_('right'),
@@ -330,6 +342,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
       return child ?? const SizedBox.shrink();
     }
     return FadeTransition(
+      key: c.key,
       opacity: animation,
       alwaysIncludeSemantics: c.bool_('alwaysIncludeSemantics') ?? false,
       child: child,
@@ -344,6 +357,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
       return child ?? const SizedBox.shrink();
     }
     return ScaleTransition(
+      key: c.key,
       scale: animation,
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
       child: child,
@@ -358,6 +372,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
       return child ?? const SizedBox.shrink();
     }
     return RotationTransition(
+      key: c.key,
       turns: animation,
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
       child: child,
@@ -372,6 +387,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
       return child ?? const SizedBox.shrink();
     }
     return SizeTransition(
+      key: c.key,
       sizeFactor: animation,
       axis: axisFromJson(c.props['axis']) ?? Axis.vertical,
       axisAlignment: c.num_('axisAlignment') ?? 0,

@@ -16,8 +16,8 @@ import 'change_notifier_bridge.dart';
 
 /// 注册 Listenable 响应式组件的宿主映射。
 void registerListenableWidgets(JsWidgetRegistry r) {
-  r.register('ListenableBuilder', (c) => listenableBoundary(c));
-  r.register('ValueListenableBuilder', (c) => listenableBoundary(c));
+  r.register('ListenableBuilder', (c) => listenableBoundary(c, key: c.key));
+  r.register('ValueListenableBuilder', (c) => listenableBoundary(c, key: c.key));
 }
 
 /// 把一段 JS 子树包成 Dart 的监听边界：结点 props 的 `notifier`
@@ -25,11 +25,12 @@ void registerListenableWidgets(JsWidgetRegistry r) {
 ///
 /// **共用实现**：ListenableBuilder / ValueListenableBuilder 对宿主的要求相同
 /// （订阅 + 重建子树），故公开一份；JS 侧的 provider 消费者不再经过宿主。
-Widget listenableBoundary(JsRenderContext c) {
+Widget listenableBoundary(JsRenderContext c, {Key? key}) {
   final subtree = (c.children['child'] as Widget?) ?? const SizedBox.shrink();
   final notifier = jsChangeNotifierOfProp(c.props['notifier']);
   if (notifier == null) return subtree;
   return ListenableBuilder(
+    key: key,
     listenable: notifier,
     builder: (context, child) => child ?? const SizedBox.shrink(),
     child: subtree,
