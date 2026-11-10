@@ -8,10 +8,13 @@
 /// 抽取目标 = `hot_patch` 包的 `lib/src/js_ui/**`：
 ///   - `r.register('X', …)` → 宿主 widget 类型（运行时 `JsWidgetRegistry` 的键）。
 ///
-/// 因此新增宿主组件**只改运行时注册那一行**，生成器不需要登记任何类型名，
-/// 两端也不存在需要人工同步的表。值对象（`InputDecoration` /
-/// `BottomNavigationBarItem` / `DropdownMenuItem` 等）不是宿主 widget：它们在
-/// `flutter.js` 值类区由 `style_values_js` 直接导出，不参与本清单。
+/// 因此新增**内建**宿主组件只改运行时注册那一行，生成器不需要登记任何类型名。
+/// 三方库 / 业务自定义的宿主组件不走这里：其 JS 类由业务方在工程根
+/// `js/<package>.js` 里维护（与 provider / getx 等三方模块同一机制），运行时
+/// 再由业务在 `main()` 里 `registerJsUiLibrary(...)` 注册 renderer。
+/// 值对象（`InputDecoration` / `BottomNavigationBarItem` / `DropdownMenuItem`
+/// 等）不是宿主 widget：它们在 `flutter.js` 值类区由 `style_values_js` 直接
+/// 导出，不参与本清单。
 library;
 
 import 'dart:io';

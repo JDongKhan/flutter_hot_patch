@@ -54,11 +54,22 @@ class JsRenderContext {
     required this.type,
     required this.props,
     required this.children,
+    this.key,
   });
 
   /// 本结点的元素 type（宿主 widget 类型名 / 未注册组件的具体类型名）。
   /// 供默认 builder 识别「这是哪个未注册组件」，按名走原生注入或占位。
   final String type;
+
+  /// 结点声明的 `key`（JS 侧 `new UniqueKey()` / `ValueKey(...)` / `GlobalKey()`）
+  /// 对应的**宿主 Flutter Key 实例**。
+  ///
+  /// GlobalKey / UniqueKey 是与 JS 句柄绑定的同一实例（跨帧稳定）；ValueKey /
+  /// ObjectKey / PageStorageKey 按值现造。未声明 key 时为 null。
+  ///
+  /// 注意：声明了 key 的宿主结点，元素级身份也用同一实例（`KeyedSubtree`）；
+  /// 原生组件内部若还需要 key，GlobalKey 不能再挂第二次。
+  final Key? key;
 
   /// 普通值 props（不含 widget：widget 已在 `children` 里）。
   final Map<String, dynamic> props;

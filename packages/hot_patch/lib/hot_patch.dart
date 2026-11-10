@@ -28,3 +28,4 @@ export 'src/utils/hot_patch_assets.dart';
 export 'src/js_ui/capabilities/dialog/dialog_api.dart';
 export 'src/js_ui/js_ui_widget.dart';
 export 'src/js_ui/js_widget_registry.dart';
+export 'src/js_ui/capabilities/js_ui_library.dart';

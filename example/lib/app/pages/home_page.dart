@@ -1,6 +1,8 @@
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hot_example/base/app_router.dart';
+import 'package:flutter_hot_example/base/tracker.dart';
+import 'package:hot_module_base/hot_module_base.dart';
 import 'package:provider/provider.dart';
 
 import '../floors/banner_floor.dart';
@@ -120,18 +122,29 @@ class _HomeViewState extends State<HomeView> {
 }
 
 /// 楼层装配点：按接口下发的 type 组装对应楼层组件。
+///
+/// 每个楼层统一包一层 [TrackerVisibilityWidget]：首次进入可视区域时上报一次
+/// 曝光（曝光判定与去重都在组件内，楼层自己不感知埋点）。
 class FloorSlot extends StatelessWidget {
   const FloorSlot({super.key, required this.floor});
 
   final HomeFloor floor;
 
+  /// 包一层曝光埋点：事件名统一为 `home_floor_exposure`，参数带楼层类型。
+  Widget _tracked(String type, Widget child) {
+    return TrackerVisibilityWidget(
+      onExposure: () => Tracker.exposure('home_floor_exposure', {'floor': type}),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final type = floor.type;
-    if (type == 'banner') return BannerFloor(vm: floor.vm);
-    if (type == 'grid') return GridFloor(vm: floor.vm);
-    if (type == 'spots') return SpotFloor(vm: floor.vm);
-    if (type == 'promo') return PromoFloor(vm: floor.vm);
+    if (type == 'banner') return _tracked(type, BannerFloor(vm: floor.vm));
+    if (type == 'grid') return _tracked(type, GridFloor(vm: floor.vm));
+    if (type == 'spots') return _tracked(type, SpotFloor(vm: floor.vm));
+    if (type == 'promo') return _tracked(type, PromoFloor(vm: floor.vm));
     // 未知楼层类型不静默丢弃：输出明确日志并显示可见提示。
     print('FloorSlot 未知楼层类型：$type');
     return Text(

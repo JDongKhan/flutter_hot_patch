@@ -5,7 +5,9 @@
 import { HomeVm } from '../vm/home_vm.js';
 import { AppRouter } from '../../base/app_router.js';
 import { HomeFloor } from '../floors/floor_base.js';
+import { Tracker } from '../../base/tracker.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
+import { TrackerVisibilityWidget } from '../../packages/hot_module_base/src/widgets/tracker_visibility_widget.js';
 import { BannerFloor } from '../floors/banner_floor.js';
 import { GridFloor } from '../floors/grid_floor.js';
 import { SpotFloor } from '../floors/spot_floor.js';
@@ -112,27 +114,33 @@ export class FloorSlot extends StatelessWidget {
   __applyProps(args) {
     this.floor = (args && args.floor !== undefined) ? args.floor : null;
   }
+  _tracked(type, child) {
+    return new TrackerVisibilityWidget({
+      "onExposure": () => Tracker.exposure("home_floor_exposure", new Map([["floor", type]])),
+      "child": child
+    });
+  }
   build(context) {
     const type = this.floor.type;
     if ((type === "banner")) {
-      return new BannerFloor({
+      return this._tracked(type, new BannerFloor({
         "vm": this.floor.vm
-      });
+      }));
     }
     if ((type === "grid")) {
-      return new GridFloor({
+      return this._tracked(type, new GridFloor({
         "vm": this.floor.vm
-      });
+      }));
     }
     if ((type === "spots")) {
-      return new SpotFloor({
+      return this._tracked(type, new SpotFloor({
         "vm": this.floor.vm
-      });
+      }));
     }
     if ((type === "promo")) {
-      return new PromoFloor({
+      return this._tracked(type, new PromoFloor({
         "vm": this.floor.vm
-      });
+      }));
     }
     print("FloorSlot 未知楼层类型：" + type);
     return new Text({

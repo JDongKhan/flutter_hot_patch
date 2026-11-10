@@ -1,14 +1,15 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-10T19:44:04.603047",
+  "buildTime": "2026-11-10T20:55:34.051008",
   "resources": {
     "flutter.js": "81f855b3b6d1a05e3298f51419faecacb36368613dbd5735585df424e965f08b",
     "packages/get.js": "f8aa6f3b477af33cdf3214a64e46d1a98f8d96aaa06dbeb2be5a1bf0a8aa7027",
     "packages/provider.js": "998f91ba6314dff5b811a88baacffdb07a6b35f0901eb5a04e5e8f1d65d93414",
     "packages/uuid.js": "315bfa1aecc89c4c253d5aded272e9fa7f072c7902878c68ebbb084a60ebf57b",
+    "packages/visibility_detector.js": "5d72eb9a82628596cc50038e34f475ba1aeb4b531cf93d7353f6728319670d7a",
     "runtime.js": "c9922af948eb83ea98b2b27c2e9e835f5fb121d0e76ed31dd1241fc58bb1c790",
-    "packages/hot_module_base/hot_module_base.js": "290a1651bbbace19d379f64d2970e0eecc0bdd3b67ab0fe4c131393f53dc04ed",
+    "packages/hot_module_base/hot_module_base.js": "a6d50df16623b09b1de1ee795fac35c962350c12cc2468b00c06c59cc016ca7a",
     "packages/hot_module_base/src/account_center.js": "1e0b2389c45cf44f37d762ca12dcbbbc6b0d96f7ba1df7256f9481a251ef006e",
     "packages/hot_module_base/src/guide_bubble_widget.js": "8fc9270c7b523dc7d185a055456beab601232530b00377370114659814c4bb22",
     "packages/hot_module_base/src/int_extension.js": "efc425401b8cbef7d8f840eba665e1a85de3e19418ead3c9bec591be5f42834a",
@@ -18,6 +19,7 @@
     "packages/hot_module_base/src/network.js": "79c5f2f797d4d9f92043e6c3bbed01dee82594e064af652d8f1da9994dd20ef5",
     "packages/hot_module_base/src/state_log_mixin.js": "2486342a1861df9968412dcf1439043e549113bf1adf26c96b3be6d43b68e081",
     "packages/hot_module_base/src/widgets/timetable_date_picker.js": "75a3b518611f041e55b8c10f6238602bef0ff4af7b493a1bd277b682d6bf6160",
+    "packages/hot_module_base/src/widgets/tracker_visibility_widget.js": "d62634d5917d1ef54a78a3d8910fc878e836df802d79ab335faf1467a0f059bf",
     "packages/hot_plugin_counter/hot_plugin_counter.js": "9fcbbd6b54786f721779eff339df934196bc306df47a8ee04dae86b891fdf0f2",
     "packages/hot_plugin_device_info/hot_plugin_device_info.js": "0d60ab3a2a37c47440bfd02827b3a75bbe5a2f99ce6c3a37668501f293546547",
     "grammar/statement_detail.js": "bb560baf4983c571769fa1de29aab6a1d63ed3ab58340766f30bdc58795891d8",
@@ -64,7 +66,7 @@
     "app/service/app_service.js": "1e6ce8a82d39fe320784153f52fecd945714ea7be5d5bad1754e53f22c635293",
     "app/pages/orders_page.js": "9c06493d0f6bf9ba025619055815a36ba043b8fb1d588b22ea0fdf67c10a4c63",
     "app/pages/community_page.js": "08a4a605b19de3ef711ee73d5792cb31f333faecef5772124634f85b0c7b34ab",
-    "app/pages/home_page.js": "0cedf84e29171e114515997cfbb45e97d632173871ccbae60b03004ca719a8a1",
+    "app/pages/home_page.js": "219b15686951d75b99c850ef3805aa6cd7338cac07b08d637f8651724c34fd6e",
     "app/pages/mine_page.js": "c3a4dbf962cc53279511390bbe82004c37046922134cf654986cf77d5302a590",
     "app/pages/detail_pages.js": "45069c8d6658f4c9df0f01edb8723bf57d319ed690cd95c55c6f50b7fc859008",
     "app/app.js": "ba63460598bc5e11a12087321100d9b50a2fa0ea52ef71a07749e6c382cafead",
@@ -142,6 +144,7 @@
     "base/host_http.js": "52834208a683c9180b829800ed8db9846a73746563b4d7bce6287200c749d5fc",
     "base/canvas_image.js": "903379c7a8a93053d1ed1a9ce65e410e09ff9d70328c170ecedef4b04ffd8623",
     "base/app_router.js": "49bddfad3670613d57985a623fc85af9f37930a09304b88289a23caca22d6efb",
+    "base/tracker.js": "d4664b4ea74e6fae26b5facc2881b1d2e953b7754293ea5ad13a453e443e8a5d",
     "base/web_view.js": "ed4cfc2b46fd3928dbe87a84069b8403ba875aaafa657b1e4cdeae83e9aaaff7",
     "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e"
   }

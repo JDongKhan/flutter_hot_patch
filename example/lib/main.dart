@@ -11,6 +11,7 @@ import 'components/hello_component.dart';
 import 'components/inherited_widget_demo.dart';
 import 'components/widget_showcase.dart';
 import 'components/test_widget.dart';
+import 'custom/custom_capabilities.dart';
 import 'custom_component.dart';
 import 'generated/host_methods.dart';
 import 'grammar/grammar_showcase.dart';
@@ -28,6 +29,10 @@ void main() {
     // 注册清单由 build_runner 扫描注解生成（lib/generated/host_methods.dart），
     // 调一次即可，无需手写每条通道。
     registerHostMethods();
+    // 开发者自定义能力（lib/custom/**）：与内建能力同一套 `JsUiLibrary` 扩展点，
+    // 在 runApp 之前注册即可，hot_patch 包本身零改动。当前示例是
+    // VisibilityDetector（曝光/可见性检测）。
+    registerCustomCapabilities();
     // JsRuntimeManager.setVerboseCacheTrace(true);
     // 无 JS 产物的组件（产物里的 `Component` 占位结点）的原生实现：**全局一次注册**
     // （进程内共用一张表，不随 JsUiWidget 实例透传），位置与 registerHostMethods

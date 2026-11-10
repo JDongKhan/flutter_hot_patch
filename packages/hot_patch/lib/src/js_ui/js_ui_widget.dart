@@ -677,7 +677,7 @@ Widget _renderStoreNode(JsUiStore store, String id, String pageKey) {
       pageKey: pageKey,
     );
   }
-  final widget = builder(_renderContextOf(store, node, pageKey));
+  final widget = builder(_renderContextOf(store, node, pageKey, declared));
   // 未声明 key 时交给 Flutter 的默认语义（按位置 + 类型复用 element），与原生
   // 一致；声明了 key 才套一层 KeyedSubtree（保证列表重排时 element 跟着 key 走）。
   return declared == null ? widget : KeyedSubtree(key: declared, child: widget);
@@ -689,6 +689,7 @@ JsRenderContext _renderContextOf(
   JsUiStore store,
   JsUiNode node,
   String pageKey,
+  Key? key,
 ) {
   final children = <String, Object?>{};
   // builder 展开结果（内部键 __items）：有序 widget 列表。
@@ -718,6 +719,7 @@ JsRenderContext _renderContextOf(
     type: node.type,
     props: node.props,
     children: children,
+    key: key,
   );
 }
 
@@ -988,7 +990,12 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
         '结点 "${widget.id}" 不在 store.nodes 中（页面 ${widget.pageKey}）',
       );
     }
-    final ctx = _renderContextOf(widget.store, node, widget.pageKey);
+    final ctx = _renderContextOf(
+      widget.store,
+      node,
+      widget.pageKey,
+      jsKeyOf(node.props['key']),
+    );
     // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
     // lookup 未命中走单例注册表的默认 builder（原生注入 / 占位）。
     final builder =

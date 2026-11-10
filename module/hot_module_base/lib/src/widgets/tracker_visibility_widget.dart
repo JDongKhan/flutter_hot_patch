@@ -36,7 +36,10 @@ class _TrackerVisibilityWidgetState extends State<TrackerVisibilityWidget> {
           return;
         }
         _hasExposure = true;
-        widget.onExposure();
+        // 局部别名后调用：语句位置的 `widget.onExposure()` 当前不在翻译覆盖内
+        // （会被丢弃并告警），而 `widget.onExposure` 字段读已按 `this.` 归一。
+        final VoidCallback onExposure = widget.onExposure;
+        onExposure();
       },
       child: widget.child,
     );
