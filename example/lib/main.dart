@@ -11,6 +11,7 @@ import 'components/hello_component.dart';
 import 'components/inherited_widget_demo.dart';
 import 'components/widget_showcase.dart';
 import 'components/test_widget.dart';
+import 'custom_component.dart';
 import 'generated/host_methods.dart';
 import 'grammar/grammar_showcase.dart';
 import 'third_party/third_party_showcase.dart';
@@ -33,13 +34,7 @@ void main() {
     // 一致——runApp 之前。重复注册同名会覆盖（覆盖时告警），故不要放进 build()。
     //   DashboardCard 产物里 `_LabeledDivider` 私有类跨库不可见，注册公开的同名实现。
     //   回调收到完整 JsRenderContext：props + children slot + invoke。
-    registerNativeComponent(
-      '_LabeledDivider',
-      (c) => LabeledDivider(
-        text: c.str('text') ?? '',
-        child: c.children['child'] as Widget?,
-      ),
-    );
+    registerAllNativeComponent();
     // 入口是 Demo 列表页，其中的两条「完整 App」入口分别渲染**原生外壳**与
     // **JS 热更外壳**（AppShell，见 lib/app/app.dart）。
     runApp(const HotDemoApp());
