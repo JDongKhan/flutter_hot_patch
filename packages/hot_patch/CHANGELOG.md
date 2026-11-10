@@ -7,7 +7,8 @@
 - **宿主通道 `methodChannel`**：JS 侧 `MethodChannel.invokeMethod` 经唯一出口 `_app_host_.invoke('methodChannel', [name, codec, method, args])` 交给宿主，宿主再调真正的 Flutter `MethodChannel(name, codec).invokeMethod` → 原生（不绕过、不新开 JS↔原生通道）。
 - **实例绑定**：宿主按 `name#codec` 缓存 Dart 侧 `MethodChannel` 实例；channel 身份即该键，无运行时句柄、无 acquire / release（MethodChannel 无状态、无 dispose，同名实例共享 messenger 路由）。
 - **codec**：镜像 `StandardMethodCodec` / `JSONMethodCodec`；未知标记回落标准 codec。参数与返回值走 JSON（`Map` 经运行时的 `toJSON` 归一）。
-- 示例：`module/hot_plugin_device_info`（设备信息）、`module/hot_plugin_counter`（原生计数）两个模拟三方库插件，各持独立 channel；`example` 新增 `MethodChannelDetail` 展示页。
+- **`setMethodCallHandler`（反向）**：JS 侧用 `G.__core.__createFnHandle` 登记回调，宿主通道 `methodChannelHandler` 在原生调用到达时经 `JsRuntimeManager.invokeAwait` 执行 JS handler；结果包成 `{value}` / `{__mcError}`，后者转 `PlatformException` 回给原生。handler 按 `name#codec` 唯一（同名新注册覆盖旧注册，旧 JS 句柄释放）。同时补齐 `invokeListMethod` / `invokeMapMethod`。
+- 示例：`module/hot_plugin_device_info`（设备信息）、`module/hot_plugin_counter`（原生计数 + 原生回调 JS）两个模拟三方库插件，各持独立 channel；`example` 新增 `MethodChannelDetail` 展示页。
 
 ## 0.4.1
 

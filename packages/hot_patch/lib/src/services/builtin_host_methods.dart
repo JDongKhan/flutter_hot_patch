@@ -43,6 +43,10 @@ void registerBuiltinHostMethods() {
   JsRuntimeManager.registerHostMethod('jsuiRequestFrame', _requestFrame);
   JsRuntimeManager.registerHostMethod('assetLoadString', _assetLoadString);
   JsRuntimeManager.registerHostMethod('methodChannel', _methodChannel);
+  JsRuntimeManager.registerHostMethod(
+    'methodChannelHandler',
+    _methodChannelHandler,
+  );
 }
 
 /// JS 侧 `MethodChannel` 的宿主实例缓存。
@@ -62,11 +66,57 @@ Future<Object?> _methodChannel(
   String method, [
   Object? arguments,
 ]) {
-  final channel = _methodChannels.putIfAbsent(
+  return _channelOf(name, codec).invokeMethod<Object?>(method, arguments);
+}
+
+/// `name#codec` → 当前注册的 JS 函数句柄 id。
+///
+/// 与 Dart 的语义一致：handler 归 **channel 名**所有，同名新注册覆盖旧注册
+/// （旧 JS 句柄由 JS 侧释放）。null 表示已注销。
+final Map<String, String> _methodChannelHandlerIds = {};
+
+/// `methodChannelHandler`：JS 侧 `setMethodCallHandler` 的宿主落点。
+///
+/// 注册后，原生经该 channel 发来的调用会走 `invokeAwait` 回到 JS 回调；
+/// 回调结果包成 `{value}` / `{__mcError}`（见生成器 `method_channel_js.dart`），
+/// 后者转成 `PlatformException` 回给原生。
+Future<Object?> _methodChannelHandler(
+  String name,
+  String codec,
+  String? handlerId,
+) async {
+  final key = '$name#$codec';
+  final channel = _channelOf(name, codec);
+  if (handlerId == null) {
+    _methodChannelHandlerIds.remove(key);
+    channel.setMethodCallHandler(null);
+    return null;
+  }
+  _methodChannelHandlerIds[key] = handlerId;
+  channel.setMethodCallHandler((call) async {
+    // 已被新注册覆盖 / 已注销：本次调用按「无 handler」返回 null。
+    if (_methodChannelHandlerIds[key] != handlerId) return null;
+    final raw = await JsRuntimeManager.invokeAwait(
+      {'__fn': handlerId},
+      [call.method, call.arguments],
+    );
+    if (raw is Map && raw.containsKey('__mcError')) {
+      throw PlatformException(
+        code: 'js_error',
+        message: '${raw['__mcError']}',
+      );
+    }
+    return raw is Map ? raw['value'] : null;
+  });
+  return null;
+}
+
+/// 按 channel 身份取（并缓存）Dart 侧 MethodChannel 实例。
+MethodChannel _channelOf(String name, String codec) {
+  return _methodChannels.putIfAbsent(
     '$name#$codec',
     () => MethodChannel(name, _codecOf(codec)),
   );
-  return channel.invokeMethod<Object?>(method, arguments);
 }
 
 /// codec 只镜像 Standard / JSON 两种（见生成器的 `JSONMethodCodec` /

@@ -23,6 +23,7 @@ class MethodChannelDetail extends StatefulWidget {
 class _MethodChannelDetailState extends State<MethodChannelDetail> {
   String _deviceInfo = '未调用';
   String _counter = '未调用';
+  String _handlerResult = '未调用';
   bool _busy = false;
 
   Future<void> _readDeviceInfo() async {
@@ -82,6 +83,27 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
       if (!mounted) return;
       setState(() {
         _counter = '调用失败：' + e.toString();
+        _busy = false;
+      });
+    }
+  }
+
+  Future<void> _pingFromNative() async {
+    setState(() {
+      _busy = true;
+      _handlerResult = '调用中…';
+    });
+    try {
+      final value = await HotPluginCounter.pingFromNative();
+      if (!mounted) return;
+      setState(() {
+        _handlerResult = value;
+        _busy = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _handlerResult = '调用失败：' + e.toString();
         _busy = false;
       });
     }
@@ -173,6 +195,20 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
                   _resetCounter();
                 },
                 child: const Text('重置'),
+              ),
+            ],
+          ),
+          _card(
+            title: '插件 B · setMethodCallHandler',
+            channel: '原生 → Flutter → JS（同一 channel 反向调用）',
+            result: _handlerResult,
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  if (_busy) return;
+                  _pingFromNative();
+                },
+                child: const Text('原生回调 JS'),
               ),
             ],
           ),

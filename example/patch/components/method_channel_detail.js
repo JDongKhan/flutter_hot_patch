@@ -12,6 +12,7 @@ export class MethodChannelDetail extends StatefulWidget {
     super(args);
     this._deviceInfo = "未调用";
     this._counter = "未调用";
+    this._handlerResult = "未调用";
     this._busy = false;
   }
   async _readDeviceInfo() {
@@ -84,6 +85,31 @@ export class MethodChannelDetail extends StatefulWidget {
       }
       this.setState(() => {
         this._counter = ("调用失败：" + e.toString());
+        this._busy = false;
+      });
+    }
+  }
+  async _pingFromNative() {
+    this.setState(() => {
+      this._busy = true;
+      this._handlerResult = "调用中…";
+    });
+    try {
+      const value = await HotPluginCounter.pingFromNative();
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => {
+        this._handlerResult = value;
+        this._busy = false;
+      });
+    } catch (__e) {
+      const e = __e;
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => {
+        this._handlerResult = ("调用失败：" + e.toString());
         this._busy = false;
       });
     }
@@ -187,6 +213,15 @@ export class MethodChannelDetail extends StatefulWidget {
                   this._resetCounter(); },
                 "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "重置"
+                })))
+              })] }),
+          this._card({ "title": "插件 B · setMethodCallHandler", "channel": "原生 → Flutter → JS（同一 channel 反向调用）", "result": this._handlerResult, "actions": [new ElevatedButton({
+                "onPressed": () => { if (this._busy) {
+                    return;
+                  }
+                  this._pingFromNative(); },
+                "child": (this.__k12 || (this.__k12 = new Text({
+                  "data": "原生回调 JS"
                 })))
               })] })
         ]

@@ -7,7 +7,19 @@ import { MethodChannel } from '../../flutter.js';
 // 模型 HotPluginCounter
 export class HotPluginCounter {
   static _channel = new MethodChannel({name: "hot_patch/demo/counter"});
+  static _bound = false;
   constructor() {
+  }
+  static _bindHandler() {
+    if (HotPluginCounter._bound) {
+      return;
+    }
+    HotPluginCounter._bound = true;
+    HotPluginCounter._channel.setMethodCallHandler(async (call) => { if ((call.method === "onNativeEvent")) {
+        const value = call.arguments;
+        return ("ack:" + (((__nn(value) == null) ? "" : value.toString())));
+      }
+      return null; });
   }
   static async increment(step) {
     const value = await HotPluginCounter._channel.invokeMethod("increment", new Map([["step", step]]));
@@ -16,5 +28,10 @@ export class HotPluginCounter {
   static async reset() {
     const value = await HotPluginCounter._channel.invokeMethod("reset");
     return ((Number.isInteger(value)) ? value : 0);
+  }
+  static async pingFromNative() {
+    HotPluginCounter._bindHandler();
+    const value = await HotPluginCounter._channel.invokeMethod("pingFromNative");
+    return ((__nn(value) == null) ? "" : value.toString());
   }
 }

@@ -6,7 +6,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
-/// 示例三方库 B 的 Android 原生实现：实例内维护计数。
+/// 示例三方库 B 的 Android 原生实现：实例内维护计数，并支持反向回调。
 class HotPluginCounterPlugin :
     FlutterPlugin,
     MethodCallHandler {
@@ -27,6 +27,23 @@ class HotPluginCounterPlugin :
             "reset" -> {
                 count = 0
                 result.success(count)
+            }
+            "pingFromNative" -> {
+                // 原生 → Flutter → JS：同一个 channel 反向调用，把 handler 的
+                // 返回值作为本次调用的结果回给 Dart/JS。
+                channel.invokeMethod("onNativeEvent", "Android-ping", object : Result {
+                    override fun success(value: Any?) {
+                        result.success("native → " + (value?.toString() ?: ""))
+                    }
+
+                    override fun error(code: String, message: String?, details: Any?) {
+                        result.error(code, message, details)
+                    }
+
+                    override fun notImplemented() {
+                        result.error("no_handler", "Flutter/JS 未响应 onNativeEvent", null)
+                    }
+                })
             }
             else -> result.notImplemented()
         }
