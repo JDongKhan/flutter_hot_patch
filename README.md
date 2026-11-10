@@ -2,6 +2,9 @@
 
 [简体中文](README_ZH.md)
 
+> **Read first — [Tech Blog (Chinese)](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/tech-blog.html)**
+> Architecture overview, translation pipeline, runtime closed-loop, capability catalog and known limitations — the complete introduction to the framework.
+
 **A hot-update framework for Flutter widgets**: fix a component in production without a new release.
 
 Flutter's AOT output cannot be hot-patched, so production bugs normally wait for a store review and a
@@ -57,6 +60,8 @@ cd example && flutter run
 | [Architecture Guide (Chinese)](docs/项目架构文档.md) | Core design laws, architecture overview, core mechanisms, design red lines, extension guide, key file index |
 | [Widget Support Reference (Chinese)](docs/组件支持文档.md) | Widget support matrix, style/value/event protocol, generic translation capabilities, known limitations, JS engine capability baseline |
 | [TODO.md](TODO.md) | Pending tasks, implementation order, detailed TODOs and deferred items |
+| [Blog Center (Chinese)](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/index.html) | Tech blog, Dart → JS syntax comparison, interactive app prototype |
+| [App Prototype (Chinese)](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/app-prototype.html) | High-fidelity interactive prototype of the example app (HTML) |
 | [hot_patch_annotations](packages/hot_patch_annotations/README.md) | Annotations package: `@PatchEntry` / `@PatchIgnore` |
 | [hot_patch_generator](packages/hot_patch_generator/README.md) | Generator: artifact layout, options, translation design principles, adding widget support |
 | [hot_patch](packages/hot_patch/README.md) | Runtime: patch loading, host capability bridge, logging |

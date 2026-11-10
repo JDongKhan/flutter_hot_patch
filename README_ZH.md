@@ -2,6 +2,9 @@
 
 [English](README.md)
 
+> **先读这篇 —— [技术博客](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/tech-blog.html)**
+> 架构图、设计定律、翻译流水线、运行时闭环、能力目录与已知限制，一篇看懂整个框架。
+
 **Flutter 组件热更新框架**：线上组件出 bug 时，不发版也能修复。
 
 Flutter 的 AOT 编译产物无法热更，线上缺陷只能等应用商店审核、重新发版。本框架把「可能出问题的
@@ -54,6 +57,8 @@ cd example && flutter run
 | [项目架构文档](docs/项目架构文档.md) | 核心设计定律、架构总览、核心机制、设计红线、扩展指引、关键文件索引 |
 | [组件支持文档](docs/组件支持文档.md) | 组件支持矩阵、样式/值/事件协议、通用翻译能力、已知限制、JS 引擎能力基线 |
 | [TODO.md](TODO.md) | 待办任务、实施顺序、详细 TODO 与暂缓项 |
+| [文档中心](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/index.html) | 技术博客、Dart → JS 语法对照、App 交互原型 |
+| [App 交互原型](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/app-prototype.html) | 示例 App 的高保真交互原型（HTML，可直接在浏览器中体验） |
 | [hot_patch_annotations](packages/hot_patch_annotations/README_ZH.md) | 注解包：`@PatchEntry` / `@PatchIgnore` |
 | [hot_patch_generator](packages/hot_patch_generator/README_ZH.md) | 生成器：产物布局、配置项、翻译设计原则、新增 widget 支持 |
 | [hot_patch](packages/hot_patch/README_ZH.md) | 运行时：补丁加载、宿主能力桥、日志 |
