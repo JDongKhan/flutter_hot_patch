@@ -34,6 +34,7 @@ void main() {
     // 在 runApp 之前注册即可，hot_patch 包本身零改动。当前示例是
     // VisibilityDetector（曝光/可见性检测）。
     registerCustomCapabilities();
+    // 生命周期验证期间临时打开双端句柄进出日志（验证后恢复注释）。
     // JsRuntimeManager.setVerboseCacheTrace(true);
     // 无 JS 产物的组件（产物里的 `Component` 占位结点）的原生实现：**全局一次注册**
     // （进程内共用一张表，不随 JsUiWidget 实例透传），位置与 registerHostMethods
@@ -183,6 +184,11 @@ class DemoListPage extends StatelessWidget {
         ),
       ),
     ),
+    _DemoEntry(
+      '生命周期 · 挂载失败回滚',
+      'initState 注册持久帧回调后抛错：验证 __abortRoot 广播 rootClose，回调随根丢弃（退出后 leak-check 应为 clean）',
+      const _MountFailDemo(),
+    ),
     _DemoEntry('基础语法 · 列表', 'Dart mixin / extension：State 扩展日志、String 扩展打印（原生 vs JS 热更）', const GrammarShowcase()),
     _DemoEntry('常用组件 · 列表', '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）', const WidgetShowcase()),
   ];
@@ -326,4 +332,15 @@ class _TwinTest extends StatelessWidget {
       ],
     );
   }
+}
+
+/// 挂载失败回滚演示：JS 侧 `initState` 抛错，验证 `__abortRoot` 也广播
+/// `onRootClose`（持久帧回调随根丢弃）。页面会停在 boot 失败态，返回列表即可。
+class _MountFailDemo extends StatelessWidget {
+  const _MountFailDemo();
+
+  @override
+  Widget build(BuildContext context) => JsUiWidget(
+        jsAsset: _patchUrl('MountFailCard', 'components/mount_fail_card.js'),
+      );
 }
