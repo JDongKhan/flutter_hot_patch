@@ -104,9 +104,10 @@ export class GridFloorView extends StatelessWidget {
               "crossAxisSpacing": 6,
               "mainAxisExtent": 84,
               "mainAxisSpacing": 6,
-              "maxCrossAxisExtent": 150
+              "maxCrossAxisExtent": 100
             }))),
             "shrinkWrap": true,
+            "padding": EdgeInsets.zero,
             "physics": (this.__k4 || (this.__k4 = new NeverScrollableScrollPhysics({}))),
             "children": [
               ...(() => { var out = []; for (let i = 0; (i < vm.grid.length); (i++)) { out.push.apply(out, [new GridCell({

@@ -83,12 +83,13 @@ class GridFloorView extends StatelessWidget {
         // Flutter 按可用宽度动态算（maxCrossAxisExtent）。
         child: GridView(
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 150,
+            maxCrossAxisExtent: 100,
             mainAxisSpacing: 6,
             crossAxisSpacing: 6,
             mainAxisExtent: 84,
           ),
           shrinkWrap: true,
+          padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
           children: [
             for (var i = 0; i < vm.grid.length; i++) GridCell(entry: vm.grid[i]),
