@@ -290,6 +290,97 @@ List<String> _scanThirdPartyJsFiles() {
 String thirdPartyJsModulePath(String package) =>
     '$thirdPartyJsProductsRoot/$package.js';
 
+/// 宿主 `js/<package>.js` **实际导出的符号**（`export class` / `export const` /
+/// `export function` / `export { A, B as C }`）。
+///
+/// 这是「JS 侧确实有这个值」的唯一事实来源：Dart 包里声明了同名类 / 枚举，不代表
+/// 宿主模块导出了它（`js/get.js` 只导出 Get API，并没有导出 get 包的
+/// `Transition` 枚举）。引用方据此决定能否 `import`，避免 import 不存在的导出
+/// 导致模块加载直接失败。
+Set<String> thirdPartyJsExports(String package) =>
+    _thirdPartyJsExports[package] ??= _scanThirdPartyJsExports(package);
+
+final Map<String, Set<String>> _thirdPartyJsExports = {};
+
+Set<String> _scanThirdPartyJsExports(String package) {
+  final root = PackageSources.instance?.projectRoot;
+  if (root == null) return const {};
+  final file = File('$root${Platform.pathSeparator}$thirdPartyJsRoot'
+      '${Platform.pathSeparator}$package.js');
+  if (!file.existsSync()) return const {};
+  final text = file.readAsStringSync();
+  final names = <String>{};
+  for (final m in _exportDecl.allMatches(text)) {
+    final n = m.group(1);
+    if (n != null) names.add(n);
+  }
+  for (final m in _exportList.allMatches(text)) {
+    for (final part in m.group(1)!.split(',')) {
+      final t = part.trim();
+      if (t.isEmpty) continue;
+      // `A as B` → 对外导出名是 B；`A` → A。
+      final alias = t.split(RegExp(r'\s+as\s+')).last.trim();
+      if (alias.isNotEmpty && !alias.startsWith("'")) names.add(alias);
+    }
+  }
+  return names;
+}
+
+/// `export class X` / `export const X` / `export let X` / `export var X` /
+/// `export function X` / `export async function X`。
+final RegExp _exportDecl = RegExp(
+  r'^[ \t]*export[ \t]+(?:default[ \t]+)?(?:abstract[ \t]+)?'
+  r'(?:class|const|let|var|function|async[ \t]+function)[ \t]+'
+  r'([A-Za-z_$][\w$]*)',
+  multiLine: true,
+);
+
+/// `export { A, B as C }` / `export { A } from './x.js'`。
+final RegExp _exportList =
+    RegExp(r'^[ \t]*export[ \t]*\{([^}]*)\}', multiLine: true);
+
+/// 当前文件（**库根**，part 共享根文件的 import）`import` 的包名集合。
+///
+/// 只收 `package:<pkg>/...`：`dart:` 隐式类型由运行时同名类承接、相对导入由
+/// `importResolver` 按文件产物承接，都不参与「包归属」判定。
+///
+/// 用途：同名类 / 枚举在多个包都有声明时（如 flutter 与三方库），以 Dart 源码
+/// 实际 import 的包为准消歧，而不是靠名字索引的命中顺序。
+Set<String> importedPackagesOf(String sourcePath) {
+  final root = _libraryRootOf(sourcePath);
+  final path = sourceFileOf(root) ?? root;
+  final file = File(path);
+  if (!file.existsSync()) return const {};
+  final mtime = file.lastModifiedSync();
+  final cached = _importedPackages[root];
+  if (cached != null && cached.$1 == mtime) return cached.$2;
+  final packages = _scanImportedPackages(root);
+  _importedPackages[root] = (mtime, packages);
+  return packages;
+}
+
+final Map<String, (DateTime, Set<String>)> _importedPackages = {};
+
+String _libraryRootOf(String sourcePath) {
+  final unit = parseUnitFile(sourcePath);
+  if (unit == null) return sourcePath;
+  return libraryRootPathOf(unit, sourcePath);
+}
+
+Set<String> _scanImportedPackages(String libRoot) {
+  final unit = parseUnitFile(libRoot);
+  if (unit == null) return const {};
+  final out = <String>{};
+  for (final d in unit.directives.whereType<ImportDirective>()) {
+    final uri = d.uri.stringValue;
+    if (uri == null || !uri.startsWith('package:')) continue;
+    final rest = uri.substring('package:'.length);
+    final slash = rest.indexOf('/');
+    if (slash > 0) out.add(rest.substring(0, slash));
+  }
+  return out;
+}
+
 /// 不参与翻译的框架包：SDK `flutter` 与运行时 / 注解 / 生成器包——它们的类型
 /// 在 JS 侧另有实现（宿主注册表 / 注入类），源码不需要跨包翻译。
 const Set<String> nonTranslatedPackages = {

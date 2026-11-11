@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-11T16:22:16.534991",
+  "buildTime": "2026-11-11T16:43:26.661802",
   "resources": {
     "flutter.js": "b3bd91fdf47458d75d6663d80727046d8f8f563fac31de16391c22941d7c07f9",
     "packages/easy_refresh.js": "7606f91d791306289ebf4d47a37f6b30ac1fcdccbceeea53e6192818c9b09740",
@@ -123,7 +123,7 @@
     "components/sliver_detail.js": "3bb687e6442dd3128ab31f1e73f5bf6e12b4747e9b914252cde962f1088d9e4f",
     "components/stateless_card.js": "17c979ef79b001aaf6e1920313e7599e577c362e078aefd7de3ea6a91923797e",
     "components/timetable_picker_detail.js": "5576d80b795f345ddb19e918e832b7748871871721a231ac3c80d7b791f6fd34",
-    "components/explicit_animation_detail.js": "cdf4a0a82e020fa12894155b905d28544a6b6d94fcc5d22adfbe6512d3acfe25",
+    "components/explicit_animation_detail.js": "1aa88580b767d47aadddc09692d9b2bccf2a32589475120196d0272f493ac20c",
     "components/keyboard_listener_detail.js": "8feb77db28b4f0a4cf3aff62fbfd684cadc54c4f7d3c6bd204a04d1d2fadafb0",
     "components/image_detail.js": "519e42521fa1c89f986f58a05a2a13a0f52e88857ddc0f4909ab1880ac6c07e3",
     "components/getx_component.js": "04859a36873d007c48fc6f865cf4fc7873ca7749a25257975fcb742488523a5d",

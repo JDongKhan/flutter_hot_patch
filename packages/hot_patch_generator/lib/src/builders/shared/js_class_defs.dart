@@ -213,35 +213,45 @@ String? _resolveThirdPartyPackage(String type) {
   return hits.isEmpty ? null : hits.first;
 }
 
-/// 三方包**枚举**名 → 宿主 JS 模块所属包。
+/// 符号（类 / 枚举 / 顶层值）声明所在包 ∩ **当前文件 import 的包集合**。
 ///
-/// 枚举不进类索引（[CtorSignatures.declaringPackagesOf] 只索引 class），值位置的
-/// `X.member` 也不会经过静态调用钩子——产物只能按「实际出现的名字」补 import。
-/// 归属判据与 [thirdPartyPackageOf] 同一口径：枚举声明文件所在包在宿主 `js/`
-/// 有模块时才算；同名枚举跨包声明时不猜，出声跳过。
-Map<String, String> thirdPartyEnumModules() =>
-    _thirdPartyEnumModules ??= _resolveThirdPartyEnumModules();
-
-Map<String, String>? _thirdPartyEnumModules;
-
-Map<String, String> _resolveThirdPartyEnumModules() {
-  final out = <String, String>{};
-  final modules = thirdPartyJsPackages;
-  if (modules.isEmpty) return out;
-  final all = CtorSignatures.instance?.enumDeclaringPackages() ??
-      const <String, Set<String>>{};
-  all.forEach((name, packages) {
-    final hits = packages.where(modules.contains).toSet();
-    if (hits.length == 1) {
-      out[name] = hits.first;
-    } else if (hits.length > 1) {
-      // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 枚举 $name 同时声明在多个三方包 '
-          '${hits.join(' / ')}，无法判定 JS 模块归属，已跳过 import');
-    }
-  });
-  return out;
+/// 同名符号在多个包都有声明时（flutter.js 与三方模块、或两个三方库），以 Dart
+/// 源码实际 `import` 的包为准消歧，而不是靠名字索引的命中顺序：
+///   - 恰好 1 个 → 返回该包（调用方据此决定 flutter.js / `js/<pkg>.js`）；
+///   - 多个 → Dart 源码本身需要 import 前缀 / show-hide 才能编译，出声并返回
+///     null（调用方回退既有判据，不猜）；
+///   - 0 个（隐式可达 / barrel 未展开 / 无 import 信息）→ 返回 null。
+///
+/// [includeTopLevelValues] 仅供「类文件归属」使用：`jsClassFileOf` 回答的是
+/// 「这个**类**的 JS 类定义在哪」，三方包的顶层单例（`Get`）由
+/// `_thirdPartyValueRefJs` 单独承接；混进来会把值当成类、import 到 flutter.js。
+String? importedOwnerPackageOf(
+  String name,
+  String sourcePath, {
+  bool includeTopLevelValues = true,
+}) {
+  final imported = importedPackagesOf(sourcePath);
+  if (imported.isEmpty) return null;
+  final signatures = CtorSignatures.instance;
+  final candidates = <String>{
+    ...?signatures?.declaringPackagesOf(name),
+    ...?signatures?.enumDeclaringPackages()[name],
+    if (includeTopLevelValues)
+      ...?signatures?.declaringPackagesOfTopLevelValue(name),
+  };
+  if (candidates.isEmpty) return null;
+  final hits = candidates.where(imported.contains).toSet();
+  if (hits.length == 1) return hits.first;
+  if (hits.length > 1 && _ambiguousOwners.add('$name@$sourcePath')) {
+    // ignore: avoid_print - 构建期日志
+    print('[hot_patch_generator] 符号 $name 同时声明在多个已 import 的包 '
+        '${hits.join(' / ')}（$sourcePath）：Dart 源码需显式前缀 / show-hide 才能'
+        '消歧，JS 归属回退既有判据');
+  }
+  return null;
 }
+
+final Set<String> _ambiguousOwners = {};
 
 /// 顶层变量 → 持有其 JS 值的三方包（null = 不是「有三方 JS 模块的包」的顶层值）。
 ///

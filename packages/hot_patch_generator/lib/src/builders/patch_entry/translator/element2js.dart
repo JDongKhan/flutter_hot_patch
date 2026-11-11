@@ -4,6 +4,7 @@ import 'package:build/build.dart' show log;
 
 import '../../shared/ctor_signatures.dart';
 import '../../shared/js_class_defs.dart';
+import '../../shared/source_index.dart';
 import '../../shared/source_location.dart';
 import 'js_translator.dart';
 import 'js_value.dart';
@@ -1405,15 +1406,58 @@ class ElementTranslateContext implements ExprRenderer {
   T withExprRenderer<T>(T Function() body) {
     final prev = constructionHook;
     final prevClassRef = classRefHook;
+    final prevSymbolRef = symbolRefHook;
     constructionHook = _constructionJs;
     classRefHook = _classRefJs;
+    symbolRefHook = _symbolRefJs;
     try {
       return body();
     } finally {
       constructionHook = prev;
       classRefHook = prevClassRef;
+      symbolRefHook = prevSymbolRef;
     }
   }
+
+  /// 静态常量 / 枚举常量引用（`IndicatorResult.success` / `Colors.red`）的
+  /// owner → 登记 import。
+  ///
+  /// 枚举不进类索引、值位置也不经过 [classRefHook]（那只覆盖 `X.m(...)`），所以
+  /// 只能在真实引用点登记：归属按 [importedOwnerPackageOf]（枚举声明所在包 ∩
+  /// 当前文件 import 的包集合）消歧；SDK / 项目类 / 顶层常量不命中三方模块，
+  /// 仍走各自既有路径。
+  ///
+  /// 「Dart 包里有这个枚举」不等于「宿主模块导出了它」（get 包声明了 `Transition`
+  /// 枚举，但 `js/get.js` 并未导出）：导入前按 [thirdPartyJsExports] 校验模块实际
+  /// 导出，缺失时保留裸引用并出声——绝不 import 一个不存在的导出（那会让整个模块
+  /// 加载失败）。
+  void _symbolRefJs(String owner) {
+    final declared =
+        CtorSignatures.instance?.enumDeclaringPackages()[owner];
+    if (declared == null || declared.isEmpty) return;
+    // 以 Dart 源码 import 的包为准：多个已 import 的包都声明同名枚举时，
+    // Dart 源码本身必须靠前缀 / show-hide 才能编译，这里不猜。
+    final hits = declared.where(importedPackagesOf(sourcePath).contains).toSet();
+    if (hits.length != 1) return;
+    final pkg = hits.first;
+    // 没有宿主 JS 模块的包（SDK 枚举由 flutter.js 承接，产物按
+    // flutterExportTypes 文本补 import）不在这里处理。
+    if (!thirdPartyJsPackages.contains(pkg)) return;
+    if (!thirdPartyJsExports(pkg).contains(owner)) {
+      if (_missingEnumExports.add('$pkg/$owner')) {
+        log.warning(
+          '[hot_patch_generator] ${sourceAt(sourcePath, null)}: 枚举 $owner 声明于 '
+          '包 $pkg，但宿主 `js/$pkg.js` 未导出它；产物保留裸引用'
+          '（执行到该值时会 ReferenceError）。请在 js/$pkg.js 里导出该枚举。',
+        );
+      }
+      return;
+    }
+    (usedWidgetPackages[pkg] ??= <String>{}).add(owner);
+  }
+
+  /// 已告警的「三方枚举未导出」项（每个 input 只出声一次，避免刷屏）。
+  final Set<String> _missingEnumExports = {};
 
   /// 静态成员调用的 receiver 是「类定义在某个产物模块里的类型」时 → 类引用串
   /// （并登记 import），否则 null（交给通用路径）。
@@ -1445,12 +1489,33 @@ class ElementTranslateContext implements ExprRenderer {
   /// 归属只由「变量声明文件 → 包 → 宿主 `js/` 是否有模块」判定。项目内同名值
   /// （[importResolver] 命中）优先走依赖 import，不在此处理。
   String? _thirdPartyValueRefJs(String name) {
-    final pkg = thirdPartyValuePackageOf(name);
-    if (pkg == null) return null;
     if (importResolver?.call(name) != null) return null;
+    // 以 Dart import 的包为准（多个三方库都有同名顶层值时按源码消歧）；
+    // import 未给出唯一归属时回退「声明包 ∩ 有宿主模块」的既有判据。
+    final owner = importedOwnerPackageOf(name, sourcePath);
+    final pkg = (owner != null &&
+            thirdPartyJsPackages.contains(owner) &&
+            thirdPartyJsExports(owner).contains(name))
+        ? owner
+        : thirdPartyValuePackageOf(name);
+    if (pkg == null) return null;
     (usedWidgetPackages[pkg] ??= <String>{}).add(name);
     return name;
   }
+
+  /// 三方模块**没有导出**该符号：出声并拒绝生成 import（导入不存在的导出会让
+  /// 整个模块加载失败，比裸引用更糟）。
+  void _warnMissingModuleExport(String package, String name) {
+    if (!_missingModuleExports.add('$package/$name')) return;
+    log.warning(
+      '[hot_patch_generator] ${sourceAt(sourcePath, null)}: $name 声明于包 '
+      '$package，但宿主 `js/$package.js` 未导出它；产物保留裸引用'
+      '（执行到该符号时会 ReferenceError）。请在 js/$package.js 里导出它。',
+    );
+  }
+
+  /// 已告警的「三方模块未导出」项（每个 input 只出声一次）。
+  final Set<String> _missingModuleExports = {};
 
   /// 实参位置的构造表达式 → 属性管线（与 children 里的子结点同一条路径）。
   ///
@@ -1511,6 +1576,33 @@ class ElementTranslateContext implements ExprRenderer {
     }
     final product = importResolver?.call(type);
     if (product != null) return product;
+    // 同名符号的归属以 **Dart 源码 import 的包**为准：flutter.js 与三方模块、
+    // 或两个三方库都声明了同名类型时，不能按名字索引的命中顺序猜。
+    // 顶层单例（`Get`）不参与：它不是类，由 [_thirdPartyValueRefJs] 承接。
+    final owner = importedOwnerPackageOf(
+      type,
+      sourcePath,
+      includeTopLevelValues: false,
+    );
+    if (owner != null) {
+      if (owner == nodeHelperPackage) {
+        // 声明在 flutter：只有 flutter.js 真的导出（宿主包装类 / 值类）时才
+        // import；运行时注入类（Theme 等没有产物文件）返回 null，由裸引用承接。
+        if (hostWrapperTypes.contains(type) || jsClassWidgets.contains(type)) {
+          return packageModulePath(nodeHelperPackage);
+        }
+        return null;
+      }
+      if (thirdPartyJsPackages.contains(owner)) {
+        if (!thirdPartyJsExports(owner).contains(type)) {
+          _warnMissingModuleExport(owner, type);
+          return null;
+        }
+        return packageModulePath(owner);
+      }
+      // 其它包（无宿主 JS 模块，如 cached_network_image）：回退既有判据
+      // （多数是宿主注册的内建能力，归 flutter.js）。
+    }
     if (hostWrapperTypes.contains(type) || jsClassWidgets.contains(type)) {
       return packageModulePath(widgetPackageOf(type));
     }

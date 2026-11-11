@@ -3,7 +3,6 @@
 // 重新生成：dart run build_runner build
 
 import { Alignment, AnimatedBuilder, AnimationController, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CurvedAnimation, Curves, Divider, Duration, Expanded, FadeTransition, FontWeight, LinearProgressIndicator, RotationTransition, Row, ScaleTransition, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
-import { Transition } from '../packages/get.js';
 
 // 组件 ExplicitAnimationDetail
 export class ExplicitAnimationDetail extends StatefulWidget {

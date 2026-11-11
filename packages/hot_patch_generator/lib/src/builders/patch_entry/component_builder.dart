@@ -857,14 +857,6 @@ String _renderJsProduct(
   if (usedValues.isNotEmpty) {
     (importsByPackage[nodeHelperPackage] ??= <String>{}).addAll(usedValues);
   }
-  // 三方包枚举（`IndicatorResult` 等）：枚举不进类索引、值位置的 `X.member` 也不
-  // 经过静态调用钩子，同样按产物文本补 import；归属由「枚举声明所在包 + 宿主
-  // `js/<package>.js` 是否有模块」判定（见 [thirdPartyEnumModules]）。
-  for (final e in thirdPartyEnumModules().entries) {
-    if (RegExp('\\b${RegExp.escape(e.key)}\\b').hasMatch(bodyText)) {
-      (importsByPackage[e.value] ??= <String>{}).add(e.key);
-    }
-  }
   final ownProduct = productPath(sourcePath);
   final importLines = <String>[
     for (final entry in importsByPackage.entries)

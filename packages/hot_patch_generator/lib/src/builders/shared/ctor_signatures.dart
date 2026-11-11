@@ -298,6 +298,8 @@ class CtorSignatures {
   ///
   /// 供「宿主 `js/<package>.js` 导出了该枚举」的引用方按源码事实补 import。
   Map<String, Set<String>> enumDeclaringPackages() {
+    final cached = _enumDeclaringPackages;
+    if (cached != null) return cached;
     _ensureIndex();
     final out = <String, Set<String>>{};
     _enumFiles.forEach((name, files) {
@@ -308,8 +310,10 @@ class CtorSignatures {
       }
       if (packages.isNotEmpty) out[name] = packages;
     });
-    return out;
+    return _enumDeclaringPackages = out;
   }
+
+  Map<String, Set<String>>? _enumDeclaringPackages;
 
   /// 顶层变量声明的**所在包**（同名顶层变量可能存在于多个包，全部返回）。
   ///

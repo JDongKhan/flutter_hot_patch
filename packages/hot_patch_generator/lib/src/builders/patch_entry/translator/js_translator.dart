@@ -139,6 +139,10 @@ String? exprToJs(
         RegExp(r'^[A-Z]').hasMatch(e.prefix.name)) {
       // prefix 是大写开头的外部类名（如 Network.post）→ 原样保留。
       _warnUnsupportedSdkEnum(e.prefix.name);
+      // 真实引用到「类 / 枚举的静态常量」：通知导入方登记归属（三方包枚举由
+      // 宿主 js/<package>.js 导出，import 必须在这里按源码事实补，而不是扫产物
+      // 文本——字符串与注释里的同名单词会造成错误 import）。
+      symbolRefHook?.call(e.prefix.name);
       base = e.prefix.name;
     }
     if (base == null) return null;
@@ -1238,6 +1242,16 @@ typedef ClassRefHook = String? Function(String className);
 
 /// 当前生效的类引用钩子（由 element2js 安装；翻译单线程，按调用期安装/还原）。
 ClassRefHook? classRefHook;
+
+/// **静态常量引用**钩子：`Owner.member`（`IndicatorResult.success` /
+/// `Colors.red`）的 owner 被原样引用时回调，供导入方按源码事实登记「该符号
+/// 来自哪个模块」。与 [classRefHook] 分开：类引用钩子只覆盖 `X.m(...)` 调用，
+/// 枚举/常量引用没有调用形态，生成器需要在翻译期看到真实引用（不能靠产物
+/// 文本里出现同名子串来猜，否则字符串 / 注释里的同名单词会引入错误 import）。
+typedef SymbolRefHook = void Function(String ownerName);
+
+/// 当前生效的静态常量引用钩子（由 element2js 按作用域安装/还原）。
+SymbolRefHook? symbolRefHook;
 
 bool _isClassLikeName(String name) {
   if (name.isEmpty) return false;
