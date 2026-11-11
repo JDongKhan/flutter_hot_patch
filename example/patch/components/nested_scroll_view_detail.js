@@ -31,7 +31,7 @@ export class NestedScrollViewDetail extends StatelessWidget {
               "color": Colors.white,
               "fontSize": 10
             }))),
-            "data": (index + 1)
+            "data": "" + (index + 1)
           })
         }),
         "title": new Text({

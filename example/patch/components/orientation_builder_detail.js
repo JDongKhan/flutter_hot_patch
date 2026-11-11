@@ -63,7 +63,7 @@ export class OrientationBuilderDetail extends StatelessWidget {
           "height": 10
         }))),
         this._line("orientation：" + (isPortrait ? "portrait" : "landscape")),
-        this._line("size：" + mq.size.width.toStringAsFixed(0) + " x " + mq.size.height.toStringAsFixed(0)),
+        this._line("size：" + mq.size.width.toStringAsFixed(0) + " x " + "" + mq.size.height.toStringAsFixed(0)),
         this._line("devicePixelRatio：" + mq.devicePixelRatio.toStringAsFixed(2)),
         this._line("padding.top：" + mq.padding.top.toStringAsFixed(0)),
         (this.__k6 || (this.__k6 = new SizedBox({
@@ -174,7 +174,7 @@ export class OrientationBuilderDetail extends StatelessWidget {
                     "style": (this.__k2 || (this.__k2 = new TextStyle({
                       "fontSize": 12
                     }))),
-                    "data": "biggest：" + c.biggest.width.toStringAsFixed(0) + " x " + c.biggest.height.toStringAsFixed(0)
+                    "data": "biggest：" + c.biggest.width.toStringAsFixed(0) + " x " + "" + c.biggest.height.toStringAsFixed(0)
                   }),
                   (this.__k8 || (this.__k8 = new SizedBox({
                     "height": 6

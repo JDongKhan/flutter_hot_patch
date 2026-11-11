@@ -305,7 +305,7 @@ export class SpotCard extends StatelessWidget {
                           "fontSize": 17,
                           "fontWeight": FontWeight.w700
                         }))),
-                        "data": this.spot.price
+                        "data": "" + this.spot.price
                       }),
                       (this.__k12 || (this.__k12 = new Spacer({}))),
                       new Text({

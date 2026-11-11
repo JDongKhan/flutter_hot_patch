@@ -157,21 +157,25 @@ export class _MediaQueryDump extends StatelessWidget {
           this._row("viewInsets", this._edges(mq.viewInsets)),
           this._row("devicePixelRatio", mq.devicePixelRatio.toStringAsFixed(2)),
           this._row("textScaler", mq.textScaler.scale(1).toStringAsFixed(2)),
-          this._row("orientation", mq.orientation),
-          this._row("platformBrightness", mq.platformBrightness),
-          this._row("navigationMode", mq.navigationMode),
-          this._row("alwaysUse24HourFormat", mq.alwaysUse24HourFormat),
-          this._row("accessibleNavigation", mq.accessibleNavigation),
-          this._row("disableAnimations", mq.disableAnimations),
-          this._row("invertColors", mq.invertColors),
-          this._row("highContrast", mq.highContrast),
-          this._row("boldText", mq.boldText)
+          this._row("orientation", this._enumText("" + mq.orientation)),
+          this._row("platformBrightness", this._enumText("" + mq.platformBrightness)),
+          this._row("navigationMode", this._enumText("" + mq.navigationMode)),
+          this._row("alwaysUse24HourFormat", "" + mq.alwaysUse24HourFormat),
+          this._row("accessibleNavigation", "" + mq.accessibleNavigation),
+          this._row("disableAnimations", "" + mq.disableAnimations),
+          this._row("invertColors", "" + mq.invertColors),
+          this._row("highContrast", "" + mq.highContrast),
+          this._row("boldText", "" + mq.boldText)
         ]
       })
     });
   }
   _edges(e) {
     return "L" + e.left.toStringAsFixed(1) + " T" + e.top.toStringAsFixed(1) + " " + "R" + e.right.toStringAsFixed(1) + " B" + e.bottom.toStringAsFixed(1);
+  }
+  _enumText(s) {
+    const dot = s.indexOf(".");
+    return ((dot >= 0) ? s.substring((dot + 1)) : s);
   }
   _row(name, value) {
     return new Padding({

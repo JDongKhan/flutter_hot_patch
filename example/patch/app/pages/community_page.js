@@ -567,7 +567,7 @@ export class _PostCard extends StatelessWidget {
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
   static _likeText(n) {
-    return ((n > 999) ? ((n / 1000)).toStringAsFixed(1) + "k" : n);
+    return ((n > 999) ? ((n / 1000)).toStringAsFixed(1) + "k" : "" + n);
   }
   build(context) {
     return new GestureDetector({

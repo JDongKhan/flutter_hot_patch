@@ -103,9 +103,9 @@ class _MediaQueryDump extends StatelessWidget {
           _row('viewInsets', _edges(mq.viewInsets)),
           _row('devicePixelRatio', mq.devicePixelRatio.toStringAsFixed(2)),
           _row('textScaler', mq.textScaler.scale(1).toStringAsFixed(2)),
-          _row('orientation', '${mq.orientation}'),
-          _row('platformBrightness', '${mq.platformBrightness}'),
-          _row('navigationMode', '${mq.navigationMode}'),
+          _row('orientation', _enumText('${mq.orientation}')),
+          _row('platformBrightness', _enumText('${mq.platformBrightness}')),
+          _row('navigationMode', _enumText('${mq.navigationMode}')),
           _row('alwaysUse24HourFormat', '${mq.alwaysUse24HourFormat}'),
           _row('accessibleNavigation', '${mq.accessibleNavigation}'),
           _row('disableAnimations', '${mq.disableAnimations}'),
@@ -120,6 +120,13 @@ class _MediaQueryDump extends StatelessWidget {
   String _edges(EdgeInsets e) =>
       'L${e.left.toStringAsFixed(1)} T${e.top.toStringAsFixed(1)} '
       'R${e.right.toStringAsFixed(1)} B${e.bottom.toStringAsFixed(1)}';
+
+  /// 枚举 `toString()` 原生是 `Orientation.landscape`、跨桥后是 `landscape`；
+  /// 去掉类型前缀，左右两栏才好逐项对比。
+  String _enumText(String s) {
+    final dot = s.indexOf('.');
+    return dot >= 0 ? s.substring(dot + 1) : s;
+  }
 
   Widget _row(String name, String value) {
     return Padding(

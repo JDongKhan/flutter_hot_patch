@@ -35,12 +35,12 @@ export class InputDetail extends StatefulWidget {
   }
   _onChoiceChanged(v) {
     this.setState(() => {
-      this._choice = v;
+      this._choice = "" + v;
     });
   }
   _onDropdownChanged(v) {
     this.setState(() => {
-      this._dropdown = v;
+      this._dropdown = "" + v;
     });
   }
   _onSwitchChanged(v) {

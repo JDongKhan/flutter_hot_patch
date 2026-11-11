@@ -107,7 +107,7 @@ export class BasicApiDetail extends StatefulWidget {
           "data": "RegExp(r'\\d+').hasMatch(text) → " + hasDigits
         }),
         new Text({
-          "data": "firstMatch(text).group(0) → " + ((__nn(firstDigits) == null) ? "无" : firstDigits.group(0))
+          "data": "firstMatch(text).group(0) → " + "" + ((__nn(firstDigits) == null) ? "无" : firstDigits.group(0))
         }),
         new Text({
           "data": "allMatches(text).length → " + allDigits.length

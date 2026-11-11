@@ -266,7 +266,7 @@ export const ListTail = registerExtension("List", (function () {
         return (this.isEmpty ? null : this.last);
       } },
     tailText: function () {
-      return (this.isEmpty ? "(空)" : this.last);
+      return (this.isEmpty ? "(空)" : "" + this.last);
     },
   };
 })(), { id: "lib/grammar/generic_detail.dart#ListTail" });

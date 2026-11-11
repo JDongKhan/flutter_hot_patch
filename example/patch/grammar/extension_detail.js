@@ -94,7 +94,7 @@ export class ExtensionDetail extends StatefulWidget {
               "fontSize": 20,
               "color": Colors.black54
             }),
-            "data": this._count
+            "data": "" + this._count
           })
         }),
         (this.__k3 || (this.__k3 = new SizedBox({

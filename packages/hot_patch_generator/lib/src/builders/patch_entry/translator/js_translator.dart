@@ -1373,7 +1373,13 @@ String? _stringInterpolationJs(
         }
       }
     }
-    return parts.isEmpty ? '""' : parts.join(' + ');
+    // Dart 的每个插值片段语义都是 `toString()`：多片段时 `+` 里有字符串参与，
+    // 靠 JS 的 `+` 隐式转换即可；但**只有一个片段**时没有任何字符串参与，
+    // `'${x}'` 会退化成 `x` 本身（类型都变了：枚举 / bool / int 直接透出，
+    // 之后在 JS 侧做字符串操作就炸）。补一个空串保证结果始终是字符串。
+    if (parts.isEmpty) return '""';
+    if (parts.length == 1) return '"" + ${parts.single}';
+    return parts.join(' + ');
   }
   return exprToJs(a, scope, classes);
 }

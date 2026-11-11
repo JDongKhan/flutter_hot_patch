@@ -83,7 +83,7 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
                             "fontSize": 18,
                             "fontWeight": FontWeight.bold
                           }))),
-                          "data": value
+                          "data": "" + value
                         })
                       }),
                       (this.__k4 || (this.__k4 = new SizedBox({

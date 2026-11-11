@@ -33,7 +33,7 @@ export class AnimatedListDetail extends StatefulWidget {
               "color": Colors.white,
               "fontSize": 11
             }))),
-            "data": (index + 1)
+            "data": "" + (index + 1)
           })
         }),
         "title": new Text({
