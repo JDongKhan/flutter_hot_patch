@@ -12,8 +12,9 @@ import { BannerFloor } from '../floors/banner_floor.js';
 import { GridFloor } from '../floors/grid_floor.js';
 import { SpotFloor } from '../floors/spot_floor.js';
 import { PromoFloor } from '../floors/promo_floor.js';
-import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, FontWeight, Icon, Icons, InkWell, LinearGradient, ListenableBuilder, Padding, Positioned, Radius, Row, SafeArea, ScrollController, SizedBox, SliverToBoxAdapter, Spacer, Stack, StatefulWidget, StatelessWidget, Text, TextStyle } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EdgeInsets, FontWeight, Icon, Icons, InkWell, LinearGradient, ListenableBuilder, Padding, Positioned, Radius, Row, SafeArea, ScrollController, SizedBox, SliverToBoxAdapter, Spacer, Stack, StatefulWidget, StatelessWidget, Text, TextStyle } from '../../flutter.js';
 import { ChangeNotifierProvider } from '../../packages/provider.js';
+import { EasyRefresh, EasyRefreshController } from '../../packages/easy_refresh.js';
 
 // 组件 HomePage
 export class HomePage extends StatelessWidget {

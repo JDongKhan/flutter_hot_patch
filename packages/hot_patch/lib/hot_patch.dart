@@ -25,7 +25,16 @@ library;
 export 'src/services/js_runtime_manager.dart';
 export 'src/utils/env_flags.dart';
 export 'src/utils/hot_patch_assets.dart';
+export 'src/utils/hot_patch_log.dart';
 export 'src/js_ui/capabilities/dialog/dialog_api.dart';
 export 'src/js_ui/js_ui_widget.dart';
 export 'src/js_ui/js_widget_registry.dart';
 export 'src/js_ui/capabilities/js_ui_library.dart';
+// 自定义能力（App 侧实现，如三方包的 Controller 句柄桥）需要的通用构件：
+// 句柄桥基类 + 事件实参还原（Duration / Curve）。核心文件不因能力迁移改动。
+export 'src/js_ui/capabilities/animation/animation_from_json.dart'
+    show curveFromJson;
+export 'src/js_ui/capabilities/core/controller_bridge.dart'
+    show JsControllerBridge;
+export 'src/js_ui/capabilities/core/from_json/dart_values_from_json.dart'
+    show durationFromJson;

@@ -15,8 +15,8 @@ dependencies:
   provider: ^6.1.2
   # GetX 状态管理（DI / GetBuilder / Obx）：JS 侧实现见宿主 js/get.js。
   get: ^4.6.6
-  # 下拉刷新（easy_refresh 能力）：宿主侧桥接见
-  # hot_patch/lib/src/js_ui/capabilities/easy_refresh/。
+  # 下拉刷新（easy_refresh）：三方组件，自定义能力示例——宿主桥接见
+  # example/lib/custom/easy_refresh/，JS 见 js/easy_refresh.js。
   easy_refresh: ^3.4.0
   # 磁盘缓存网络图（cached_network_image 能力）：宿主侧桥接见
   # hot_patch/lib/src/js_ui/capabilities/cached_network_image/。

@@ -25,7 +25,6 @@ import '../core_js_builder/js/flutter/dart_errors_js.dart';
 import '../core_js_builder/js/flutter/dart_values_js.dart';
 import '../core_js_builder/js/flutter/dialogs_js.dart';
 import '../core_js_builder/js/flutter/drag_js.dart';
-import '../core_js_builder/js/flutter/easy_refresh_js.dart';
 import '../core_js_builder/js/flutter/focus_js.dart';
 import '../core_js_builder/js/flutter/future_js.dart';
 import '../core_js_builder/js/flutter/iterable_js.dart';
@@ -123,7 +122,6 @@ String flutterValueClassesSource() => [
   overlayPortalJsSource,
   tabControllerJsSource,
   keyJsSource,
-  easyRefreshJsSource,
   timerJsSource,
 ].join('\n');
 

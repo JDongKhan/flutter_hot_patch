@@ -52,7 +52,6 @@ import 'dialog/dialog_library.dart';
 import 'dismissible/dismissible_library.dart';
 import 'drag/drag_library.dart';
 import 'drawer/drawer_library.dart';
-import 'easy_refresh/easy_refresh_library.dart';
 import 'focus/focus_library.dart';
 import 'key/key_library.dart';
 import 'keyboard_listener/keyboard_listener_library.dart';
@@ -184,6 +183,5 @@ void _seedBuiltins() {
   // OverlayPortal：弹层挂载点 + LayerLink 锚定跟随（引导气泡那类悬浮提示）。
   registerJsUiLibrary(const OverlayPortalLibrary());
   // ── 三方库 ──
-  registerJsUiLibrary(const EasyRefreshLibrary());
   registerJsUiLibrary(const CachedNetworkImageLibrary());
 }

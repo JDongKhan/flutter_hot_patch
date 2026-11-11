@@ -23,6 +23,9 @@
 - **运行时生命周期化（阶段 1+2）**：新增 `__implement({...})` 生命周期扩展点与调度器（`__runChain` 责任链 / `__runAll` 广播，异常隔离）。`__registerHandle` / `__releaseHandle` 收敛为「去重 → 解析归属 → 写表 / 广播」，不再内联场景分支；归属策略拆为 6 个内建实现（`asyncOwnership` / `constructFrame` / `ownerAnchor` / `building` / `pageFallback` / `globalFallback`），行为与重构前等价。后续新增归属或清理场景只加功能对象，核心零改动。
 - **运行时生命周期化（阶段 3：mount / unmount / 根开关）**：`__mount` 组件分支广播 `onMount`；`__markUnmounted` 不再内联清理分支，改为两段广播——`onUnmount`（自身清理、子树递归之前）与 `onUnmounted`（子树卸载之后）；`__openRoot` / `__closeRoot` 分别广播 `onRootOpen` / `onRootClose`。原有卸载清理迁移为内建实现 `componentLifecycle`（deactivate / dispose）、`scopeSubscriptions`（退订）、`inheritedDependencies`（摘依赖）、`buildContextHandle`（释放 `__ctx` 句柄）、`ownerHandles`（子树后释放实例持有的控制器 / Key），顺序与重构前一致。
 - **生命周期扩展点对外**：`G.__core` 新增 `__implement`（只暴露注册，调度器 `__runAll` / `__runChain` 仍为内核私有），能力模块与 `flutter.js` 的 SDK 值类可直接注册挂载 / 卸载 / 页面根开关实现。`WidgetsBinding` 的持久帧回调不再在 `frameTick` 里逐帧判断根是否存活，改由 `onRootClose` 实现摘除本页回调；挂载失败回滚（`__abortRoot`）同样广播 `onRootClose`，挂载期注册的页面级状态不会变成无主状态。
+- **EasyRefresh 迁出运行时包**：三方组件不内建。宿主桥接从 `lib/src/js_ui/capabilities/easy_refresh/` 迁到 example 的自定义能力 `example/lib/custom/easy_refresh/`（由 `registerCustomCapabilities()` 注册）；JS 类从 `flutter.js`（生成器 `js/flutter/easy_refresh_js.dart`）迁到 `example/js/easy_refresh.js`，构建期原样拷贝为 `patch/packages/easy_refresh.js`。包内不再依赖 `easy_refresh`，也不再为它生成宿主包装类。未被本次迁移改动的能力（`cached_network_image` 等）保持原路径。
+- **自定义能力公开构件**：`hot_patch.dart` 新增导出 `JsControllerBridge`、`curveFromJson`、`durationFromJson`、`HotPatchLog`，App 侧的第三方组件能力（含 Controller 句柄桥）无需再 import `src/` 实现文件。
+- **EasyRefresh 只响应纵向滚动**：迁到 example 的宿主桥接固定 `triggerAxis: Axis.vertical`。包内物理经 `ScrollConfiguration` 下发到整个子树，横向滚动（banner / `PageView` / 横向列表）也会被接管并把指示器切成横向模式（竖排刷新文案）；该配置下非纵向滚动既不构建指示器、也不更新状态与触发刷新 / 加载任务。
 
 ## 0.4.1
 

@@ -1,8 +1,12 @@
-// ===== 能力：EasyRefresh 下拉刷新（通道 + 桥接组件 + 组件注册）=====
+// ===== 自定义能力：EasyRefresh 下拉刷新（通道 + 桥接组件 + 组件注册）=====
 //
 // 一个能力 = 通道 + 桥接组件 + 组件注册，全部内聚在本文件。
 //
-// EasyRefresh（三方包 flutter_easy_refresh）的**手势 / 物理 / 指示器**全在宿主
+// EasyRefresh 来自三方包 `easy_refresh`，不是运行时内建能力：宿主桥接放在本
+// 工程 `lib/custom/easy_refresh/`，JS 类放在工程根 `js/easy_refresh.js`（构建
+// 期拷贝为 `patch/packages/easy_refresh.js`），hot_patch 包零改动。
+//
+// EasyRefresh（三方包 easy_refresh）的**手势 / 物理 / 指示器**全在宿主
 // 侧，回调 onRefresh / onLoad 由 JS 补丁实现，所以需要一次「宿主发起 → JS 异步
 // 完成」的往返：
 //   1. 宿主 → JS：用户下拉后按事件句柄调用通用入口
@@ -18,13 +22,7 @@ import 'dart:async';
 
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/widgets.dart';
-
-import '../../../services/js_runtime_manager.dart';
-import '../../../utils/hot_patch_log.dart';
-import '../../js_widget_registry.dart';
-import '../animation/animation_from_json.dart';
-import '../core/controller_bridge.dart';
-import '../core/from_json/dart_values_from_json.dart';
+import 'package:hot_patch/hot_patch.dart';
 
 bool _channelsRegistered = false;
 
@@ -225,6 +223,11 @@ class _JsEasyRefresh extends StatelessWidget {
       onRefresh: onRefresh == null ? null : () => _runAwaitableEvent(onRefresh),
       onLoad: onLoad == null ? null : () => _runAwaitableEvent(onLoad),
       refreshOnStart: refreshOnStart,
+      // 只响应纵向滚动：包内物理会经 ScrollConfiguration 下发到整个子树，
+      // 横向滚动（banner / PageView / 横向列表）也会被接管并切到横向模式，
+      // 表现为竖排的刷新文案。triggerAxis 是包自己的开关：非该方向的滚动
+      // 既不构建指示器，也不更新状态、不触发任务。
+      triggerAxis: Axis.vertical,
       child: child,
     );
   }
