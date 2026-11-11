@@ -922,7 +922,7 @@ class _JsComponentHostState extends _JsHostBaseState<_JsComponentHost> {
     if (childId == null) {
       return uiFallback('组件 "${widget.id}" 尚未产出渲染根');
     }
-    return _renderStoreNode(widget.store, childId, widget.pageKey);
+    return _renderStoreNode(widget.store, childId, widget.pageKey, context);
   }
 }
 
@@ -1024,6 +1024,7 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
       node,
       widget.pageKey,
       jsKeyOf(node.props['key']),
+      context,
     );
     // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
     // lookup 未命中走单例注册表的默认 builder（原生注入 / 占位）。
