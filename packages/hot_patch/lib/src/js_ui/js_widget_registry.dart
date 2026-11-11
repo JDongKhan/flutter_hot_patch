@@ -67,8 +67,9 @@ class JsRenderContext {
   /// GlobalKey / UniqueKey 是与 JS 句柄绑定的同一实例（跨帧稳定）；ValueKey /
   /// ObjectKey / PageStorageKey 按值现造。未声明 key 时为 null。
   ///
-  /// 注意：声明了 key 的宿主结点，元素级身份也用同一实例（`KeyedSubtree`）；
-  /// 原生组件内部若还需要 key，GlobalKey 不能再挂第二次。
+  /// renderer 应把它传给真实 widget（`key: c.key`）：运行时不做 wrapper 兜底，
+  /// `GlobalKey.currentContext / currentState` 因此直接指向真实 widget。同一个
+  /// key 只挂一次（不要既传给真实 widget 又套额外的 keyed wrapper）。
   final Key? key;
 
   /// 普通值 props（不含 widget：widget 已在 `children` 里）。

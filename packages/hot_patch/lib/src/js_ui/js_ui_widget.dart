@@ -660,6 +660,7 @@ Widget _renderStoreNode(JsUiStore store, String id, String pageKey) {
     return uiFallback('结点 "$id" 不在 store.nodes 中（页面 $pageKey）');
   }
   final declared = jsKeyOf(node.props['key']);
+  //自定义组件
   if (node.hasBuild) {
     return _JsComponentHost(
       key: declared ?? ValueKey(id),
@@ -668,6 +669,7 @@ Widget _renderStoreNode(JsUiStore store, String id, String pageKey) {
       pageKey: pageKey,
     );
   }
+  //lazy组件
   final builder = jsWidgetRegistry.lookup(node.type);
   if (node.props['__lazy'] == true || builder == null) {
     return _JsPlainNodeHost(
@@ -677,11 +679,25 @@ Widget _renderStoreNode(JsUiStore store, String id, String pageKey) {
       pageKey: pageKey,
     );
   }
+  //其注册的组件
   final widget = builder(_renderContextOf(store, node, pageKey, declared));
-  // 未声明 key 时交给 Flutter 的默认语义（按位置 + 类型复用 element），与原生
-  // 一致；声明了 key 才套一层 KeyedSubtree（保证列表重排时 element 跟着 key 走）。
-  return declared == null ? widget : KeyedSubtree(key: declared, child: widget);
+  // key 统一由 renderer 传给**真实 widget**（`key: c.key`），运行时不做任何
+  // wrapper 兜底：`GlobalKey.currentContext / currentState` 因此直接指向真实
+  // widget 的 Element，与原生 Flutter 一致。renderer 漏传时出声提示补 key
+  // （每类型一次），不在框架层用额外 wrapper 掩盖问题。
+  if (declared != null &&
+      widget.key == null &&
+      _missingKeyWarned.add(node.type)) {
+    HotPatchLog.warn(
+      'js_ui: 宿主组件 "${node.type}" 的 renderer 没有把 key 传给真实 widget；'
+      '请补 `key: c.key`（否则声明式 key 不生效）',
+    );
+  }
+  return widget;
 }
+
+/// 已提示过「renderer 漏传 key」的类型（避免逐帧刷屏）。
+final Set<String> _missingKeyWarned = <String>{};
 
 /// 结点 → renderer 的输入：props + 按 Dart 实参原名索引的 slot
 /// （子 widget / 数据载体 / delegate）。

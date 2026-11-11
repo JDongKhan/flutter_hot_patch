@@ -33,10 +33,8 @@ const String _keyBucket = JsBindingBuckets.key;
 ///
 /// key 层不认任何 State 类型：具体能力（如 AnimatedList）在初始化时按**方法名**
 /// 注册自己的处理函数，key 层只做「句柄 → GlobalKey」的解析与分发。
-typedef KeyStateOpHandler = Object? Function(
-  GlobalKey key,
-  Map<String, Object?> payload,
-);
+typedef KeyStateOpHandler =
+    Object? Function(GlobalKey key, Map<String, Object?> payload);
 
 final Map<String, KeyStateOpHandler> _stateOps = {};
 
@@ -45,117 +43,103 @@ void registerKeyStateOp(String op, KeyStateOpHandler handler) {
   _stateOps[op] = handler;
 }
 
-/// 「外层 JS 元素 key」→「真正挂到宿主 widget 上的 key」。
-///
-/// Flutter 不允许同一个 GlobalKey 同时挂在两个 widget 上，而 JS 元素的 key 已由
-/// 核心挂到结点宿主 wrapper 上做身份。需要由 JS 访问 State 的宿主组件（如
-/// AnimatedList）因此**换一把自己的 GlobalKey** 挂在真实 widget 上，并按外层 key
-/// 记住映射；`currentState` 解析时顺着映射找到真实 State。与具体组件无关。
-final Expando<GlobalKey> _stateKeys = Expando<GlobalKey>('hostStateKey');
-
-/// 为某个 JS 元素 key 取（或首次创建）宿主 widget 专用 GlobalKey。
-GlobalKey hostStateKey(Object? jsKey) {
-  final outer = jsKeyOf(jsKey);
-  if (outer is GlobalKey) {
-    return _stateKeys[outer] ??= GlobalKey(debugLabel: 'js.hostState');
-  }
-  return GlobalKey(debugLabel: 'js.hostState');
-}
-
-/// currentState 的实际解析对象：有映射用映射（真实 State 在宿主 widget 上），
-/// 否则就是 key 本身（key 直接挂在带 State 的 widget 上的情形）。
-GlobalKey _stateTarget(GlobalKey key) => _stateKeys[key] ?? key;
-
 bool _keyKindRegistered = false;
 
 /// 幂等注册 Key 句柄 kind（由 js_ui_capabilities.ensureJsUiCapabilities 聚合调用）。
 void ensureKeyChannels() {
   if (_keyKindRegistered) return;
   _keyKindRegistered = true;
-  registerHandleKind('key/Global', JsHandleKind(
-    onCreate: (id, meta, pageKey) {
-      // putIfAbsent：create 消息与首帧渲染（props 里的 key）到达顺序不定，
-      // 同一句柄 id 必须始终对应同一个 GlobalKey 实例（换实例即丢 State）。
-      JsBindingCache.instance.putIfAbsent<Key>(
-        bucket: _keyBucket,
-        id: id,
-        kind: 'key/Global',
-        owner: 'key/Global.onCreate',
-        weak: false,
-        pageKey: pageKey,
-        create: () => GlobalKey(debugLabel: _labelOf(meta)),
-      );
-    },
-    onOp: (id, op, payload) {
-      // 「取位置 / 取尺寸」只能在宿主做：BuildContext / RenderObject 是宿主端概念，
-      // JS 侧只有句柄 id、没有同步取值能力（见 capabilities/key/key_js.dart 的 RenderObject 代理）。
-      // 这里还原真实 GlobalKey → 真实 BuildContext → 真实 RenderObject，把 Dart
-      // 单源的整条语义补全：
-      //   - `ctx.findRenderObject()?.showOnScreen()`：位置 + 滚动，void 语义；
-      //   - `box.measure()`：RenderBox 的 `size` 与 `localToGlobal(Offset.zero)`
-      //     都是同步属性，宿主算完回填（返回值经通道回填 JS Promise，见
-      //     JsRuntimeManager.registerHostMethod）。
-      final key = JsBindingCache.instance.target<Key>(_keyBucket, id);
-      if (key is! GlobalKey) return null;
-      // `currentState.<op>`：op 形如 `__state.<method>`。State 的方法签名属于具体
-      // 组件，故按 **`Type.method`** 分发（Type 来自 `GlobalKey<T>` 的泛型实参），
-      // 同名方法各自挂在自己的类型下，key 层不认任何 State 类型，也不会互相覆盖。
-      if (op.startsWith('__state.')) {
-        // State 挂在宿主 widget 上（key 由 [hostStateKey] 另行分配），顺着映射取。
-        final target = _stateTarget(key);
-        final state = target.currentState;
-        if (state == null) return null;
-        final method = op.substring('__state.'.length);
-        // 类型优先取 JS 侧**泛型实参**（`GlobalKey<AnimatedListState>` 的 T）——
-        // 与 `context.read<T>()` 同一原则：T 是参数，不是猜出来的。没声明泛型时
-        // 才回退 runtimeType（并留痕，提示补上泛型）。
-        final declared = payload['type'];
-        final String typeName;
-        if (declared is String && declared.isNotEmpty) {
-          typeName = declared;
-        } else {
-          typeName = '${state.runtimeType}';
-          // ignore: avoid_print - 运行时日志
-          print('[hot_patch] [WARN] GlobalKey 未声明泛型实参，按 runtimeType 推断：'
-              '$typeName（建议写成 GlobalKey<$typeName>）');
+  registerHandleKind(
+    'key/Global',
+    JsHandleKind(
+      onCreate: (id, meta, pageKey) {
+        // putIfAbsent：create 消息与首帧渲染（props 里的 key）到达顺序不定，
+        // 同一句柄 id 必须始终对应同一个 GlobalKey 实例（换实例即丢 State）。
+        JsBindingCache.instance.putIfAbsent<Key>(
+          bucket: _keyBucket,
+          id: id,
+          kind: 'key/Global',
+          owner: 'key/Global.onCreate',
+          weak: false,
+          pageKey: pageKey,
+          create: () => GlobalKey(debugLabel: _labelOf(meta)),
+        );
+      },
+      onOp: (id, op, payload) {
+        // 「取位置 / 取尺寸」只能在宿主做：BuildContext / RenderObject 是宿主端概念，
+        // JS 侧只有句柄 id、没有同步取值能力（见 capabilities/key/key_js.dart 的 RenderObject 代理）。
+        // 这里还原真实 GlobalKey → 真实 BuildContext → 真实 RenderObject，把 Dart
+        // 单源的整条语义补全：
+        //   - `ctx.findRenderObject()?.showOnScreen()`：位置 + 滚动，void 语义；
+        //   - `box.measure()`：RenderBox 的 `size` 与 `localToGlobal(Offset.zero)`
+        //     都是同步属性，宿主算完回填（返回值经通道回填 JS Promise，见
+        //     JsRuntimeManager.registerHostMethod）。
+        final key = JsBindingCache.instance.target<Key>(_keyBucket, id);
+        if (key is! GlobalKey) return null;
+        // `currentState.<op>`：op 形如 `__state.<method>`。State 的方法签名属于具体
+        // 组件，故按 **`Type.method`** 分发（Type 来自 `GlobalKey<T>` 的泛型实参），
+        // 同名方法各自挂在自己的类型下，key 层不认任何 State 类型，也不会互相覆盖。
+        if (op.startsWith('__state.')) {
+          // key 由 renderer 直接挂在真实 widget 上（`key: c.key`），真实 State 就是
+          // 它的 currentState，无需任何外层/映射 key。
+          final state = key.currentState;
+          if (state == null) return null;
+          final method = op.substring('__state.'.length);
+          // 类型优先取 JS 侧**泛型实参**（`GlobalKey<AnimatedListState>` 的 T）——
+          // 与 `context.read<T>()` 同一原则：T 是参数，不是猜出来的。没声明泛型时
+          // 才回退 runtimeType（并留痕，提示补上泛型）。
+          final declared = payload['type'];
+          final String typeName;
+          if (declared is String && declared.isNotEmpty) {
+            typeName = declared;
+          } else {
+            typeName = '${state.runtimeType}';
+            // ignore: avoid_print - 运行时日志
+            print(
+              '[hot_patch] [WARN] GlobalKey 未声明泛型实参，按 runtimeType 推断：'
+              '$typeName（建议写成 GlobalKey<$typeName>）',
+            );
+          }
+          final handler = _stateOps['$typeName.$method'];
+          if (handler == null) {
+            // ignore: avoid_print - 运行时日志
+            print('[hot_patch] [WARN] currentState 未登记的方法：$typeName.$method');
+            return null;
+          }
+          // 能力实现直接 `key.currentState` 即可。
+          return handler(key, payload.cast<String, Object?>());
         }
-        final handler = _stateOps['$typeName.$method'];
-        if (handler == null) {
-          // ignore: avoid_print - 运行时日志
-          print('[hot_patch] [WARN] currentState 未登记的方法：$typeName.$method');
+        // `__type`：JS 侧按它挑对应组件的 State 代理类（无代理类时退化为通用句柄）。
+        if (op == '__type') {
+          return key.currentState?.runtimeType.toString();
+        }
+        final ro = key.currentContext?.findRenderObject();
+        if (op == 'showOnScreen') {
+          ro?.showOnScreen();
           return null;
         }
-        // 下发的 key 已经是**真正挂着 State 的那个 key**（见 [hostStateKey]），
-        // 能力实现直接 `key.currentState` 即可。
-        return handler(target, payload.cast<String, Object?>());
-      }
-      // `__type`：JS 侧按它挑对应组件的 State 代理类（无代理类时退化为通用句柄）。
-      if (op == '__type') {
-        return _stateTarget(key).currentState?.runtimeType.toString();
-      }
-      final ro = key.currentContext?.findRenderObject();
-      if (op == 'showOnScreen') {
-        ro?.showOnScreen();
+        // 位置与尺寸的取值规则见 core/render_object_ops.dart（与 ctx 句柄共用）。
+        if (op == 'measure') return renderObjectMeasurePayload(ro);
         return null;
-      }
-      // 位置与尺寸的取值规则见 core/render_object_ops.dart（与 ctx 句柄共用）。
-      if (op == 'measure') return renderObjectMeasurePayload(ro);
-      return null;
-    },
-    onRelease: (id) => JsBindingCache.instance.remove(_keyBucket, id),
-  ));
-  registerHandleKind('key/Unique', JsHandleKind(
-    onCreate: (id, meta, pageKey) => JsBindingCache.instance.putIfAbsent<Key>(
-      bucket: _keyBucket,
-      id: id,
-      kind: 'key/Unique',
-      owner: 'key/Unique.onCreate',
-      weak: false,
-      pageKey: pageKey,
-      create: () => UniqueKey(),
+      },
+      onRelease: (id) => JsBindingCache.instance.remove(_keyBucket, id),
     ),
-    onRelease: (id) => JsBindingCache.instance.remove(_keyBucket, id),
-  ));
+  );
+  registerHandleKind(
+    'key/Unique',
+    JsHandleKind(
+      onCreate: (id, meta, pageKey) => JsBindingCache.instance.putIfAbsent<Key>(
+        bucket: _keyBucket,
+        id: id,
+        kind: 'key/Unique',
+        owner: 'key/Unique.onCreate',
+        weak: false,
+        pageKey: pageKey,
+        create: () => UniqueKey(),
+      ),
+      onRelease: (id) => JsBindingCache.instance.remove(_keyBucket, id),
+    ),
+  );
 }
 
 String? _labelOf(Object? meta) {
@@ -175,7 +159,9 @@ Key? jsKeyOf(Object? prop) {
   // 存进 PageStorage bucket，是宿主端行为）；对象值同 ValueKey 走身份 token。
   if (prop.containsKey('__psk')) {
     final pv = prop['__psk'];
-    final value = (pv is Map && pv['__vtok'] != null) ? 'po:${pv['__vtok']}' : pv;
+    final value = (pv is Map && pv['__vtok'] != null)
+        ? 'po:${pv['__vtok']}'
+        : pv;
     return PageStorageKey<Object?>(value);
   }
   if (prop.containsKey('__vkey')) return ValueKey<Object?>(prop['__vkey']);
@@ -183,6 +169,7 @@ Key? jsKeyOf(Object? prop) {
   // ObjectKey：身份 token 串等价复现（Dart 侧 identical 语义，见文件头）。
   if (okey != null) return ValueKey<String>('ok:$okey');
   final handle = prop['__handle'];
-  if (handle is String) return JsBindingCache.instance.target<Key>(_keyBucket, handle);
+  if (handle is String)
+    return JsBindingCache.instance.target<Key>(_keyBucket, handle);
   return null;
 }
