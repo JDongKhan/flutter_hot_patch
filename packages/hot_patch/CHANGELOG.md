@@ -4,6 +4,8 @@
 
 **加法：`MethodChannel` 宿主通道；无破坏性协议变更。**
 
+- **`ClipRRect` 圆角修复**：宿主渲染只按数字读 `borderRadius`（`c.num_`），而 JS 侧 `BorderRadius.circular(14)` 的 `toJSON()` 是 `{radius: 14}` 对象 → 取不到值退回 `BorderRadius.zero`，补丁内所有圆角裁切（banner / 推广图等）变成直角。改为 `borderRadiusFromJson` 解析（`{radius}` / 四角），并兼容旧协议直接下发数字。
+
 - **宿主通道 `methodChannel`**：JS 侧 `MethodChannel.invokeMethod` 经唯一出口 `_app_host_.invoke('methodChannel', [name, codec, method, args])` 交给宿主，宿主再调真正的 Flutter `MethodChannel(name, codec).invokeMethod` → 原生（不绕过、不新开 JS↔原生通道）。
 - **实例绑定**：宿主按 `name#codec` 缓存 Dart 侧 `MethodChannel` 实例；channel 身份即该键，无运行时句柄、无 acquire / release（MethodChannel 无状态、无 dispose，同名实例共享 messenger 路由）。
 - **codec**：镜像 `StandardMethodCodec` / `JSONMethodCodec`；未知标记回落标准 codec。参数与返回值走 JSON（`Map` 经运行时的 `toJSON` 归一）。

@@ -170,14 +170,26 @@ _callArgs(List<Object?> args) {
   return (result: result, force: force);
 }
 
-/// 宿主发起一次「JS 侧异步事件」，返回等待其完成的 Future。
+/// 宿主发起一次「JS 侧异步事件」，返回 JS 侧的结果。
 ///
 /// [handler] 是 JS 侧事件句柄（`{'__fn': id}`，由生成器在构建期产出）。
 /// 句柄缺失 / 形态不对时立即完成：等价于「无事可做」，不阻塞指示器收起。
-Future<void> _runAwaitableEvent(Object? handler) async {
+///
+/// 返回值必须**原样交给 EasyRefresh**：它的 `_onTask` 检查 `res is
+/// IndicatorResult`，非枚举一律按 `success` 处理。JS 侧的枚举跨桥是成员名
+/// （`IndicatorResult.fail` → `'fail'`），这里还原成枚举；JS 回调是无返回值 /
+/// 非枚举时返回 null，由包内按 success 兜底（与原生 `Future<void>` 一致）。
+Future<Object?> _runAwaitableEvent(Object? handler) async {
   // 指示器的收起时机 = JS 任务真正结束时刻（invokeAwait 自带 30s 兜底超时，
   // 运行时销毁时不会永远转圈）。
-  await JsRuntimeManager.invokeAwait(handler);
+  final value = await JsRuntimeManager.invokeAwait(handler);
+  return switch (value) {
+    'none' => IndicatorResult.none,
+    'success' => IndicatorResult.success,
+    'fail' => IndicatorResult.fail,
+    'noMore' => IndicatorResult.noMore,
+    _ => null,
+  };
 }
 
 /// EasyRefresh 桥接组件（对应注册 key 'EasyRefresh'）。

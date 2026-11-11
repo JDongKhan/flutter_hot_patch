@@ -336,12 +336,18 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   });
 
   r.register('ClipRRect', (c) {
-    final radius = c.num_('borderRadius');
+    // JS 侧 `BorderRadius` 的 toJSON 是 `{radius}` / 四角数字；旧补丁可能直接
+    // 下发单个数字。此前只读数字，`BorderRadius.circular(n)` 被当成缺省 0，
+    // 导致圆角整体丢失（banner 等圆角容器与原生不一致）。
+    final raw = c.props['borderRadius'];
+    final radius = raw is Map
+        ? borderRadiusFromJson(raw.cast<String, dynamic>())
+        : (raw is num
+            ? BorderRadius.all(Radius.circular(raw.toDouble()))
+            : null);
     return ClipRRect(
       key: c.key,
-      borderRadius: radius == null
-          ? BorderRadius.zero
-          : BorderRadius.all(Radius.circular(radius)),
+      borderRadius: radius ?? BorderRadius.zero,
       clipBehavior:
           clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
       child: (c.children['child'] as Widget?),
