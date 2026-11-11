@@ -20,6 +20,7 @@
 - **key 挂到真实 widget**：所有宿主 renderer 统一把 `c.key` 传给真实 widget（基础组件与全部能力域），运行时不再额外包 `KeyedSubtree`，`GlobalKey.currentContext / currentState` 直接指向真实 widget（与原生 Flutter 一致）。漏传时运行期告警并用 `KeyedSubtree` 兜底元素身份，避免静默丢 key。配套删除 `hostStateKey` / `_stateTarget` 映射层：`AnimatedList` / `Dismissible` 也直接把 `c.key` 挂到真实 widget，key 桥的 `__state.*` / `__type` 直接从该 key 取 State。
 - **泄漏日志只报差异**：`leak-check` 汇总行不再输出 `2 → 3 条（key/Global +1，fn 2，…）` 这类规模统计，只保留 `<N> 项残留` + 逐条「多余（JS）/ 多余（Dart）」明细（id / kind / scope / 登记方）；干净时只打 `clean`。配套删除 `_scaleText`、kind/桶计数与 `LeakStats` 的登记计数（`debugOnRegister` 挂载点一并移除）。
 - **异步回调继承句柄归属**：`Timer` / `Timer.periodic` / `Future` / `Future.delayed` / `Future.microtask` / `then` / `catchError` / `whenComplete` 在创建回调时捕获当前归属（组件实例 → 其 pageKey），执行时经 `__withAsyncOwner` 恢复；异步回调里新建的 `GlobalKey` / Controller 随发起它的组件（或回退页面）释放，不再退化为永久 `global` 句柄。归属创建时固定，页面遮挡/切换不会归错；实例与页面均已销毁时不再登记并告警。
+- **运行时生命周期化（阶段 1+2）**：新增 `__implement({...})` 生命周期扩展点与调度器（`__runChain` 责任链 / `__runAll` 广播，异常隔离）。`__registerHandle` / `__releaseHandle` 收敛为「去重 → 解析归属 → 写表 / 广播」，不再内联场景分支；归属策略拆为 6 个内建实现（`asyncOwnership` / `constructFrame` / `ownerAnchor` / `building` / `pageFallback` / `globalFallback`），行为与重构前等价。后续新增归属或清理场景只加功能对象，核心零改动。
 
 ## 0.4.1
 

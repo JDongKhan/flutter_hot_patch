@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 949de17c） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 239fafb4） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '949de17c') { return; }
-  G.__jsuiVersion = '949de17c';
+  if (G.__jsui && G.__jsuiVersion === '239fafb4') { return; }
+  G.__jsuiVersion = '239fafb4';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -747,23 +747,14 @@ __defineProtoMember(Map.prototype, {
 
   // 登记一个 JS 侧真实对象/函数为句柄，返回 id。
   //
-  // 归属优先级（scope 未显式指定时）：
-  //   0. **异步回调**（Timer / Future 等）：使用创建回调时捕获的归属（见
-  //      __captureAsyncOwner）——实例还活着就归实例；实例已卸载则回退到创建时
-  //      的页面；页面也已销毁则不登记并告警（绝不落到「当前最上层页面」或
-  //      永久 global）；
-  //   1. 组件**构造中**（`new el.type(...)` 期间）：记入最内层构造帧，返回后由
-  //      __endConstruct 回填到该组件实例——字段初始化里的
-  //      `this._controller = new ScrollController()` 正是这个时机；
-  //   2. 委托调用期间（__withOwner）：归属方法体所在的类实例；
-  //   3. `__building` 是组件结点（initState / build / 事件执行期）：直接归属它；
-  //   4. 其余（模块级 / 静态字段）：随页面；无 __activeRoot 时退化为 global。
+  // 核心只做三件事：去重、**经责任链解析归属**（`resolveOwner`）、写表并广播
+  // `onRegister`。任何「这个场景归谁」的策略都在 `__implement` 里，核心不再
+  // 出现具体场景分支（内建实现见文件末尾）。
   //
-  // 显式 `opts.scope`（'local' / 'page' / 'global'）优先，事件闭包等仍按原语义。
-  //
-  // `opts.release(h)`：本端真实资源的清理钩子（可选），随登记声明——只有需要
-  // 「释放时还要动内部状态」的对象才传（如控制器要连带释放回传句柄与订阅）。
-  // 对端的清理由对端自己的登记负责，跨桥只传 id + op。
+  // `opts.scope` / `opts.owner` 显式指定优先，不进入责任链；`opts.key` 为页面
+  // 兜底键；`opts.release(h)` 是本端资源清理钩子；`opts.sync === false` 不同步宿主。
+  var DROP = { __drop: true };
+
   function __registerHandle(obj, kind, opts) {
     if (obj === null || obj === undefined) { return null; }
     var exist = __handleOwnerIdx.get(obj);
@@ -772,43 +763,31 @@ __defineProtoMember(Map.prototype, {
     var explicit = opts.scope;
     var owner = opts.owner || null;
     var pending = false;
-    var asyncScope = null;
-    var asyncKey = null;
+    var scope = explicit || null;
+    var key = null;
     if (!explicit && !owner) {
-      if (__asyncOwners.length) {
-        var holder = __asyncOwners[__asyncOwners.length - 1];
-        var aim = holder && holder.inst;
-        var aimPage = (holder && holder.pageKey) || __rootKeyOf(aim);
-        if (aim && !aim.__unmounted) {
-          owner = aim;
-        } else if (aimPage && __roots[aimPage]) {
-          // 实例已卸载（或构造帧未落到实例）：回退到创建时的页面
-          asyncScope = 'page';
-          asyncKey = aimPage;
-        } else {
-          return __dropOrphanHandle(kind);
-        }
-      } else if (__constructFrames.length) {
-        pending = true; // 归属最内层构造中的组件（见 __beginConstruct/__endConstruct）
-      } else if (__ownerAnchor) {
-        // 委托调用期间（不是 build 锚点）：资源属于方法体所在的类实例
-        owner = __ownerAnchor;
-      } else if (__building && __building.__k === __COMP) {
-        owner = __building;
+      var res = __runChain('resolveOwner', obj, kind, opts);
+      if (res === DROP) { return __dropOrphanHandle(kind); }
+      if (res) {
+        if (res.owner) { owner = res.owner; }
+        else if (res.pending) { pending = true; }
+        else if (res.scope) { scope = res.scope; key = res.key || null; }
       }
     }
-    var pageKey = asyncScope === 'page' ? asyncKey : ((__activeRoot && __activeRoot.key) || null);
-    var scope = explicit || asyncScope || ((owner || pending) ? 'instance' : 'page');
-    var key = pageKey; // 诊断 / 宿主侧页面兜底都用它
+    if (!scope) { scope = (owner || pending) ? 'instance' : 'page'; }
     if (scope === 'page') {
-      key = opts.key || pageKey || null;
+      if (key == null) { key = opts.key || ((__activeRoot && __activeRoot.key) || null); }
       if (key === null) { scope = 'global'; }
+    } else if (key == null) {
+      // 实例 / 全局句柄也带页面键：宿主侧据此登记「句柄→页面」做兜底回收。
+      key = (__activeRoot && __activeRoot.key) || null;
     }
     var id = __nextHandleId(kind);
-    __handles[id] = {
+    var h = {
       id: id, kind: kind, scope: scope, key: key, obj: obj,
       meta: opts.meta || null, release: opts.release || null, owner: null
     };
+    __handles[id] = h;
     __handleOwnerIdx.set(obj, id);
     if (scope === 'page') {
       (__pageHandles[key] || (__pageHandles[key] = [])).push(id);
@@ -823,7 +802,62 @@ __defineProtoMember(Map.prototype, {
         id: id, op: 'create', kind: kind, pageKey: key, meta: opts.meta || null
       }]);
     }
+    __runAll('onRegister', h);
     return id;
+  }
+
+  // ── 生命周期引擎（核心只认这几个名字，不认具体场景）──────────────
+  // 一个功能 = 一个 `__implement({...})` 对象，声明它关心的生命周期；注册顺序
+  // 即执行顺序。链式生命周期（resolveOwner / captureAsync）返回 undefined 表示
+  // 「交给下一个」，其它返回值即结论；广播生命周期全部执行且异常隔离。
+  var __LIFECYCLE_NAMES = {
+    resolveOwner: 1, captureAsync: 1,
+    onRegister: 1, onRelease: 1,
+    onMount: 1, onUnmount: 1, onRootOpen: 1, onRootClose: 1
+  };
+  var __impls = [];
+
+  function __implement(spec) {
+    if (!spec) { return null; }
+    var hooks = {};
+    for (var k in spec) {
+      if (k === 'name') { continue; }
+      if (!__LIFECYCLE_NAMES[k]) {
+        __warn('jsui: 未知生命周期 "' + k + '"，已忽略（功能 ' + (spec.name || '?') + '）');
+        continue;
+      }
+      if (typeof spec[k] === 'function') { hooks[k] = spec[k]; }
+    }
+    var impl = { name: spec.name || '', hooks: hooks };
+    __impls.push(impl);
+    return impl;
+  }
+
+  // 整体摘除一个功能（测试 / 热重载用）。
+  function __unimplement(impl) {
+    var i = __impls.indexOf(impl);
+    if (i >= 0) { __impls.splice(i, 1); }
+  }
+
+  function __runAll(name, arg) {
+    for (var i = 0; i < __impls.length; i++) {
+      var fn = __impls[i].hooks[name];
+      if (!fn) { continue; }
+      try { fn(arg); } catch (e) {
+        __warn('jsui: 生命周期 ' + name + ' 异常（' + (__impls[i].name || '?') + '）: ' +
+          ((e && e.message) ? e.message : e));
+      }
+    }
+  }
+
+  function __runChain(name, a, b, c) {
+    for (var i = 0; i < __impls.length; i++) {
+      var fn = __impls[i].hooks[name];
+      if (!fn) { continue; }
+      var r = fn(a, b, c);
+      if (r !== undefined) { return r; }
+    }
+    return undefined;
   }
 
   // ── 组件实例归属（owner）────────────────────────────────────────────
@@ -854,27 +888,10 @@ __defineProtoMember(Map.prototype, {
     return (inst && inst.__root && inst.__root.key) || null;
   }
 
-  // 捕获当前归属（异步源的创建时刻调用）。
+  // 捕获当前归属（异步源的创建时刻调用）：具体策略由 captureAsync 实现提供。
   function __captureAsyncOwner() {
-    if (__asyncOwners.length) {
-      // 异步回调里再创建异步任务：继承外层归属（链式 Timer / Future）。
-      return __asyncOwners[__asyncOwners.length - 1];
-    }
-    if (__ownerAnchor) {
-      return { inst: __ownerAnchor, pageKey: __rootKeyOf(__ownerAnchor) };
-    }
-    if (__building && __building.__k === __COMP) {
-      return { inst: __building, pageKey: __rootKeyOf(__building) };
-    }
-    if (__constructFrames.length) {
-      // 组件构造中：实例尚未建立，先挂到本帧，__endConstruct 回填实例。
-      var frame = __constructFrames[__constructFrames.length - 1];
-      var holder = { inst: null, pageKey: null };
-      (frame.__async || (frame.__async = [])).push(holder);
-      return holder;
-    }
-    // 无组件归属：只记创建时的页面（module 级 / 静态字段里的定时器）。
-    return { inst: null, pageKey: (__activeRoot && __activeRoot.key) || null };
+    var ctx = __runChain('captureAsync');
+    return ctx === undefined ? null : ctx;
   }
 
   function __withAsyncOwner(holder, callback) {
@@ -954,6 +971,7 @@ __defineProtoMember(Map.prototype, {
     if (h.release) {
       try { h.release(h); } catch (e) {}
     }
+    __runAll('onRelease', h);
     if (notify !== false) { __invokeHostMethod('jsHandle', [{ id: id, op: 'release' }]); }
   }
 
@@ -1027,6 +1045,87 @@ __defineProtoMember(Map.prototype, {
   // 它们是 Flutter 侧语义，随 flutter.js 发布（`ControllerBase`，见
   // js/controller_base_js.dart）。本片段只提供与能力无关的句柄机制
   // （__registerHandle / __handleOp / __releaseHandle）。
+
+  // ── 内建归属实现（按注册顺序执行）────────────────────────────────────
+  // 归属策略全部以「功能对象」形式声明，核心只做责任链调度。新增归属场景
+  // 只加一个 __implement，不改 __registerHandle。
+
+  // 1) 异步回调：Timer / Future 创建时捕获的归属（见 captureAsync）。
+  __implement({
+    name: 'asyncOwnership',
+    captureAsync: function () {
+      if (__asyncOwners.length) {
+        // 异步回调里再创建异步任务：继承外层归属（链式 Timer / Future）。
+        return __asyncOwners[__asyncOwners.length - 1];
+      }
+      if (__ownerAnchor) {
+        return { inst: __ownerAnchor, pageKey: __rootKeyOf(__ownerAnchor) };
+      }
+      if (__building && __building.__k === __COMP) {
+        return { inst: __building, pageKey: __rootKeyOf(__building) };
+      }
+      if (__constructFrames.length) {
+        // 组件构造中：实例尚未建立，先挂到本帧，__endConstruct 回填实例。
+        var frame = __constructFrames[__constructFrames.length - 1];
+        var holder = { inst: null, pageKey: null };
+        (frame.__async || (frame.__async = [])).push(holder);
+        return holder;
+      }
+      // 无组件归属：只记创建时的页面（module 级 / 静态字段里的定时器）。
+      return { inst: null, pageKey: (__activeRoot && __activeRoot.key) || null };
+    },
+    resolveOwner: function (obj, kind) {
+      if (!__asyncOwners.length) { return undefined; }
+      var holder = __asyncOwners[__asyncOwners.length - 1];
+      var aim = holder && holder.inst;
+      var aimPage = (holder && holder.pageKey) || __rootKeyOf(aim);
+      if (aim && !aim.__unmounted) { return { owner: aim }; }
+      if (aimPage && __roots[aimPage]) {
+        // 实例已卸载（或构造帧未落到实例）：回退到创建时的页面。
+        return { scope: 'page', key: aimPage };
+      }
+      return DROP;
+    }
+  });
+
+  // 2) 组件构造帧：实例尚未建立，登记后由 __endConstruct 回填。
+  __implement({
+    name: 'constructFrame',
+    resolveOwner: function () {
+      return __constructFrames.length ? { pending: true } : undefined;
+    }
+  });
+
+  // 3) 委托调用：资源属于方法体所在的类实例。
+  __implement({
+    name: 'ownerAnchor',
+    resolveOwner: function () {
+      return __ownerAnchor ? { owner: __ownerAnchor } : undefined;
+    }
+  });
+
+  // 4) 组件执行期（initState / build / 事件）：直接归该组件结点。
+  __implement({
+    name: 'building',
+    resolveOwner: function () {
+      return (__building && __building.__k === __COMP) ? { owner: __building } : undefined;
+    }
+  });
+
+  // 5) 页面兜底：随当前提交页；没有页面键则交给 globalFallback。
+  __implement({
+    name: 'pageFallback',
+    resolveOwner: function (obj, kind, opts) {
+      var pk = (opts && opts.key) || ((__activeRoot && __activeRoot.key) || null);
+      return pk ? { scope: 'page', key: pk } : undefined;
+    }
+  });
+
+  // 6) 无归属：模块级 / 静态字段（含宿主的页面外调用）。
+  __implement({
+    name: 'globalFallback',
+    resolveOwner: function () { return { scope: 'global' }; }
+  });
 
 
 

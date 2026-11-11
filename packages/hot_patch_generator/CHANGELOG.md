@@ -5,6 +5,7 @@
 **加法：顶层函数支持（与成员函数共用形参 / 函数体翻译）；无破坏性协议变更。**
 
 - **异步回调继承句柄归属**：`Timer` / `Timer.periodic` / `Future` / `Future.delayed` / `Future.microtask` / `then` / `catchError` / `whenComplete` 在创建回调时捕获当前归属（组件实例 → 其 pageKey），执行时经 `__withAsyncOwner` 恢复；`G.__core` 新增 `__captureAsyncOwner` / `__withAsyncOwner` 供 `flutter.js` 值类区解构。异步回调里新建的 `GlobalKey` / Controller 随发起它的组件（或回退页面）释放，不再退化为永久 `global` 句柄；实例与页面均已销毁时丢弃并告警。
+- **运行时生命周期化**：`runtime.js` 新增 `__implement({...})` 扩展点与 `__runChain` / `__runAll` 调度器；`__registerHandle` / `__releaseHandle` 不再内联归属分支，归属策略拆为 `asyncOwnership` / `constructFrame` / `ownerAnchor` / `building` / `pageFallback` / `globalFallback` 六个内建实现（行为等价）。
 
 - **顶层函数**：收集同文件 / import 文件的 `FunctionDeclaration`，复用 `_functionParamPlan` + `closureToJs`，产物落成 `export const foo = <closure>`；支持具名参数、默认值、async、`sync*` / `async*`。调用点同名解析，跨文件按顶层常量机制 `import { foo }`。`main` 入口函数不参与补丁翻译；`@HostInjected` 顶层函数仍走 `_app_host_.invoke`。
 - **自增 / 自减同名发射**：语句位置 `x++` / `++x` / `a[i]++` 不再归一成 `+= 1` / `-= 1`，按源码写法原样发射（值位置本就保留 `(x++)`）。`x++`（`PostfixExpression` / `PrefixExpression`）与 `x += 1`（`AssignmentExpression`）是两种 AST 节点，各自同名翻译。
