@@ -71,8 +71,9 @@ class _HomeViewState extends State<HomeView> {
   }
 
   /// 下拉刷新 / 头部刷新按钮：统一调用页面 VM 刷新所有楼层。
-  Future<void> _onRefresh() async {
+  Future<IndicatorResult> _onRefresh() async {
     await context.read<HomeVm>().refresh();
+    return IndicatorResult.fail;
   }
 
   /// 头部刷新按钮：走 controller 主动触发（与下拉手势同一条刷新链路）。

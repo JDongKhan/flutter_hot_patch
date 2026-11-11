@@ -55,6 +55,7 @@ export class HomeView extends StatefulWidget {
   }
   async _onRefresh() {
     await this.context.read({ typeArguments: {"T": "HomeVm"} }).refresh();
+    return IndicatorResult.fail;
   }
   _refresh() {
     this._refreshController.callRefresh();
