@@ -22,6 +22,63 @@ import { Component, ControllerBase } from '../flutter.js';
 var G = typeof globalThis !== 'undefined' ? globalThis : Function('return this')();
 var __handleOp = G.__core.__handleOp;
 
+// ===== 枚举值类（与 dart:enum 语义一致：.name / .index / values / 判等）=====
+//
+// Dart 里 `IndicatorResult.success` 是常量对象，翻译层原样引用同名符号；跨桥
+// 时 `toJSON()` 发成员名（宿主 `_finishArgs` 等既有 `xxxFromJson` 直接吃字符串），
+// `valueOf()` 返回成员名使 `'fail' == IndicatorResult.fail` 成立。
+// SDK 枚举由 flutter.js 自动生成，三方包的枚举必须由宿主模块自己补充——生成器
+// 按「枚举声明所在包 + 本工程 js/<package>.js 是否存在」补 import（见
+// `thirdPartyEnumModules`）。
+export class IndicatorMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  valueOf() { return this.name; }
+  toString() { return 'IndicatorMode.' + this.name; }
+  static inactive = new IndicatorMode('inactive', 0);
+  static drag = new IndicatorMode('drag', 1);
+  static armed = new IndicatorMode('armed', 2);
+  static ready = new IndicatorMode('ready', 3);
+  static processing = new IndicatorMode('processing', 4);
+  static processed = new IndicatorMode('processed', 5);
+  static secondaryArmed = new IndicatorMode('secondaryArmed', 6);
+  static secondaryReady = new IndicatorMode('secondaryReady', 7);
+  static secondaryOpen = new IndicatorMode('secondaryOpen', 8);
+  static secondaryClosing = new IndicatorMode('secondaryClosing', 9);
+  static done = new IndicatorMode('done', 10);
+}
+
+export class IndicatorResult {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  valueOf() { return this.name; }
+  toString() { return 'IndicatorResult.' + this.name; }
+  static none = new IndicatorResult('none', 0);
+  static success = new IndicatorResult('success', 1);
+  static fail = new IndicatorResult('fail', 2);
+  static noMore = new IndicatorResult('noMore', 3);
+}
+
+export class IndicatorPosition {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  valueOf() { return this.name; }
+  toString() { return 'IndicatorPosition.' + this.name; }
+  static above = new IndicatorPosition('above', 0);
+  static behind = new IndicatorPosition('behind', 1);
+  static locator = new IndicatorPosition('locator', 2);
+  static custom = new IndicatorPosition('custom', 3);
+}
+
 // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
 // props 由基类构造期统一拆分。
 export class EasyRefresh extends Component {

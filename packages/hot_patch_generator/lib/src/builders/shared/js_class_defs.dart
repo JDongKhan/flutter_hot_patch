@@ -213,6 +213,36 @@ String? _resolveThirdPartyPackage(String type) {
   return hits.isEmpty ? null : hits.first;
 }
 
+/// 三方包**枚举**名 → 宿主 JS 模块所属包。
+///
+/// 枚举不进类索引（[CtorSignatures.declaringPackagesOf] 只索引 class），值位置的
+/// `X.member` 也不会经过静态调用钩子——产物只能按「实际出现的名字」补 import。
+/// 归属判据与 [thirdPartyPackageOf] 同一口径：枚举声明文件所在包在宿主 `js/`
+/// 有模块时才算；同名枚举跨包声明时不猜，出声跳过。
+Map<String, String> thirdPartyEnumModules() =>
+    _thirdPartyEnumModules ??= _resolveThirdPartyEnumModules();
+
+Map<String, String>? _thirdPartyEnumModules;
+
+Map<String, String> _resolveThirdPartyEnumModules() {
+  final out = <String, String>{};
+  final modules = thirdPartyJsPackages;
+  if (modules.isEmpty) return out;
+  final all = CtorSignatures.instance?.enumDeclaringPackages() ??
+      const <String, Set<String>>{};
+  all.forEach((name, packages) {
+    final hits = packages.where(modules.contains).toSet();
+    if (hits.length == 1) {
+      out[name] = hits.first;
+    } else if (hits.length > 1) {
+      // ignore: avoid_print - 构建期日志
+      print('[hot_patch_generator] 枚举 $name 同时声明在多个三方包 '
+          '${hits.join(' / ')}，无法判定 JS 模块归属，已跳过 import');
+    }
+  });
+  return out;
+}
+
 /// 顶层变量 → 持有其 JS 值的三方包（null = 不是「有三方 JS 模块的包」的顶层值）。
 ///
 /// 与 [thirdPartyPackageOf] 同一判据，只是把「类声明」换成「顶层变量声明」：

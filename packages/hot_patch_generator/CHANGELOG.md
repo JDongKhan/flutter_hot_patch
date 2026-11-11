@@ -4,6 +4,8 @@
 
 **加法：顶层函数支持（与成员函数共用形参 / 函数体翻译）；无破坏性协议变更。**
 
+- **三方包枚举引用补 import**：`IndicatorResult.success` 这类枚举常量在值位置原样引用，但枚举不进类索引、也不经过静态调用钩子，此前产物只有裸标识符（运行期 `ReferenceError`）。现在产物按「实际出现的名字」兜底补 import（`component_builder` / `ui_project_module`），归属由新增的 `thirdPartyEnumModules`（`CtorSignatures.enumDeclaringPackages` + 宿主 `js/<package>.js` 是否存在）按源码事实判定；同名枚举跨包时不猜、出声跳过。JS 侧枚举值类由宿主模块以 SDK 同款形态导出（`.name/.index`、`toJSON()` 发成员名、`valueOf()` 返回成员名）。规则已写入手册「模块 / 导入」章节。
+
 - **异步回调继承句柄归属**：`Timer` / `Timer.periodic` / `Future` / `Future.delayed` / `Future.microtask` / `then` / `catchError` / `whenComplete` 在创建回调时捕获当前归属（组件实例 → 其 pageKey），执行时经 `__withAsyncOwner` 恢复；`G.__core` 新增 `__captureAsyncOwner` / `__withAsyncOwner` 供 `flutter.js` 值类区解构。异步回调里新建的 `GlobalKey` / Controller 随发起它的组件（或回退页面）释放，不再退化为永久 `global` 句柄；实例与页面均已销毁时丢弃并告警。
 - **运行时生命周期化**：`runtime.js` 新增 `__implement({...})` 扩展点与 `__runChain` / `__runAll` 调度器；`__registerHandle` / `__releaseHandle` 不再内联归属分支，归属策略拆为 `asyncOwnership` / `constructFrame` / `ownerAnchor` / `building` / `pageFallback` / `globalFallback` 六个内建实现（行为等价）。挂载 / 卸载 / 页面根开关同样接入：组件挂载广播 `onMount`，卸载分 `onUnmount`（自身清理，子树之前）与 `onUnmounted`（子树之后）两段，页面根广播 `onRootOpen` / `onRootClose`；原有卸载清理（deactivate / dispose、退订、继承依赖、`__ctx` 句柄、实例持有句柄）迁移为内建实现，执行顺序不变。`G.__core` 新增 `__implement`（只暴露注册，调度器仍为内核私有），能力模块可直接注册生命周期实现；`flutter.js` 的 `WidgetsBinding` 持久帧回调改由 `onRootClose` 摘除本页回调（挂载失败回滚 `__abortRoot` 同样广播 `onRootClose`）。
 - **核心 JS 源码按产区分目录**：`builders/runtime/` → `builders/core_js_builder/`，`runtime_builder.dart` → `core_js_builder.dart`（builder key 仍为 `ui_runtime`）。JS 源码拆为 `js/runtime/`（拼成 `patch/runtime.js`）与 `js/flutter/`（拼成 `patch/flutter.js`），同类产物源码同目录；`runtime_global_types` 的源码扫描改为递归。产物内容不变。

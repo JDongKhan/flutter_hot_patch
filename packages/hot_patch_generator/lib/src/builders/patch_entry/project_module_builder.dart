@@ -503,6 +503,13 @@ String? renderProjectPackageFile(
     }
   }
   (usedWidgets[nodeHelperPackage] ??= <String>{}).addAll(usedValues);
+  // 三方包枚举（`IndicatorResult` 等）：枚举不在类索引里，值位置也不会经过
+  // 静态调用钩子，按产物文本兜底补 import；归属见 [thirdPartyEnumModules]。
+  for (final e in thirdPartyEnumModules().entries) {
+    if (RegExp('\\b${RegExp.escape(e.key)}\\b').hasMatch(bodyText)) {
+      (usedWidgets[e.value] ??= <String>{}).add(e.key);
+    }
+  }
   for (final e in usedWidgets.entries) {
     if (e.value.isEmpty) continue;
     imports.add("import { ${(e.value.toList()..sort()).join(', ')} } from "

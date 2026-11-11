@@ -293,6 +293,24 @@ class CtorSignatures {
     return out;
   }
 
+  /// 枚举名 → 枚举声明**所在包**（与 [declaringPackagesOf] 同一口径，只是索引
+  /// 换成 enum 声明：枚举不进类索引，[of] 也查不到）。
+  ///
+  /// 供「宿主 `js/<package>.js` 导出了该枚举」的引用方按源码事实补 import。
+  Map<String, Set<String>> enumDeclaringPackages() {
+    _ensureIndex();
+    final out = <String, Set<String>>{};
+    _enumFiles.forEach((name, files) {
+      final packages = <String>{};
+      for (final file in files) {
+        final pkg = _sources?.packageOfFile(file);
+        if (pkg != null) packages.add(pkg);
+      }
+      if (packages.isNotEmpty) out[name] = packages;
+    });
+    return out;
+  }
+
   /// 顶层变量声明的**所在包**（同名顶层变量可能存在于多个包，全部返回）。
   ///
   /// 与 [declaringPackagesOf] 同一口径：只读源码事实（声明文件 → 包）。
