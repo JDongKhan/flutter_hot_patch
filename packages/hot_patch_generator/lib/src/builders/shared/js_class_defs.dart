@@ -103,6 +103,10 @@ StateHandle.registerProxy('AnimatedListState', AnimatedListState);''',
 /// 三方库（provider 等）的 JS 类**不在本表**：由宿主在自己的 `js/<package>.js`
 /// 维护，生成器只按「类声明所在包 + 该包是否有宿主 JS 模块」自动归属。
 const Set<String> logicWidgetTypes = {
+  // MediaQuery 的 JS 类由 `js/flutter/media_query_js.dart` 手写（静态取值 API +
+  // 命名构造静态方法），因此不能再生成同名宿主包装类，登记进本表；
+  // 它的类源码不在 `logicWidgetSources`（在值类区的 mediaQueryJsSource 里）。
+  'MediaQuery',
   'Builder',
   'ListenableBuilder',
   'ValueListenableBuilder',
