@@ -9,6 +9,7 @@ import 'components/compare_test.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
 import 'components/inherited_widget_demo.dart';
+import 'components/leak_demo_card.dart';
 import 'components/widget_showcase.dart';
 import 'components/test_widget.dart';
 import 'custom/custom_capabilities.dart';
@@ -169,6 +170,16 @@ class DemoListPage extends StatelessWidget {
         native: const TestWidget(),
         js: JsUiWidget(
           jsAsset: _patchUrl('TestWidget', 'components/test_widget.js'),
+        ),
+      ),
+    ),
+    _DemoEntry(
+      '泄漏演示 · JS 热更',
+      '进入即定时创建不释放的 GlobalKey：退出后看右侧 leak-check「多余（JS）」',
+      CompareTest(
+        native: const LeakDemoCard(),
+        js: JsUiWidget(
+          jsAsset: _patchUrl('LeakDemoCard', 'components/leak_demo_card.js'),
         ),
       ),
     ),

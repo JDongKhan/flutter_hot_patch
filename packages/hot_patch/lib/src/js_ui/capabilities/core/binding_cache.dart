@@ -212,7 +212,6 @@ class JsBindingCache {
       pageKey: pageKey, value: value, meta: meta,
     );
     (_buckets[bucket] ??= <String, JsBinding<Object>>{})[id] = created;
-    _notifyStat(created);
     _logPut(created);
     return created;
   }
@@ -248,7 +247,6 @@ class JsBindingCache {
       pageKey: pageKey, value: create?.call(), meta: meta,
     );
     (_buckets[bucket] ??= <String, JsBinding<Object>>{})[id] = created;
-    _notifyStat(created);
     _logPut(created);
     return created;
   }
@@ -348,22 +346,9 @@ class JsBindingCache {
 
   /// ---- 统计切面挂载点（debug-only）----
   ///
-  /// 业务侧只提供挂载点，不携带任何统计状态：
-  ///   - [debugOnRegister]：新登记了一条（只递出页归属）——旁路记账用；
-  ///   - [debugPageLabel]：pageKey → 日志显示名。
-  /// 均由 `leak/leak_stats.dart` 在 debug 构建里装配；release 下恒为 null，且
-  /// `kDebugMode` 是编译期常量，下面两处调用被整段裁剪。
+  /// 业务侧只提供挂载点，不携带任何统计状态：[debugPageLabel] 把 pageKey 映射成
+  /// 日志显示名，由 `leak/leak_stats.dart` 在 debug 构建里装配；release 下恒为
+  /// null，且 `kDebugMode` 是编译期常量，调用处被裁剪。
 
-  static void Function(String? pageKey)? debugOnRegister;
   static String Function(String pageKey)? debugPageLabel;
-
-  /// 通知统计切面。**统计只观测**：任何异常都吞掉，绝不影响绑定登记本身。
-  void _notifyStat(JsBinding<Object> e) {
-    if (!kDebugMode) return;
-    try {
-      debugOnRegister?.call(e.pageKey);
-    } catch (_) {
-      // 切面异常不得影响业务（不重抛、不打日志，避免二次副作用）。
-    }
-  }
 }

@@ -42,9 +42,6 @@ class JsLeakSnapshot {
     required this.roots,
     required this.dartTables,
     required this.bindingKeys,
-    required this.bindingTotal,
-    required this.kindCounts,
-    required this.bindingBucketCounts,
   });
 
   /// JS 句柄明细：`{id, kind, scope, key, obj}`（obj 为 JS 侧构造名或 typeof）。
@@ -65,17 +62,6 @@ class JsLeakSnapshot {
 
   /// Dart 绑定缓存全部条目的 `桶|id` 集合（基线比对用）。
   final Set<String> bindingKeys;
-
-  /// Dart 绑定缓存总量（跨桶条目数）。
-  final int bindingTotal;
-
-  /// JS 句柄按 kind 汇总（`ctx/BuildContext` / `ctrl/Scroll` / `key` …）：
-  /// JS 注入的 Dart 类（PageController / ScrollController / GlobalKey /
-  /// BuildContext…）各有多少条，进入与销毁两端对照即知谁在涨。
-  final Map<String, int> kindCounts;
-
-  /// Dart 绑定缓存按桶汇总（桶名即 kind / 存储分组）。
-  final Map<String, int> bindingBucketCounts;
 
   /// 取一次快照；JS 运行时骨架未注入 / 执行出错时返回 null（调用方按
   /// 「无法观测」静默跳过，不干扰页面流程）。
@@ -134,56 +120,7 @@ class JsLeakSnapshot {
       bindingKeys: <String>{
         for (final e in cache.allEntries) '${e.bucket}|${e.id}',
       },
-      bindingTotal: cache.totalCount,
-      kindCounts: _countKinds(handles),
-      bindingBucketCounts: _countBuckets(cache.allEntries),
     );
-  }
-
-  /// JS 句柄按 kind 计数。
-  static Map<String, int> _countKinds(Iterable<Map<String, Object?>> hs) {
-    final out = <String, int>{};
-    for (final h in hs) {
-      final k = '${h['kind']}';
-      out[k] = (out[k] ?? 0) + 1;
-    }
-    return out;
-  }
-
-  /// Dart 绑定缓存按桶计数。
-  static Map<String, int> _countBuckets(Iterable<JsBinding<Object>> es) {
-    final out = <String, int>{};
-    for (final e in es) {
-      out[e.bucket] = (out[e.bucket] ?? 0) + 1;
-    }
-    return out;
-  }
-
-  /// 「进入 → 销毁」的规模对照：`118 → 120 条（ctx/BuildContext +2，fn 60，…）`。
-  ///
-  /// 前半是净增（只列数量有变的 kind / 桶），后半是销毁时刻的绝对分布——
-  /// 绝对数用于跨页面比对整体规模（如 ctx/BuildContext 是否随页面复杂度上涨），
-  /// 净增用于判定本页是否留下对象。
-  static String _scaleText(
-    int? before,
-    int now,
-    Map<String, int> nowCounts,
-    Map<String, int>? baseCounts,
-  ) {
-    final changed = <String>[];
-    if (baseCounts != null) {
-      for (final k in <String>{...baseCounts.keys, ...nowCounts.keys}.toList()
-        ..sort()) {
-        final d = (nowCounts[k] ?? 0) - (baseCounts[k] ?? 0);
-        if (d != 0) changed.add('$k ${d > 0 ? '+' : ''}$d');
-      }
-    }
-    final parts = <String>[
-      ...changed,
-      for (final k in nowCounts.keys.toList()..sort()) '$k ${nowCounts[k]}',
-    ];
-    return '${before ?? '-'} → $now 条'
-        '${parts.isEmpty ? '' : '（${parts.join('，')}）'}';
   }
 
   /// 打印本页销毁后的双端残留明细。
@@ -227,7 +164,7 @@ class JsLeakSnapshot {
         // 归属别的页面的新句柄由那一页自己审计（同屏多实例不互相误报）。
         if (key != null && key != pageKey) continue;
         leaks.add(
-          'JS 缓存净增（进入后新增且未释放）：$id'
+          '多余（JS）：$id'
           '（kind: ${h['kind']}, scope: ${h['scope']}, obj: ${h['obj']}）',
         );
       }
@@ -245,7 +182,7 @@ class JsLeakSnapshot {
         if (e.bucket != JsBindingBuckets.ctxNode && !liveIds.contains(e.id)) {
           continue;
         }
-        leaks.add('Dart 缓存净增（进入后新增且未释放）：${e.describe()}');
+        leaks.add('多余（Dart）：${e.describe()}');
       }
     }
     // ---- Dart 端（条目自带页面归属：兄弟实例活着的对象不参与判定）----
@@ -261,27 +198,14 @@ class JsLeakSnapshot {
     }
     // ---- 汇总 ----
     // 页面名（`HelloCard（jsui_0）`）：人类名在前、pageKey 保留在后，便于与 JS 侧日志对齐。
-    final cache = JsBindingCache.instance;
     final page = LeakStats.labelOf(pageKey);
-    final tally = LeakStats.pageTally(pageKey);
-    LeakStats.clearPageTally(pageKey);
-    // 「进入 → 销毁」的缓存规模对照（量取自两端快照时刻），按 kind / 桶列出净增
-    // 与销毁时刻的绝对分布（JS 注入的 PageController / ScrollController /
-    // GlobalKey / BuildContext 各多少条，一眼可见）。
-    final scale = 'JS 缓存 '
-        '${_scaleText(base?.handleIds.length, handles.length, _countKinds(handles), base?.kindCounts)}'
-        '，Dart 缓存 '
-        '${_scaleText(base?.bindingTotal, cache.totalCount, _countBuckets(cache.allEntries), base?.bindingBucketCounts)}';
     if (leaks.isEmpty) {
-      HotPatchLog.log(
-        'leak-check $page: clean（JS 根 ${roots.length}；Dart 表 '
-        '${dartTables.values.fold(0, (a, b) => a + b)} 项；$scale；'
-        'binding 本页登记 $tally 条已全清）',
-      );
+      HotPatchLog.log('leak-check $page: clean');
       return;
     }
+    // 只说「多了哪个」：每条都带 id / kind / scope / 登记方，不再打规模统计。
     HotPatchLog.warn(
-      'leak-check $page: ${leaks.length} 项残留（$scale；binding 本页登记 $tally 条）'
+      'leak-check $page: ${leaks.length} 项残留'
       '\n  ${leaks.join('\n  ')}',
     );
   }
