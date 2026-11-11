@@ -524,7 +524,7 @@ class JsRuntimeManager {
   /// 片段 + commit 协议。与具体组件无关；组件/模型/按 package 生成的 widget
   /// 模块仍走 [loadModule]。
   ///
-  /// JS 源码全部在 `hot_patch_generator`（`builders/runtime/js/**`），由
+  /// JS 源码全部在 `hot_patch_generator`（`builders/core_js_builder/js/runtime/**`），由
   /// `ui_runtime` builder 写成 `patch/runtime.js`：**JS 侧修复重出产物即可，
   /// 不需要发版 App**。
   ///

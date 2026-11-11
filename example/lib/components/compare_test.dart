@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// 原生 vs JS 热更同屏对比：一页上下两块，方便肉眼对照。
+/// 原生 vs JS 热更同屏对比：**左右两栏**，方便肉眼对照。
 ///
 /// 供 Demo 列表页与「三方库」列表页共用（原先是 main.dart 里的私有实现）。
 class CompareTest extends StatelessWidget {
@@ -11,27 +11,27 @@ class CompareTest extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 可滚动：对比块里既有紧凑组件，也可能出现固定高度/多段区块，整页高度
-    // 会超出一屏，需可滚动避免 RenderFlex 溢出。
+    // 两栏各自可滚动：对比块里既有紧凑组件，也可能出现固定高度/多段区块，
+    // 整页高度会超出一屏，需可滚动避免 RenderFlex 溢出。
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _pane('原生组件', native)),
+        const VerticalDivider(width: 1),
+        Expanded(child: _pane('JS 热更（JsUiWidget）', js)),
+      ],
+    );
+  }
+
+  Widget _pane(String title, Widget child) {
     return SingleChildScrollView(
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            '原生组件',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
-          ),
+          Text(title, style: const TextStyle(fontSize: 13, color: Colors.grey)),
           const SizedBox(height: 8),
-          native,
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          const Text(
-            'JS 热更（JsUiWidget）',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          js,
+          child,
         ],
       ),
     );

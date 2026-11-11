@@ -444,7 +444,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
 ///   - [JsUiWidget] 自己按 URL 加载补丁并 `mount`；
 ///   - 本类用于 JS 侧命令式弹层（`showDialog` 系列）：builder 在 JS 端已执行
 ///     完毕，元素树要在本 widget 首帧之后才挂到 JS 侧独立 root 上（见
-///     builders/runtime/js/dialogs_js.dart 的 panelMount）。**首帧之后**是硬约束：
+///     builders/core_js_builder/js/flutter/dialogs_js.dart 的 panelMount）。**首帧之后**是硬约束：
 ///     `jsuiPanelOpen` 的宿主处理器运行在 JS 求值期内，此刻再回调 JS 会重入引擎。
 ///
 /// 本类不做任何弹层判断：它只认「一份 store + 一个 pageKey」，页面/弹层/任何

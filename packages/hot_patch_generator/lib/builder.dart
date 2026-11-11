@@ -3,15 +3,17 @@
 /// 本文件是**对外入口**：只声明七个 builder 工厂与它们的默认选项；
 /// 实现按功能分目录放在 `lib/src/` 下——`src/builders/shared/`（多 builder
 /// 共用基础）、`src/builders/patch_entry/`（componentBuilder 的收集 + 翻译 +
-/// 产物组装全链路）、`src/builders/ui_*/`（其余 builder 各自独立）。
+/// 产物组装全链路）、`src/builders/core_js_builder/`（核心 JS 源码：runtime /
+/// flutter 两个子目录，分别产出 `patch/runtime.js` 与 `patch/flutter.js`）、
+/// `src/builders/ui_*/`（其余 builder 各自独立）。
 /// 使用方只需依赖本包，即可通过 build_runner 获得全部产物。
 library;
 
 import 'package:build/build.dart';
 
+import 'src/builders/core_js_builder/core_js_builder.dart';
 import 'src/builders/patch_entry/component_builder.dart';
 import 'src/builders/patch_entry/project_module_builder.dart';
-import 'src/builders/runtime/runtime_builder.dart';
 import 'src/builders/ui_host_register/host_register_builder.dart';
 import 'src/builders/ui_patch_manifest/patch_manifest_builder.dart';
 import 'src/builders/ui_third_party_js/third_party_js_builder.dart';
@@ -47,12 +49,13 @@ Builder thirdPartyJsBuilder(BuilderOptions _) => const ThirdPartyJsBuilder();
 /// 推导；没有本地依赖包时不产出任何文件。本 builder 不读任何 options。
 Builder projectModuleBuilder(BuilderOptions _) => const ProjectModuleBuilder();
 
-/// JS 运行时 builder 工厂：`ui_runtime`。
+/// 核心 JS builder 工厂：`ui_runtime`。
 ///
-/// 把 JS 运行时骨架 + 各能力片段写成 `patch/runtime.js`（构建期产物）。
-/// 运行时 Dart 侧不再内置任何 JS 源码，只从补丁目录读取该文件——JS 修复随
-/// 补丁发布生效，无需发版。本 builder 不读任何 options。
-Builder runtimeJsBuilder(BuilderOptions _) => const RuntimeJsBuilder();
+/// 把核心 JS 源码（`src/builders/core_js_builder/js/runtime/`）写成
+/// `patch/runtime.js`（构建期产物）。运行时 Dart 侧不再内置任何 JS 源码，
+/// 只从补丁目录读取该文件——JS 修复随补丁发布生效，无需发版。
+/// 本 builder 不读任何 options。
+Builder coreJsBuilder(BuilderOptions _) => const CoreJsBuilder();
 
 /// 宿主注入注册 builder 工厂：`ui_host_register`。
 ///

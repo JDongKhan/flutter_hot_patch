@@ -72,8 +72,9 @@
 /// 「这段代码是为哪个设计写的」。
 library;
 
-// 核心 JS 片段随本文件迁入生成器（`runtime/js/` 同目录），由
-// [runtimeJsSource] 按**固定顺序**拼接成单个 `patch/runtime.js`。
+// 核心 JS 片段按目标产物分目录维护：本目录（`js/runtime/`）的片段由
+// [runtimeJsSource] 按**固定顺序**拼接成单个 `patch/runtime.js`；
+// `js/flutter/` 下的 Flutter SDK 面由 `ui_widget` builder 拼成 `patch/flutter.js`。
 // 运行时包（hot_patch）不再持有任何 JS 源码：JS 修复随产物发布即可生效，
 // 不需要发版。
 import 'build_context_js.dart';

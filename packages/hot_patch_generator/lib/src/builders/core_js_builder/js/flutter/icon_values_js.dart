@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../../shared/sdk_icons_index.dart';
+import '../../../shared/sdk_icons_index.dart';
 
 /// SDK `IconData` 的默认字体族（与 `IconData` 构造的默认值一致）。
 const _defaultFontFamily = 'MaterialIcons';

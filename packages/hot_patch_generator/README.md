@@ -95,7 +95,7 @@ The output must correspond to the Dart source **one-to-one**; this is the core c
 3. **Capabilities are isolated per file.** When adding a runtime capability (e.g. ScrollController /
    TextEditingController id-bridge), put it on the host side as a separate file under
    `hot_patch/lib/src/js_ui/capabilities/` and **do not touch the `js_widget_registry` / `js_ui_widget` core**;
-   the capability's JS lives in `builders/runtime/js/` here and ships inside `patch/runtime.js`.
+   the capability's JS lives in `builders/core_js_builder/js/runtime/` here and ships inside `patch/runtime.js`.
 4. **Defaults match Flutter 100%.** When the host renders, nullable properties stay `null` by default; never
    default them to `0` / `EdgeInsets.zero` etc. and override Flutter theme defaults.
 5. **Registration keys match class names.** The key in the host's `r.register('X', ...)` must have the same name
@@ -120,7 +120,7 @@ single translation path (`lib/src/builders/patch_entry/translator/element_json.d
   therefore no longer asks "is this class a widget"; it only excludes known model classes and value objects;
 - **value shapes** (`lib/src/builders/patch_entry/translator/value_forms.dart`): literals, constructors, static factories,
   constant references (enums / colors / icons), lists, closures — structured style values are runtime
-  classes in `lib/src/builders/runtime/js/style_values_js.dart`.
+  classes in `lib/src/builders/core_js_builder/js/flutter/style_values_js.dart`.
 
 The translation path itself needs **no per-widget code**. Supporting a new widget still requires a host
 renderer (`JsWidgetRegistry` or a capability library) because the Flutter widget has to be reconstructed;
@@ -182,15 +182,17 @@ shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
 - `translator/`: `js_translator` (shared language layer) · `js_value` (shared value tools) · `dart2js`
   (class declarations) · `element2js` (widget trees) · `element_json` (the single unified widget entry
   `elementToJson`) · `value_forms` (value-shape dispatch `autoValue`). Structured style values are
-  generated into `flutter.js` from `builders/runtime/js/style_values_js.dart`.
+  generated into `flutter.js` from `builders/core_js_builder/js/flutter/style_values_js.dart`.
 
 The other builders are self-contained:
 
 - `ui_widget/`: `widget_module_builder` (package module output + the JS class sources of every logic
   component/sliver proxy; used only by this builder)
-- `runtime/`: `runtime_builder` (emits the whole JS runtime — mini-react, handle registry, capability
-  fragments — as one `patch/runtime.js`; the runtime package only loads it, so JS fixes ship with the patch
-  and never require an app release. Sections are separated by `// ===== 【n】… =====` comments)
+- `core_js_builder/`: `core_js_builder` (emits the whole JS runtime — mini-react, handle registry, capability
+  fragments — as one `patch/runtime.js`; sources live under `js/runtime/`, Flutter SDK's JS surface under
+  `js/flutter/` and is assembled into `patch/flutter.js` by `ui_widget`. The runtime package only loads it, so
+  JS fixes ship with the patch and never require an app release. Sections are separated by
+  `// ===== 【n】… =====` comments)
 - `ui_host_register/`: `host_register_builder` (host-side registration list generation; the detection rules for
   @HostInjected live in `builders/shared/host_injected.dart`)
 - `ui_patch_manifest/`: `patch_manifest_builder` (produces `patch/manifest.json`; thanks to

@@ -11,7 +11,7 @@
 //                            用全局出口 `__jsui` / `_app_host_`）。内建能力的
 //                            JS 已随产物发布——核心机制写进 `patch/runtime.js`，
 //                            库自己的 API 面写进该包的 `patch/<pkg>.js`
-//                            （生成器 `builders/runtime/js/**`），内建库的该
+//                            （生成器 `builders/core_js_builder/js/runtime/**`），内建库的该
 //                            钩子为空。
 //   2. [ensureChannels]   —— 幂等登记本能力用到的跨语言句柄 kind，以及把本库的
 //                            `context.<op>(...)` 处理注册进核心的通用缝
@@ -78,7 +78,7 @@ abstract class JsUiLibrary {
   /// 注入 JS 运行时的片段：**仅供 App 侧注册的外部库**使用。
   ///
   /// 内建能力的 JS 已在构建期拼进 `patch/runtime.js`（生成器
-  /// `builders/runtime/js/**`，随补丁发布，修复无需发版），故内建库都返回空。
+  /// `builders/core_js_builder/js/runtime/**`，随补丁发布，修复无需发版），故内建库都返回空。
   /// 外部库的片段在 runtime.js 之后以独立 IIFE 求值，**不能**再引用核心闭包
   /// 内部函数（`__inheritElement` / `__getInheritedElement` 等，它们不在全局），只能用
   /// `__jsui` 与 `_app_host_`；需要核心能力的库应把代码并入运行时产物。
@@ -135,7 +135,7 @@ List<JsUiLibrary> get jsUiLibraries {
 ///
 /// 注册顺序 = [ensureChannels] / [registerWidgets] 的遍历顺序。内建能力的
 /// **JS 片段**不在这里——它们已随 `patch/runtime.js` 发布，拼接顺序由生成器
-/// `builders/runtime/js/runtime_js.dart` 的 `runtimeJsSource()` 维护。
+/// `builders/core_js_builder/js/runtime/runtime_js.dart` 的 `runtimeJsSource()` 维护。
 void _seedBuiltins() {
   if (_seeded) return;
   _seeded = true;

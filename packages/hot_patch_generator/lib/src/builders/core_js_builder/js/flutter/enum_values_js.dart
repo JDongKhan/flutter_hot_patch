@@ -1,4 +1,4 @@
-import '../../shared/sdk_enum_index.dart';
+import '../../../shared/sdk_enum_index.dart';
 
 /// SDK 枚举的 JS 值类（写进 `patch/flutter.js`）。
 ///

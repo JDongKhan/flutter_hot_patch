@@ -81,7 +81,7 @@ targets:
 
 1. **Dart 合法写法应被静态翻译，而不是绕开**。遇到不认识的语法形态，补正式翻译分支（表达式/语句翻译在 `translator/js_translator.dart`，类声明渲染在 `translator/dart2js.dart`，都一比一映射成等价 JS），**不要求用户改 Dart 写法来适配框架**。当前未覆盖的写法会在构建期告警并降级为占位结点；占位是**诊断兜底，不是长期方案**（见组件支持文档「已知限制」）。所有翻译只有一处实现，组件与普通类共用。
 2. **禁止临时方案**。报错时不得在 demo 里加临时字段/中间层绕过（如为规避 setState 无 diff 而加的镜像触发字段）；产物 JS 应与 Dart 写法逐行对应，修就修翻译路径本身。
-3. **能力按文件隔离**。新增运行时能力（如 ScrollController / TextEditingController id-bridge）时，宿主侧按能力放 `hot_patch/lib/src/js_ui/capabilities/` 独立文件，**不动 `js_widget_registry` / `js_ui_widget` 核心**；该能力的 JS 放本包 `builders/runtime/js/`，随 `patch/runtime.js` 发布（JS 修复无需发版）。
+3. **能力按文件隔离**。新增运行时能力（如 ScrollController / TextEditingController id-bridge）时，宿主侧按能力放 `hot_patch/lib/src/js_ui/capabilities/` 独立文件，**不动 `js_widget_registry` / `js_ui_widget` 核心**；该能力的 JS 放本包 `builders/core_js_builder/js/runtime/`，随 `patch/runtime.js` 发布（JS 修复无需发版）。
 4. **默认值与 Flutter 百分百一致**。宿主渲染时 nullable 属性缺省保持 `null`，不得默认成 `0` / `EdgeInsets.zero` 等覆盖 Flutter 主题默认。
 5. **注册 key 与类名一致**。宿主 `r.register('X', ...)` 的 key 与产物 JS 里的 type 字符串保持同名，不另起别名。
 
@@ -101,7 +101,7 @@ targets:
   widget”，只排除已知模型类与值对象；
 - **值的形态**（`lib/src/builders/patch_entry/translator/value_forms.dart`）：字面量、构造、静态工厂、常量引用
   （枚举 / 颜色 / 图标）、列表、闭包——结构化样式的运行时值类在
-  `lib/src/builders/runtime/js/style_values_js.dart`。
+  `lib/src/builders/core_js_builder/js/flutter/style_values_js.dart`。
 
 翻译路径本身**无需 per-widget 代码**，但宿主侧仍需为该 widget 注册 renderer
 （`JsWidgetRegistry` 或能力库），因为 Flutter widget 必须被重新构造；
@@ -155,12 +155,15 @@ shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
   `const_support` · `singleton_support` · `imported_components`；
 - `translator/`：`js_translator`（公共语言层）· `js_value`（共享值工具）· `dart2js`（类声明）·
   `element2js`（widget 树）· `element_json`（统一翻译入口 `elementToJson`）· `value_forms`（值形态分派
-  `autoValue`）。结构化样式值由 `builders/runtime/js/style_values_js.dart` 生成到 `flutter.js`。
+  `autoValue`）。结构化样式值由 `builders/core_js_builder/js/flutter/style_values_js.dart` 生成到 `flutter.js`。
 
 其余 builder 各自独立：
 
 - `ui_widget/`：`widget_module_builder`（package 模块产物 + 各逻辑组件/sliver 代理的 JS 类源码，仅本
   builder 使用）
+- `core_js_builder/`：`core_js_builder`（把 `js/runtime/` 的框架代码拼成 `patch/runtime.js`；
+  `js/flutter/` 下的 Flutter SDK JS 面由 `ui_widget` 拼成 `patch/flutter.js`。运行时包只负责加载，
+  JS 修复随补丁发布、无需发版；产区分区以 `// ===== 【n】… =====` 注释隔开）
 - `ui_host_register/`：`host_register_builder`（宿主侧注册清单生成；@HostInjected 的识别口径在
   `builders/shared/host_injected.dart`）
 - `ui_patch_manifest/`：`patch_manifest_builder`（产出 `patch/manifest.json`；靠

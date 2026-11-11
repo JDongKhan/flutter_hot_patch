@@ -1,4 +1,4 @@
-/// 运行时注入的全局类型名：构建期从生成器 `runtime/js/**` 源码自动抽取
+/// 运行时注入的全局类型名：构建期从生成器 `core_js_builder/js/**` 源码自动抽取
 /// （`G.<Name> = …` 与值类区的 `export class` / `export const`，如
 /// `G.KeyEvent` / `export class Color`）。
 ///
@@ -130,9 +130,10 @@ class _RuntimeGlobalTypes {
     final pkg = sources?.byName('hot_patch_generator');
     if (pkg == null) return empty;
     final root = pkg.libDir;
-    // 运行时片段目录：`builders/runtime/js/**`。
+    // 核心 JS 源码目录：`builders/core_js_builder/js/**`（含 runtime / flutter
+    // 两个子目录；按子目录递归扫描）。
     final dir = Directory('$root${Platform.pathSeparator}src'
-        '${Platform.pathSeparator}builders${Platform.pathSeparator}runtime'
+        '${Platform.pathSeparator}builders${Platform.pathSeparator}core_js_builder'
         '${Platform.pathSeparator}js');
     if (!dir.existsSync()) return empty;
     // 片段之外的「值类源码」：由生成器按 Flutter SDK 自动抽取后拼进
@@ -144,7 +145,7 @@ class _RuntimeGlobalTypes {
           '${Platform.pathSeparator}color_constants.dart'),
     ];
     final files = <File>[
-      for (final entity in dir.listSync(followLinks: false))
+      for (final entity in dir.listSync(recursive: true, followLinks: false))
         if (entity is File && entity.path.endsWith('.dart')) entity,
       for (final f in extras)
         if (f.existsSync()) f,

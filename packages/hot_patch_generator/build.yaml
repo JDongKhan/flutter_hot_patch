@@ -70,16 +70,18 @@ builders:
     auto_apply: dependents
     build_to: source
 
-  # JS 运行时 builder：把运行时骨架（mini-react / 句柄表 / 各能力片段）写成
-  # **一个** patch/runtime.js。区别于 ui_widget：那是「按 package 的组件工厂」，
-  # 这是「与组件无关的框架代码」。产物是普通 JS 文件，随补丁包发布；运行时包
-  # 只负责读取求值——JS 侧修复重出产物即可，不需发版。
+  # 核心 JS builder：把核心 JS 源码（`builders/core_js_builder/js/runtime/`
+  # 的运行时骨架 / mini-react / 句柄表 / 各能力片段）写成**一个**
+  # patch/runtime.js。`builders/core_js_builder/js/flutter/` 里的 Flutter SDK
+  # 面（值类 / Controller / 导航 / 弹层）由 ui_widget 拼成 patch/flutter.js。
+  # 产物是普通 JS 文件，随补丁包发布；运行时包只负责读取求值——JS 侧修复重出
+  # 产物即可，不需发版。
   #
   # 存量迁移说明：这些 JS 源码原本内嵌在 hot_patch 的 Dart 文件里（启动时
   # evaluate），Bug 修复必须发版；迁到生成器后与其它产物同生命周期。
   ui_runtime:
     import: "package:hot_patch_generator/builder.dart"
-    builder_factories: ["runtimeJsBuilder"]
+    builder_factories: ["coreJsBuilder"]
     build_extensions:
       "$package$":
         - "patch/runtime.js"

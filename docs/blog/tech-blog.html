@@ -1295,7 +1295,7 @@ bash start_patch_server.sh
       </div>
       <ul class="check-list">
         <li>只改业务 Dart：重跑 <code>start_patch_server.sh</code>，在 App 里重进该页面即可看到新产物。</li>
-        <li>改运行时 JS 源（<code>packages/hot_patch_generator/lib/src/builders/runtime/js/**</code>）：重跑 build_runner，随 <code>patch/runtime.js</code> 发布，页面重进 / 重载生效，<strong>不需要重装 App</strong>。</li>
+        <li>改运行时 JS 源（<code>packages/hot_patch_generator/lib/src/builders/core_js_builder/js/runtime/**</code>）：重跑 build_runner，随 <code>patch/runtime.js</code> 发布，页面重进 / 重载生效，<strong>不需要重装 App</strong>。</li>
         <li>改组件属性：生成侧与运行侧要同时更新，详见<a href="#ui">组件支持总览</a>。</li>
       </ul>
     </section>
@@ -1459,7 +1459,7 @@ bash start_patch_server.sh
         <div class="tl-item">
           <span class="tl-time">STAGE 04 · build 树翻译</span>
           <b>没有 per-widget 实现，只有值形态分派</b>
-          <p><code>element_json.dart</code> 是统一入口，<code>value_forms.dart</code> 按值的形态（字面量 / 构造 / 静态工厂 / 常量引用 / 列表 / 闭包）分派，结构化样式的运行时值类见 <code>builders/runtime/js/style_values_js.dart</code>。所有实参按原名进 props。</p>
+          <p><code>element_json.dart</code> 是统一入口，<code>value_forms.dart</code> 按值的形态（字面量 / 构造 / 静态工厂 / 常量引用 / 列表 / 闭包）分派，结构化样式的运行时值类见 <code>builders/core_js_builder/js/flutter/style_values_js.dart</code>。所有实参按原名进 props。</p>
         </div>
         <div class="tl-item">
           <span class="tl-time">STAGE 05 · 产物组装</span>
@@ -2734,7 +2734,7 @@ bash start_patch_server.sh
       <ol>
         <li>在 <code>packages/hot_patch/lib/src/js_ui/capabilities/</code> 新建目录，写 Dart 桥与 <code>JsUiLibrary</code> 子类。</li>
         <li>在 <code>js_ui_library.dart</code> 的 <code>_seedBuiltins</code> 里加一行注册（外部库则让业务在 <code>main()</code> 调 <code>registerJsUiLibrary</code>）。</li>
-        <li>JS 片段写进生成器 <code>builders/runtime/js/</code>，随 <code>patch/runtime.js</code> 发布；若只是库自己的 API 面，放该库模块。</li>
+        <li>JS 片段写进生成器 <code>builders/core_js_builder/js/runtime/</code>，随 <code>patch/runtime.js</code> 发布；若只是库自己的 API 面，放该库模块。</li>
         <li>确认 <code>reconciler</code> / <code>JsUiWidget</code> / <code>disposeRoot</code> / 桥 / 句柄注册表<strong>零改动</strong>。</li>
       </ol>
       <p class="subtle">判据：这段 JS 若不认识任何具体库 / 具体 API 也成立 → <code>runtime.js</code>；否则归它的库模块。</p>
@@ -2853,8 +2853,8 @@ bash start_patch_server.sh
             <tr><td>widget 统一翻译</td><td><span class="file-path">.../translator/element_json.dart</span> · <span class="file-path">.../translator/value_forms.dart</span> · <span class="file-path">.../runtime/js/style_values_js.dart</span></td></tr>
             <tr><td>语言层翻译</td><td><span class="file-path">.../translator/js_translator.dart</span> · <span class="file-path">.../translator/dart2js.dart</span></td></tr>
             <tr><td>构建期登记表</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/shared/js_class_defs.dart</span> · <span class="file-path">.../shared/ctor_signatures.dart</span></td></tr>
-            <tr><td>JS 运行时骨架</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/runtime/js/runtime_js.dart</span></td></tr>
-            <tr><td>mini-react</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/runtime/js/mini_react_js.dart</span></td></tr>
+            <tr><td>JS 运行时骨架</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/core_js_builder/js/runtime/runtime_js.dart</span></td></tr>
+            <tr><td>mini-react</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/core_js_builder/js/runtime/mini_react_js.dart</span></td></tr>
             <tr><td>Flutter SDK 面子层</td><td><span class="file-path">.../runtime/js/dialogs_js.dart</span> · <span class="file-path">.../runtime/js/navigator_js.dart</span> · <span class="file-path">.../runtime/js/canvas_js.dart</span></td></tr>
             <tr><td>builder 入口 / 配置</td><td><span class="file-path">packages/hot_patch_generator/lib/builder.dart</span> · <span class="file-path">packages/hot_patch_generator/build.yaml</span></td></tr>
             <tr><td>示例 App 源码 / 产物</td><td><span class="file-path">example/lib/</span> · <span class="file-path">example/patch/</span></td></tr>
