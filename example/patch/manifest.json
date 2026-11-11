@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-11T17:13:28.021759",
+  "buildTime": "2026-11-11T17:18:30.397521",
   "resources": {
-    "flutter.js": "b3bd91fdf47458d75d6663d80727046d8f8f563fac31de16391c22941d7c07f9",
+    "flutter.js": "3e43eadd8396aed450b470dff53a8b4e7cb78b7832223f7576da159062078d04",
     "packages/easy_refresh.js": "7606f91d791306289ebf4d47a37f6b30ac1fcdccbceeea53e6192818c9b09740",
     "packages/get.js": "f8aa6f3b477af33cdf3214a64e46d1a98f8d96aaa06dbeb2be5a1bf0a8aa7027",
     "packages/provider.js": "998f91ba6314dff5b811a88baacffdb07a6b35f0901eb5a04e5e8f1d65d93414",
@@ -75,6 +75,7 @@
     "app/widgets/banner_carousel.js": "3116b8ceda0efaf633fd194474a591bc5c1ebcfd2bbebfb2bd7e6d984c9127ed",
     "components/layout_more_detail.js": "3a554c31edc30d94665629c5e18f24b0ba19341e23e4a2e8f6c71ecc7471f1b7",
     "components/safe_area_detail.js": "e65b127b17e7c8b489de1dc77076a4f3aa75f8522e676c937096afb2f896120e",
+    "components/media_query_detail.js": "62d6beabc89401fb0b8500f7542f86257dc0a62ec301b374f2edc4b97f1321d5",
     "components/orientation_builder_detail.js": "3a352ab629d8e30e4ed8e9e94a340af75780e44ceb0af6a14f05998c99cae032",
     "components/automatic_keep_alive_detail.js": "f2722c56046c712324446f31b39c7b597e8f9c61c0e4ba870391c10623653b29",
     "components/notifier_card.js": "b2c214c764d9d3bca910314305fd2c363dd9d4519b5b952ad47f6a965c1ec450",

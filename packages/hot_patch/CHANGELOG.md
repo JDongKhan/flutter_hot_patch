@@ -4,6 +4,8 @@
 
 **加法：`MethodChannel` 宿主通道；无破坏性协议变更。**
 
+- **`MediaQuery.removePadding` 支持**：JS 侧 `MediaQuery.removePadding` 是 MediaQuery 的命名构造，而 MediaQuery 在宿主没有包装类（只有取值代理）。新增宿主渲染节点 `MediaQueryRemovePadding`（`capabilities/media_query` 经 `registerWidgets` 注册）：用 `Builder` 取调用位置最近的 BuildContext，按四向开关调 `MediaQueryData.removePadding`，只改 padding、其余字段保留；上游无 MediaQuery 时原样渲染 child。JS 侧 `MediaQuery.removePadding(props)` 静态方法丢弃 `context` 后构造该节点。示例见 `example/lib/components/media_query_detail.dart`。
+
 - **`ClipRRect` 圆角修复**：宿主渲染只按数字读 `borderRadius`（`c.num_`），而 JS 侧 `BorderRadius.circular(14)` 的 `toJSON()` 是 `{radius: 14}` 对象 → 取不到值退回 `BorderRadius.zero`，补丁内所有圆角裁切（banner / 推广图等）变成直角。改为 `borderRadiusFromJson` 解析（`{radius}` / 四角），并兼容旧协议直接下发数字。
 
 - **宿主通道 `methodChannel`**：JS 侧 `MethodChannel.invokeMethod` 经唯一出口 `_app_host_.invoke('methodChannel', [name, codec, method, args])` 交给宿主，宿主再调真正的 Flutter `MethodChannel(name, codec).invokeMethod` → 原生（不绕过、不新开 JS↔原生通道）。

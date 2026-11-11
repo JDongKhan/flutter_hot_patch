@@ -229,6 +229,17 @@ const String mediaQueryJsSource = r'''
     static invertColorsOf(context) {
       return MediaQuery.__aspect(context, 'invertColors');
     }
+
+    // `MediaQuery.removePadding(...)`：Dart 里是 MediaQuery 的**命名构造**，产物按
+    // `MediaQuery.removePadding({...})` 调用。MediaQuery 在宿主没有包装类（宿主只
+    // 提供取值代理），所以这里把 props 转成宿主渲染节点 `MediaQueryRemovePadding`；
+    // `context` 不下发（JS 的 ctx 代理不是 Flutter BuildContext，宿主用调用位置最近
+    // 的 BuildContext 等价还原）。
+    static removePadding(props) {
+      var p = Object.assign({}, props);
+      delete p.context;
+      return new MediaQueryRemovePadding(p);
+    }
   }
 
   // 宿主回填写口（宿主经 evaluate 裸引用调用，故挂 G）。

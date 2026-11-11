@@ -4,6 +4,8 @@
 
 **加法：顶层函数支持（与成员函数共用形参 / 函数体翻译）；无破坏性协议变更。**
 
+- **元素位置的 SDK 命名构造（宿主无包装类）**：`MediaQuery.removePadding(...)` 这类组件命名构造此前因 `jsClassFileOf` 为空被渲染成 `new MediaQuery({...})`（丢失 child）。现在元素位置在类文件为空时，若 `flutterExportTypes()` 确有同名类，则按类渲染成 `X.ctor({...})` 并登记 flutter import，由该类的同名静态方法返回宿主渲染节点；值位置不放宽（仍走通用构造翻译，避免把值类当组件）。
+
 - **三方包枚举引用补 import**：`IndicatorResult.success` 这类枚举常量在值位置原样引用，但枚举不进类索引、也不经过类引用钩子，此前产物只有裸标识符（运行期 `ReferenceError`）。现在在**真实引用点**登记 import（`js_translator` 的 `symbolRefHook` → `element2js._symbolRefJs`），归属按新增的 `importedOwnerPackageOf` 判定：「符号声明所在包 ∩ 当前文件（库根，含 part）`import` 的包集合」唯一命中才采用（类 / 构造 / 静态调用 / 枚举 / 三方顶层值同一规则；此前只看全局名字索引，flutter.js 与三方模块同名时按命中顺序误选）。多个已 import 的包同名时出声回退、不猜；再通过 `thirdPartyJsExports`（扫描 `js/<package>.js` 的 `export`）确认模块**实际导出**了该符号，缺失时保留裸引用并告警（Dart 里有声明不代表 JS 模块导出，如 get 包的 `Transition`）。**不按产物文本扫描**：否则字符串 / 注释里的同名单词会误命中（如 `'*Transition · …'` 命中 get 包的 `Transition` 枚举），引入模块不存在的导出导致加载失败。JS 侧枚举值类由宿主模块以 SDK 同款形态导出（`.name/.index`、`toJSON()` 发成员名、`valueOf()` 返回成员名）。规则已写入手册「模块 / 导入」章节。
 
 - **异步回调继承句柄归属**：`Timer` / `Timer.periodic` / `Future` / `Future.delayed` / `Future.microtask` / `then` / `catchError` / `whenComplete` 在创建回调时捕获当前归属（组件实例 → 其 pageKey），执行时经 `__withAsyncOwner` 恢复；`G.__core` 新增 `__captureAsyncOwner` / `__withAsyncOwner` 供 `flutter.js` 值类区解构。异步回调里新建的 `GlobalKey` / Controller 随发起它的组件（或回退页面）释放，不再退化为永久 `global` 句柄；实例与页面均已销毁时丢弃并告警。

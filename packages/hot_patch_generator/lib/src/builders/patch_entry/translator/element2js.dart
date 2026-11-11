@@ -4,6 +4,7 @@ import 'package:build/build.dart' show log;
 
 import '../../shared/ctor_signatures.dart';
 import '../../shared/js_class_defs.dart';
+import '../../shared/runtime_global_types.dart';
 import '../../shared/source_index.dart';
 import '../../shared/source_location.dart';
 import 'js_translator.dart';
@@ -664,12 +665,24 @@ class ElementTranslateContext implements ExprRenderer {
     // `X.b({...})` 一比一发射，静态方法负责把构造名写进 `props.factory`）。
     // 带前缀（`p.Foo`）的引用一定指向模块导出，按类处理。
     final classFile = jsClassFileOf(name);
-    final asClass = token != name || classFile != null;
+    // flutter.js **实际导出**的同名类在元素位置也能承接命名构造：宿主包装类没有
+    // 覆盖到的 SDK 组件（如 `MediaQuery.removePadding`——MediaQuery 在宿主只有
+    // 取值代理、没有包装类）由该类的同名静态方法返回宿主渲染节点。只在元素位置
+    // 放宽；值位置仍走通用构造翻译，避免把值类当组件。
+    final flutterValueClass =
+        classFile == null && flutterExportTypes().contains(name);
+    final asClass = token != name || classFile != null || flutterValueClass;
     // JS 侧既没有这个类、宿主也没有同名 widget 渲染器时，元素 type 只能退化成
     // 字符串 —— 宿主注册表查不到必然失败。若类来自某个 pub 依赖包而宿主 `js/`
     // 没提供该包模块（`js/<package>.js`），构建期直接报错（每个类型一次）。
-    if (classFile == null) _reportMissingHostJs(name, nodeSourceOf(json));
-    _registerWidgetImport(token, name);
+    if (classFile == null && !flutterValueClass) {
+      _reportMissingHostJs(name, nodeSourceOf(json));
+    }
+    if (flutterValueClass) {
+      (usedWidgetPackages[nodeHelperPackage] ??= <String>{}).add(name);
+    } else {
+      _registerWidgetImport(token, name);
+    }
     return _renderCall(token, json, depth, asClass: asClass);
   }
 

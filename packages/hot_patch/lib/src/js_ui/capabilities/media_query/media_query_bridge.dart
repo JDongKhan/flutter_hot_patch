@@ -19,6 +19,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../services/js_runtime_manager.dart';
 import '../../../utils/hot_patch_log.dart';
+import '../../js_widget_registry.dart';
 import '../build_context/build_context_bridge.dart';
 
 /// ctx 句柄 id → {aspect(null=整份) → 上次下发的 payload 文本}。
@@ -56,6 +57,42 @@ String? _aspectOf(Object? payload) {
     if (a is String && a.isNotEmpty) return a;
   }
   return null;
+}
+
+/// `MediaQuery.removePadding` 的宿主渲染。
+///
+/// JS 侧 `MediaQuery.removePadding` 是 MediaQuery 的命名构造（宿主没有 MediaQuery
+/// 包装类），静态方法把 props 转成本类型（`MediaQueryRemovePadding`）：
+///   - `context` 不下发：JS 的 ctx 代理不是 Flutter `BuildContext`，这里用
+///     [Builder] 取**调用位置**最近的 BuildContext，语义与 Dart 版
+///     `MediaQuery.of(context).removePadding(...)` 等价；
+///   - 只改 padding（四向开关），其余字段原样保留；上层没有 MediaQuery 时直接渲染
+///     child，不造空数据。
+void registerMediaQueryWidgets(JsWidgetRegistry r) {
+  r.register('MediaQueryRemovePadding', (c) {
+    final removeLeft = c.bool_('removeLeft') ?? false;
+    final removeTop = c.bool_('removeTop') ?? false;
+    final removeRight = c.bool_('removeRight') ?? false;
+    final removeBottom = c.bool_('removeBottom') ?? false;
+    final child =
+        (c.children['child'] as Widget?) ?? const SizedBox.shrink();
+    return Builder(
+      key: c.key,
+      builder: (context) {
+        final data = MediaQuery.maybeOf(context);
+        if (data == null) return child;
+        return MediaQuery(
+          data: data.removePadding(
+            removeLeft: removeLeft,
+            removeTop: removeTop,
+            removeRight: removeRight,
+            removeBottom: removeBottom,
+          ),
+          child: child,
+        );
+      },
+    );
+  });
 }
 
 /// `MediaQuery` 相关的系统级变化 → 给所有订阅者回推新值。

@@ -18,6 +18,7 @@ import 'image_detail.dart';
 import 'input_detail.dart';
 import 'key_detail.dart';
 import 'layout_detail.dart';
+import 'media_query_detail.dart';
 import 'method_channel_detail.dart';
 import 'notifier_card.dart';
 import 'page_view_detail.dart';
@@ -236,6 +237,11 @@ class WidgetShowcase extends StatelessWidget {
         'SafeArea',
         '系统安全区内边距：四边开关 + minimum 强制留白 + viewPadding',
         'SafeAreaDetail',
+      ),
+      _Entry(
+        'MediaQuery.removePadding',
+        '按方向移除安全区 padding：外层 / 移除后子树的 padding 数值对照',
+        'MediaQueryDetail',
       ),
     ]),
     _Group('Tab 切换', [
@@ -467,6 +473,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'KeyboardListenerDetail': 'components/keyboard_listener_detail.js',
     'LayoutDetail': 'components/layout_detail.js',
     'LayoutMoreDetail': 'components/layout_more_detail.js',
+    'MediaQueryDetail': 'components/media_query_detail.js',
     'MethodChannelDetail': 'components/method_channel_detail.js',
     'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
     'NotifierCard': 'components/notifier_card.js',
@@ -563,6 +570,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'ImageIconDetail' => const ImageIconDetail(),
       'KeyboardListenerDetail' => const KeyboardListenerDetail(),
       'LayoutMoreDetail' => const LayoutMoreDetail(),
+      'MediaQueryDetail' => const MediaQueryDetail(),
       'MethodChannelDetail' => const MethodChannelDetail(channelTag: '_native'),
       'NestedScrollViewDetail' => const NestedScrollViewDetail(),
       'OrientationBuilderDetail' => const OrientationBuilderDetail(),
