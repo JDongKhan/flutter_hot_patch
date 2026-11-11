@@ -55,7 +55,14 @@ class JsRenderContext {
     required this.props,
     required this.children,
     this.key,
+    this.context,
   });
+
+  /// 本结点 renderer 所在位置的 [BuildContext]（宿主构建期提供）。
+  ///
+  /// 供「需要按调用位置取祖先」的渲染器使用（如 `MediaQuery.removePadding`）；
+  /// 值对象里就地还原的元素（[buildJsElement]）没有宿主构建位置，为 null。
+  final BuildContext? context;
 
   /// 本结点的元素 type（宿主 widget 类型名 / 未注册组件的具体类型名）。
   /// 供默认 builder 识别「这是哪个未注册组件」，按名走原生注入或占位。

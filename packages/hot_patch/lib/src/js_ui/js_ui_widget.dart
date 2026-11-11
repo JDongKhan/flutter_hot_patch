@@ -407,7 +407,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     //   1. 角标自带 IgnorePointer —— 不参与命中测试；
     //   2. Stack 用 StackFit.passthrough —— 原样透传父约束给内容，不改变既有布局
     //      （loose/expand 都会给内容另一套约束，Column 里会直接改变尺寸）。
-    final content = _renderStoreNode(_store, _rootId!, _pageKey);
+    final content = _renderStoreNode(_store, _rootId!, _pageKey, context);
     final buildTime = _buildTime;
     if (!widget.showBuildTime || buildTime == null) return content;
     return Stack(
@@ -529,7 +529,7 @@ class _JsUiContentState extends State<JsUiContent> {
       // 故不走 uiFallback（挂载真失败时由面板/页面的 onMountFailed 上报）。
       return const SizedBox.shrink();
     }
-    return _renderStoreNode(widget.store, rootId, widget.pageKey);
+    return _renderStoreNode(widget.store, rootId, widget.pageKey, context);
   }
 }
 
@@ -654,7 +654,12 @@ class _BuildTimeBadge extends StatelessWidget {
 ///   - **已注册的宿主类型** → 直接建真实 widget，**不再包一层 [_JsPlainNodeHost]**。
 ///     它的重建由最近的组件 wrapper 驱动（父级重建 → 子树 widget 重建，
 ///     Flutter 复用 element / State），与原生 Flutter 的更新模型同构。
-Widget _renderStoreNode(JsUiStore store, String id, String pageKey) {
+Widget _renderStoreNode(
+  JsUiStore store,
+  String id,
+  String pageKey, [
+  BuildContext? context,
+]) {
   final node = store.nodes[id];
   if (node == null) {
     return uiFallback('结点 "$id" 不在 store.nodes 中（页面 $pageKey）');
@@ -680,7 +685,8 @@ Widget _renderStoreNode(JsUiStore store, String id, String pageKey) {
     );
   }
   //其注册的组件
-  final widget = builder(_renderContextOf(store, node, pageKey, declared));
+  final widget =
+      builder(_renderContextOf(store, node, pageKey, declared, context));
   // key 统一由 renderer 传给**真实 widget**（`key: c.key`），运行时不做任何
   // wrapper 兜底：`GlobalKey.currentContext / currentState` 因此直接指向真实
   // widget 的 Element，与原生 Flutter 一致。renderer 漏传时出声提示补 key
@@ -705,18 +711,23 @@ JsRenderContext _renderContextOf(
   JsUiStore store,
   JsUiNode node,
   String pageKey,
-  Key? key,
-) {
+  Key? key, [
+  BuildContext? context,
+]) {
   final children = <String, Object?>{};
+  // 子树沿用**构造期**的 BuildContext：renderer 是 widget 构造函数（此刻子结点
+  // 还没有自己的 BuildContext），需要按调用位置取祖先的渲染器（如
+  // `MediaQuery.removePadding`）据此工作。
   // builder 展开结果（内部键 __items）：有序 widget 列表。
   if (node.childIds.isNotEmpty) {
     children['__items'] = [
-      for (final id in node.childIds) _renderStoreNode(store, id, pageKey),
+      for (final id in node.childIds)
+        _renderStoreNode(store, id, pageKey, context),
     ];
   }
   // 单值 widget slot：按 Dart 实参原名索引。
   for (final entry in node.propChildIds.entries) {
-    children[entry.key] = _renderStoreNode(store, entry.value, pageKey);
+    children[entry.key] = _renderStoreNode(store, entry.value, pageKey, context);
   }
   // 数组 widget slot。
   // 同一 key 同时存在单值与列表条目时（prop 形态从列表切到单值时，JS 侧会先下发
@@ -724,7 +735,8 @@ JsRenderContext _renderContextOf(
   for (final entry in node.propChildLists.entries) {
     if (node.propChildIds.containsKey(entry.key)) continue;
     children[entry.key] = [
-      for (final id in entry.value) _renderStoreNode(store, id, pageKey),
+      for (final id in entry.value)
+        _renderStoreNode(store, id, pageKey, context),
     ];
   }
   // delegate 等非 Widget slot 描述。
@@ -736,6 +748,7 @@ JsRenderContext _renderContextOf(
     props: node.props,
     children: children,
     key: key,
+    context: context,
   );
 }
 
