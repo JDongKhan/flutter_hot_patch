@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 b050c266） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 dbb8baf5） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'b050c266') { return; }
-  G.__jsuiVersion = 'b050c266';
+  if (G.__jsui && G.__jsuiVersion === 'dbb8baf5') { return; }
+  G.__jsuiVersion = 'dbb8baf5';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2805,9 +2805,22 @@ __defineProtoMember(Map.prototype, {
     if (!C) {
       throw new Error('jsui: component not found: ' + className + ' in ' + moduleKey);
     }
+    // 根组件构造期间的句柄（字段初始化里的 `GlobalKey()` / 控制器等）必须归属
+    // 根实例——与 __mount 里组件构造同一口径（__beginConstruct / __endConstruct）。
+    // 否则此刻 `__activeRoot` 尚未建立，句柄会退化成 scope=global，页面销毁时
+    // 既不随实例释放、也不随页面释放（真实泄漏）。
+    var ownFrame = __beginConstruct();
+    var inst;
+    try {
+      inst = new C(__parseProps(propsJson));
+    } catch (e) {
+      __endConstruct(null, ownFrame);
+      throw e;
+    }
+    __endConstruct(inst, ownFrame);
     // 根组件是 `Component` 实例（实例即元素），build 由宿主在它的组件 wrapper
     // 挂载时同步拉取（见 __pullComponent）。
-    __openRoot(pageKey, new C(__parseProps(propsJson)), null);
+    __openRoot(pageKey, inst, null);
     return true;
   }
 
