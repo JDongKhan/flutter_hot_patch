@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/media_query_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MediaQuery, MediaQueryData, Radius, SizedBox, StatelessWidget, Text, TextScaler, TextStyle, double } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MediaQuery, Padding, Radius, Row, SizedBox, StatelessWidget, Text, TextScaler, TextStyle, double } from '../flutter.js';
 
 // 组件 MediaQueryDetail
 export class MediaQueryDetail extends StatelessWidget {
@@ -14,7 +14,7 @@ export class MediaQueryDetail extends StatelessWidget {
       "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
-          "data": "MediaQuery.removePadding",
+          "data": "MediaQuery",
           "style": new TextStyle({
             "fontWeight": FontWeight.bold
           })
@@ -23,7 +23,7 @@ export class MediaQueryDetail extends StatelessWidget {
           "height": 4
         }))),
         (this.__k2 || (this.__k2 = new Text({
-          "data": "按方向移除安全区 padding，子树读到的是移除后的 MediaQueryData；本机 padding 全 0，移动端可见差异",
+          "data": "下面逐项显示 MediaQuery.of(context) 的全部字段：原生模式与 JS 热更模式各看一次即可对比。",
           "style": new TextStyle({
             "fontSize": 12,
             "color": Colors.black54
@@ -32,9 +32,9 @@ export class MediaQueryDetail extends StatelessWidget {
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 8
         }))),
-        (this.__k4 || (this.__k4 = new _PaddingReadout({
+        (this.__k4 || (this.__k4 = new _MediaQueryDump({
           "accent": Colors.orange,
-          "label": "外层（原始 padding）"
+          "label": "外层 MediaQuery.of(context)"
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 8
@@ -47,7 +47,7 @@ export class MediaQueryDetail extends StatelessWidget {
             "removeBottom": true,
             "removeLeft": true,
             "removeRight": true,
-            "child": (this.__k5 || (this.__k5 = new _PaddingReadout({
+            "child": (this.__k5 || (this.__k5 = new _MediaQueryDump({
               "accent": Colors.teal,
               "label": "removePadding 四边移除"
             })))
@@ -61,7 +61,7 @@ export class MediaQueryDetail extends StatelessWidget {
           "child": MediaQuery.removePadding({
             "context": context,
             "removeTop": true,
-            "child": (this.__k6 || (this.__k6 = new _PaddingReadout({
+            "child": (this.__k6 || (this.__k6 = new _MediaQueryDump({
               "accent": Colors.indigo,
               "label": "removePadding 仅移除 top"
             })))
@@ -80,7 +80,7 @@ export class MediaQueryDetail extends StatelessWidget {
           "height": 4
         }))),
         (this.__k9 || (this.__k9 = new Text({
-          "data": "下面这段文字被 MediaQuery 覆盖了 textScaler（1.6x），其余字段沿用外层",
+          "data": "下面这段文字被 MediaQuery 覆盖了 textScaler（1.6x），其余字段沿用外层；下方 dump 里可看到 textScaler 变化。",
           "style": new TextStyle({
             "fontSize": 12,
             "color": Colors.black54
@@ -91,17 +91,29 @@ export class MediaQueryDetail extends StatelessWidget {
         }))),
         new MediaQuery({
           "data": MediaQuery.of(context).copyWith({ "textScaler": TextScaler.linear({textScaleFactor: 1.6}) }),
-          "child": (this.__k10 || (this.__k10 = new Text({
-            "data": "被 MediaQuery 放大的文字（1.6x）"
-          })))
+          "child": new Column({
+            "crossAxisAlignment": CrossAxisAlignment.start,
+            "children": [
+              new Text({
+                "data": "被 MediaQuery 放大的文字（1.6x）"
+              }),
+              new SizedBox({
+                "height": 8
+              }),
+              new _MediaQueryDump({
+                "label": "MediaQuery(textScaler: 1.6)",
+                "accent": Colors.purple
+              })
+            ]
+          })
         })
       ]
     });
   }
 }
 
-// 组件 _PaddingReadout
-export class _PaddingReadout extends StatelessWidget {
+// 组件 _MediaQueryDump
+export class _MediaQueryDump extends StatelessWidget {
   constructor(args) {
     super(args);
     this.__applyProps(args);
@@ -111,14 +123,14 @@ export class _PaddingReadout extends StatelessWidget {
     this.accent = (args && args.accent !== undefined) ? args.accent : null;
   }
   build(context) {
-    const p = MediaQuery.paddingOf(context);
+    const mq = MediaQuery.of(context);
     return new Container({
       "width": double.infinity,
       "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
         "value": 8
       }))),
       "decoration": new BoxDecoration({
-        "color": this.accent.withValues({ "alpha": 0.12 }),
+        "color": this.accent.withValues({ "alpha": 0.08 }),
         "borderRadius": (this.__k1 || (this.__k1 = BorderRadius.all({
           "radius": Radius.circular({
             "radius": 6
@@ -129,18 +141,63 @@ export class _PaddingReadout extends StatelessWidget {
         "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [
           new Text({
-            "style": (this.__k2 || (this.__k2 = new TextStyle({
-              "fontSize": 12
-            }))),
-            "data": this.label + ": L" + p.left.toStringAsFixed(0) + " T" + p.top.toStringAsFixed(0) + " " + "R" + p.right.toStringAsFixed(0) + " B" + p.bottom.toStringAsFixed(0)
+            "style": new TextStyle({
+              "fontSize": 12,
+              "fontWeight": FontWeight.bold,
+              "color": this.accent
+            }),
+            "data": this.label
           }),
-          (this.__k3 || (this.__k3 = new SizedBox({
+          (this.__k2 || (this.__k2 = new SizedBox({
             "height": 4
           }))),
-          new Container({
-            "width": double.infinity,
-            "height": (p.top === 0) ? 4 : p.top,
-            "color": this.accent
+          this._row("size", mq.size.width.toStringAsFixed(1) + " × " + mq.size.height.toStringAsFixed(1)),
+          this._row("padding", this._edges(mq.padding)),
+          this._row("viewPadding", this._edges(mq.viewPadding)),
+          this._row("viewInsets", this._edges(mq.viewInsets)),
+          this._row("devicePixelRatio", mq.devicePixelRatio.toStringAsFixed(2)),
+          this._row("textScaler", mq.textScaler.scale(1).toStringAsFixed(2)),
+          this._row("orientation", mq.orientation),
+          this._row("platformBrightness", mq.platformBrightness),
+          this._row("navigationMode", mq.navigationMode),
+          this._row("alwaysUse24HourFormat", mq.alwaysUse24HourFormat),
+          this._row("accessibleNavigation", mq.accessibleNavigation),
+          this._row("disableAnimations", mq.disableAnimations),
+          this._row("invertColors", mq.invertColors),
+          this._row("highContrast", mq.highContrast),
+          this._row("boldText", mq.boldText)
+        ]
+      })
+    });
+  }
+  _edges(e) {
+    return "L" + e.left.toStringAsFixed(1) + " T" + e.top.toStringAsFixed(1) + " " + "R" + e.right.toStringAsFixed(1) + " B" + e.bottom.toStringAsFixed(1);
+  }
+  _row(name, value) {
+    return new Padding({
+      "padding": (this.__k3 || (this.__k3 = EdgeInsets.only({
+        "top": 2
+      }))),
+      "child": new Row({
+        "crossAxisAlignment": CrossAxisAlignment.start,
+        "children": [
+          new SizedBox({
+            "width": 150,
+            "child": new Text({
+              "style": (this.__k4 || (this.__k4 = new TextStyle({
+                "color": Colors.black54,
+                "fontSize": 11
+              }))),
+              "data": name
+            })
+          }),
+          new Expanded({
+            "child": new Text({
+              "style": (this.__k5 || (this.__k5 = new TextStyle({
+                "fontSize": 11
+              }))),
+              "data": value
+            })
           })
         ]
       })
