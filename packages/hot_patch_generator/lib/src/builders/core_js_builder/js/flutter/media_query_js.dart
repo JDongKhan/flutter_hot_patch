@@ -15,15 +15,70 @@
 //     组件——与 Flutter 的 `dependOnInheritedWidgetOfExactType(aspect:)` 一致
 //     （只用了 `sizeOf` 的组件不会因字号变化而重建）。
 //
-// 缓存与读取逻辑全部收在 `MediaQuery` 类里（静态字段 = 缓存，静态方法 = 读取），
-// 对外只有 `MediaQuery.of/sizeOf/...`；`G.__setMediaQuery` 是宿主回填同一份缓存
-// 的唯一写口。缓存不是第二套数据源，而是「同步读」在异步桥上的必要底座——build
-// 里 `mq.size.width` 必须同步拿到值，而 JS→宿主只能返回 Promise。
-//
-// 粒度是 **ctx（组件实例）**：同一页面不同位置的组件各读各自 BuildContext 上的
-// MediaQuery，页内嵌套 `MediaQuery` 覆盖也各归各位。
+// 缓存与读取逻辑收在 `MediaQuery` 类上（静态字段 = 缓存，静态方法 = 读取）。
+// **MediaQuery 的 JS 类是手写 Component 子类**（本文件）：宿主注册 `'MediaQuery'`
+// 只负责渲染，类登记在 `logicWidgetTypes`（生成器不再重复生成同名包装类）。
+// 命名构造 `removePadding / removeViewInsets / removeViewPadding` 与其它组件同构：
+// 静态方法把构造名写进 `props.factory`，宿主 renderer 按 factory 分派。
 const String mediaQueryJsSource = r'''
-  export class MediaQuery {
+  // `MediaQueryData`：宿主回填的整份数据 / `MediaQuery(data: ...)` 的入参。
+  // 字段名与宿主 media_query_bridge 的 `_readAspect(null)` 一一对应；缺省值同
+  // Flutter `MediaQueryData()` 的默认构造。`copyWith` 支持
+  // `MediaQuery.of(context).copyWith(textScaler: ...)` 这类常见写法（函数属性
+  // 不参与 JSON，跨桥时自然被丢弃）。
+  export class MediaQueryData {
+    constructor(props) {
+      var p = props || {};
+      var zero = new EdgeInsets({});
+      this.size = p.size != null ? p.size : new Size({ width: 0, height: 0 });
+      this.padding = p.padding != null ? p.padding : zero;
+      this.viewPadding = p.viewPadding != null ? p.viewPadding : zero;
+      this.viewInsets = p.viewInsets != null ? p.viewInsets : zero;
+      this.devicePixelRatio = p.devicePixelRatio != null ? p.devicePixelRatio : 1;
+      var scaler = p.textScaler;
+      if (scaler == null && p.textScaleFactor != null) {
+        scaler = TextScaler.linear({ textScaleFactor: p.textScaleFactor });
+      }
+      this.textScaler = scaler != null ? scaler : TextScaler.noScaling;
+      this.textScaleFactor = this.textScaler.scale ? this.textScaler.scale(1) : 1;
+      this.orientation = p.orientation != null ? p.orientation : Orientation.portrait;
+      this.platformBrightness = p.platformBrightness != null
+          ? p.platformBrightness
+          : Brightness.light;
+      this.alwaysUse24HourFormat = p.alwaysUse24HourFormat === true;
+      this.accessibleNavigation = p.accessibleNavigation === true;
+      this.disableAnimations = p.disableAnimations === true;
+      this.invertColors = p.invertColors === true;
+      this.highContrast = p.highContrast === true;
+      this.boldText = p.boldText === true;
+      this.navigationMode = p.navigationMode != null
+          ? p.navigationMode
+          : NavigationMode.traditional;
+    }
+    copyWith(args) {
+      var a = args || {};
+      return new MediaQueryData(Object.assign({}, this, a));
+    }
+  }
+
+  // ===== MediaQuery =====
+  //
+  // 普通组件（宿主注册 `'MediaQuery'` → 宿主 renderer），但 JS 类由本片段手写并
+  // 登记在 `logicWidgetTypes`（生成器不再重复生成同名包装类）：
+  //   - 静态取值 API（`of/sizeOf/...`）返回 `MediaQueryData`；
+  //   - 命名构造静态方法与其它组件同构：写 `factory` 交给宿主 renderer 分派。
+  export class MediaQuery extends Component {
+    // 命名构造：与宿主包装类生成的静态方法完全同形（`SizedBox.shrink` 同款）。
+    static removePadding(props) {
+      return new MediaQuery(Object.assign({}, props, { factory: 'removePadding' }));
+    }
+    static removeViewInsets(props) {
+      return new MediaQuery(Object.assign({}, props, { factory: 'removeViewInsets' }));
+    }
+    static removeViewPadding(props) {
+      return new MediaQuery(Object.assign({}, props, { factory: 'removeViewPadding' }));
+    }
+
     // ctx 句柄 id -> {
     //   anchor, all, allKey, vals: {aspect: value}, keys: {aspect: key},
     //   pending: {aspect: true}, missing: {aspect: true}
@@ -58,28 +113,9 @@ const String mediaQueryJsSource = r'''
       return MediaQuery.__fallback;
     }
 
-    // 宿主下发的 JSON → JS 侧 MediaQueryData 同形对象（aspect = null 时整份）。
+    // 宿主下发的 JSON → JS 侧 MediaQueryData（字段齐全，含 copyWith）。
     static __build(json) {
-      var s = json.size || { width: 0, height: 0 };
-      var f = json.textScaleFactor != null ? json.textScaleFactor : 1;
-      return {
-        size: new Size({ width: s.width, height: s.height }),
-        padding: json.padding,
-        viewPadding: json.viewPadding,
-        viewInsets: json.viewInsets,
-        devicePixelRatio: json.devicePixelRatio,
-        textScaleFactor: f,
-        textScaler: TextScaler.linear({ textScaleFactor: f }),
-        orientation: json.orientation,
-        platformBrightness: json.platformBrightness,
-        alwaysUse24HourFormat: json.alwaysUse24HourFormat,
-        accessibleNavigation: json.accessibleNavigation,
-        disableAnimations: json.disableAnimations,
-        invertColors: json.invertColors,
-        highContrast: json.highContrast,
-        boldText: json.boldText,
-        navigationMode: json.navigationMode,
-      };
+      return new MediaQueryData(json);
     }
 
     // 单 aspect 的宿主原值 → 本端值（size 包成 Size、textScaler 包出 scale 方法，
@@ -228,17 +264,6 @@ const String mediaQueryJsSource = r'''
     }
     static invertColorsOf(context) {
       return MediaQuery.__aspect(context, 'invertColors');
-    }
-
-    // `MediaQuery.removePadding(...)`：Dart 里是 MediaQuery 的**命名构造**，产物按
-    // `MediaQuery.removePadding({...})` 调用。MediaQuery 在宿主没有包装类（宿主只
-    // 提供取值代理），所以这里把 props 转成宿主渲染节点 `MediaQueryRemovePadding`；
-    // `context` 不下发（JS 的 ctx 代理不是 Flutter BuildContext，宿主用调用位置最近
-    // 的 BuildContext 等价还原）。
-    static removePadding(props) {
-      var p = Object.assign({}, props);
-      delete p.context;
-      return new MediaQueryRemovePadding(p);
     }
   }
 

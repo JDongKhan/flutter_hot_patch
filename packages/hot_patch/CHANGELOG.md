@@ -4,7 +4,7 @@
 
 **加法：`MethodChannel` 宿主通道；无破坏性协议变更。**
 
-- **`MediaQuery.removePadding` 支持**：JS 侧 `MediaQuery.removePadding` 是 MediaQuery 的命名构造，而 MediaQuery 在宿主没有包装类（只有取值代理）。新增宿主渲染节点 `MediaQueryRemovePadding`（`capabilities/media_query` 经 `registerWidgets` 注册）：用 `Builder` 取调用位置最近的 BuildContext，按四向开关调 `MediaQueryData.removePadding`，只改 padding、其余字段保留；上游无 MediaQuery 时原样渲染 child。JS 侧 `MediaQuery.removePadding(props)` 静态方法丢弃 `context` 后构造该节点。示例见 `example/lib/components/media_query_detail.dart`。
+- **`MediaQuery` 组件（含 `removePadding` / `removeViewPadding` / `removeViewInsets`）**：按普通宿主组件接入——宿主注册 `'MediaQuery'` 后生成器产出 `export class MediaQuery extends Component`，命名构造自动写成同名静态方法并带 `factory`（与 `SizedBox.shrink` 同构）；renderer 按 `factory` 分派：无名构造用 `data` 还原 `MediaQueryData`（JS 侧 `MediaQueryData` 值类 + `copyWith`，`MediaQuery.of()` 返回它），`remove*` 用调用位置的 BuildContext 直接调 Flutter 同名 API。为此 `JsRenderContext` 新增 `context`（宿主构建期传入并沿子树透传）；`JsBuildContext` 补 `toJSON()`（代理含组件实例引用，不可直接跨桥序列化）。示例见 `example/lib/components/media_query_detail.dart`。
 
 - **`ClipRRect` 圆角修复**：宿主渲染只按数字读 `borderRadius`（`c.num_`），而 JS 侧 `BorderRadius.circular(14)` 的 `toJSON()` 是 `{radius: 14}` 对象 → 取不到值退回 `BorderRadius.zero`，补丁内所有圆角裁切（banner / 推广图等）变成直角。改为 `borderRadiusFromJson` 解析（`{radius}` / 四角），并兼容旧协议直接下发数字。
 

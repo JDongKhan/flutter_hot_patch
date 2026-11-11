@@ -59,41 +59,128 @@ String? _aspectOf(Object? payload) {
   return null;
 }
 
-/// `MediaQuery.removePadding` 的宿主渲染。
+/// `MediaQuery` 组件（含 `removePadding` / `removeViewPadding` /
+/// `removeViewInsets` 三个命名构造）的宿主渲染。
 ///
-/// JS 侧 `MediaQuery.removePadding` 是 MediaQuery 的命名构造（宿主没有 MediaQuery
-/// 包装类），静态方法把 props 转成本类型（`MediaQueryRemovePadding`）：
-///   - `context` 不下发：JS 的 ctx 代理不是 Flutter `BuildContext`，这里用
-///     [Builder] 取**调用位置**最近的 BuildContext，语义与 Dart 版
-///     `MediaQuery.of(context).removePadding(...)` 等价；
-///   - 只改 padding（四向开关），其余字段原样保留；上层没有 MediaQuery 时直接渲染
-///     child，不造空数据。
+/// 它就是**普通宿主组件**：JS 类由宿主包装类生成（`export class MediaQuery
+/// extends Component`），命名构造由生成器写成同名静态方法并带 `factory`——
+/// 与 `SizedBox.shrink` 等完全同构。renderer 按 `factory` 分派到 Flutter 对应
+/// API，语义与原生一致：
+///   - 无名构造 → `MediaQuery(data:, child:)`；
+///   - `remove*` → 用**调用位置**的 BuildContext 调 Flutter 同名方法（
+///     [JsRenderContext.context]，宿主构建期传入并沿子树透传）。
 void registerMediaQueryWidgets(JsWidgetRegistry r) {
-  r.register('MediaQueryRemovePadding', (c) {
-    final removeLeft = c.bool_('removeLeft') ?? false;
-    final removeTop = c.bool_('removeTop') ?? false;
-    final removeRight = c.bool_('removeRight') ?? false;
-    final removeBottom = c.bool_('removeBottom') ?? false;
+  r.register('MediaQuery', (c) {
     final child =
         (c.children['child'] as Widget?) ?? const SizedBox.shrink();
-    return Builder(
-      key: c.key,
-      builder: (context) {
-        final data = MediaQuery.maybeOf(context);
-        if (data == null) return child;
-        return MediaQuery(
-          data: data.removePadding(
+    final factory = c.str('factory');
+    if (factory == 'removePadding' ||
+        factory == 'removeViewPadding' ||
+        factory == 'removeViewInsets') {
+      final context = c.context;
+      if (context == null) {
+        HotPatchLog.warn(
+          'js_ui: MediaQuery.$factory 取不到 BuildContext，按原样渲染 child',
+        );
+        return child;
+      }
+      final removeLeft = c.bool_('removeLeft') ?? false;
+      final removeTop = c.bool_('removeTop') ?? false;
+      final removeRight = c.bool_('removeRight') ?? false;
+      final removeBottom = c.bool_('removeBottom') ?? false;
+      switch (factory) {
+        case 'removePadding':
+          return MediaQuery.removePadding(
+            key: c.key,
+            context: context,
             removeLeft: removeLeft,
             removeTop: removeTop,
             removeRight: removeRight,
             removeBottom: removeBottom,
-          ),
-          child: child,
-        );
-      },
+            child: child,
+          );
+        case 'removeViewPadding':
+          return MediaQuery.removeViewPadding(
+            key: c.key,
+            context: context,
+            removeLeft: removeLeft,
+            removeTop: removeTop,
+            removeRight: removeRight,
+            removeBottom: removeBottom,
+            child: child,
+          );
+        default:
+          return MediaQuery.removeViewInsets(
+            key: c.key,
+            context: context,
+            removeLeft: removeLeft,
+            removeTop: removeTop,
+            removeRight: removeRight,
+            removeBottom: removeBottom,
+            child: child,
+          );
+      }
+    }
+    final data = _mediaQueryDataFromJson(c.map('data'));
+    return MediaQuery(
+      key: c.key,
+      data: data ?? const MediaQueryData(),
+      child: child,
     );
   });
 }
+
+/// JS 侧 `MediaQueryData`（`{size, padding, viewPadding, viewInsets,
+/// devicePixelRatio, textScaler, orientation, platformBrightness, 各开关}`）→
+/// Flutter `MediaQueryData`。字段形态与 [media_query_js] 的 `MediaQueryData` 类
+/// 一一对应；缺省值同 Flutter `MediaQueryData()` 的默认构造。
+MediaQueryData? _mediaQueryDataFromJson(Map<String, dynamic>? json) {
+  if (json == null || json.isEmpty) return null;
+  double factor = 1;
+  final scaler = json['textScaler'];
+  if (scaler is Map && scaler['linear'] is num) {
+    factor = (scaler['linear'] as num).toDouble();
+  }
+  if (json['textScaleFactor'] is num) {
+    factor = (json['textScaleFactor'] as num).toDouble();
+  }
+  return MediaQueryData(
+    size: _sizeOf(json['size']),
+    devicePixelRatio: (json['devicePixelRatio'] as num?)?.toDouble() ?? 1,
+    textScaler: TextScaler.linear(factor),
+    platformBrightness: json['platformBrightness'] == 'dark'
+        ? Brightness.dark
+        : Brightness.light,
+    padding: _edgesOf(json['padding']),
+    viewPadding: _edgesOf(json['viewPadding']),
+    viewInsets: _edgesOf(json['viewInsets']),
+    alwaysUse24HourFormat: json['alwaysUse24HourFormat'] == true,
+    accessibleNavigation: json['accessibleNavigation'] == true,
+    disableAnimations: json['disableAnimations'] == true,
+    invertColors: json['invertColors'] == true,
+    highContrast: json['highContrast'] == true,
+    boldText: json['boldText'] == true,
+    navigationMode: json['navigationMode'] == 'directional'
+        ? NavigationMode.directional
+        : NavigationMode.traditional,
+  );
+}
+
+Size _sizeOf(Object? v) => v is Map && v['width'] is num && v['height'] is num
+    ? Size(
+        (v['width'] as num).toDouble(),
+        (v['height'] as num).toDouble(),
+      )
+    : Size.zero;
+
+EdgeInsets _edgesOf(Object? v) => v is Map
+    ? EdgeInsets.fromLTRB(
+        (v['left'] as num?)?.toDouble() ?? 0,
+        (v['top'] as num?)?.toDouble() ?? 0,
+        (v['right'] as num?)?.toDouble() ?? 0,
+        (v['bottom'] as num?)?.toDouble() ?? 0,
+      )
+    : EdgeInsets.zero;
 
 /// `MediaQuery` 相关的系统级变化 → 给所有订阅者回推新值。
 ///

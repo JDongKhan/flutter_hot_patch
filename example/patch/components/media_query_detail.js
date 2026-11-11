@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/media_query_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MediaQuery, Radius, SizedBox, StatelessWidget, Text, TextStyle, double } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MediaQuery, MediaQueryData, Radius, SizedBox, StatelessWidget, Text, TextScaler, TextStyle, double } from '../flutter.js';
 
 // 组件 MediaQueryDetail
 export class MediaQueryDetail extends StatelessWidget {
@@ -66,6 +66,34 @@ export class MediaQueryDetail extends StatelessWidget {
               "label": "removePadding 仅移除 top"
             })))
           })
+        }),
+        (this.__k7 || (this.__k7 = new SizedBox({
+          "height": 12
+        }))),
+        (this.__k8 || (this.__k8 = new Text({
+          "data": "MediaQuery(data: ...)：覆盖子树读到的数据",
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
+        }))),
+        (this.__k1 || (this.__k1 = new SizedBox({
+          "height": 4
+        }))),
+        (this.__k9 || (this.__k9 = new Text({
+          "data": "下面这段文字被 MediaQuery 覆盖了 textScaler（1.6x），其余字段沿用外层",
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
+        }))),
+        (this.__k3 || (this.__k3 = new SizedBox({
+          "height": 8
+        }))),
+        new MediaQuery({
+          "data": MediaQuery.of(context).copyWith({ "textScaler": TextScaler.linear({textScaleFactor: 1.6}) }),
+          "child": (this.__k10 || (this.__k10 = new Text({
+            "data": "被 MediaQuery 放大的文字（1.6x）"
+          })))
         })
       ]
     });

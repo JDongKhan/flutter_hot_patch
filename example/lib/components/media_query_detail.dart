@@ -47,6 +47,21 @@ class MediaQueryDetail extends StatelessWidget {
             child: const _PaddingReadout(label: 'removePadding 仅移除 top', accent: Colors.indigo),
           ),
         ),
+        const SizedBox(height: 12),
+        const Text(
+          'MediaQuery(data: ...)：覆盖子树读到的数据',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          '下面这段文字被 MediaQuery 覆盖了 textScaler（1.6x），其余字段沿用外层',
+          style: TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        const SizedBox(height: 8),
+        MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.6)),
+          child: const Text('被 MediaQuery 放大的文字（1.6x）'),
+        ),
       ],
     );
   }

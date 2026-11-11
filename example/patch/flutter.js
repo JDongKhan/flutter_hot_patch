@@ -655,10 +655,12 @@ export class Material extends Component {
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
-export class MediaQueryRemovePadding extends Component {
+export class MediaQuery extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  static __fnProps = null;
+  static removePadding(props) { return new MediaQuery(Object.assign({}, props, { factory: 'removePadding' })); }
+  static removeViewInsets(props) { return new MediaQuery(Object.assign({}, props, { factory: 'removeViewInsets' })); }
+  static removeViewPadding(props) { return new MediaQuery(Object.assign({}, props, { factory: 'removeViewPadding' })); }
 }
 
 export class NotificationListener extends Component {
@@ -8734,224 +8736,235 @@ G.__keyEvent = function (handleId, eventJson) {
   }));
 };
 
-export class MediaQuery {
-  // ctx 句柄 id -> {
-  //   anchor, all, allKey, vals: {aspect: value}, keys: {aspect: key},
-  //   pending: {aspect: true}, missing: {aspect: true}
-  // }
-  static __byContext = {};
-  // 最近一次解析到的整份真值：新 ctx 首帧尚未回填时先读它（同一运行时同一窗口，
-  // 基本等价），避免「先显示 0x0 再校正」的闪一帧。
-  static __lastFull = null;
-  // 真值到达前的兜底常量（构造一次）：字段齐全，避免读崩。
-  static __fallback = null;
-
-  static __empty() {
-    if (MediaQuery.__fallback == null) {
-      MediaQuery.__fallback = MediaQuery.__build({
-        size: { width: 0, height: 0 },
-        padding: { left: 0, top: 0, right: 0, bottom: 0 },
-        viewPadding: { left: 0, top: 0, right: 0, bottom: 0 },
-        viewInsets: { left: 0, top: 0, right: 0, bottom: 0 },
-        devicePixelRatio: 1,
-        textScaleFactor: 1,
-        orientation: Orientation.portrait,
-        platformBrightness: Brightness.light,
-        alwaysUse24HourFormat: false,
-        accessibleNavigation: false,
-        disableAnimations: false,
-        invertColors: false,
-        highContrast: false,
-        boldText: false,
-        navigationMode: NavigationMode.traditional,
-      });
+// `MediaQueryData`：宿主回填的整份数据 / `MediaQuery(data: ...)` 的入参。
+// 字段名与宿主 media_query_bridge 的 `_readAspect(null)` 一一对应；缺省值同
+// Flutter `MediaQueryData()` 的默认构造。`copyWith` 支持
+// `MediaQuery.of(context).copyWith(textScaler: ...)` 这类常见写法（函数属性
+// 不参与 JSON，跨桥时自然被丢弃）。
+export class MediaQueryData {
+  constructor(props) {
+    var p = props || {};
+    var zero = new EdgeInsets({});
+    this.size = p.size != null ? p.size : new Size({ width: 0, height: 0 });
+    this.padding = p.padding != null ? p.padding : zero;
+    this.viewPadding = p.viewPadding != null ? p.viewPadding : zero;
+    this.viewInsets = p.viewInsets != null ? p.viewInsets : zero;
+    this.devicePixelRatio = p.devicePixelRatio != null ? p.devicePixelRatio : 1;
+    var scaler = p.textScaler;
+    if (scaler == null && p.textScaleFactor != null) {
+      scaler = TextScaler.linear({ textScaleFactor: p.textScaleFactor });
     }
-    return MediaQuery.__fallback;
+    this.textScaler = scaler != null ? scaler : TextScaler.noScaling;
+    this.textScaleFactor = this.textScaler.scale ? this.textScaler.scale(1) : 1;
+    this.orientation = p.orientation != null ? p.orientation : Orientation.portrait;
+    this.platformBrightness = p.platformBrightness != null
+    ? p.platformBrightness
+    : Brightness.light;
+    this.alwaysUse24HourFormat = p.alwaysUse24HourFormat === true;
+    this.accessibleNavigation = p.accessibleNavigation === true;
+    this.disableAnimations = p.disableAnimations === true;
+    this.invertColors = p.invertColors === true;
+    this.highContrast = p.highContrast === true;
+    this.boldText = p.boldText === true;
+    this.navigationMode = p.navigationMode != null
+    ? p.navigationMode
+    : NavigationMode.traditional;
   }
-
-  // 宿主下发的 JSON → JS 侧 MediaQueryData 同形对象（aspect = null 时整份）。
-  static __build(json) {
-    var s = json.size || { width: 0, height: 0 };
-    var f = json.textScaleFactor != null ? json.textScaleFactor : 1;
-    return {
-      size: new Size({ width: s.width, height: s.height }),
-      padding: json.padding,
-      viewPadding: json.viewPadding,
-      viewInsets: json.viewInsets,
-      devicePixelRatio: json.devicePixelRatio,
-      textScaleFactor: f,
-      textScaler: TextScaler.linear({ textScaleFactor: f }),
-      orientation: json.orientation,
-      platformBrightness: json.platformBrightness,
-      alwaysUse24HourFormat: json.alwaysUse24HourFormat,
-      accessibleNavigation: json.accessibleNavigation,
-      disableAnimations: json.disableAnimations,
-      invertColors: json.invertColors,
-      highContrast: json.highContrast,
-      boldText: json.boldText,
-      navigationMode: json.navigationMode,
-    };
-  }
-
-  // 单 aspect 的宿主原值 → 本端值（size 包成 Size、textScaler 包出 scale 方法，
-  // 其余是标量 / 已同形的对象，原样用）。
-  static __decode(aspect, raw) {
-    if (aspect == null) { return MediaQuery.__build(raw); }
-    if (aspect === 'size') {
-      return new Size({ width: raw.width, height: raw.height });
-    }
-    if (aspect === 'textScaler') {
-      return TextScaler.linear({ textScaleFactor: raw.__factor });
-    }
-    return raw;
-  }
-
-  static __entry(id, context) {
-    var e = MediaQuery.__byContext[id];
-    if (!e) {
-      e = MediaQuery.__byContext[id] = {
-        anchor: context ? context.__anchor : null,
-        all: null, allKey: '',
-        vals: {}, keys: {}, pending: {}, missing: {},
-      };
-    }
-    return e;
-  }
-
-  // 唯一写口：宿主回填 / 变化回推。
-  //   aspect = null → 整份数据；否则只更新该 aspect。
-  //   **与缓存不同才标脏**（一次真值变化只重建一次）。
-  static __set(ctxId, aspect, raw) {
-    var id = String(ctxId);
-    var e = MediaQuery.__entry(id, null);
-    if (raw == null) {
-      // 该位置上方没有 MediaQuery：标记后不再重试，避免每次 build 都发桥消息。
-      e.missing[aspect] = true;
-      return;
-    }
-    var key = JSON.stringify(raw);
-    if (aspect == null) {
-      if (e.allKey === key) { return; }
-      e.allKey = key;
-      e.all = MediaQuery.__build(raw);
-      MediaQuery.__lastFull = e.all;
-    } else {
-      if (e.keys[aspect] === key) { return; }
-      e.keys[aspect] = key;
-      e.vals[aspect] = MediaQuery.__decode(aspect, raw);
-    }
-    var a = e.anchor;
-    if (a && a.__unmounted) {
-      // 组件已卸载（句柄即将/已被释放）：丢掉这条缓存，不再标脏。
-      delete MediaQuery.__byContext[id];
-      return;
-    }
-    if (a) { __cc.__markDirty(a); }
-  }
-
-  // 按 aspect 向宿主取一次值（每个 aspect 只取一次，之后靠回推）。
-  static __fetch(e, id, aspect) {
-    var slot = aspect == null ? 'all' : aspect;
-    if (e.pending[slot] || e.missing[slot]) { return; }
-    e.pending[slot] = true;
-    try {
-      var p = __handleOp(id, 'mediaQuery',
-      aspect == null ? null : { 'aspect': aspect });
-      if (p && typeof p.then === 'function') {
-        p.then(function (raw) {
-          e.pending[slot] = false;
-          MediaQuery.__set(id, aspect, raw);
-        }, function () { e.pending[slot] = false; });
-      } else {
-        e.pending[slot] = false;
-      }
-    } catch (err) {
-      e.pending[slot] = false;
-    }
-  }
-
-  // `MediaQuery.of(context)`：整份数据（依赖全部 aspect）。
-  static __of(context) {
-    var id = null;
-    try { id = context.__handle(); } catch (err) { id = null; }
-    if (id == null) { return MediaQuery.__lastFull || MediaQuery.__empty(); }
-    var e = MediaQuery.__entry(id, context);
-    if (e.all == null) { MediaQuery.__fetch(e, id, null); }
-    return e.all || MediaQuery.__lastFull || MediaQuery.__empty();
-  }
-
-  // `MediaQuery.<x>Of(context)`：只依赖该 aspect。
-  static __aspect(context, aspect) {
-    var id = null;
-    try { id = context.__handle(); } catch (err) { id = null; }
-    if (id == null) { return (MediaQuery.__lastFull || MediaQuery.__empty())[aspect]; }
-    var e = MediaQuery.__entry(id, context);
-    var v = e.vals[aspect];
-    if (v === undefined) { MediaQuery.__fetch(e, id, aspect); }
-    if (v !== undefined) { return v; }
-    // 该 aspect 还没回来：从整份数据 / 最近值 / 兜底里取同名字段投影。
-    var src = e.all || MediaQuery.__lastFull || MediaQuery.__empty();
-    return src[aspect];
-  }
-
-  // Dart 的静态取值方法：每个都按自己的 aspect 代理（取值 + 重建粒度都对齐）。
-  static of(context) { return MediaQuery.__of(context); }
-  // `maybeOf` 语义：没有 MediaQuery 祖先时返回 null；这里退化为兜底对象
-  // （字段齐全，读不崩），与 `of` 同源。
-  static maybeOf(context) { return MediaQuery.__of(context); }
-  static sizeOf(context) { return MediaQuery.__aspect(context, 'size'); }
-  static paddingOf(context) { return MediaQuery.__aspect(context, 'padding'); }
-  static viewPaddingOf(context) {
-    return MediaQuery.__aspect(context, 'viewPadding');
-  }
-  static viewInsetsOf(context) {
-    return MediaQuery.__aspect(context, 'viewInsets');
-  }
-  static devicePixelRatioOf(context) {
-    return MediaQuery.__aspect(context, 'devicePixelRatio');
-  }
-  static textScalerOf(context) {
-    return MediaQuery.__aspect(context, 'textScaler');
-  }
-  static orientationOf(context) {
-    return MediaQuery.__aspect(context, 'orientation');
-  }
-  static platformBrightnessOf(context) {
-    return MediaQuery.__aspect(context, 'platformBrightness');
-  }
-  static navigationModeOf(context) {
-    return MediaQuery.__aspect(context, 'navigationMode');
-  }
-  static alwaysUse24HourFormatOf(context) {
-    return MediaQuery.__aspect(context, 'alwaysUse24HourFormat');
-  }
-  static accessibleNavigationOf(context) {
-    return MediaQuery.__aspect(context, 'accessibleNavigation');
-  }
-  static boldTextOf(context) {
-    return MediaQuery.__aspect(context, 'boldText');
-  }
-  static disableAnimationsOf(context) {
-    return MediaQuery.__aspect(context, 'disableAnimations');
-  }
-  static highContrastOf(context) {
-    return MediaQuery.__aspect(context, 'highContrast');
-  }
-  static invertColorsOf(context) {
-    return MediaQuery.__aspect(context, 'invertColors');
-  }
-
-  // `MediaQuery.removePadding(...)`：Dart 里是 MediaQuery 的**命名构造**，产物按
-  // `MediaQuery.removePadding({...})` 调用。MediaQuery 在宿主没有包装类（宿主只
-  // 提供取值代理），所以这里把 props 转成宿主渲染节点 `MediaQueryRemovePadding`；
-  // `context` 不下发（JS 的 ctx 代理不是 Flutter BuildContext，宿主用调用位置最近
-  // 的 BuildContext 等价还原）。
-  static removePadding(props) {
-    var p = Object.assign({}, props);
-    delete p.context;
-    return new MediaQueryRemovePadding(p);
+  copyWith(args) {
+    var a = args || {};
+    return new MediaQueryData(Object.assign({}, this, a));
   }
 }
+
+// ===== MediaQuery 静态取值 API =====
+// ctx 句柄 id -> {
+//   anchor, all, allKey, vals: {aspect: value}, keys: {aspect: key},
+//   pending: {aspect: true}, missing: {aspect: true}
+// }
+MediaQuery.__byContext = {};
+// 最近一次解析到的整份真值：新 ctx 首帧尚未回填时先读它（同一运行时同一窗口，
+// 基本等价），避免「先显示 0x0 再校正」的闪一帧。
+MediaQuery.__lastFull = null;
+// 真值到达前的兜底常量（构造一次）：字段齐全，避免读崩。
+MediaQuery.__fallback = null;
+
+MediaQuery.__empty = function () {
+  if (MediaQuery.__fallback == null) {
+    MediaQuery.__fallback = MediaQuery.__build({
+      size: { width: 0, height: 0 },
+      padding: { left: 0, top: 0, right: 0, bottom: 0 },
+      viewPadding: { left: 0, top: 0, right: 0, bottom: 0 },
+      viewInsets: { left: 0, top: 0, right: 0, bottom: 0 },
+      devicePixelRatio: 1,
+      textScaleFactor: 1,
+      orientation: Orientation.portrait,
+      platformBrightness: Brightness.light,
+      alwaysUse24HourFormat: false,
+      accessibleNavigation: false,
+      disableAnimations: false,
+      invertColors: false,
+      highContrast: false,
+      boldText: false,
+      navigationMode: NavigationMode.traditional,
+    });
+  }
+  return MediaQuery.__fallback;
+};
+
+// 宿主下发的 JSON → JS 侧 MediaQueryData（字段齐全，含 copyWith）。
+MediaQuery.__build = function (json) {
+  return new MediaQueryData(json);
+};
+
+// 单 aspect 的宿主原值 → 本端值（size 包成 Size、textScaler 包出 scale 方法，
+// 其余是标量 / 已同形的对象，原样用）。
+MediaQuery.__decode = function (aspect, raw) {
+  if (aspect == null) { return MediaQuery.__build(raw); }
+  if (aspect === 'size') {
+    return new Size({ width: raw.width, height: raw.height });
+  }
+  if (aspect === 'textScaler') {
+    return TextScaler.linear({ textScaleFactor: raw.__factor });
+  }
+  return raw;
+};
+
+MediaQuery.__entry = function (id, context) {
+  var e = MediaQuery.__byContext[id];
+  if (!e) {
+    e = MediaQuery.__byContext[id] = {
+      anchor: context ? context.__anchor : null,
+      all: null, allKey: '',
+      vals: {}, keys: {}, pending: {}, missing: {},
+    };
+  }
+  return e;
+};
+
+// 唯一写口：宿主回填 / 变化回推。
+//   aspect = null → 整份数据；否则只更新该 aspect。
+//   **与缓存不同才标脏**（一次真值变化只重建一次）。
+MediaQuery.__set = function (ctxId, aspect, raw) {
+  var id = String(ctxId);
+  var e = MediaQuery.__entry(id, null);
+  if (raw == null) {
+    // 该位置上方没有 MediaQuery：标记后不再重试，避免每次 build 都发桥消息。
+    e.missing[aspect] = true;
+    return;
+  }
+  var key = JSON.stringify(raw);
+  if (aspect == null) {
+    if (e.allKey === key) { return; }
+    e.allKey = key;
+    e.all = MediaQuery.__build(raw);
+    MediaQuery.__lastFull = e.all;
+  } else {
+    if (e.keys[aspect] === key) { return; }
+    e.keys[aspect] = key;
+    e.vals[aspect] = MediaQuery.__decode(aspect, raw);
+  }
+  var a = e.anchor;
+  if (a && a.__unmounted) {
+    // 组件已卸载（句柄即将/已被释放）：丢掉这条缓存，不再标脏。
+    delete MediaQuery.__byContext[id];
+    return;
+  }
+  if (a) { __cc.__markDirty(a); }
+};
+
+// 按 aspect 向宿主取一次值（每个 aspect 只取一次，之后靠回推）。
+MediaQuery.__fetch = function (e, id, aspect) {
+  var slot = aspect == null ? 'all' : aspect;
+  if (e.pending[slot] || e.missing[slot]) { return; }
+  e.pending[slot] = true;
+  try {
+    var p = __handleOp(id, 'mediaQuery',
+    aspect == null ? null : { 'aspect': aspect });
+    if (p && typeof p.then === 'function') {
+      p.then(function (raw) {
+        e.pending[slot] = false;
+        MediaQuery.__set(id, aspect, raw);
+      }, function () { e.pending[slot] = false; });
+    } else {
+      e.pending[slot] = false;
+    }
+  } catch (err) {
+    e.pending[slot] = false;
+  }
+};
+
+// `MediaQuery.of(context)`：整份数据（依赖全部 aspect）。
+MediaQuery.__of = function (context) {
+  var id = null;
+  try { id = context.__handle(); } catch (err) { id = null; }
+  if (id == null) { return MediaQuery.__lastFull || MediaQuery.__empty(); }
+  var e = MediaQuery.__entry(id, context);
+  if (e.all == null) { MediaQuery.__fetch(e, id, null); }
+  return e.all || MediaQuery.__lastFull || MediaQuery.__empty();
+};
+
+// `MediaQuery.<x>Of(context)`：只依赖该 aspect。
+MediaQuery.__aspect = function (context, aspect) {
+  var id = null;
+  try { id = context.__handle(); } catch (err) { id = null; }
+  if (id == null) { return (MediaQuery.__lastFull || MediaQuery.__empty())[aspect]; }
+  var e = MediaQuery.__entry(id, context);
+  var v = e.vals[aspect];
+  if (v === undefined) { MediaQuery.__fetch(e, id, aspect); }
+  if (v !== undefined) { return v; }
+  // 该 aspect 还没回来：从整份数据 / 最近值 / 兜底里取同名字段投影。
+  var src = e.all || MediaQuery.__lastFull || MediaQuery.__empty();
+  return src[aspect];
+};
+
+// Dart 的静态取值方法：每个都按自己的 aspect 代理（取值 + 重建粒度都对齐）。
+MediaQuery.of = function (context) { return MediaQuery.__of(context); };
+// `maybeOf` 语义：没有 MediaQuery 祖先时返回 null；这里退化为兜底对象
+// （字段齐全，读不崩），与 `of` 同源。
+MediaQuery.maybeOf = function (context) { return MediaQuery.__of(context); };
+MediaQuery.sizeOf = function (context) { return MediaQuery.__aspect(context, 'size'); };
+MediaQuery.paddingOf = function (context) {
+  return MediaQuery.__aspect(context, 'padding');
+};
+MediaQuery.viewPaddingOf = function (context) {
+  return MediaQuery.__aspect(context, 'viewPadding');
+};
+MediaQuery.viewInsetsOf = function (context) {
+  return MediaQuery.__aspect(context, 'viewInsets');
+};
+MediaQuery.devicePixelRatioOf = function (context) {
+  return MediaQuery.__aspect(context, 'devicePixelRatio');
+};
+MediaQuery.textScalerOf = function (context) {
+  return MediaQuery.__aspect(context, 'textScaler');
+};
+MediaQuery.orientationOf = function (context) {
+  return MediaQuery.__aspect(context, 'orientation');
+};
+MediaQuery.platformBrightnessOf = function (context) {
+  return MediaQuery.__aspect(context, 'platformBrightness');
+};
+MediaQuery.navigationModeOf = function (context) {
+  return MediaQuery.__aspect(context, 'navigationMode');
+};
+MediaQuery.alwaysUse24HourFormatOf = function (context) {
+  return MediaQuery.__aspect(context, 'alwaysUse24HourFormat');
+};
+MediaQuery.accessibleNavigationOf = function (context) {
+  return MediaQuery.__aspect(context, 'accessibleNavigation');
+};
+MediaQuery.boldTextOf = function (context) {
+  return MediaQuery.__aspect(context, 'boldText');
+};
+MediaQuery.disableAnimationsOf = function (context) {
+  return MediaQuery.__aspect(context, 'disableAnimations');
+};
+MediaQuery.highContrastOf = function (context) {
+  return MediaQuery.__aspect(context, 'highContrast');
+};
+MediaQuery.invertColorsOf = function (context) {
+  return MediaQuery.__aspect(context, 'invertColors');
+};
 
 // 宿主回填写口（宿主经 evaluate 裸引用调用，故挂 G）。
 G.__setMediaQuery = MediaQuery.__set;

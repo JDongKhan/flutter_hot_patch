@@ -37,6 +37,13 @@ const String buildContextJsSource = r'''
       this.__id = handleId == null ? null : handleId;
     }
 
+    // ctx 代理**不能当数据跨桥**：`__anchor` 是消费它的组件实例（持有整棵元素树），
+    // 直接 JSON.stringify 会递归/成环。JSON 化时只保留 nodeId——宿主需要的始终是
+    // 句柄（`__handle()`）或 node id，不是代理本身。
+    toJSON() {
+      return { __ctxNode: this.__nodeId };
+    }
+
     // 句柄（首次真正需要宿主真值时才登记，宿主 onCreate 绑定 nodeId）。
     __handle() {
       if (this.__id == null) {

@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 1c79d2c8） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 21a458d4） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '1c79d2c8') { return; }
-  G.__jsuiVersion = '1c79d2c8';
+  if (G.__jsui && G.__jsuiVersion === '21a458d4') { return; }
+  G.__jsuiVersion = '21a458d4';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -3187,6 +3187,13 @@ __defineProtoMember(Map.prototype, {
       // 跨语言句柄：**惰性**登记（没用过 context 的组件零句柄开销）。
       // 已有句柄时（GlobalKey.currentContext 复用 key 句柄）直接沿用，不再新建。
       this.__id = handleId == null ? null : handleId;
+    }
+
+    // ctx 代理**不能当数据跨桥**：`__anchor` 是消费它的组件实例（持有整棵元素树），
+    // 直接 JSON.stringify 会递归/成环。JSON 化时只保留 nodeId——宿主需要的始终是
+    // 句柄（`__handle()`）或 node id，不是代理本身。
+    toJSON() {
+      return { __ctxNode: this.__nodeId };
     }
 
     // 句柄（首次真正需要宿主真值时才登记，宿主 onCreate 绑定 nodeId）。
