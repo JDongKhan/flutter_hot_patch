@@ -40,11 +40,11 @@ export class LeakDemoCard extends StatefulWidget {
           "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             (this.__k1 || (this.__k1 = new Text({
-              "data": "泄漏演示 · GlobalKey 未释放",
+              "data": "验证异步归属 · Timer 里 new GlobalKey()",
               "style": new TextStyle({
                 "fontSize": 16,
                 "fontWeight": FontWeight.bold,
-                "color": Colors.red
+                "color": Colors.blue
               })
             }))),
             (this.__k2 || (this.__k2 = new SizedBox({
@@ -60,7 +60,7 @@ export class LeakDemoCard extends StatefulWidget {
               "height": 8
             }))),
             (this.__k4 || (this.__k4 = new Text({
-              "data": "每 300ms 在 Timer 回调里 new GlobalKey() 并持有。JS 侧句柄 scope=global，" + "退出本页后不会释放；左侧原生版随 State 回收，不会告警。",
+              "data": "每 300ms 在 Timer 回调里 new GlobalKey() 并持有。回调创建时捕获了本组件的归属，" + "退出本页应随实例释放；左侧原生版同样随 State 回收。",
               "style": new TextStyle({
                 "fontSize": 12,
                 "color": Colors.grey
@@ -70,7 +70,7 @@ export class LeakDemoCard extends StatefulWidget {
               "height": 8
             }))),
             (this.__k5 || (this.__k5 = new Text({
-              "data": "退出后看右侧日志的 leak-check：会出现「多余（JS）：js:key/Global#…」。",
+              "data": "退出后看右侧日志：应为 leak-check … clean；若出现「多余（JS）：js:key/Global#…」即回归。",
               "style": new TextStyle({
                 "fontSize": 12,
                 "color": Colors.grey

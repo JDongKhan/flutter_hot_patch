@@ -5,6 +5,9 @@
 // 因此这里不引入任何新的产物协议，只补 Dart SDK 的 `Timer`：
 //
 //   - `Timer(…)` / `Timer.periodic(…)` 均为同名 JS 函数；
+//   - 回调**创建时**捕获句柄归属，执行时恢复（见 handle_registry 的
+//     `__captureAsyncOwner` / `__withAsyncOwner`），回调里创建的 Key /
+//     Controller 不会退化成永不释放的 `global` 句柄；
 //   - 引擎（flutter_js / QuickJS）只提供一次性 `setTimeout`，没有
 //     `setInterval`，周期定时用「回调内再次 setTimeout」实现；
 //   - `cancel()` 后不再触发（宿主没有 clearTimeout 时也只靠取消标记兜底，
@@ -23,6 +26,9 @@ const String timerJsSource = r'''
       var args = Timer.__options(props, second);
       this._ms = args.ms;
       this._callback = args.callback;
+      // 创建时刻的归属：回调执行时恢复（回调里 new GlobalKey / Controller
+      // 也能归到发起它的组件或页面，随生命周期释放）。
+      this.__owner = __captureAsyncOwner();
       this._repeat = !!repeat;
       this._active = true;
       this._cancelled = false;
@@ -40,7 +46,10 @@ const String timerJsSource = r'''
         if (self._cancelled) { return; }
         if (!self._repeat) { self._active = false; }
         try {
-          if (typeof self._callback === 'function') { self._callback(self); }
+          if (typeof self._callback === 'function') {
+            var run = function () { self._callback(self); };
+            if (self.__owner) { __withAsyncOwner(self.__owner, run); } else { run(); }
+          }
         } catch (e) {
           __error('[patch] Timer 回调异常: ' +
             ((e && e.message) ? e.message : e));

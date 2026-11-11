@@ -8,6 +8,7 @@ const {
   __createFnHandle, __objectToken, __inheritElement,
   __contextOf, __isElement, __isElementList, __descriptorOf,
   __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,
+  __captureAsyncOwner, __withAsyncOwner,
 } = G.__core;
 
 const __log = G.__core.log;
@@ -2808,8 +2809,8 @@ export class Future {
   constructor(props) {
     props = __positionalArgs(props, ['computation']);
     // Dart 的 `Future(computation)` 是**异步**启动（内部走 Timer.run），
-    // 这里等价用一次性 setTimeout。
-    this.__promise = Future.__run(props.computation, false);
+    // 这里等价用一次性 setTimeout。计算体绑定创建时的归属（见 __bind）。
+    this.__promise = Future.__run(Future.__bind(props.computation), false);
   }
 
   // 计算体执行：异常一律转成 rejection（与 Dart 一致）。
@@ -2833,6 +2834,17 @@ export class Future {
     return f;
   }
 
+  // 异步归属绑定：**创建回调时**捕获归属，执行时恢复——回调里创建的
+  // GlobalKey / Controller 等句柄归发起异步的组件或页面，随生命周期释放。
+  static __bind(fn) {
+    if (typeof fn !== 'function') { return fn; }
+    var owner = __captureAsyncOwner();
+    return function () {
+      var args = arguments;
+      return __withAsyncOwner(owner, function () { return fn.apply(null, args); });
+    };
+  }
+
   // 原生 Promise 会自动解包 thenable（onValue 返回 Future 时等待其完成），
   // 与 Dart `then` 的扁平化语义一致。第二个参数兼容两种形态：
   //   - `await` 内部调用 `then(resolve, reject)`（裸函数）；
@@ -2840,11 +2852,13 @@ export class Future {
   then(onValue, onError) {
     var handler = typeof onError === 'function' ? onError
     : ((onError && typeof onError.onError === 'function') ? onError.onError : null);
-    return Future.__wrap(this.__promise.then(onValue, handler));
+    return Future.__wrap(this.__promise.then(
+    Future.__bind(onValue), Future.__bind(handler)));
   }
 
   catchError(onError, opts) {
     var test = opts && typeof opts.test === 'function' ? opts.test : null;
+    onError = Future.__bind(onError);
     return Future.__wrap(this.__promise.catch(function (e) {
       // Dart 语义：test 为假时异常原样继续向后抛。
       if (test != null && !test(e)) { throw e; }
@@ -2853,6 +2867,7 @@ export class Future {
   }
 
   whenComplete(action) {
+    action = Future.__bind(action);
     var call = function () {
       return typeof action === 'function' ? action() : null;
     };
@@ -2878,6 +2893,7 @@ export class Future {
     }
     var ms = __durationMs(duration);
     if (ms == null || ms < 0) { ms = 0; }
+    computation = Future.__bind(computation);
     return Future.__wrap(new Promise(function (resolve, reject) {
       setTimeout(function () {
         try {
@@ -2916,7 +2932,7 @@ export class Future {
   // `Future.microtask(computation)`：微任务启动（比 setTimeout 更早）。
   static microtask(props) {
     props = __positionalArgs(props, ['computation']);
-    var computation = props.computation;
+    var computation = Future.__bind(props.computation);
     return Future.__wrap(Promise.resolve().then(function () {
       return typeof computation === 'function' ? computation() : null;
     }));
@@ -2926,7 +2942,7 @@ export class Future {
   static wait(futures, opts) {
     var list = Array.from(futures || []);
     var eager = opts && opts.eagerError === true;
-    var cleanUp = opts && typeof opts.cleanUp === 'function' ? opts.cleanUp : null;
+    var cleanUp = opts && typeof opts.cleanUp === 'function' ? Future.__bind(opts.cleanUp) : null;
     return Future.__wrap(new Promise(function (resolve, reject) {
       var results = [];
       var remaining = list.length;
@@ -9584,6 +9600,9 @@ export class Timer {
     var args = Timer.__options(props, second);
     this._ms = args.ms;
     this._callback = args.callback;
+    // 创建时刻的归属：回调执行时恢复（回调里 new GlobalKey / Controller
+    // 也能归到发起它的组件或页面，随生命周期释放）。
+    this.__owner = __captureAsyncOwner();
     this._repeat = !!repeat;
     this._active = true;
     this._cancelled = false;
@@ -9601,7 +9620,10 @@ export class Timer {
       if (self._cancelled) { return; }
       if (!self._repeat) { self._active = false; }
       try {
-        if (typeof self._callback === 'function') { self._callback(self); }
+        if (typeof self._callback === 'function') {
+          var run = function () { self._callback(self); };
+          if (self.__owner) { __withAsyncOwner(self.__owner, run); } else { run(); }
+        }
       } catch (e) {
         __error('[patch] Timer 回调异常: ' +
         ((e && e.message) ? e.message : e));

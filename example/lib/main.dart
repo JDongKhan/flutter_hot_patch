@@ -174,8 +174,8 @@ class DemoListPage extends StatelessWidget {
       ),
     ),
     _DemoEntry(
-      '泄漏演示 · JS 热更',
-      '进入即定时创建不释放的 GlobalKey：退出后看右侧 leak-check「多余（JS）」',
+      '异步归属 · JS 热更',
+      'Timer 回调里创建 GlobalKey：验证随组件释放，退出后 leak-check 应为 clean',
       CompareTest(
         native: const LeakDemoCard(),
         js: JsUiWidget(

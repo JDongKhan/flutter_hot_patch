@@ -17,8 +17,8 @@ const String futureJsSource = r'''
     constructor(props) {
       props = __positionalArgs(props, ['computation']);
       // Dart 的 `Future(computation)` 是**异步**启动（内部走 Timer.run），
-      // 这里等价用一次性 setTimeout。
-      this.__promise = Future.__run(props.computation, false);
+      // 这里等价用一次性 setTimeout。计算体绑定创建时的归属（见 __bind）。
+      this.__promise = Future.__run(Future.__bind(props.computation), false);
     }
 
     // 计算体执行：异常一律转成 rejection（与 Dart 一致）。
@@ -42,6 +42,17 @@ const String futureJsSource = r'''
       return f;
     }
 
+    // 异步归属绑定：**创建回调时**捕获归属，执行时恢复——回调里创建的
+    // GlobalKey / Controller 等句柄归发起异步的组件或页面，随生命周期释放。
+    static __bind(fn) {
+      if (typeof fn !== 'function') { return fn; }
+      var owner = __captureAsyncOwner();
+      return function () {
+        var args = arguments;
+        return __withAsyncOwner(owner, function () { return fn.apply(null, args); });
+      };
+    }
+
     // 原生 Promise 会自动解包 thenable（onValue 返回 Future 时等待其完成），
     // 与 Dart `then` 的扁平化语义一致。第二个参数兼容两种形态：
     //   - `await` 内部调用 `then(resolve, reject)`（裸函数）；
@@ -49,11 +60,13 @@ const String futureJsSource = r'''
     then(onValue, onError) {
       var handler = typeof onError === 'function' ? onError
         : ((onError && typeof onError.onError === 'function') ? onError.onError : null);
-      return Future.__wrap(this.__promise.then(onValue, handler));
+      return Future.__wrap(this.__promise.then(
+        Future.__bind(onValue), Future.__bind(handler)));
     }
 
     catchError(onError, opts) {
       var test = opts && typeof opts.test === 'function' ? opts.test : null;
+      onError = Future.__bind(onError);
       return Future.__wrap(this.__promise.catch(function (e) {
         // Dart 语义：test 为假时异常原样继续向后抛。
         if (test != null && !test(e)) { throw e; }
@@ -62,6 +75,7 @@ const String futureJsSource = r'''
     }
 
     whenComplete(action) {
+      action = Future.__bind(action);
       var call = function () {
         return typeof action === 'function' ? action() : null;
       };
@@ -87,6 +101,7 @@ const String futureJsSource = r'''
       }
       var ms = __durationMs(duration);
       if (ms == null || ms < 0) { ms = 0; }
+      computation = Future.__bind(computation);
       return Future.__wrap(new Promise(function (resolve, reject) {
         setTimeout(function () {
           try {
@@ -125,7 +140,7 @@ const String futureJsSource = r'''
     // `Future.microtask(computation)`：微任务启动（比 setTimeout 更早）。
     static microtask(props) {
       props = __positionalArgs(props, ['computation']);
-      var computation = props.computation;
+      var computation = Future.__bind(props.computation);
       return Future.__wrap(Promise.resolve().then(function () {
         return typeof computation === 'function' ? computation() : null;
       }));
@@ -135,7 +150,7 @@ const String futureJsSource = r'''
     static wait(futures, opts) {
       var list = Array.from(futures || []);
       var eager = opts && opts.eagerError === true;
-      var cleanUp = opts && typeof opts.cleanUp === 'function' ? opts.cleanUp : null;
+      var cleanUp = opts && typeof opts.cleanUp === 'function' ? Future.__bind(opts.cleanUp) : null;
       return Future.__wrap(new Promise(function (resolve, reject) {
         var results = [];
         var remaining = list.length;

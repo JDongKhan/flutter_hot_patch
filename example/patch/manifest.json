@@ -1,14 +1,14 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-11T10:26:14.597980",
+  "buildTime": "2026-11-11T13:12:55.299065",
   "resources": {
-    "flutter.js": "81f855b3b6d1a05e3298f51419faecacb36368613dbd5735585df424e965f08b",
+    "flutter.js": "f33262e97460b785bdf79cc867bd866b571d608666f1024ba597dec7c7228180",
     "packages/get.js": "f8aa6f3b477af33cdf3214a64e46d1a98f8d96aaa06dbeb2be5a1bf0a8aa7027",
     "packages/provider.js": "998f91ba6314dff5b811a88baacffdb07a6b35f0901eb5a04e5e8f1d65d93414",
     "packages/uuid.js": "315bfa1aecc89c4c253d5aded272e9fa7f072c7902878c68ebbb084a60ebf57b",
     "packages/visibility_detector.js": "5d72eb9a82628596cc50038e34f475ba1aeb4b531cf93d7353f6728319670d7a",
-    "runtime.js": "5d651361d3e36a118388e12d6dbf919524677cd1db3915cebf13309bba38adfd",
+    "runtime.js": "1c115a460b573dbcea446c33b2868e8060ca4d27a9fe765dbda09d1c80f91d17",
     "packages/hot_module_base/hot_module_base.js": "a6d50df16623b09b1de1ee795fac35c962350c12cc2468b00c06c59cc016ca7a",
     "packages/hot_module_base/src/account_center.js": "1e0b2389c45cf44f37d762ca12dcbbbc6b0d96f7ba1df7256f9481a251ef006e",
     "packages/hot_module_base/src/guide_bubble_widget.js": "8fc9270c7b523dc7d185a055456beab601232530b00377370114659814c4bb22",
@@ -79,6 +79,7 @@
     "components/notifier_card.js": "b2c214c764d9d3bca910314305fd2c363dd9d4519b5b952ad47f6a965c1ec450",
     "components/tween_animation_builder_detail.js": "2f2bcf61383e90488afcd0599980f635be29e013436fb201c92b9b1023c0fc11",
     "components/container_detail.js": "07d92e0ee50d981e04b2485419825cb316ea1c294a97daf5d592ada785fc7435",
+    "components/leak_demo_card.js": "a87a6e479a87a0ab086a91ae4334791654713a863c371c9e0a099a1116844e82",
     "components/grid_detail.js": "b486a8bc37e8f57b572d746aa34299b9bb92eab474d510eeedc4c2ea186dae67",
     "components/drawer_detail.js": "2eac58055f288cc43f087c4f389860d05deb318ac1add624ad2d864b42b4a032",
     "components/dialog_detail.js": "fba201c0f020a3b74a888b12f0dc8565ad170fab7c4135505dfc3b5aac669178",
@@ -146,7 +147,6 @@
     "base/app_router.js": "49bddfad3670613d57985a623fc85af9f37930a09304b88289a23caca22d6efb",
     "base/tracker.js": "d4664b4ea74e6fae26b5facc2881b1d2e953b7754293ea5ad13a453e443e8a5d",
     "base/web_view.js": "ed4cfc2b46fd3928dbe87a84069b8403ba875aaafa657b1e4cdeae83e9aaaff7",
-    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e",
-    "components/leak_demo_card.js": "ac95ec4413be3501f8f75779ab0ccb1b6f2b6daba0098be9e2661eecf6b3778f"
+    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e"
   }
 }

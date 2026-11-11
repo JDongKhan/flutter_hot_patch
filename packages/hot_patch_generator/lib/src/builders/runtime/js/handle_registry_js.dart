@@ -63,6 +63,10 @@ const String handleRegistryJsSource = r'''
   // 登记一个 JS 侧真实对象/函数为句柄，返回 id。
   //
   // 归属优先级（scope 未显式指定时）：
+  //   0. **异步回调**（Timer / Future 等）：使用创建回调时捕获的归属（见
+  //      __captureAsyncOwner）——实例还活着就归实例；实例已卸载则回退到创建时
+  //      的页面；页面也已销毁则不登记并告警（绝不落到「当前最上层页面」或
+  //      永久 global）；
   //   1. 组件**构造中**（`new el.type(...)` 期间）：记入最内层构造帧，返回后由
   //      __endConstruct 回填到该组件实例——字段初始化里的
   //      `this._controller = new ScrollController()` 正是这个时机；
@@ -83,8 +87,23 @@ const String handleRegistryJsSource = r'''
     var explicit = opts.scope;
     var owner = opts.owner || null;
     var pending = false;
+    var asyncScope = null;
+    var asyncKey = null;
     if (!explicit && !owner) {
-      if (__constructFrames.length) {
+      if (__asyncOwners.length) {
+        var holder = __asyncOwners[__asyncOwners.length - 1];
+        var aim = holder && holder.inst;
+        var aimPage = (holder && holder.pageKey) || __rootKeyOf(aim);
+        if (aim && !aim.__unmounted) {
+          owner = aim;
+        } else if (aimPage && __roots[aimPage]) {
+          // 实例已卸载（或构造帧未落到实例）：回退到创建时的页面
+          asyncScope = 'page';
+          asyncKey = aimPage;
+        } else {
+          return __dropOrphanHandle(kind);
+        }
+      } else if (__constructFrames.length) {
         pending = true; // 归属最内层构造中的组件（见 __beginConstruct/__endConstruct）
       } else if (__ownerAnchor) {
         // 委托调用期间（不是 build 锚点）：资源属于方法体所在的类实例
@@ -93,8 +112,8 @@ const String handleRegistryJsSource = r'''
         owner = __building;
       }
     }
-    var pageKey = (__activeRoot && __activeRoot.key) || null;
-    var scope = explicit || ((owner || pending) ? 'instance' : 'page');
+    var pageKey = asyncScope === 'page' ? asyncKey : ((__activeRoot && __activeRoot.key) || null);
+    var scope = explicit || asyncScope || ((owner || pending) ? 'instance' : 'page');
     var key = pageKey; // 诊断 / 宿主侧页面兜底都用它
     if (scope === 'page') {
       key = opts.key || pageKey || null;
@@ -136,6 +155,58 @@ const String handleRegistryJsSource = r'''
     try { return callback(); } finally { __ownerAnchor = prev; }
   }
 
+  // ── 异步回调的归属继承（Timer / Future）─────────────────────────────────
+  // 异步回调执行时，构造帧 / __building / __ownerAnchor 均已恢复为空；若此时
+  // 创建 GlobalKey / Controller 等句柄，会退化为 `global` 而永不释放。
+  // 因此异步源在**创建回调时**捕获归属（holder），执行回调时用 __withAsyncOwner
+  // 恢复：归实例 → 随实例卸载释放；实例已卸载 → 回退创建时的页面；页面也
+  // 销毁 → 不登记并告警。归属只在捕获时确定，执行时不再读全局「当前页面」，
+  // 所以页面被其它页面盖住 / 切换都不会找错。
+  var __asyncOwners = []; // holder 栈：{ inst, pageKey }
+  var __orphanWarned = {}; // 已告警过的 kind，避免重复刷屏
+
+  function __rootKeyOf(inst) {
+    return (inst && inst.__root && inst.__root.key) || null;
+  }
+
+  // 捕获当前归属（异步源的创建时刻调用）。
+  function __captureAsyncOwner() {
+    if (__asyncOwners.length) {
+      // 异步回调里再创建异步任务：继承外层归属（链式 Timer / Future）。
+      return __asyncOwners[__asyncOwners.length - 1];
+    }
+    if (__ownerAnchor) {
+      return { inst: __ownerAnchor, pageKey: __rootKeyOf(__ownerAnchor) };
+    }
+    if (__building && __building.__k === __COMP) {
+      return { inst: __building, pageKey: __rootKeyOf(__building) };
+    }
+    if (__constructFrames.length) {
+      // 组件构造中：实例尚未建立，先挂到本帧，__endConstruct 回填实例。
+      var frame = __constructFrames[__constructFrames.length - 1];
+      var holder = { inst: null, pageKey: null };
+      (frame.__async || (frame.__async = [])).push(holder);
+      return holder;
+    }
+    // 无组件归属：只记创建时的页面（module 级 / 静态字段里的定时器）。
+    return { inst: null, pageKey: (__activeRoot && __activeRoot.key) || null };
+  }
+
+  function __withAsyncOwner(holder, callback) {
+    if (!holder) { return callback(); }
+    __asyncOwners.push(holder);
+    try { return callback(); } finally { __asyncOwners.pop(); }
+  }
+
+  // 归属已失效（实例卸载 + 页面销毁）：不登记，避免产生永久 global 句柄。
+  function __dropOrphanHandle(kind) {
+    if (!__orphanWarned[kind]) {
+      __orphanWarned[kind] = true;
+      __warn('jsui: 异步回调创建的 ' + kind + ' 已无归属页面（实例与页面均已销毁），已丢弃');
+    }
+    return null;
+  }
+
   function __attachOwner(id, inst) {
     var h = __handles[id];
     if (!h || !inst) { return; }
@@ -161,6 +232,12 @@ const String handleRegistryJsSource = r'''
       return;
     }
     for (var j = 0; j < frame.length; j++) { __attachOwner(frame[j], inst); }
+    // 构造期创建的异步任务（如字段初始化里的 Timer）：补上实例归属。
+    // pageKey 留到回调执行时由 inst.__root 解析（构造返回时 __root 可能还没写）。
+    var asyncs = frame.__async;
+    if (asyncs) {
+      for (var m = 0; m < asyncs.length; m++) { asyncs[m].inst = inst; }
+    }
   }
 
   // 实例卸载：释放它持有的全部句柄（`dispose()` 里已显式释放过的幂等跳过）。

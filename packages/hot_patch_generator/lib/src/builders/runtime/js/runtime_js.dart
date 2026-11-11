@@ -1071,6 +1071,9 @@ const String _jsUiCrossModuleExports = r'''
     __releaseHandle: function (id, notify) { return __releaseHandle(id, notify); },
     __handleObjectOf: __handleObjectOf,
     __createFnHandle: __createFnHandle,
+    // 异步归属继承：Timer / Future 等值类在创建回调时捕获归属，执行时恢复。
+    __captureAsyncOwner: __captureAsyncOwner,
+    __withAsyncOwner: __withAsyncOwner,
     // 继承机制（InheritedWidget 语义）：provider 在自己的模块
     // patch/packages/provider.js 里登记作用域；BuildContext 的查找方法在
     // runtime 内核里（同一 IIFE）。

@@ -3,19 +3,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
-/// 泄漏演示：定时创建「永不释放」的 GlobalKey。
+/// 异步归属验证：定时创建 GlobalKey（业务常见的「回调里 new 对象」写法）。
 ///
-/// JS 侧关键点：`GlobalKey()` 在 **Timer 回调**里创建——既不在组件构造期、也不在
-/// build / 事件执行期，句柄无法归属组件实例（scope 退化为 `global`），页面销毁
-/// 时也不会被回收。退出本页后，右侧日志会出现：
+/// 覆盖点：`Timer` 在 `initState` 创建时会捕获当前组件归属；回调执行时恢复该
+/// 归属，所以回调里 `new GlobalKey()` 归本组件，页面退出随实例释放——不再像
+/// 以前那样退化成永不释放的 `global` 句柄。
+///
+/// 预期日志（退出本页后）：
 ///
 /// ```
-/// leak-check LeakDemoCard（jsui_N）: N 项残留
-///   多余（JS）：js:key/Global#…（kind: key/Global, scope: global, obj: GlobalKey）
+/// leak-check LeakDemoCard（jsui_N）: clean
 /// ```
 ///
-/// 左侧原生版没有句柄表这个概念，`dispose` 后列表随 State 一起回收，不会告警——
-/// 这正是「JS 侧资源必须显式释放」的对照。
+/// 若仍出现「多余（JS）：js:key/Global#…（scope: global）」，说明异步归属
+/// 继承出现回归。
 @PatchEntry('LeakDemoCard')
 class LeakDemoCard extends StatefulWidget {
   const LeakDemoCard({super.key});
@@ -25,7 +26,7 @@ class LeakDemoCard extends StatefulWidget {
 }
 
 class _LeakDemoCardState extends State<LeakDemoCard> {
-  /// 故意持有：模拟「业务把 Key 存进缓存 / 单例」的写法。
+  /// 模拟业务把 Key 存进局部缓存（生命周期跟着页面走）。
   final List<GlobalKey> _leakedKeys = <GlobalKey>[];
 
   Timer? _timer;
@@ -47,7 +48,7 @@ class _LeakDemoCardState extends State<LeakDemoCard> {
 
   @override
   void dispose() {
-    // 只停定时器；已经创建的 GlobalKey 仍然留在 JS 句柄表里（这正是泄漏点）。
+    // 定时器停掉；回调里已创建的 GlobalKey 由异步归属随实例一并释放（无需业务手动清）。
     _timer?.cancel();
     super.dispose();
   }
@@ -62,11 +63,11 @@ class _LeakDemoCardState extends State<LeakDemoCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '泄漏演示 · GlobalKey 未释放',
+              '验证异步归属 · Timer 里 new GlobalKey()',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.red,
+                color: Colors.blue,
               ),
             ),
             const SizedBox(height: 8),
@@ -76,13 +77,13 @@ class _LeakDemoCardState extends State<LeakDemoCard> {
             ),
             const SizedBox(height: 8),
             const Text(
-              '每 300ms 在 Timer 回调里 new GlobalKey() 并持有。JS 侧句柄 scope=global，'
-              '退出本页后不会释放；左侧原生版随 State 回收，不会告警。',
+              '每 300ms 在 Timer 回调里 new GlobalKey() 并持有。回调创建时捕获了本组件的归属，'
+              '退出本页应随实例释放；左侧原生版同样随 State 回收。',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 8),
             const Text(
-              '退出后看右侧日志的 leak-check：会出现「多余（JS）：js:key/Global#…」。',
+              '退出后看右侧日志：应为 leak-check … clean；若出现「多余（JS）：js:key/Global#…」即回归。',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],

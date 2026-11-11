@@ -927,6 +927,8 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln(
         '  __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,',
       )
+      // 异步归属继承（Timer / Future 回调里创建的句柄归属发起组件）
+      ..writeln('  __captureAsyncOwner, __withAsyncOwner,')
       ..writeln('} = G.__core;')
       ..writeln()
       // 框架内日志 / 值展开：runtime 的两个内部入口经 __core 交接（release 零跨桥）。
