@@ -1,14 +1,14 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-11T13:30:27.881872",
+  "buildTime": "2026-11-11T13:35:45.283078",
   "resources": {
     "flutter.js": "f33262e97460b785bdf79cc867bd866b571d608666f1024ba597dec7c7228180",
     "packages/get.js": "f8aa6f3b477af33cdf3214a64e46d1a98f8d96aaa06dbeb2be5a1bf0a8aa7027",
     "packages/provider.js": "998f91ba6314dff5b811a88baacffdb07a6b35f0901eb5a04e5e8f1d65d93414",
     "packages/uuid.js": "315bfa1aecc89c4c253d5aded272e9fa7f072c7902878c68ebbb084a60ebf57b",
     "packages/visibility_detector.js": "5d72eb9a82628596cc50038e34f475ba1aeb4b531cf93d7353f6728319670d7a",
-    "runtime.js": "23b6e8fb87eb1a299639a60ea4aa3aa7f2c67ebb0a7b5ad2c342fc4ab7b58971",
+    "runtime.js": "3ba5f147004fbcec83c65c3fa9549abac15e85781cd21569a410ee1a4ef5c082",
     "packages/hot_module_base/hot_module_base.js": "a6d50df16623b09b1de1ee795fac35c962350c12cc2468b00c06c59cc016ca7a",
     "packages/hot_module_base/src/account_center.js": "1e0b2389c45cf44f37d762ca12dcbbbc6b0d96f7ba1df7256f9481a251ef006e",
     "packages/hot_module_base/src/guide_bubble_widget.js": "8fc9270c7b523dc7d185a055456beab601232530b00377370114659814c4bb22",

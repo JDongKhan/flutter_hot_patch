@@ -128,7 +128,11 @@ const String handleRegistryJsSource = r'''
   var __LIFECYCLE_NAMES = {
     resolveOwner: 1, captureAsync: 1,
     onRegister: 1, onRelease: 1,
-    onMount: 1, onUnmount: 1, onRootOpen: 1, onRootClose: 1
+    // mount：组件结点已建立（initState 已执行、create/insert 已下发）。
+    // unmount 分两段：onUnmount = 自身清理（子树递归之前）；
+    // onUnmounted = 子树全部卸载之后（如释放实例持有的控制器 / Key）。
+    onMount: 1, onUnmount: 1, onUnmounted: 1,
+    onRootOpen: 1, onRootClose: 1
   };
   var __impls = [];
 

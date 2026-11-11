@@ -887,6 +887,9 @@ const String _jsUiApi = r'''
     // 在这里补一次 flush：根补丁已下发，实例与结点都在，走的正是 patch 增量重建，
     // 与 Flutter「initState 里 setState → 首帧后再重建」语义一致。
     if (root.dirty.length) { __flushNow(root); }
+    // 根已可交互：按注册顺序广播给各功能实现（新增「页面打开后要做什么」
+    // 只加 __implement，不改核心）。
+    __runAll('onRootOpen', root);
     return root;
   }
 
@@ -904,6 +907,9 @@ const String _jsUiApi = r'''
       __activeRoot = prev;
     }
     root.inst = null;
+    // 整棵树已卸载：通知各功能实现做页面级收尾（此时 page 句柄还没兜底释放，
+    // 实现里仍可按句柄做自己的清理）。异常隔离，不影响页面关闭。
+    __runAll('onRootClose', root);
     // 页面退出兜底（scope=page）：这类句柄就是「显式归页面所有」的，页面没了
     // 即应释放，属正常生命周期而非泄漏。scope=instance/local 的孤儿残留留给
     // 宿主在泄漏比对之后调用 sweepPage 处理。

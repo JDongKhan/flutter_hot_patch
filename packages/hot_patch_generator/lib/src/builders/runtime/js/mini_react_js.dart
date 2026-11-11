@@ -1287,6 +1287,10 @@ const String miniReactReconcilerSource = r'''
     if (slot && slot.hostParentId) {
       __emitOp({ op: 'insert', parent: slot.hostParentId, id: ci.__id, index: slot.index });
     }
+    // 挂载边界已建立：initState 已执行、create/insert 已入本帧 ops。按注册顺序
+    // 广播给各功能实现（新增「组件挂载后要做什么」只加 __implement，不改核心）。
+    // 注意此刻 build 尚未执行（由宿主 wrapper 经 __pullComponent 拉起）。
+    __runAll('onMount', ci);
     return ci;
   }
 
@@ -1747,26 +1751,14 @@ const String miniReactReconcilerSource = r'''
     } else {
       // 组件结点索引同步摘除：宿主不会再拉取一个已卸载的组件。
       delete __compNodes[inst.__id];
-      // 与 Flutter 一致：从树上摘除时先 deactivate、再最终 dispose。
-      // 生命周期异常不静默吞掉（后果是「句柄泄漏 / 监听未摘」，只能靠日志定位）。
-      __callLifecycle(inst, 'deactivate');
-      __callLifecycle(inst, 'dispose');
-      // [scope] 从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 `__subs`）。
-      __unsubscribeAll(inst);
-      // [inherited] 从各提供者结点的 `__dependents` 里摘掉自己（台账在 `__dependencies`）。
-      __clearDependencies(inst);
-      // [ctx] 释放 BuildContext 代理句柄。**必须通知宿主**：代理在宿主侧有
-      // 真实记录（句柄→结点），纯本端删除会让宿主那条记录留到页面销毁。
-      // 与页面兜底 __releasePageHandles 幂等（先删者胜，第二次是空操作）。
-      if (inst.__ctx != null && inst.__ctx.__id != null) {
-        __releaseHandle(inst.__ctx.__id);
-        inst.__ctx = null;
-      }
+      // 自身清理（deactivate / dispose / 退订 / 继承依赖 / BuildContext 句柄）
+      // 全部由功能实现声明（见文件末尾），核心只负责调度与子树顺序。
+      __runAll('onUnmount', inst);
       __markUnmounted(inst.__child);
-      // [owner] 释放该实例持有的句柄（控制器 / Key 等）：先递归卸载子树，再
-      // 整份释放——与 Dart 的 State.dispose 顺序一致。`dispose()` 里显式释放
-      // 过的句柄已被移出 `__owns`，这里幂等跳过。
-      __releaseOwnerHandles(inst);
+      // 子树全部卸载之后再释放实例持有的句柄（控制器 / Key 等）：与 Dart 的
+      // State.dispose 顺序一致，保证子组件 dispose 期间仍能读到父实例的资源。
+      // `dispose()` 里显式释放过的句柄已被移出 `__owns`，这里幂等跳过。
+      __runAll('onUnmounted', inst);
     }
   }
 
@@ -1805,5 +1797,51 @@ const String miniReactReconcilerSource = r'''
     root.inst = null;
     delete __roots[pageKey];
   }
+
+  // ── 内建卸载实现（按注册顺序执行）────────────────────────────────────
+  // `__markUnmounted` 只做「标脏 + 摘索引 + 调度子树」，具体清理项都在这里声明。
+  // 分两段：onUnmount = 自身清理（子树递归之前）；onUnmounted = 子树卸载之后。
+
+  // 1) Flutter 组件生命周期：从树上摘除先 deactivate、再最终 dispose。
+  //    异常只记日志（一个组件清理失败不能中断整棵树的拆解），执行期间构建锚点
+  //    指向本实例（清理里新建 / 释放的句柄仍归属它）。
+  __implement({
+    name: 'componentLifecycle',
+    onUnmount: function (inst) {
+      __callLifecycle(inst, 'deactivate');
+      __callLifecycle(inst, 'dispose');
+    }
+  });
+
+  // 2) 状态订阅：从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 __subs）。
+  __implement({
+    name: 'scopeSubscriptions',
+    onUnmount: function (inst) { __unsubscribeAll(inst); }
+  });
+
+  // 3) 继承依赖：从各提供者结点的 __dependents 里摘掉自己（台账在 __dependencies）。
+  __implement({
+    name: 'inheritedDependencies',
+    onUnmount: function (inst) { __clearDependencies(inst); }
+  });
+
+  // 4) BuildContext 代理句柄。**必须通知宿主**：代理在宿主侧有真实记录
+  //    （句柄→结点），纯本端删除会让宿主那条记录留到页面销毁；与页面兜底
+  //    __releasePageHandles 幂等（先删者胜，第二次是空操作）。
+  __implement({
+    name: 'buildContextHandle',
+    onUnmount: function (inst) {
+      if (inst.__ctx != null && inst.__ctx.__id != null) {
+        __releaseHandle(inst.__ctx.__id);
+        inst.__ctx = null;
+      }
+    }
+  });
+
+  // 5) 实例持有的句柄（控制器 / Key 等）：子树卸载完之后整份释放。
+  __implement({
+    name: 'ownerHandles',
+    onUnmounted: function (inst) { __releaseOwnerHandles(inst); }
+  });
 
 ''';

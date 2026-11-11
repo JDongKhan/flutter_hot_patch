@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 239fafb4） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 c330a27e） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '239fafb4') { return; }
-  G.__jsuiVersion = '239fafb4';
+  if (G.__jsui && G.__jsuiVersion === 'c330a27e') { return; }
+  G.__jsuiVersion = 'c330a27e';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -813,7 +813,11 @@ __defineProtoMember(Map.prototype, {
   var __LIFECYCLE_NAMES = {
     resolveOwner: 1, captureAsync: 1,
     onRegister: 1, onRelease: 1,
-    onMount: 1, onUnmount: 1, onRootOpen: 1, onRootClose: 1
+    // mount：组件结点已建立（initState 已执行、create/insert 已下发）。
+    // unmount 分两段：onUnmount = 自身清理（子树递归之前）；
+    // onUnmounted = 子树全部卸载之后（如释放实例持有的控制器 / Key）。
+    onMount: 1, onUnmount: 1, onUnmounted: 1,
+    onRootOpen: 1, onRootClose: 1
   };
   var __impls = [];
 
@@ -2381,6 +2385,10 @@ __defineProtoMember(Map.prototype, {
     if (slot && slot.hostParentId) {
       __emitOp({ op: 'insert', parent: slot.hostParentId, id: ci.__id, index: slot.index });
     }
+    // 挂载边界已建立：initState 已执行、create/insert 已入本帧 ops。按注册顺序
+    // 广播给各功能实现（新增「组件挂载后要做什么」只加 __implement，不改核心）。
+    // 注意此刻 build 尚未执行（由宿主 wrapper 经 __pullComponent 拉起）。
+    __runAll('onMount', ci);
     return ci;
   }
 
@@ -2841,26 +2849,14 @@ __defineProtoMember(Map.prototype, {
     } else {
       // 组件结点索引同步摘除：宿主不会再拉取一个已卸载的组件。
       delete __compNodes[inst.__id];
-      // 与 Flutter 一致：从树上摘除时先 deactivate、再最终 dispose。
-      // 生命周期异常不静默吞掉（后果是「句柄泄漏 / 监听未摘」，只能靠日志定位）。
-      __callLifecycle(inst, 'deactivate');
-      __callLifecycle(inst, 'dispose');
-      // [scope] 从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 `__subs`）。
-      __unsubscribeAll(inst);
-      // [inherited] 从各提供者结点的 `__dependents` 里摘掉自己（台账在 `__dependencies`）。
-      __clearDependencies(inst);
-      // [ctx] 释放 BuildContext 代理句柄。**必须通知宿主**：代理在宿主侧有
-      // 真实记录（句柄→结点），纯本端删除会让宿主那条记录留到页面销毁。
-      // 与页面兜底 __releasePageHandles 幂等（先删者胜，第二次是空操作）。
-      if (inst.__ctx != null && inst.__ctx.__id != null) {
-        __releaseHandle(inst.__ctx.__id);
-        inst.__ctx = null;
-      }
+      // 自身清理（deactivate / dispose / 退订 / 继承依赖 / BuildContext 句柄）
+      // 全部由功能实现声明（见文件末尾），核心只负责调度与子树顺序。
+      __runAll('onUnmount', inst);
       __markUnmounted(inst.__child);
-      // [owner] 释放该实例持有的句柄（控制器 / Key 等）：先递归卸载子树，再
-      // 整份释放——与 Dart 的 State.dispose 顺序一致。`dispose()` 里显式释放
-      // 过的句柄已被移出 `__owns`，这里幂等跳过。
-      __releaseOwnerHandles(inst);
+      // 子树全部卸载之后再释放实例持有的句柄（控制器 / Key 等）：与 Dart 的
+      // State.dispose 顺序一致，保证子组件 dispose 期间仍能读到父实例的资源。
+      // `dispose()` 里显式释放过的句柄已被移出 `__owns`，这里幂等跳过。
+      __runAll('onUnmounted', inst);
     }
   }
 
@@ -2899,6 +2895,52 @@ __defineProtoMember(Map.prototype, {
     root.inst = null;
     delete __roots[pageKey];
   }
+
+  // ── 内建卸载实现（按注册顺序执行）────────────────────────────────────
+  // `__markUnmounted` 只做「标脏 + 摘索引 + 调度子树」，具体清理项都在这里声明。
+  // 分两段：onUnmount = 自身清理（子树递归之前）；onUnmounted = 子树卸载之后。
+
+  // 1) Flutter 组件生命周期：从树上摘除先 deactivate、再最终 dispose。
+  //    异常只记日志（一个组件清理失败不能中断整棵树的拆解），执行期间构建锚点
+  //    指向本实例（清理里新建 / 释放的句柄仍归属它）。
+  __implement({
+    name: 'componentLifecycle',
+    onUnmount: function (inst) {
+      __callLifecycle(inst, 'deactivate');
+      __callLifecycle(inst, 'dispose');
+    }
+  });
+
+  // 2) 状态订阅：从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 __subs）。
+  __implement({
+    name: 'scopeSubscriptions',
+    onUnmount: function (inst) { __unsubscribeAll(inst); }
+  });
+
+  // 3) 继承依赖：从各提供者结点的 __dependents 里摘掉自己（台账在 __dependencies）。
+  __implement({
+    name: 'inheritedDependencies',
+    onUnmount: function (inst) { __clearDependencies(inst); }
+  });
+
+  // 4) BuildContext 代理句柄。**必须通知宿主**：代理在宿主侧有真实记录
+  //    （句柄→结点），纯本端删除会让宿主那条记录留到页面销毁；与页面兜底
+  //    __releasePageHandles 幂等（先删者胜，第二次是空操作）。
+  __implement({
+    name: 'buildContextHandle',
+    onUnmount: function (inst) {
+      if (inst.__ctx != null && inst.__ctx.__id != null) {
+        __releaseHandle(inst.__ctx.__id);
+        inst.__ctx = null;
+      }
+    }
+  });
+
+  // 5) 实例持有的句柄（控制器 / Key 等）：子树卸载完之后整份释放。
+  __implement({
+    name: 'ownerHandles',
+    onUnmounted: function (inst) { __releaseOwnerHandles(inst); }
+  });
 
 
 
@@ -2948,6 +2990,9 @@ __defineProtoMember(Map.prototype, {
     // 在这里补一次 flush：根补丁已下发，实例与结点都在，走的正是 patch 增量重建，
     // 与 Flutter「initState 里 setState → 首帧后再重建」语义一致。
     if (root.dirty.length) { __flushNow(root); }
+    // 根已可交互：按注册顺序广播给各功能实现（新增「页面打开后要做什么」
+    // 只加 __implement，不改核心）。
+    __runAll('onRootOpen', root);
     return root;
   }
 
@@ -2965,6 +3010,9 @@ __defineProtoMember(Map.prototype, {
       __activeRoot = prev;
     }
     root.inst = null;
+    // 整棵树已卸载：通知各功能实现做页面级收尾（此时 page 句柄还没兜底释放，
+    // 实现里仍可按句柄做自己的清理）。异常隔离，不影响页面关闭。
+    __runAll('onRootClose', root);
     // 页面退出兜底（scope=page）：这类句柄就是「显式归页面所有」的，页面没了
     // 即应释放，属正常生命周期而非泄漏。scope=instance/local 的孤儿残留留给
     // 宿主在泄漏比对之后调用 sweepPage 处理。
