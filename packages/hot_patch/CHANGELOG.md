@@ -4,6 +4,13 @@
 
 **加法：`MethodChannel` 宿主通道；无破坏性协议变更。**
 
+- **宿主对象还原不再自带默认值**：JSON → Flutter 值/组件的解析统一以**官方构造器默认值**为准，缺省属性一律不传（`null` = 组件/主题默认），不再用自定义零值覆盖。
+  - `Container` / `AnimatedContainer` 的 `padding` / `margin` 改用 `nullableEdgeInsets`（此前缺省塞 `EdgeInsets.zero`）；
+  - `Tooltip` 的 `padding` / `margin` / `verticalOffset` / `excludeFromSemantics` 缺省不再填 0 / 24 / false（这些在 3.41 都是 `null` → `TooltipTheme`）；
+  - `CustomPaint` 的 `TextPainter.textAlign` 缺省改为官方 `TextAlign.start`（此前误用 `left`）；
+  - `MediaQueryData` 解析由 `const MediaQueryData()` + 仅对存在的字段 `copyWith`（见上一条）。
+  其余 `*_from_json` 助手逐项核对：`BorderSide` / `BoxShadow` / `Border` / `OutlinedBorder` / 渐变 / `BoxConstraints` 的兜底值与官方构造默认一致，可选项均返回 `null`。
+
 - **`MediaQuery` 组件（含 `removePadding` / `removeViewPadding` / `removeViewInsets`）**：JS 类是宿主手写的 `Component` 子类（登记 `logicWidgetTypes`，生成器不再重复生成同名包装类），静态取值 API 与命名构造静态方法都写在类体内（后者与其它组件同构：写 `factory`）。宿主注册 `'MediaQuery'` 只负责渲染：无名构造用 `data` 还原 `MediaQueryData`（JS 侧 `MediaQueryData` 值类 + `copyWith`，`MediaQuery.of()` 返回它），`remove*` 用调用位置的 BuildContext 直接调 Flutter 同名 API。为此 `JsRenderContext` 新增 `context`（宿主构建期传入并沿子树透传）；`JsBuildContext` 补 `toJSON()`（代理含组件实例引用，不可直接跨桥序列化）。示例见 `example/lib/components/media_query_detail.dart`。
 
 - **`ClipRRect` 圆角修复**：宿主渲染只按数字读 `borderRadius`（`c.num_`），而 JS 侧 `BorderRadius.circular(14)` 的 `toJSON()` 是 `{radius: 14}` 对象 → 取不到值退回 `BorderRadius.zero`，补丁内所有圆角裁切（banner / 推广图等）变成直角。改为 `borderRadiusFromJson` 解析（`{radius}` / 四角），并兼容旧协议直接下发数字。

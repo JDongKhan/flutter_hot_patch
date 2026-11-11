@@ -180,8 +180,9 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
       // color 与 decoration 同传会断言：与 Container 同口径，decoration 优先。
       color: deco == null ? colorFromJson(c.props['color']) : null,
       decoration: deco,
-      padding: edgeInsetsFromJson(c.map('padding')),
-      margin: edgeInsetsFromJson(c.map('margin')),
+      // 与 Container 一致：padding / margin 可选，缺省走 Flutter 默认（null）。
+      padding: nullableEdgeInsets(c.map('padding')),
+      margin: nullableEdgeInsets(c.map('margin')),
       alignment: alignmentFromJson(c.props['alignment']),
       constraints: boxConstraintsFromJson(c.map('constraints')),
       clipBehavior:

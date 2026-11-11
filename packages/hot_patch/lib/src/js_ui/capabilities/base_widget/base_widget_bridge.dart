@@ -205,8 +205,10 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       // color 与 decoration 同传会断言：decoration 优先（其内可含 color）。
       color: deco == null ? colorFromJson(c.props['color']) : null,
       decoration: deco,
-      padding: edgeInsetsFromJson(c.map('padding')),
-      margin: edgeInsetsFromJson(c.map('margin')),
+      // padding / margin 在 Container 里是可选参数（null = 不加内边距），
+      // 用 nullable 版本、缺省交给 Flutter 默认，不塞 EdgeInsets.zero。
+      padding: nullableEdgeInsets(c.map('padding')),
+      margin: nullableEdgeInsets(c.map('margin')),
       alignment: alignmentFromJson(c.props['alignment']),
       constraints: boxConstraintsFromJson(c.map('constraints')),
       clipBehavior: clip,
@@ -1264,11 +1266,13 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       message: c.str('message') ?? '',
       waitDuration: durationFromJson(c.props['waitDuration']),
       showDuration: durationFromJson(c.props['showDuration']),
-      padding: edgeInsetsFromJson(c.map('padding')),
-      margin: edgeInsetsFromJson(c.map('margin')),
-      verticalOffset: c.num_('verticalOffset') ?? 24,
+      // padding / margin / verticalOffset / excludeFromSemantics 在 Tooltip 里
+      // 都是「null = 用 TooltipTheme 默认」，不能塞自己的零值/常量覆盖主题。
+      padding: nullableEdgeInsets(c.map('padding')),
+      margin: nullableEdgeInsets(c.map('margin')),
+      verticalOffset: c.num_('verticalOffset'),
       preferBelow: c.bool_('preferBelow'),
-      excludeFromSemantics: c.bool_('excludeFromSemantics') ?? false,
+      excludeFromSemantics: c.bool_('excludeFromSemantics'),
       enableTapToDismiss: c.bool_('enableTapToDismiss') ?? true,
       decoration: boxDecorationFromJson(c.map('decoration')),
       textStyle: textStyleFromJson(c.map('textStyle')),

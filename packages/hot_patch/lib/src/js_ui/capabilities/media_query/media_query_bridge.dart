@@ -132,55 +132,97 @@ void registerMediaQueryWidgets(JsWidgetRegistry r) {
 
 /// JS 侧 `MediaQueryData`（`{size, padding, viewPadding, viewInsets,
 /// devicePixelRatio, textScaler, orientation, platformBrightness, 各开关}`）→
-/// Flutter `MediaQueryData`。字段形态与 [media_query_js] 的 `MediaQueryData` 类
-/// 一一对应；缺省值同 Flutter `MediaQueryData()` 的默认构造。
+/// Flutter `MediaQueryData`。
+///
+/// **不引入自己的默认值**：从 `const MediaQueryData()` 起步，只对 JS 里**真实存在**
+/// 的字段 `copyWith`，缺字段一律沿用 Flutter 官方默认构造值（`Size.zero` /
+/// `devicePixelRatio: 1` / `TextScaler.noScaling` / 各开关 false /
+/// `NavigationMode.traditional` …）。这样两端默认值只有一处在维护。
 MediaQueryData? _mediaQueryDataFromJson(Map<String, dynamic>? json) {
   if (json == null || json.isEmpty) return null;
-  double factor = 1;
+  var data = const MediaQueryData();
+
+  final size = _sizeOf(json['size']);
+  if (size != null) data = data.copyWith(size: size);
+
+  final dpr = json['devicePixelRatio'];
+  if (dpr is num) data = data.copyWith(devicePixelRatio: dpr.toDouble());
+
   final scaler = json['textScaler'];
+  double? factor;
   if (scaler is Map && scaler['linear'] is num) {
     factor = (scaler['linear'] as num).toDouble();
-  }
-  if (json['textScaleFactor'] is num) {
+  } else if (json['textScaleFactor'] is num) {
     factor = (json['textScaleFactor'] as num).toDouble();
   }
-  return MediaQueryData(
-    size: _sizeOf(json['size']),
-    devicePixelRatio: (json['devicePixelRatio'] as num?)?.toDouble() ?? 1,
-    textScaler: TextScaler.linear(factor),
-    platformBrightness: json['platformBrightness'] == 'dark'
-        ? Brightness.dark
-        : Brightness.light,
-    padding: _edgesOf(json['padding']),
-    viewPadding: _edgesOf(json['viewPadding']),
-    viewInsets: _edgesOf(json['viewInsets']),
-    alwaysUse24HourFormat: json['alwaysUse24HourFormat'] == true,
-    accessibleNavigation: json['accessibleNavigation'] == true,
-    disableAnimations: json['disableAnimations'] == true,
-    invertColors: json['invertColors'] == true,
-    highContrast: json['highContrast'] == true,
-    boldText: json['boldText'] == true,
-    navigationMode: json['navigationMode'] == 'directional'
-        ? NavigationMode.directional
-        : NavigationMode.traditional,
-  );
+  if (factor != null) {
+    data = data.copyWith(textScaler: TextScaler.linear(factor));
+  }
+
+  final brightness = json['platformBrightness'];
+  if (brightness is String) {
+    data = data.copyWith(
+      platformBrightness:
+          brightness == 'dark' ? Brightness.dark : Brightness.light,
+    );
+  }
+
+  final padding = _edgesOf(json['padding']);
+  if (padding != null) data = data.copyWith(padding: padding);
+
+  final viewPadding = _edgesOf(json['viewPadding']);
+  if (viewPadding != null) data = data.copyWith(viewPadding: viewPadding);
+
+  final viewInsets = _edgesOf(json['viewInsets']);
+  if (viewInsets != null) data = data.copyWith(viewInsets: viewInsets);
+
+  bool? flag(String key) => json[key] is bool ? json[key] as bool : null;
+  final alwaysUse24HourFormat = flag('alwaysUse24HourFormat');
+  if (alwaysUse24HourFormat != null) {
+    data = data.copyWith(alwaysUse24HourFormat: alwaysUse24HourFormat);
+  }
+  final accessibleNavigation = flag('accessibleNavigation');
+  if (accessibleNavigation != null) {
+    data = data.copyWith(accessibleNavigation: accessibleNavigation);
+  }
+  final disableAnimations = flag('disableAnimations');
+  if (disableAnimations != null) {
+    data = data.copyWith(disableAnimations: disableAnimations);
+  }
+  final invertColors = flag('invertColors');
+  if (invertColors != null) data = data.copyWith(invertColors: invertColors);
+  final highContrast = flag('highContrast');
+  if (highContrast != null) data = data.copyWith(highContrast: highContrast);
+  final boldText = flag('boldText');
+  if (boldText != null) data = data.copyWith(boldText: boldText);
+
+  final navigationMode = json['navigationMode'];
+  if (navigationMode is String) {
+    data = data.copyWith(
+      navigationMode: navigationMode == 'directional'
+          ? NavigationMode.directional
+          : NavigationMode.traditional,
+    );
+  }
+  return data;
 }
 
-Size _sizeOf(Object? v) => v is Map && v['width'] is num && v['height'] is num
-    ? Size(
-        (v['width'] as num).toDouble(),
-        (v['height'] as num).toDouble(),
-      )
-    : Size.zero;
+Size? _sizeOf(Object? v) =>
+    v is Map && v['width'] is num && v['height'] is num
+        ? Size(
+            (v['width'] as num).toDouble(),
+            (v['height'] as num).toDouble(),
+          )
+        : null;
 
-EdgeInsets _edgesOf(Object? v) => v is Map
+EdgeInsets? _edgesOf(Object? v) => v is Map
     ? EdgeInsets.fromLTRB(
         (v['left'] as num?)?.toDouble() ?? 0,
         (v['top'] as num?)?.toDouble() ?? 0,
         (v['right'] as num?)?.toDouble() ?? 0,
         (v['bottom'] as num?)?.toDouble() ?? 0,
       )
-    : EdgeInsets.zero;
+    : null;
 
 /// `MediaQuery` 相关的系统级变化 → 给所有订阅者回推新值。
 ///

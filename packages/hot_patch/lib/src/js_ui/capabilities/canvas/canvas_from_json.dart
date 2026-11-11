@@ -339,7 +339,8 @@ TextPainter? textPainterFromJson(Object? spanJson, Object? optionsJson) {
   final painter = TextPainter(
     text: span,
     textDirection: direction,
-    textAlign: textAlignFromJson(opts['textAlign']) ?? TextAlign.left,
+    // 与 `TextPainter({textAlign = TextAlign.start})` 的官方默认一致。
+    textAlign: textAlignFromJson(opts['textAlign']) ?? TextAlign.start,
     maxLines: (rawMaxLines as num?)?.toInt(),
     ellipsis: rawEllipsis as String?,
   );
