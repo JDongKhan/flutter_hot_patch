@@ -1795,6 +1795,9 @@ const String miniReactReconcilerSource = r'''
     root.dirty = [];
     root.flushPending = false;
     root.inst = null;
+    // 挂载失败同样视为「这条根已关闭」：挂载期（如 initState）注册的页面级状态
+    // （持久帧回调等）必须随根一起丢弃，否则会变成无主状态永久存活。
+    __runAll('onRootClose', root);
     delete __roots[pageKey];
   }
 
