@@ -262,7 +262,17 @@ String? exprToJs(
         // null 与 undefined 对比较结果完全一致（都 `!==` 该非空值），不需要
         // 归一；只有两侧都可能为空时，才需要把 undefined 归一成 null
         // （否则 `null === undefined` 会与 Dart 的 `null == null` 不一致）。
-        final strict = op == '==' ? '===' : '!==';
+        //
+        // 枚举例外：JS 侧枚举值是常量对象（`toJSON()` / `valueOf()` 都返回成员名），
+        // 跨桥回传的是成员名（如 `'endToStart'`）。Dart 的 `==` 必须落成**宽松
+        // 相等**，让 `'endToStart' == DismissDirection.endToStart` 成立；严格相等
+        // 会让枚举与宿主回传值永远不等（如 Dismissible.confirmDismiss 恒 false）。
+        final enumCompare =
+            _isEnumOperand(e.leftOperand, scope, classes) ||
+            _isEnumOperand(e.rightOperand, scope, classes);
+        final strict = enumCompare
+            ? (op == '==' ? '==' : '!=')
+            : (op == '==' ? '===' : '!==');
         if (!_mayBeNull(e.leftOperand, scope, classes) ||
             !_mayBeNull(e.rightOperand, scope, classes)) {
           return '($l $strict $r)';
@@ -3177,6 +3187,23 @@ ClassInfo? _operatorOwnerOf(
     c = sup == null ? null : classes[sup];
   }
   return null;
+}
+
+/// 操作数静态类型是否为枚举（项目 / SDK / 依赖包共用同一份声明索引）。
+///
+/// 枚举参与的 `==` / `!=` 必须落成**宽松相等**：JS 枚举值是常量对象，
+/// `valueOf()` 返回成员名，宿主跨桥回传的也是成员名（如 `'endToStart'`）。
+/// 严格相等会让 `'endToStart' === DismissDirection.endToStart` 恒为 false。
+bool _isEnumOperand(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final t = _staticTypeOf(e, scope, classes);
+  if (t == null) return false;
+  final name = eraseType(t);
+  if (name.isEmpty) return false;
+  return CtorSignatures.instance?.isEnum(name) ?? false;
 }
 
 /// 赋值目标链上是否出现空安全选择器（`?.` / `?[` / `?.m()`）。
