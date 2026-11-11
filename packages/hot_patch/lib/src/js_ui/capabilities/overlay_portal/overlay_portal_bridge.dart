@@ -31,26 +31,26 @@ final JsControllerBridge<LayerLink> _linkBridge = JsControllerBridge<LayerLink>(
 /// OverlayPortalController 句柄桥：show/hide 由 JS 命令驱动。
 final JsControllerBridge<OverlayPortalController> _portalBridge =
     JsControllerBridge<OverlayPortalController>(
-  kind: 'overlay/Portal',
-  create: (id, meta) => OverlayPortalController(
-    debugLabel: meta is Map && meta['debugLabel'] is String
-        ? meta['debugLabel'] as String
-        : null,
-  ),
-  onOp: (controller, op, payload) {
-    if (op == 'call') {
-      switch (payload['method']) {
-        case 'show':
-          controller.show();
-        case 'hide':
-          controller.hide();
-        case 'toggle':
-          controller.isShowing ? controller.hide() : controller.show();
-      }
-    }
-    return null;
-  },
-);
+      kind: 'overlay/Portal',
+      create: (id, meta) => OverlayPortalController(
+        debugLabel: meta is Map && meta['debugLabel'] is String
+            ? meta['debugLabel'] as String
+            : null,
+      ),
+      onOp: (controller, op, payload) {
+        if (op == 'call') {
+          switch (payload['method']) {
+            case 'show':
+              controller.show();
+            case 'hide':
+              controller.hide();
+            case 'toggle':
+              controller.isShowing ? controller.hide() : controller.show();
+          }
+        }
+        return null;
+      },
+    );
 
 void ensureOverlayPortalChannels() {
   _linkBridge.ensure();
@@ -65,6 +65,7 @@ void registerOverlayPortalWidgets(JsWidgetRegistry r) {
     }
     final overlayChild = c.children['overlayChild'] as Widget?;
     return OverlayPortal(
+      key: c.key,
       controller: controller,
       overlayLocation: _locationOf(c.props['overlayLocation']),
       overlayChildBuilder: (context) =>
@@ -77,6 +78,7 @@ void registerOverlayPortalWidgets(JsWidgetRegistry r) {
     final link = _linkOf(c.props['link']);
     if (link == null) return uiFallback('CompositedTransformTarget.link 缺失');
     return CompositedTransformTarget(
+      key: c.key,
       link: link,
       child: c.children['child'] as Widget?,
     );
@@ -86,6 +88,7 @@ void registerOverlayPortalWidgets(JsWidgetRegistry r) {
     final link = _linkOf(c.props['link']);
     if (link == null) return uiFallback('CompositedTransformFollower.link 缺失');
     return CompositedTransformFollower(
+      key: c.key,
       link: link,
       showWhenUnlinked: c.bool_('showWhenUnlinked') ?? true,
       offset: offsetFromJson(c.props['offset']) ?? Offset.zero,
@@ -116,5 +119,6 @@ OverlayPortalController? _controllerOf(Object? prop) {
 }
 
 /// `OverlayChildLocation.*` 在 JS 侧是枚举名字符串（与其它 SDK 枚举同一形态）。
-OverlayChildLocation _locationOf(Object? raw) =>
-    raw == 'rootOverlay' ? OverlayChildLocation.rootOverlay : OverlayChildLocation.nearestOverlay;
+OverlayChildLocation _locationOf(Object? raw) => raw == 'rootOverlay'
+    ? OverlayChildLocation.rootOverlay
+    : OverlayChildLocation.nearestOverlay;

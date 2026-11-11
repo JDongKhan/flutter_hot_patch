@@ -25,6 +25,7 @@ void registerPopScopeWidgets(JsWidgetRegistry r) {
     final handler =
         c.props['onPopInvokedWithResult'] ?? c.props['onPopInvoked'];
     return _JsPopScope(
+      key: c.key,
       canPop: c.bool_('canPop') ?? true,
       handler: handler,
       child: c.children['child'] as Widget?,
@@ -34,6 +35,7 @@ void registerPopScopeWidgets(JsWidgetRegistry r) {
 
 class _JsPopScope extends StatelessWidget {
   const _JsPopScope({
+    super.key,
     required this.canPop,
     required this.handler,
     required this.child,
@@ -54,7 +56,7 @@ class _JsPopScope extends StatelessWidget {
       onPopInvokedWithResult: handler == null
           ? null
           : (didPop, result) =>
-              invokeJsHandler(handler, [didPop, _jsonSafe(result)]),
+                invokeJsHandler(handler, [didPop, _jsonSafe(result)]),
       child: child ?? const SizedBox.shrink(),
     );
   }

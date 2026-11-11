@@ -21,29 +21,30 @@ import '../../js_widget_registry.dart';
 import '../core/controller_bridge.dart';
 
 /// FocusNode 句柄桥：真实节点由 `meta` 里的构造参数创建（请求/失焦走 op）。
-final JsControllerBridge<FocusNode> _focusBridge = JsControllerBridge<FocusNode>(
-  kind: 'ctrl/Focus',
-  create: (_, meta) {
-    final m = meta is Map ? meta : const {};
-    return FocusNode(
-      debugLabel: m['debugLabel']?.toString(),
-      skipTraversal: m['skipTraversal'] == true,
-      canRequestFocus: m['canRequestFocus'] != false,
-      descendantsAreFocusable: m['descendantsAreFocusable'] != false,
+final JsControllerBridge<FocusNode> _focusBridge =
+    JsControllerBridge<FocusNode>(
+      kind: 'ctrl/Focus',
+      create: (_, meta) {
+        final m = meta is Map ? meta : const {};
+        return FocusNode(
+          debugLabel: m['debugLabel']?.toString(),
+          skipTraversal: m['skipTraversal'] == true,
+          canRequestFocus: m['canRequestFocus'] != false,
+          descendantsAreFocusable: m['descendantsAreFocusable'] != false,
+        );
+      },
+      onOp: (node, op, payload) {
+        if (op == 'call') {
+          final method = payload['method']?.toString() ?? '';
+          if (method == 'requestFocus') {
+            node.requestFocus();
+          } else if (method == 'unfocus') {
+            node.unfocus();
+          }
+        }
+        return null;
+      },
     );
-  },
-  onOp: (node, op, payload) {
-    if (op == 'call') {
-      final method = payload['method']?.toString() ?? '';
-      if (method == 'requestFocus') {
-        node.requestFocus();
-      } else if (method == 'unfocus') {
-        node.unfocus();
-      }
-    }
-    return null;
-  },
-);
 
 /// FocusNode 句柄桥：需要真实 FocusNode 的其它能力（KeyboardListener 等）
 /// 复用同一条桥，保证「同一 JS 实例 ↔ 同一宿主节点」。
@@ -61,9 +62,11 @@ void registerFocusWidgets(JsWidgetRegistry r) {
     final canRequestFocus = c.bool_('canRequestFocus') ?? true;
     final skipTraversal = c.bool_('skipTraversal') ?? false;
     final descendantsAreFocusable = c.bool_('descendantsAreFocusable') ?? true;
-    final descendantsAreTraversable = c.bool_('descendantsAreTraversable') ?? true;
+    final descendantsAreTraversable =
+        c.bool_('descendantsAreTraversable') ?? true;
 
-    Widget build(FocusNode? node) => Focus(
+    Widget build(FocusNode? node, {Key? key}) => Focus(
+      key: key,
       focusNode: node,
       autofocus: autofocus,
       canRequestFocus: canRequestFocus,
@@ -75,8 +78,9 @@ void registerFocusWidgets(JsWidgetRegistry r) {
     );
 
     final id = JsControllerBridge.idOf(c.props['focusNode']);
-    if (id == null) return build(null);
+    if (id == null) return build(null, key: c.key);
     return JsControllerHost<FocusNode>(
+      key: c.key,
       bridge: _focusBridge,
       id: id,
       create: () => FocusNode(),

@@ -25,6 +25,7 @@ void registerSliverPersistentHeaderWidgets(JsWidgetRegistry r) {
   r.register(
     'SliverPersistentHeader',
     (c) => SliverPersistentHeader(
+      key: c.key,
       pinned: c.bool_('pinned') ?? false,
       floating: c.bool_('floating') ?? false,
       delegate: _JsSliverPersistentHeaderDelegate(

@@ -60,8 +60,8 @@ _scrollBridge = JsControllerBridge<ScrollController>(
 
 /// PageController 句柄桥：与 ScrollController 同一套通用层，只多
 /// jumpToPage / animateToPage / nextPage / previousPage 的方法分派。
-final JsControllerBridge<PageController> _pageBridge =
-    JsControllerBridge<PageController>(
+final JsControllerBridge<PageController>
+_pageBridge = JsControllerBridge<PageController>(
   kind: 'ctrl/Page',
   // 真实 PageController 由 Host 带 initialPage / viewportFraction 创建
   // （与 TabController 同模式）；此处不能预创建默认实例，否则 Host 的
@@ -79,9 +79,8 @@ final JsControllerBridge<PageController> _pageBridge =
       // 实参位置按方法各自的口径取：animateToPage = [page, ms, curve]，
       // nextPage / previousPage = [ms, curve]（切换页不需要 page）。
       final isPageTurn = method == 'nextPage' || method == 'previousPage';
-      int msAt(int i) => args.length > i && args[i] is num
-          ? (args[i] as num).toInt()
-          : 300;
+      int msAt(int i) =>
+          args.length > i && args[i] is num ? (args[i] as num).toInt() : 300;
       Curve curveAt(int i) => args.length > i
           ? curves[args[i]?.toString()] ?? Curves.easeOut
           : Curves.easeOut;
@@ -99,9 +98,15 @@ final JsControllerBridge<PageController> _pageBridge =
           curve: curve,
         );
       } else if (method == 'nextPage') {
-        c.nextPage(duration: Duration(milliseconds: ms), curve: curve);
+        c.nextPage(
+          duration: Duration(milliseconds: ms),
+          curve: curve,
+        );
       } else if (method == 'previousPage') {
-        c.previousPage(duration: Duration(milliseconds: ms), curve: curve);
+        c.previousPage(
+          duration: Duration(milliseconds: ms),
+          curve: curve,
+        );
       }
     }
     return null;
@@ -124,8 +129,10 @@ void ensureScrollControllerChannels() {
 Widget _scrollControllerHost(
   JsRenderContext c,
   String id,
-  Widget Function(ScrollController controller) build,
-) => JsControllerHost<ScrollController>(
+  Widget Function(ScrollController controller) build, {
+  Key? key,
+}) => JsControllerHost<ScrollController>(
+  key: key,
   bridge: _scrollBridge,
   id: id,
   create: ScrollController.new,
@@ -148,25 +155,26 @@ Widget _pageControllerHost(
   String id,
   int initialPage,
   double viewportFraction,
-  Widget Function(PageController controller) build,
-) =>
-    JsControllerHost<PageController>(
-      bridge: _pageBridge,
-      id: id,
-      create: () => PageController(
-        initialPage: initialPage,
-        viewportFraction: viewportFraction,
-      ),
-      forward: (controller, handler) {
-        if (!controller.hasClients) return;
-        final page = controller.page;
-        if (page == null) return;
-        c.invoke(handler, [
-          {'page': page, 'initialPage': initialPage},
-        ]);
-      },
-      buildChild: build,
-    );
+  Widget Function(PageController controller) build, {
+  Key? key,
+}) => JsControllerHost<PageController>(
+  key: key,
+  bridge: _pageBridge,
+  id: id,
+  create: () => PageController(
+    initialPage: initialPage,
+    viewportFraction: viewportFraction,
+  ),
+  forward: (controller, handler) {
+    if (!controller.hasClients) return;
+    final page = controller.page;
+    if (page == null) return;
+    c.invoke(handler, [
+      {'page': page, 'initialPage': initialPage},
+    ]);
+  },
+  buildChild: build,
+);
 
 /// 从 props 还原 SliverGridDelegate：含 `maxCrossAxisExtent` →
 /// SliverGridDelegateWithMaxCrossAxisExtent，否则
@@ -295,7 +303,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final builder = _isNamedBuilderForm(c);
     final isSeparated = _isSeparated(c);
 
-    Widget build(ScrollController? controller) {
+    Widget build(ScrollController? controller, {Key? key}) {
       final shrinkWrap = c.bool_('shrinkWrap') ?? false;
       final scrollDirection =
           axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
@@ -304,6 +312,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final itemExtent = c.num_('itemExtent');
       if (!builder) {
         return ListView(
+          key: key,
           controller: controller,
           // shrinkWrap 缺省保持 Flutter 默认（false）——与原生渲染一致。
           shrinkWrap: shrinkWrap,
@@ -319,6 +328,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         // 展开 [item, sep, ...]，按奇偶拆回两组；itemCount 是 item 数）。
         final split = _splitSeparated(children);
         return ListView.separated(
+          key: key,
           controller: controller,
           shrinkWrap: shrinkWrap,
           scrollDirection: scrollDirection,
@@ -331,6 +341,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       }
       // `.builder` 形态：还原 Flutter 原生 `ListView.builder`。
       return ListView.builder(
+        key: key,
         controller: controller,
         shrinkWrap: shrinkWrap,
         scrollDirection: scrollDirection,
@@ -343,8 +354,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     }
 
     final scId = JsControllerBridge.idOf(c.props['controller']);
-    if (scId != null) return _scrollControllerHost(c, scId, build);
-    return build(null);
+    if (scId != null) {
+      return _scrollControllerHost(c, scId, build, key: c.key);
+    }
+    return build(null, key: c.key);
   });
 
   // ReorderableListView：长按拖拽重排。事件 onReorder 是**双参**回调
@@ -362,7 +375,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final isBuilder = _isNamedBuilderForm(c);
     final children = _flatChildren(c, 'children');
 
-    Widget build(ScrollController? controller) {
+    Widget build(ScrollController? controller, {Key? key}) {
       // onReorder 非空：无句柄时给空实现，避免拖拽结束抛断言。
       final onReorder = c.on2<int, int>('onReorder') ?? (_, _) {};
       final scrollDirection =
@@ -372,6 +385,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final physics = scrollPhysicsFromJson(c.props['physics']);
       if (isBuilder) {
         return ReorderableListView.builder(
+          key: key,
           scrollController: controller,
           onReorder: onReorder,
           itemCount: _builderCount(c, children.length),
@@ -383,6 +397,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         );
       }
       return ReorderableListView(
+        key: key,
         scrollController: controller,
         onReorder: onReorder,
         scrollDirection: scrollDirection,
@@ -394,8 +409,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     }
 
     final scId = JsControllerBridge.idOf(c.props['scrollController']);
-    if (scId != null) return _scrollControllerHost(c, scId, build);
-    return build(null);
+    if (scId != null) {
+      return _scrollControllerHost(c, scId, build, key: c.key);
+    }
+    return build(null, key: c.key);
   });
 
   // GridView：普通构造 / .builder（懒加载）/ .count / .extent。gridDelegate 按
@@ -415,8 +432,9 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final isBuilder = _isNamedBuilderForm(c);
     final itemCount = _builderCount(c, children.length);
 
-    Widget build(ScrollController? controller) => isBuilder
+    Widget build(ScrollController? controller, {Key? key}) => isBuilder
         ? GridView.builder(
+            key: key,
             controller: controller,
             gridDelegate: gridDelegate,
             scrollDirection: scrollDirection,
@@ -427,6 +445,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
             itemBuilder: (_, i) => _childAt(children, i),
           )
         : GridView(
+            key: key,
             controller: controller,
             gridDelegate: gridDelegate,
             scrollDirection: scrollDirection,
@@ -437,8 +456,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
           );
 
     final scId = JsControllerBridge.idOf(c.props['controller']);
-    if (scId != null) return _scrollControllerHost(c, scId, build);
-    return build(null);
+    if (scId != null) {
+      return _scrollControllerHost(c, scId, build, key: c.key);
+    }
+    return build(null, key: c.key);
   });
 
   // CustomScrollView：slivers 按原名进 props，宿主包装类构造期抽成有序 __children
@@ -464,9 +485,11 @@ void registerScrollWidgets(JsWidgetRegistry r) {
           shrinkWrap: shrinkWrap,
           slivers: slivers,
         ),
+        key: c.key,
       );
     }
     return CustomScrollView(
+      key: c.key,
       scrollDirection:
           axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
       physics: scrollPhysicsFromJson(c.props['physics']),
@@ -488,7 +511,9 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
     final physics = scrollPhysicsFromJson(c.props['physics']);
     final clipBehavior = clipBehaviorFromJson(c.props['clipBehavior']);
-    Widget buildWith(ScrollController? controller) => NestedScrollView(
+    Widget buildWith(ScrollController? controller, {Key? key}) =>
+        NestedScrollView(
+          key: key,
           controller: controller,
           body: body,
           headerSliverBuilder: (_, _) => headers,
@@ -499,8 +524,8 @@ void registerScrollWidgets(JsWidgetRegistry r) {
           clipBehavior: clipBehavior ?? Clip.hardEdge,
         );
     final scId = JsControllerBridge.idOf(c.props['controller']);
-    if (scId == null) return buildWith(null);
-    return _scrollControllerHost(c, scId, buildWith);
+    if (scId == null) return buildWith(null, key: c.key);
+    return _scrollControllerHost(c, scId, buildWith, key: c.key);
   });
 
   // SliverList：`.builder`/`.separated` 命名构造还原 Flutter 同名原生构造；
@@ -509,17 +534,21 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register('SliverList', (c) {
     // 非命名构造（delegate 形态）直接还原 delegate：BuilderDelegate 由
     // `children.delegate` 描述还原，ListDelegate 由 delegate 列表还原。
-    if (!_isNamedBuilderForm(c)) return SliverList(delegate: _sliverDelegate(c));
+    if (!_isNamedBuilderForm(c)) {
+      return SliverList(key: c.key, delegate: _sliverDelegate(c));
+    }
     final children = (c.children['__items'] as List<Widget>?) ?? const [];
     if (_isSeparated(c)) {
       final split = _splitSeparated(children);
       return SliverList.separated(
+        key: c.key,
         itemCount: _builderCount(c, split.items.length),
         itemBuilder: (_, i) => _childAt(split.items, i),
         separatorBuilder: (_, i) => _childAt(split.separators, i),
       );
     }
     return SliverList.builder(
+      key: c.key,
       itemCount: _builderCount(c, children.length),
       itemBuilder: (_, i) => _childAt(children, i),
     );
@@ -545,11 +574,13 @@ void registerScrollWidgets(JsWidgetRegistry r) {
           if (i < split.separators.length) list.add(split.separators[i]);
         }
         return SliverGrid(
+          key: c.key,
           gridDelegate: gridDelegate,
           delegate: SliverChildListDelegate(list),
         );
       }
       return SliverGrid.builder(
+        key: c.key,
         gridDelegate: gridDelegate,
         itemCount: _builderCount(c, children.length),
         itemBuilder: (_, i) => _childAt(children, i),
@@ -561,11 +592,16 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final factory = c.str('factory');
     if (factory == 'count' || factory == 'extent') {
       return SliverGrid(
+        key: c.key,
         gridDelegate: gridDelegate,
         delegate: SliverChildListDelegate(_flatChildren(c, 'children')),
       );
     }
-    return SliverGrid(gridDelegate: gridDelegate, delegate: _sliverDelegate(c));
+    return SliverGrid(
+      key: c.key,
+      gridDelegate: gridDelegate,
+      delegate: _sliverDelegate(c),
+    );
   });
 
   // SliverAppBar：与 AppBar 同款（title/leading/flexibleSpace 是 element-prop、
@@ -593,6 +629,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     switch (c.str('factory')) {
       case 'large':
         return SliverAppBar.large(
+          key: c.key,
           leading: leading,
           title: title,
           flexibleSpace: flexibleSpace,
@@ -606,6 +643,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         );
       case 'medium':
         return SliverAppBar.medium(
+          key: c.key,
           leading: leading,
           title: title,
           flexibleSpace: flexibleSpace,
@@ -619,6 +657,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         );
       default:
         return SliverAppBar(
+          key: c.key,
           leading: leading,
           title: title,
           flexibleSpace: flexibleSpace,
@@ -641,6 +680,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register(
     'SliverPadding',
     (c) => SliverPadding(
+      key: c.key,
       padding: edgeInsetsFromJson(c.map('padding')),
       sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
@@ -649,7 +689,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // SliverToBoxAdapter：普通 widget 包装成 sliver。
   r.register(
     'SliverToBoxAdapter',
-    (c) => SliverToBoxAdapter(child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink())),
+    (c) => SliverToBoxAdapter(
+      key: c.key,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+    ),
   );
 
   // SliverFillRemaining：child + hasScrollBody（缺省 true）/fillOverscroll
@@ -657,6 +700,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register(
     'SliverFillRemaining',
     (c) => SliverFillRemaining(
+      key: c.key,
       hasScrollBody: c.bool_('hasScrollBody') ?? true,
       fillOverscroll: c.bool_('fillOverscroll') ?? false,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
@@ -671,12 +715,14 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     if (_isNamedBuilderForm(c)) {
       final children = _flatChildren(c, 'children');
       return SliverFixedExtentList.builder(
+        key: c.key,
         itemExtent: itemExtent,
         itemCount: _builderCount(c, children.length),
         itemBuilder: (_, i) => _childAt(children, i),
       );
     }
     return SliverFixedExtentList(
+      key: c.key,
       delegate: _sliverDelegate(c),
       itemExtent: itemExtent,
     );
@@ -687,6 +733,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register(
     'SliverFillViewport',
     (c) => SliverFillViewport(
+      key: c.key,
       delegate: _sliverDelegate(c),
       viewportFraction: c.num_('viewportFraction') ?? 1,
       padEnds: c.bool_('padEnds') ?? true,
@@ -697,13 +744,17 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // Flutter 组件同名默认兜底（opacity 1 / offstage false / ignoring false）。
   r.register(
     'SliverOpacity',
-    (c) =>
-        SliverOpacity(opacity: c.num_('opacity') ?? 1, sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink())),
+    (c) => SliverOpacity(
+      key: c.key,
+      opacity: c.num_('opacity') ?? 1,
+      sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
+    ),
   );
 
   r.register(
     'SliverOffstage',
     (c) => SliverOffstage(
+      key: c.key,
       offstage: c.bool_('offstage') ?? false,
       sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
@@ -712,6 +763,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register(
     'SliverIgnorePointer',
     (c) => SliverIgnorePointer(
+      key: c.key,
       ignoring: c.bool_('ignoring') ?? false,
       sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
@@ -721,6 +773,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register(
     'SliverSafeArea',
     (c) => SliverSafeArea(
+      key: c.key,
       left: c.bool_('left') ?? true,
       top: c.bool_('top') ?? true,
       right: c.bool_('right') ?? true,
@@ -736,9 +789,14 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final visible = c.bool_('visible') ?? true;
     final sliver = (c.children['sliver'] as Widget?) ?? const SizedBox.shrink();
     if (c.str('factory') == 'maintain') {
-      return SliverVisibility.maintain(visible: visible, sliver: sliver);
+      return SliverVisibility.maintain(
+        key: c.key,
+        visible: visible,
+        sliver: sliver,
+      );
     }
     return SliverVisibility(
+      key: c.key,
       visible: visible,
       maintainState: c.bool_('maintainState') ?? false,
       maintainAnimation: c.bool_('maintainAnimation') ?? false,
@@ -746,7 +804,8 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       maintainSemantics: c.bool_('maintainSemantics') ?? false,
       maintainInteractivity: c.bool_('maintainInteractivity') ?? false,
       replacementSliver:
-          (c.children['replacementSliver'] as Widget?) ?? const SliverToBoxAdapter(),
+          (c.children['replacementSliver'] as Widget?) ??
+          const SliverToBoxAdapter(),
       sliver: sliver,
     );
   });
@@ -773,9 +832,11 @@ void registerScrollWidgets(JsWidgetRegistry r) {
           reverse: reverse,
           child: child,
         ),
+        key: c.key,
       );
     }
     return SingleChildScrollView(
+      key: c.key,
       scrollDirection:
           axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
       padding: nullableEdgeInsets(c.map('padding')),
@@ -793,7 +854,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final builder = _isNamedBuilderForm(c);
     final count = _builderCount(c, children.length);
 
-    Widget build(PageController? controller) {
+    Widget build(PageController? controller, {Key? key}) {
       final direction =
           axisFromJson(c.props['scrollDirection']) ?? Axis.horizontal;
       final reverse = c.bool_('reverse') ?? false;
@@ -802,6 +863,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final onPageChanged = c.on1<int>('onPageChanged');
       if (builder) {
         return PageView.builder(
+          key: key,
           controller: controller,
           scrollDirection: direction,
           reverse: reverse,
@@ -813,6 +875,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         );
       }
       return PageView(
+        key: key,
         controller: controller,
         scrollDirection: direction,
         reverse: reverse,
@@ -832,8 +895,8 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final fraction = raw is Map && raw['viewportFraction'] is num
           ? (raw['viewportFraction'] as num).toDouble()
           : 1.0;
-      return _pageControllerHost(c, pcId, initial, fraction, build);
+      return _pageControllerHost(c, pcId, initial, fraction, build, key: c.key);
     }
-    return build(null);
+    return build(null, key: c.key);
   });
 }

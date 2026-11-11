@@ -22,6 +22,7 @@ import '../../js_widget_registry.dart';
 /// 直接收下，`n.metrics.pixels` 等属性访问与 Dart 侧源码一比一可用。
 class _NotificationListener extends StatefulWidget {
   const _NotificationListener({
+    super.key,
     required this.onNotification,
     required this.child,
   });
@@ -71,6 +72,7 @@ void registerNotificationWidgets(JsWidgetRegistry r) {
   r.register(
     'NotificationListener',
     (c) => _NotificationListener(
+      key: c.key,
       onNotification: c.props['onNotification'],
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),

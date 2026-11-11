@@ -25,21 +25,23 @@ import '../core/from_json/dart_values_from_json.dart';
 /// 复用同一实例，先到者生效）。
 final JsControllerBridge<FixedExtentScrollController> _fixedExtentBridge =
     JsControllerBridge<FixedExtentScrollController>(
-  kind: 'ctrl/FixedExtent',
-  create: (_, meta) => FixedExtentScrollController(
-    initialItem: _initialItemOf(meta is Map ? meta : null),
-  ),
-  onOp: (c, op, payload) {
-    if (op == 'call') {
-      final method = payload['method']?.toString() ?? '';
-      final args = payload['args'] is List ? payload['args'] as List : const [];
-      if (method == 'jumpToItem' && args.isNotEmpty && args[0] is num) {
-        c.jumpToItem((args[0] as num).toInt());
-      }
-    }
-    return null;
-  },
-);
+      kind: 'ctrl/FixedExtent',
+      create: (_, meta) => FixedExtentScrollController(
+        initialItem: _initialItemOf(meta is Map ? meta : null),
+      ),
+      onOp: (c, op, payload) {
+        if (op == 'call') {
+          final method = payload['method']?.toString() ?? '';
+          final args = payload['args'] is List
+              ? payload['args'] as List
+              : const [];
+          if (method == 'jumpToItem' && args.isNotEmpty && args[0] is num) {
+            c.jumpToItem((args[0] as num).toInt());
+          }
+        }
+        return null;
+      },
+    );
 
 /// 从 props / 句柄 meta 里取 `initialItem`（缺省 0，与 Flutter 同名参数一致）。
 int _initialItemOf(Map<dynamic, dynamic>? json) {
@@ -76,8 +78,9 @@ Widget _cupertinoPicker(JsRenderContext c) {
   final useMagnifier = c.bool_('useMagnifier') ?? false;
   final backgroundColor = colorFromJson(c.props['backgroundColor']);
 
-  Widget build(FixedExtentScrollController? controller) =>
+  Widget build(FixedExtentScrollController? controller, {Key? key}) =>
       CupertinoPicker.builder(
+        key: key,
         scrollController: controller,
         itemExtent: itemExtent,
         onSelectedItemChanged: onSelected,
@@ -94,14 +97,13 @@ Widget _cupertinoPicker(JsRenderContext c) {
       );
 
   final id = JsControllerBridge.idOf(c.props['scrollController']);
-  if (id == null) return build(null);
+  if (id == null) return build(null, key: c.key);
   return JsControllerHost<FixedExtentScrollController>(
+    key: c.key,
     bridge: _fixedExtentBridge,
     id: id,
     create: () => FixedExtentScrollController(
-      initialItem: _initialItemOf(
-        c.map('scrollController'),
-      ),
+      initialItem: _initialItemOf(c.map('scrollController')),
     ),
     // 只回传「当前选中项」：JS 侧 selectedItem 是纯镜像，itemBuilder 的选中
     // 高亮与上层联动都读它。

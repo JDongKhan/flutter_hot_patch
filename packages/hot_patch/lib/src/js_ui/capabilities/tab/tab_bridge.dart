@@ -51,20 +51,22 @@ const TickerProvider _detachedTickerProvider = _DetachedTickerProvider();
 /// 只登记 index 回传句柄；这里只留 index setter / animateTo 的 op 分派。
 final JsControllerBridge<TabController> _tabBridge =
     JsControllerBridge<TabController>(
-  kind: 'ctrl/Tab',
-  onOp: (c, op, payload) {
-    if (op == 'set' && payload['name'] == 'index') {
-      final v = payload['value'];
-      if (v is num) c.index = v.toInt();
-    } else if (op == 'call' && payload['method'] == 'animateTo') {
-      final args = payload['args'] is List ? payload['args'] as List : const [];
-      if (args.isNotEmpty && args[0] is num) {
-        c.animateTo((args[0] as num).toInt());
-      }
-    }
-    return null;
-  },
-);
+      kind: 'ctrl/Tab',
+      onOp: (c, op, payload) {
+        if (op == 'set' && payload['name'] == 'index') {
+          final v = payload['value'];
+          if (v is num) c.index = v.toInt();
+        } else if (op == 'call' && payload['method'] == 'animateTo') {
+          final args = payload['args'] is List
+              ? payload['args'] as List
+              : const [];
+          if (args.isNotEmpty && args[0] is num) {
+            c.animateTo((args[0] as num).toInt());
+          }
+        }
+        return null;
+      },
+    );
 
 /// 幂等注册 TabController 句柄 kind（由 js_ui_capabilities.ensureJsUiCapabilities
 /// 聚合调用）。
@@ -94,28 +96,33 @@ TabControllerHandle? tabControllerHandleOf(Object? prop) {
 Widget _tabControllerHost(
   JsRenderContext c,
   TabControllerHandle handle,
-  Widget Function(TabController controller) build,
-) =>
-    JsControllerHost<TabController>(
-      bridge: _tabBridge,
-      id: handle.id,
-      create: () => TabController(
-        length: handle.length,
-        initialIndex: handle.initialIndex,
-        vsync: _detachedTickerProvider,
-      ),
-      forward: (controller, handler) => c.invoke(handler, [controller.index]),
-      buildChild: build,
-    );
+  Widget Function(TabController controller) build, {
+  Key? key,
+}) => JsControllerHost<TabController>(
+  key: key,
+  bridge: _tabBridge,
+  id: handle.id,
+  create: () => TabController(
+    length: handle.length,
+    initialIndex: handle.initialIndex,
+    vsync: _detachedTickerProvider,
+  ),
+  forward: (controller, handler) => c.invoke(handler, [controller.index]),
+  buildChild: build,
+);
 
 /// Tab 家族的宿主注册。
 void registerTabWidgets(JsWidgetRegistry r) {
   // DefaultTabController：为子树提供 TabController（length 缺省退回子节点数）。
-  r.register('DefaultTabController', (c) => DefaultTabController(
-        length: c.int_('length') ?? 1,
-        initialIndex: c.int_('initialIndex') ?? 0,
-        child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
-      ));
+  r.register(
+    'DefaultTabController',
+    (c) => DefaultTabController(
+      key: c.key,
+      length: c.int_('length') ?? 1,
+      initialIndex: c.int_('initialIndex') ?? 0,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+    ),
+  );
 
   // TabBar：tabs 进 children（Tab 已注册为宿主 widget）。controller 是 JS
   // TabController 句柄时走 id-bridge 包装器；否则传 null（由祖先
@@ -133,17 +140,18 @@ void registerTabWidgets(JsWidgetRegistry r) {
     final labelColor = colorFromJson(c.props['labelColor']);
     final labelStyle = textStyleFromJson(c.map('labelStyle'));
     final labelPadding = nullableEdgeInsets(c.map('labelPadding'));
-    final unselectedLabelColor =
-        colorFromJson(c.props['unselectedLabelColor']);
-    final unselectedLabelStyle =
-        textStyleFromJson(c.map('unselectedLabelStyle'));
+    final unselectedLabelColor = colorFromJson(c.props['unselectedLabelColor']);
+    final unselectedLabelStyle = textStyleFromJson(
+      c.map('unselectedLabelStyle'),
+    );
     final tabAlignment = tabAlignmentFromJson(c.props['tabAlignment']);
     final physics = scrollPhysicsFromJson(c.props['physics']);
     final onTap = c.on1<int>('onTap');
 
-    Widget build(TabController? controller) {
+    Widget build(TabController? controller, {Key? key}) {
       if (c.str('factory') == 'secondary') {
         return TabBar.secondary(
+          key: key,
           controller: controller,
           tabs: tabs,
           isScrollable: isScrollable,
@@ -164,6 +172,7 @@ void registerTabWidgets(JsWidgetRegistry r) {
         );
       }
       return TabBar(
+        key: key,
         controller: controller,
         tabs: tabs,
         isScrollable: isScrollable,
@@ -185,32 +194,33 @@ void registerTabWidgets(JsWidgetRegistry r) {
     }
 
     final handle = tabControllerHandleOf(c.props['controller']);
-    if (handle == null) return build(null);
-    return _tabControllerHost(c, handle, build);
+    if (handle == null) return build(null, key: c.key);
+    return _tabControllerHost(c, handle, build, key: c.key);
   });
 
   // Tab：child 优先，其次 icon+text，最后 text（三者至少其一，生成器已保证）。
   r.register('Tab', (c) {
     // `child:` 是子结点参数 → 进 children；props 里的 child 兜底兼容。
     final child = (c.children['child'] as Widget?);
-    if (child != null) return Tab(child: child);
+    if (child != null) return Tab(key: c.key, child: child);
     final icon = (c.children['icon'] as Widget?);
     final text = c.str('text');
-    if (icon != null) return Tab(icon: icon, text: text);
-    return Tab(text: text);
+    if (icon != null) return Tab(key: c.key, icon: icon, text: text);
+    return Tab(key: c.key, text: text);
   });
 
   // TabBarView：每 tab 一页；controller 同 TabBar（句柄 → 同一 id-bridge，
   // 与 TabBar 共享同一真实 TabController；否则由祖先 DefaultTabController 提供）。
   r.register('TabBarView', (c) {
-    Widget build(TabController? controller) => TabBarView(
-          controller: controller,
-          physics: scrollPhysicsFromJson(c.props['physics']),
-          viewportFraction: c.num_('viewportFraction') ?? 1.0,
-          children: ((c.children['children'] as List<Widget>?) ?? const []),
-        );
+    Widget build(TabController? controller, {Key? key}) => TabBarView(
+      key: key,
+      controller: controller,
+      physics: scrollPhysicsFromJson(c.props['physics']),
+      viewportFraction: c.num_('viewportFraction') ?? 1.0,
+      children: ((c.children['children'] as List<Widget>?) ?? const []),
+    );
     final handle = tabControllerHandleOf(c.props['controller']);
-    if (handle == null) return build(null);
-    return _tabControllerHost(c, handle, build);
+    if (handle == null) return build(null, key: c.key);
+    return _tabControllerHost(c, handle, build, key: c.key);
   });
 }

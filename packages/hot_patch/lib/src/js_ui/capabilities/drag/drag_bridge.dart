@@ -24,25 +24,30 @@ import '../core/from_json/layout_from_json.dart';
 
 /// 登记拖拽三件套的宿主承载。
 void registerDragWidgets(JsWidgetRegistry r) {
-  r.register('Draggable', (c) => _draggableOf(c, longPress: false));
-  r.register('LongPressDraggable', (c) => _draggableOf(c, longPress: true));
-  r.register('DragTarget', (c) => _dragTargetOf(c));
+  r.register('Draggable', (c) => _draggableOf(c, key: c.key, longPress: false));
+  r.register(
+    'LongPressDraggable',
+    (c) => _draggableOf(c, key: c.key, longPress: true),
+  );
+  r.register('DragTarget', (c) => _dragTargetOf(c, key: c.key));
 }
 
 /// Draggable / LongPressDraggable：同一份参数折算，两个宿主类各自承载
 /// （长按版的额外参数 `delay` / `hapticFeedbackOnStart` 只在该分支出现）。
-Widget _draggableOf(JsRenderContext c, {required bool longPress}) {
+Widget _draggableOf(JsRenderContext c, {Key? key, required bool longPress}) {
   // child / feedback 在 Dart 侧都是必填：拿不到说明这棵 JS 树缺内容，给可见兜底。
-  final child = c.children['child'] as Widget? ??
-      uiFallback('${c.type} 缺少 child');
-  final feedback = c.children['feedback'] as Widget? ??
+  final child =
+      c.children['child'] as Widget? ?? uiFallback('${c.type} 缺少 child');
+  final feedback =
+      c.children['feedback'] as Widget? ??
       uiFallback('${c.type} 缺少 feedback（拖拽时的浮动子树）');
   final childWhenDragging = c.children['childWhenDragging'] as Widget?;
   final data = c.props['data'];
   final axis = axisFromJson(c.props['axis']);
   final maxSimultaneousDrags = c.int_('maxSimultaneousDrags');
   final hitTestBehavior =
-      _hitTestBehaviorOf(c.props['hitTestBehavior']) ?? HitTestBehavior.deferToChild;
+      _hitTestBehaviorOf(c.props['hitTestBehavior']) ??
+      HitTestBehavior.deferToChild;
   final rootOverlay = c.bool_('rootOverlay') ?? false;
   final ignoringFeedbackPointer = c.bool_('ignoringFeedbackPointer') ?? true;
 
@@ -53,6 +58,7 @@ Widget _draggableOf(JsRenderContext c, {required bool longPress}) {
 
   if (longPress) {
     return LongPressDraggable<Object>(
+      key: key,
       data: data,
       axis: axis,
       maxSimultaneousDrags: maxSimultaneousDrags,
@@ -64,13 +70,16 @@ Widget _draggableOf(JsRenderContext c, {required bool longPress}) {
       feedback: feedback,
       childWhenDragging: childWhenDragging,
       onDragStarted: onDragStarted,
-      onDragUpdate: onDragUpdate == null ? null : _dragUpdateHandler(onDragUpdate),
+      onDragUpdate: onDragUpdate == null
+          ? null
+          : _dragUpdateHandler(onDragUpdate),
       onDragEnd: onDragEnd == null ? null : _dragEndHandler(onDragEnd),
       onDragCompleted: onDragCompleted,
       child: child,
     );
   }
   return Draggable<Object>(
+    key: key,
     data: data,
     axis: axis,
     maxSimultaneousDrags: maxSimultaneousDrags,
@@ -80,7 +89,9 @@ Widget _draggableOf(JsRenderContext c, {required bool longPress}) {
     feedback: feedback,
     childWhenDragging: childWhenDragging,
     onDragStarted: onDragStarted,
-    onDragUpdate: onDragUpdate == null ? null : _dragUpdateHandler(onDragUpdate),
+    onDragUpdate: onDragUpdate == null
+        ? null
+        : _dragUpdateHandler(onDragUpdate),
     onDragEnd: onDragEnd == null ? null : _dragEndHandler(onDragEnd),
     onDragCompleted: onDragCompleted,
     child: child,
@@ -92,12 +103,12 @@ void Function(DragUpdateDetails) _dragUpdateHandler(
   ValueChanged<Map<String, dynamic>> emit,
 ) {
   return (d) => emit(<String, dynamic>{
-        'globalPosition': _offsetJson(d.globalPosition),
-        'localPosition': _offsetJson(d.localPosition),
-        'delta': _offsetJson(d.delta),
-        'primaryDelta': d.primaryDelta,
-        'sourceTimeStampUs': d.sourceTimeStamp?.inMicroseconds,
-      });
+    'globalPosition': _offsetJson(d.globalPosition),
+    'localPosition': _offsetJson(d.localPosition),
+    'delta': _offsetJson(d.delta),
+    'primaryDelta': d.primaryDelta,
+    'sourceTimeStampUs': d.sourceTimeStamp?.inMicroseconds,
+  });
 }
 
 /// `DraggableDetails` → JSON。
@@ -108,22 +119,23 @@ void Function(DraggableDetails) _dragEndHandler(
   ValueChanged<Map<String, dynamic>> emit,
 ) {
   return (d) => emit(<String, dynamic>{
-        'wasAccepted': d.wasAccepted,
-        'offset': _offsetJson(d.offset),
-        'velocity': <String, dynamic>{
-          'pxPerSecond': _offsetJson(d.velocity.pixelsPerSecond),
-        },
-      });
+    'wasAccepted': d.wasAccepted,
+    'offset': _offsetJson(d.offset),
+    'velocity': <String, dynamic>{
+      'pxPerSecond': _offsetJson(d.velocity.pixelsPerSecond),
+    },
+  });
 }
 
 /// DragTarget：`builder` 句柄 + 已展开的子树。
-Widget _dragTargetOf(JsRenderContext c) {
+Widget _dragTargetOf(JsRenderContext c, {Key? key}) {
   final builder = c.props['builder'];
   if (builder == null) {
     // builder 是 DragTarget 的必填参数（Dart 侧签名要求）。
     return uiFallback('${c.type} 缺少 builder 句柄');
   }
   return _JsDragTarget(
+    key: key,
     builder: builder,
     onAccept: c.on1<Object?>('onAccept'),
     onAcceptWithDetails: c.on1<Map<String, dynamic>>('onAcceptWithDetails'),
@@ -135,6 +147,7 @@ Widget _dragTargetOf(JsRenderContext c) {
 
 class _JsDragTarget extends StatefulWidget {
   const _JsDragTarget({
+    super.key,
     required this.builder,
     required this.child,
     required this.onAccept,
@@ -168,10 +181,7 @@ class _JsDragTargetState extends State<_JsDragTarget> {
     if (sig == _lastSig) return;
     _lastSig = sig;
     invokeJsHandler(widget.builder, [
-      <String, dynamic>{
-        'candidate': candidate,
-        'rejected': rejected,
-      },
+      <String, dynamic>{'candidate': candidate, 'rejected': rejected},
     ]);
   }
 
@@ -185,19 +195,21 @@ class _JsDragTargetState extends State<_JsDragTarget> {
         // 子树由 JS 侧执行 builder 后随 patch 回填。
         return widget.child ?? const SizedBox.shrink();
       },
-      onAcceptWithDetails: (d) => widget.onAcceptWithDetails?.call(_detailsJson(d)),
+      onAcceptWithDetails: (d) =>
+          widget.onAcceptWithDetails?.call(_detailsJson(d)),
       onMove: (d) => widget.onMove?.call(_detailsJson(d)),
       onLeave: (d) => widget.onLeave?.call(d),
     );
   }
 }
 
-Map<String, dynamic> _detailsJson(DragTargetDetails<Object> d) => <String, dynamic>{
-      'data': d.data,
-      'offset': _offsetJson(d.offset),
-    };
+Map<String, dynamic> _detailsJson(DragTargetDetails<Object> d) =>
+    <String, dynamic>{'data': d.data, 'offset': _offsetJson(d.offset)};
 
-Map<String, double> _offsetJson(Offset o) => <String, double>{'dx': o.dx, 'dy': o.dy};
+Map<String, double> _offsetJson(Offset o) => <String, double>{
+  'dx': o.dx,
+  'dy': o.dy,
+};
 
 HitTestBehavior? _hitTestBehaviorOf(Object? raw) {
   switch ('$raw') {

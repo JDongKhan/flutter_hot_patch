@@ -25,7 +25,6 @@ import '../../../services/js_runtime_manager.dart';
 import '../../js_widget_registry.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/layout_from_json.dart';
-import '../key/key_bridge.dart';
 
 /// JSON → DismissDirection（枚举名）。
 DismissDirection? dismissDirectionFromJson(Object? v) {
@@ -48,13 +47,10 @@ DragStartBehavior dragStartBehaviorFromJson(Object? v) =>
 /// Dismissible 能力：宿主组件注册。
 void registerDismissibleWidgets(JsWidgetRegistry r) {
   r.register('Dismissible', (c) {
-    final declared = jsKeyOf(c.props['key']);
-    // Dismissible 必须有 key：GlobalKey 不能与结点包装器的 key 共用（同一 key 挂在
-    // 祖先与后代上会触发重复 key 断言），交给 hostStateKey 另分配；LocalKey 按
-    // 值重建（跨语言值相等）；未声明时用常量占位——重建时保持稳定。
-    final key = declared is GlobalKey
-        ? hostStateKey(c.props['key'])
-        : (declared ?? const ValueKey<String>('js.dismissible'));
+    // Dismissible 必须有 key：直接用结点声明的 key（已挂在真实 widget 上，
+    // `GlobalKey.currentState` 即 DismissibleState）；JS 侧漏传时用常量占位
+    // （不新建实例，重建保持稳定）。
+    final key = c.key ?? const ValueKey<String>('js.dismissible');
     // resizeDuration：显式 null = 不收缩（Flutter 语义），未提供时是 300ms；
     // 两者必须区分，不能一律 `?? 默认值`。
     final resizeDuration = c.props.containsKey('resizeDuration')
@@ -66,16 +62,27 @@ void registerDismissibleWidgets(JsWidgetRegistry r) {
       key: key,
       background: c.children['background'] as Widget?,
       secondaryBackground: c.children['secondaryBackground'] as Widget?,
-      direction: dismissDirectionFromJson(c.props['direction']) ?? DismissDirection.horizontal,
+      direction:
+          dismissDirectionFromJson(c.props['direction']) ??
+          DismissDirection.horizontal,
       resizeDuration: resizeDuration,
-      movementDuration: durationFromJson(c.props['movementDuration']) ?? const Duration(milliseconds: 200),
+      movementDuration:
+          durationFromJson(c.props['movementDuration']) ??
+          const Duration(milliseconds: 200),
       crossAxisEndOffset: c.num_('crossAxisEndOffset') ?? 0.0,
-      dragStartBehavior: dragStartBehaviorFromJson(c.props['dragStartBehavior']),
-      behavior: hitTestBehaviorFromJson(c.props['behavior']) ?? HitTestBehavior.opaque,
+      dragStartBehavior: dragStartBehaviorFromJson(
+        c.props['dragStartBehavior'],
+      ),
+      behavior:
+          hitTestBehaviorFromJson(c.props['behavior']) ??
+          HitTestBehavior.opaque,
       confirmDismiss: confirm == null
           ? null
           : (direction) async =>
-                (await JsRuntimeManager.invokeAwait(confirm, [direction.name])) == true,
+                (await JsRuntimeManager.invokeAwait(confirm, [
+                  direction.name,
+                ])) ==
+                true,
       onDismissed: onDismissed == null
           ? null
           : (direction) => c.invoke(onDismissed, [direction.name]),

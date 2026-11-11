@@ -20,25 +20,32 @@ import '../core/controller_bridge.dart';
 /// 只留 set text / clear / setSelection 的 op 分派。
 final JsControllerBridge<TextEditingController> _textBridge =
     JsControllerBridge<TextEditingController>(
-  kind: 'ctrl/Text',
-  create: (_, _) => TextEditingController(),
-  onOp: (c, op, payload) {
-    if (op == 'set') {
-      if (payload['name'] == 'text') c.text = payload['value']?.toString() ?? '';
-    } else if (op == 'call') {
-      final method = payload['method']?.toString() ?? '';
-      final args = payload['args'] is List ? payload['args'] as List : const [];
-      if (method == 'clear') {
-        c.clear();
-      } else if (method == 'setSelection') {
-        final b = args.isNotEmpty && args[0] is num ? (args[0] as num).toInt() : 0;
-        final e = args.length > 1 && args[1] is num ? (args[1] as num).toInt() : b;
-        c.selection = TextSelection(baseOffset: b, extentOffset: e);
-      }
-    }
-    return null;
-  },
-);
+      kind: 'ctrl/Text',
+      create: (_, _) => TextEditingController(),
+      onOp: (c, op, payload) {
+        if (op == 'set') {
+          if (payload['name'] == 'text')
+            c.text = payload['value']?.toString() ?? '';
+        } else if (op == 'call') {
+          final method = payload['method']?.toString() ?? '';
+          final args = payload['args'] is List
+              ? payload['args'] as List
+              : const [];
+          if (method == 'clear') {
+            c.clear();
+          } else if (method == 'setSelection') {
+            final b = args.isNotEmpty && args[0] is num
+                ? (args[0] as num).toInt()
+                : 0;
+            final e = args.length > 1 && args[1] is num
+                ? (args[1] as num).toInt()
+                : b;
+            c.selection = TextSelection(baseOffset: b, extentOffset: e);
+          }
+        }
+        return null;
+      },
+    );
 
 /// 幂等注册 TextEditingController 句柄 kind（由 js_ui_capabilities.ensureJsUiCapabilities
 /// 聚合调用，与 ensureScrollControllerChannels 并列）。
@@ -57,6 +64,7 @@ void registerTextWidgets(JsWidgetRegistry r) {
     // 用 `element` 就地还原，不进 reconciler 树。
     final deco = c.map('decoration');
     return _JsTextField(
+      key: c.key,
       controller: external,
       onControllerText: external == null
           ? null
@@ -86,6 +94,7 @@ void registerTextWidgets(JsWidgetRegistry r) {
 /// controller 由宿主持有并在 props.value 变化时同步（光标移到末尾）。
 class _JsTextField extends StatefulWidget {
   const _JsTextField({
+    super.key,
     this.controller,
     this.onControllerText,
     required this.value,
@@ -134,8 +143,8 @@ class _JsTextField extends StatefulWidget {
 }
 
 class _JsTextFieldState extends State<_JsTextField> {
-  late final TextEditingController _controller = widget.controller ??
-      TextEditingController(text: widget.value ?? '');
+  late final TextEditingController _controller =
+      widget.controller ?? TextEditingController(text: widget.value ?? '');
 
   @override
   void didUpdateWidget(_JsTextField oldWidget) {

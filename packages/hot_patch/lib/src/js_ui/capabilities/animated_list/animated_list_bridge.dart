@@ -24,7 +24,8 @@ import '../key/key_bridge.dart';
 
 /// 每个 AnimatedList 最近一次渲染出的有序子项（`removeItem` 的退场 widget 用）。
 ///
-/// 键是真实 GlobalKey，值随每次渲染覆盖；Expando 随 key 一起回收，不额外持有。
+/// 键是结点声明的 Key（`c.key`），值随每次渲染覆盖；Expando 随 key 一起回收，
+/// 不额外持有。
 final Expando<List<Widget>> _latestItems = Expando('animatedList.items');
 
 /// 上一次渲染的子项（删除前的列表）。
@@ -34,36 +35,38 @@ final Expando<List<Widget>> _latestItems = Expando('animatedList.items');
 /// 就是删除前的列表（一次删除只少一项），退场项永远是被删掉的那一项。
 final Expando<List<Widget>> _previousItems = Expando('animatedList.prevItems');
 
-Widget _itemAt(List<Widget> items, int index) => (index >= 0 && index < items.length)
+Widget _itemAt(List<Widget> items, int index) =>
+    (index >= 0 && index < items.length)
     ? items[index]
     : uiFallback('AnimatedList 下标 $index 越界（当前 ${items.length} 项）');
 
 /// 删除前的子项列表（见 [_previousItems] 的说明）。
-List<Widget> _itemsBeforeRemoval(GlobalKey key) {
+List<Widget> _itemsBeforeRemoval(Key key) {
   final latest = _latestItems[key] ?? const <Widget>[];
   final previous = _previousItems[key] ?? const <Widget>[];
   return latest.length >= previous.length ? latest : previous;
 }
 
 Duration _durationOf(Map<String, Object?> payload) =>
-    durationFromJson(payload['duration']) ??
-    const Duration(milliseconds: 300);
+    durationFromJson(payload['duration']) ?? const Duration(milliseconds: 300);
 
 /// AnimatedList 能力：宿主组件注册 + `currentState` 方法。
 void registerAnimatedListWidgets(JsWidgetRegistry r) {
   r.register('AnimatedList', (c) {
     final items = (c.children['__items'] as List<Widget>?) ?? const <Widget>[];
-    // 元素的 key 已挂在结点宿主 wrapper 上，GlobalKey 不能同时挂两处，故
-    // 真实 widget 用 [hostStateKey] 分配的独立 GlobalKey；`currentState` 解析
-    // 会顺着这层映射找到 AnimatedListState（见 key_bridge）。
-    final key = hostStateKey(c.props['key']);
-    final previous = _latestItems[key];
-    if (previous != null) _previousItems[key] = previous;
-    _latestItems[key] = items;
+    // key 由 renderer 直接挂在真实 AnimatedList 上：`GlobalKey.currentState` 就是
+    // AnimatedListState（见 key_bridge），不再需要外层/映射 key。
+    final key = c.key;
+    if (key != null) {
+      final previous = _latestItems[key];
+      if (previous != null) _previousItems[key] = previous;
+      _latestItems[key] = items;
+    }
     return AnimatedList(
       key: key,
       initialItemCount: items.length,
-      scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
+      scrollDirection:
+          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
       reverse: c.bool_('reverse') ?? false,
       padding: nullableEdgeInsets(c.map('padding')),
       // JS 侧 itemBuilder 已按 index 预展开成子结点；这里按下标取，越界给占位

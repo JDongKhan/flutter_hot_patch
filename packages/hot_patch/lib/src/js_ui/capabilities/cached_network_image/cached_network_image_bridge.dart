@@ -24,6 +24,7 @@ import '../core/from_json/widget_enum_from_json.dart';
 void registerCachedNetworkImageWidgets(JsWidgetRegistry r) {
   r.register('CachedNetworkImage', (c) {
     return CachedNetworkImage(
+      key: c.key,
       // 具名参数名原样下发（`CachedNetworkImage(imageUrl: …)` → props.imageUrl）。
       imageUrl: c.str('imageUrl') ?? c.str('source') ?? '',
       width: c.num_('width'),

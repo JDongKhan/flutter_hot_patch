@@ -27,8 +27,8 @@ Map<String, Object?> _keyEventJson(KeyEvent event) {
   final kind = event is KeyDownEvent
       ? 'down'
       : event is KeyRepeatEvent
-          ? 'repeat'
-          : 'up';
+      ? 'repeat'
+      : 'up';
   return {
     'kind': kind,
     'character': event.character,
@@ -63,19 +63,21 @@ void registerKeyboardListenerWidgets(JsWidgetRegistry r) {
 
     // Dart 侧 `focusNode` 是 `required`（非空）。JS 侧漏传句柄时用单例兜底节点：
     // 每次 build 新建 FocusNode 会残留未释放的监听，单例不会。
-    Widget build(FocusNode node) => KeyboardListener(
-          focusNode: node,
-          autofocus: autofocus,
-          // Dart 侧回调可空，未传时传 null（不伪造事件处理）。
-          onKeyEvent: handler == null
-              ? null
-              : (event) => _dispatchKeyEvent(handler, event),
-          child: child,
-        );
+    Widget build(FocusNode node, {Key? key}) => KeyboardListener(
+      key: key,
+      focusNode: node,
+      autofocus: autofocus,
+      // Dart 侧回调可空，未传时传 null（不伪造事件处理）。
+      onKeyEvent: handler == null
+          ? null
+          : (event) => _dispatchKeyEvent(handler, event),
+      child: child,
+    );
 
     final id = JsControllerBridge.idOf(c.props['focusNode']);
-    if (id == null) return build(_fallbackNode);
+    if (id == null) return build(_fallbackNode, key: c.key);
     return JsControllerHost<FocusNode>(
+      key: c.key,
       bridge: focusNodeBridge,
       id: id,
       create: () => FocusNode(),

@@ -26,8 +26,12 @@ import 'canvas_image_registry.dart';
 void registerCanvasWidgets(JsWidgetRegistry r) {
   r.register('CustomPaint', (c) {
     return CustomPaint(
+      key: c.key,
       painter: _painterFromProp(c.props['painter'], 'painter'),
-      foregroundPainter: _painterFromProp(c.props['foregroundPainter'], 'foregroundPainter'),
+      foregroundPainter: _painterFromProp(
+        c.props['foregroundPainter'],
+        'foregroundPainter',
+      ),
       size: sizeFromJson(c.props['size']) ?? Size.zero,
       isComplex: c.bool_('isComplex') ?? false,
       willChange: c.bool_('willChange') ?? false,
@@ -177,7 +181,9 @@ class _JsPainter extends CustomPainter {
           } else {
             // dart:ui 的 clipRRect 没有 clipOp（只支持 intersect 语义）。
             if (op[2] == 'difference') {
-              HotPatchLog.error('CustomPaint: Canvas.clipRRect 不支持 clipOp=difference');
+              HotPatchLog.error(
+                'CustomPaint: Canvas.clipRRect 不支持 clipOp=difference',
+              );
             }
             canvas.clipRRect(rrect, doAntiAlias: op[3] != false);
           }
@@ -188,7 +194,9 @@ class _JsPainter extends CustomPainter {
           } else {
             // dart:ui 的 clipPath 没有 clipOp（只支持 intersect 语义）。
             if (op[2] == 'difference') {
-              HotPatchLog.error('CustomPaint: Canvas.clipPath 不支持 clipOp=difference');
+              HotPatchLog.error(
+                'CustomPaint: Canvas.clipPath 不支持 clipOp=difference',
+              );
             }
             canvas.clipPath(path, doAntiAlias: op[3] != false);
           }
@@ -247,7 +255,10 @@ class _JsPainter extends CustomPainter {
           final startAngle = _num(op[2]);
           final sweepAngle = _num(op[3]);
           final paint = paintFromJson(op[5]);
-          if (rect == null || startAngle == null || sweepAngle == null || paint == null) {
+          if (rect == null ||
+              startAngle == null ||
+              sweepAngle == null ||
+              paint == null) {
             _badOp(name, op);
           } else {
             canvas.drawArc(rect, startAngle, sweepAngle, op[4] == true, paint);

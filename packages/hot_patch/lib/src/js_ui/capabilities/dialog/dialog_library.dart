@@ -22,7 +22,8 @@ void registerDialogWidgets(JsWidgetRegistry r) {
   // nullableEdgeInsets 而不是 zero，否则对话框会贴满整屏。
   // `.adaptive` 是命名构造（按平台用 Material / Cupertino 实现），按 factory 还原。
   r.register('AlertDialog', (c) {
-    final actions = (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
+    final actions =
+        (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
     final icon = (c.children['icon'] as Widget?);
     final title = (c.children['title'] as Widget?);
     final titleTextStyle = textStyleFromJson(c.map('titleTextStyle'));
@@ -41,6 +42,7 @@ void registerDialogWidgets(JsWidgetRegistry r) {
     final semanticLabel = c.str('semanticLabel');
     if (c.str('factory') == 'adaptive') {
       return AlertDialog.adaptive(
+        key: c.key,
         icon: icon,
         title: title,
         titleTextStyle: titleTextStyle,
@@ -52,7 +54,8 @@ void registerDialogWidgets(JsWidgetRegistry r) {
         elevation: elevation,
         shadowColor: shadowColor,
         surfaceTintColor: surfaceTintColor,
-        insetPadding: insetPadding ??
+        insetPadding:
+            insetPadding ??
             const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
         clipBehavior: clipBehavior,
         shape: shape,
@@ -62,6 +65,7 @@ void registerDialogWidgets(JsWidgetRegistry r) {
       );
     }
     return AlertDialog(
+      key: c.key,
       icon: icon,
       title: title,
       titleTextStyle: titleTextStyle,
@@ -85,6 +89,7 @@ void registerDialogWidgets(JsWidgetRegistry r) {
   // SimpleDialog：标题 + 一组子项（常用于列表式选择）。
   r.register('SimpleDialog', (c) {
     return SimpleDialog(
+      key: c.key,
       titleTextStyle: textStyleFromJson(c.map('titleTextStyle')),
       backgroundColor: colorFromJson(c.props['backgroundColor']),
       elevation: c.num_('elevation'),
@@ -111,11 +116,13 @@ void registerDialogWidgets(JsWidgetRegistry r) {
     final child = (c.children['child'] as Widget?);
     if (c.str('factory') == 'fullscreen') {
       return Dialog.fullscreen(
+        key: c.key,
         backgroundColor: backgroundColor,
         child: child,
       );
     }
     return Dialog(
+      key: c.key,
       backgroundColor: backgroundColor,
       elevation: elevation,
       shadowColor: shadowColor,
@@ -136,6 +143,7 @@ void registerDialogWidgets(JsWidgetRegistry r) {
   // insetAnimationDuration / Curve 保持 Flutter 默认（不映射，避免覆盖主题）。
   r.register('CupertinoAlertDialog', (c) {
     return CupertinoAlertDialog(
+      key: c.key,
       title: (c.children['title'] as Widget?),
       content: (c.children['content'] as Widget?),
       actions: (c.children['actions'] as List<Widget>?) ?? const <Widget>[],
@@ -145,6 +153,7 @@ void registerDialogWidgets(JsWidgetRegistry r) {
   // CupertinoDialogAction：CupertinoAlertDialog.actions 里的标准按钮。
   r.register('CupertinoDialogAction', (c) {
     return CupertinoDialogAction(
+      key: c.key,
       onPressed: c.on('onPressed'),
       isDefaultAction: c.bool_('isDefaultAction') ?? false,
       isDestructiveAction: c.bool_('isDestructiveAction') ?? false,
@@ -156,8 +165,10 @@ void registerDialogWidgets(JsWidgetRegistry r) {
   // CupertinoActionSheet：title / message / cancelButton 单元素 slot，
   // actions 数组 slot（CupertinoActionSheetAction）。
   r.register('CupertinoActionSheet', (c) {
-    final actions = (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
+    final actions =
+        (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
     return CupertinoActionSheet(
+      key: c.key,
       title: (c.children['title'] as Widget?),
       message: (c.children['message'] as Widget?),
       actions: actions.isEmpty ? null : actions,
@@ -169,6 +180,7 @@ void registerDialogWidgets(JsWidgetRegistry r) {
   // 空实现兜底（否则整棵弹层树构造成立即抛断言）。
   r.register('CupertinoActionSheetAction', (c) {
     return CupertinoActionSheetAction(
+      key: c.key,
       onPressed: c.on('onPressed') ?? () {},
       isDefaultAction: c.bool_('isDefaultAction') ?? false,
       isDestructiveAction: c.bool_('isDestructiveAction') ?? false,
