@@ -8,7 +8,6 @@ import { Alignment, BorderRadius, BoxDecoration, BoxFit, ClipRRect, Color, Colum
 
 // 组件 BannerCarousel
 export class BannerCarousel extends StatefulWidget {
-  static _height = 150;
   static _interval = new Duration({seconds: 5});
   static _animate = new Duration({milliseconds: 350});
   constructor(args) {
@@ -19,6 +18,7 @@ export class BannerCarousel extends StatefulWidget {
     this._index = 0;
   }
   __applyProps(args) {
+    this.height = (args && args.height !== undefined) ? args.height : 150;
     this.banners = (args && args.banners !== undefined) ? args.banners : [];
   }
   initState() {
@@ -83,14 +83,14 @@ export class BannerCarousel extends StatefulWidget {
   }
   build(context) {
     const banners = this.banners;
-    if ((banners.length === 0)) {
+    if (banners.isEmpty) {
       return (this.__k0 || (this.__k0 = SizedBox.shrink({})));
     }
     return new Column({
       "mainAxisSize": MainAxisSize.min,
       "children": [
         new SizedBox({
-          "height": BannerCarousel._height,
+          "height": this.height,
           "child": new PageView({
             "controller": this._controller,
             "onPageChanged": (__a0) => this._onPageChanged(__a0),

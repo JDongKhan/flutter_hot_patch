@@ -75,26 +75,28 @@ export class BannerFloorView extends StatelessWidget {
   }
   build(context) {
     const vm = context.watch({ typeArguments: {"T": "BannerFloorVm"} });
+    let height = 250;
     let body = null;
     if (vm.loading) {
-      body = (this.__k0 || (this.__k0 = new FloorLoadingView({
-        "height": 150
-      })));
+      body = new FloorLoadingView({
+        "height": height
+      });
     } else {
       if ((vm.error != null)) {
         body = new FloorErrorView({
           "message": vm.error,
           "onRetry": (...__a) => vm.load(...__a),
-          "height": 150
+          "height": height
         });
       } else {
         body = new BannerCarousel({
-          "banners": vm.banners
+          "banners": vm.banners,
+          "height": height
         });
       }
     }
     return new Padding({
-      "padding": (this.__k1 || (this.__k1 = EdgeInsets.only({
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.only({
         "bottom": 12,
         "top": 12
       }))),
