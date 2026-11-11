@@ -110,6 +110,7 @@ class _HomeViewState extends State<HomeView> {
             child: EasyRefresh(
               controller: _refreshController,
               onRefresh: _onRefresh,
+              triggerAxis: Axis.vertical,
               child: CustomScrollView(
                 controller: _scrollController,
                 slivers: [

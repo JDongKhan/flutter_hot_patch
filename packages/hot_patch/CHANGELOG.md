@@ -25,7 +25,7 @@
 - **生命周期扩展点对外**：`G.__core` 新增 `__implement`（只暴露注册，调度器 `__runAll` / `__runChain` 仍为内核私有），能力模块与 `flutter.js` 的 SDK 值类可直接注册挂载 / 卸载 / 页面根开关实现。`WidgetsBinding` 的持久帧回调不再在 `frameTick` 里逐帧判断根是否存活，改由 `onRootClose` 实现摘除本页回调；挂载失败回滚（`__abortRoot`）同样广播 `onRootClose`，挂载期注册的页面级状态不会变成无主状态。
 - **EasyRefresh 迁出运行时包**：三方组件不内建。宿主桥接从 `lib/src/js_ui/capabilities/easy_refresh/` 迁到 example 的自定义能力 `example/lib/custom/easy_refresh/`（由 `registerCustomCapabilities()` 注册）；JS 类从 `flutter.js`（生成器 `js/flutter/easy_refresh_js.dart`）迁到 `example/js/easy_refresh.js`，构建期原样拷贝为 `patch/packages/easy_refresh.js`。包内不再依赖 `easy_refresh`，也不再为它生成宿主包装类。未被本次迁移改动的能力（`cached_network_image` 等）保持原路径。
 - **自定义能力公开构件**：`hot_patch.dart` 新增导出 `JsControllerBridge`、`curveFromJson`、`durationFromJson`、`HotPatchLog`，App 侧的第三方组件能力（含 Controller 句柄桥）无需再 import `src/` 实现文件。
-- **EasyRefresh 只响应纵向滚动**：迁到 example 的宿主桥接固定 `triggerAxis: Axis.vertical`。包内物理经 `ScrollConfiguration` 下发到整个子树，横向滚动（banner / `PageView` / 横向列表）也会被接管并把指示器切成横向模式（竖排刷新文案）；该配置下非纵向滚动既不构建指示器、也不更新状态与触发刷新 / 加载任务。
+- **EasyRefresh 只响应触发轴（由业务显式声明）**：桥接只透传业务传入的 `triggerAxis`，未传时沿用 package 默认（不限制方向），不补默认值。显式传 `vertical` 时用 `scrollBehaviorBuilder` 按 `ScrollMetrics.axis` 分流物理——只有触发轴继承 EasyRefresh 的刷新物理，横向滚动（banner / `PageView` / 横向列表）退回平台默认物理。包内物理经 `ScrollConfiguration` 下发到整个子树，`triggerAxis` 本身只拦「任务触发 / infinite 模式」、不拦 `applyBoundaryConditions` 里的指示器偏移，所以仅设置 `triggerAxis` 时横滑仍会出现竖排刷新文案。
 
 ## 0.4.1
 

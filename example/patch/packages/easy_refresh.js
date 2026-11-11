@@ -11,6 +11,12 @@
 // `example/lib/custom/easy_refresh/easy_refresh_bridge.dart`。onRefresh / onLoad
 // 返回 Future，走通用「需要结果的事件调用」（`__jsui.invokeAwait` →
 // `jsuiEventResult` 回传 token），本模块不需要自己的回传入口。
+//
+// 属性透传：除 `__fnProps` 里的函数形参外，其余 props 由 Component 原样下发，
+// 不需要在类里逐个声明。宿主桥接只透传业务显式声明的值（目前支持
+// child / onRefresh / onLoad / controller / refreshOnStart / triggerAxis），
+// 未传时沿用 easy_refresh 自己的默认值——桥接不补默认值，避免与原生不一致。
+// 需要横滑不触发刷新时，由业务显式传 `triggerAxis: Axis.vertical`。
 import { Component, ControllerBase } from '../flutter.js';
 
 var G = typeof globalThis !== 'undefined' ? globalThis : Function('return this')();

@@ -201,6 +201,7 @@ class _JsEasyRefresh extends StatelessWidget {
     required this.onRefresh,
     required this.onLoad,
     required this.refreshOnStart,
+    required this.triggerAxis,
     required this.child,
   });
 
@@ -211,23 +212,31 @@ class _JsEasyRefresh extends StatelessWidget {
   final Object? onRefresh;
   final Object? onLoad;
 
-  /// 挂载即触发一次刷新（对应 Dart 的 `refreshOnStart: true`）。
+  /// 挂载即触发一次刷新（对应 Dart 的 `refreshOnStart`，缺省同包内 false）。
   final bool refreshOnStart;
+
+  /// 触发刷新的滚动方向；null = 沿用 package 默认（不限制方向）。
+  final Axis? triggerAxis;
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final axis = triggerAxis;
     return EasyRefresh(
       controller: controller,
       onRefresh: onRefresh == null ? null : () => _runAwaitableEvent(onRefresh),
       onLoad: onLoad == null ? null : () => _runAwaitableEvent(onLoad),
       refreshOnStart: refreshOnStart,
-      // 只响应纵向滚动：包内物理会经 ScrollConfiguration 下发到整个子树，
-      // 横向滚动（banner / PageView / 横向列表）也会被接管并切到横向模式，
-      // 表现为竖排的刷新文案。triggerAxis 是包自己的开关：非该方向的滚动
-      // 既不构建指示器，也不更新状态、不触发任务。
-      triggerAxis: Axis.vertical,
+      triggerAxis: axis,
+      // 只有业务显式声明触发轴时才隔离物理：刷新物理会被 ScrollConfiguration
+      // 下发到整个子树，嵌套的横向滚动（banner / PageView / 横向列表）也会被
+      // 驱动，ClassicHeader 随 metrics.axis 切到横向模式（竖排刷新文案）。
+      // triggerAxis 只拦「任务触发 / infinite 模式」，不拦指示器偏移，所以再在
+      // 物理层按 metrics.axis 分流：触发轴用刷新物理，其它轴用平台默认物理。
+      scrollBehaviorBuilder: axis == null
+          ? null
+          : (physics) => _TriggerAxisScrollBehavior(axis, physics),
       child: child,
     );
   }
@@ -258,8 +267,87 @@ void registerEasyRefreshWidgets(JsWidgetRegistry r) {
       onRefresh: c.props['onRefresh'],
       onLoad: c.props['onLoad'],
       refreshOnStart: c.bool_('refreshOnStart') ?? false,
+      // 只透传业务显式声明的值：JS 枚举跨桥是成员名（`Axis.vertical` →
+      // `'vertical'`），未传（null）时沿用 package 默认，桥接不替业务做决定。
+      triggerAxis: switch (c.str('triggerAxis')) {
+        'vertical' => Axis.vertical,
+        'horizontal' => Axis.horizontal,
+        _ => null,
+      },
       // `child:` 统一进 children（生成器的子结点约定）→ 取第一个子结点。
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     );
   });
+}
+
+// ---------------------------------------------------------------------------
+// 刷新物理按轴隔离
+// ---------------------------------------------------------------------------
+
+/// 只让**触发轴**继承 EasyRefresh 的刷新物理。
+///
+/// 包内默认 `ERScrollBehavior` 会把刷新物理下发给整个子树，嵌套的横向滚动
+/// 因此也被接管（状态切换、指示器偏移、任务触发）。`triggerAxis` 只作用于
+/// 「任务触发 / infinite 模式」，不拦 [applyBoundaryConditions] 里的指示器
+/// 偏移，所以这里在物理层按 `metrics.axis` 分流：触发轴用刷新物理，其它轴
+/// 退回平台默认物理（横向滚动的手感、回弹保持系统行为）。
+class _TriggerAxisScrollBehavior extends ERScrollBehavior {
+  const _TriggerAxisScrollBehavior(this.triggerAxis, this.refreshPhysics);
+
+  final Axis triggerAxis;
+  final ScrollPhysics? refreshPhysics;
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    // 平台默认物理（Clamping / Bouncing，含 AlwaysScrollable）。
+    final fallback = super.getScrollPhysics(context);
+    final refresh = refreshPhysics;
+    if (refresh == null) return fallback;
+    return _TriggerAxisScrollPhysics(
+      triggerAxis: triggerAxis,
+      refresh: refresh,
+      fallback: fallback,
+    );
+  }
+}
+
+/// 按 `ScrollMetrics.axis` 在「刷新物理 / 平台默认物理」间分流。
+class _TriggerAxisScrollPhysics extends ScrollPhysics {
+  const _TriggerAxisScrollPhysics({
+    required this.triggerAxis,
+    required this.refresh,
+    required this.fallback,
+    super.parent,
+  });
+
+  final Axis triggerAxis;
+  final ScrollPhysics refresh;
+  final ScrollPhysics fallback;
+
+  ScrollPhysics _for(ScrollMetrics position) =>
+      position.axis == triggerAxis ? refresh : fallback;
+
+  @override
+  _TriggerAxisScrollPhysics applyTo(ScrollPhysics? ancestor) =>
+      _TriggerAxisScrollPhysics(
+        triggerAxis: triggerAxis,
+        refresh: refresh,
+        fallback: fallback,
+        parent: buildParent(ancestor),
+      );
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) =>
+      _for(position).applyPhysicsToUserOffset(position, offset);
+
+  @override
+  double applyBoundaryConditions(ScrollMetrics position, double value) =>
+      _for(position).applyBoundaryConditions(position, value);
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) =>
+      _for(position).createBallisticSimulation(position, velocity);
 }
