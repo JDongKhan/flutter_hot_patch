@@ -1077,6 +1077,11 @@ const String _jsUiCrossModuleExports = r'''
     __releaseHandle: function (id, notify) { return __releaseHandle(id, notify); },
     __handleObjectOf: __handleObjectOf,
     __createFnHandle: __createFnHandle,
+    // 生命周期扩展点：能力模块（随 runtime.js 的 capabilities/*，以及 flutter.js
+    // 的 SDK 值类）按功能注册 `{ name, onMount, onUnmount, ..., onRootClose }`，
+    // 挂载 / 卸载 / 页面根开关由核心统一调度（见 handle_registry_js 的生命周期引擎）。
+    // 核心只暴露注册，不暴露调度器（`__runAll` / `__runChain` 仅核心内部使用）。
+    __implement: __implement,
     // 异步归属继承：Timer / Future 等值类在创建回调时捕获归属，执行时恢复。
     __captureAsyncOwner: __captureAsyncOwner,
     __withAsyncOwner: __withAsyncOwner,

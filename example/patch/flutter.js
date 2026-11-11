@@ -9137,8 +9137,9 @@ export class WidgetsBinding {
   // 同一轮「帧后」待执行的回调；`__scheduled` 保证一批只排一个定时器。
   static __queue = [];
   static __scheduled = false;
-  // 持久帧回调：{ cb, root }。root 是注册时所在页面/弹层根的 key，页面销毁后
-  // 由 frameTick 自动摘除；注册发生在无构建上下文时记 null（跟随整个 runtime）。
+  // 持久帧回调：{ cb, root }。root 是注册时所在页面/弹层根的 key，页面销毁时
+  // 由 onRootClose 生命周期实现摘除；注册发生在无构建上下文时记 null（跟随整个
+  // runtime）。
   static __persistent = [];
 
   static get instance() {
@@ -9163,13 +9164,12 @@ export class WidgetsBinding {
   }
 
   // 宿主每帧回调入口：派发持久帧回调；仍有存活回调时续帧。
+  // 页面销毁时的摘除由 onRootClose 实现负责（见文件末尾），这里不再判断根是否存活。
   static frameTick(ms) {
     var timestamp = new Duration({ milliseconds: ms });
     var alive = [];
     for (var i = 0; i < WidgetsBinding.__persistent.length; i++) {
       var entry = WidgetsBinding.__persistent[i];
-      // 根已销毁：回调随页面一起丢弃（生命周期单入口，不需要核心额外清理）。
-      if (entry.root != null && !__roots[entry.root]) { continue; }
       alive.push(entry);
       try {
         entry.cb(timestamp);
@@ -9229,6 +9229,20 @@ export class WidgetsBinding {
 // 宿主每帧回调入口（与 panelMount 同口径：宿主调用点带存在性守卫，
 // 早于本模块加载时是 no-op；而注册持久回调必然先经过本模块）。
 G.__jsui.frameTick = WidgetsBinding.frameTick;
+
+// 页面根关闭：丢弃该页注册的持久帧回调（root 为 null 的跟随整个 runtime，
+// 其它页面的回调保留）。生命周期由 runtime 核心统一调度，本类不再感知 __roots。
+G.__core.__implement({
+  name: 'widgetsBindingFrames',
+  onRootClose: function (root) {
+    var list = WidgetsBinding.__persistent;
+    var kept = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].root !== root.key) { kept.push(list[i]); }
+    }
+    WidgetsBinding.__persistent = kept;
+  }
+});
 
 // ── data 身份表 + 事件详情还原：全部收在 DragData 里（唯一入口）──
 export class DragData {

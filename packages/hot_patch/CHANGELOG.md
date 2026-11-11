@@ -22,6 +22,7 @@
 - **异步回调继承句柄归属**：`Timer` / `Timer.periodic` / `Future` / `Future.delayed` / `Future.microtask` / `then` / `catchError` / `whenComplete` 在创建回调时捕获当前归属（组件实例 → 其 pageKey），执行时经 `__withAsyncOwner` 恢复；异步回调里新建的 `GlobalKey` / Controller 随发起它的组件（或回退页面）释放，不再退化为永久 `global` 句柄。归属创建时固定，页面遮挡/切换不会归错；实例与页面均已销毁时不再登记并告警。
 - **运行时生命周期化（阶段 1+2）**：新增 `__implement({...})` 生命周期扩展点与调度器（`__runChain` 责任链 / `__runAll` 广播，异常隔离）。`__registerHandle` / `__releaseHandle` 收敛为「去重 → 解析归属 → 写表 / 广播」，不再内联场景分支；归属策略拆为 6 个内建实现（`asyncOwnership` / `constructFrame` / `ownerAnchor` / `building` / `pageFallback` / `globalFallback`），行为与重构前等价。后续新增归属或清理场景只加功能对象，核心零改动。
 - **运行时生命周期化（阶段 3：mount / unmount / 根开关）**：`__mount` 组件分支广播 `onMount`；`__markUnmounted` 不再内联清理分支，改为两段广播——`onUnmount`（自身清理、子树递归之前）与 `onUnmounted`（子树卸载之后）；`__openRoot` / `__closeRoot` 分别广播 `onRootOpen` / `onRootClose`。原有卸载清理迁移为内建实现 `componentLifecycle`（deactivate / dispose）、`scopeSubscriptions`（退订）、`inheritedDependencies`（摘依赖）、`buildContextHandle`（释放 `__ctx` 句柄）、`ownerHandles`（子树后释放实例持有的控制器 / Key），顺序与重构前一致。
+- **生命周期扩展点对外**：`G.__core` 新增 `__implement`（只暴露注册，调度器 `__runAll` / `__runChain` 仍为内核私有），能力模块与 `flutter.js` 的 SDK 值类可直接注册挂载 / 卸载 / 页面根开关实现。`WidgetsBinding` 的持久帧回调不再在 `frameTick` 里逐帧判断根是否存活，改由 `onRootClose` 实现摘除本页回调。
 
 ## 0.4.1
 
