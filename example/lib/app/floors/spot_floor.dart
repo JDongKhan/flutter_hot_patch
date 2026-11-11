@@ -81,6 +81,7 @@ class SpotFloorView extends StatelessWidget {
           mainAxisExtent: 190,
         ),
         shrinkWrap: true,
+        padding: EdgeInsets.zero,
         physics: const NeverScrollableScrollPhysics(),
         children: [
           for (var i = 0; i < vm.spots.length; i++)

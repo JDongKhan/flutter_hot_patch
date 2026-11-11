@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-11T17:08:21.536202",
+  "buildTime": "2026-11-11T17:13:28.021759",
   "resources": {
     "flutter.js": "b3bd91fdf47458d75d6663d80727046d8f8f563fac31de16391c22941d7c07f9",
     "packages/easy_refresh.js": "7606f91d791306289ebf4d47a37f6b30ac1fcdccbceeea53e6192818c9b09740",
@@ -63,7 +63,7 @@
     "app/floors/banner_floor.js": "174eca120cdea09053be96a4ff1876451162bf3840bc66de81f9833233ee320e",
     "app/floors/grid_floor.js": "8fc2e339da3610c127f42be89a4bff3c4706b582a022c283c7619331f4f60a85",
     "app/floors/floor_base.js": "c00b39d55fce384cc1d8b48b05d33e43767e0e05d71199eb7e69da4bd601ef7f",
-    "app/floors/spot_floor.js": "083248a94072820d53323b13f2a892931ad3b8ee366c860766da00653b489bf3",
+    "app/floors/spot_floor.js": "901cf5955e7fac86eedebdf6abbb0b7c8f6e203b5e2a72a9abcbbc4ecfa0f2a5",
     "app/service/app_service.js": "1e6ce8a82d39fe320784153f52fecd945714ea7be5d5bad1754e53f22c635293",
     "app/pages/orders_page.js": "9c06493d0f6bf9ba025619055815a36ba043b8fb1d588b22ea0fdf67c10a4c63",
     "app/pages/community_page.js": "08a4a605b19de3ef711ee73d5792cb31f333faecef5772124634f85b0c7b34ab",

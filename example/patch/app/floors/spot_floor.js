@@ -93,6 +93,7 @@ export class SpotFloorView extends StatelessWidget {
             "maxCrossAxisExtent": 300
           }))),
           "shrinkWrap": true,
+          "padding": EdgeInsets.zero,
           "physics": (this.__k2 || (this.__k2 = new NeverScrollableScrollPhysics({}))),
           "children": [
             ...(() => { var out = []; for (let i = 0; (i < vm.spots.length); (i++)) { out.push.apply(out, [new SpotCard({
