@@ -58,10 +58,7 @@ class BannerFloor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<BannerFloorVm>.value(
-      value: vm,
-      child: const BannerFloorView(),
-    );
+    return ChangeNotifierProvider<BannerFloorVm>.value(value: vm, child: const BannerFloorView());
   }
 }
 
@@ -72,17 +69,15 @@ class BannerFloorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<BannerFloorVm>();
+    double height = 250;
     Widget body;
     if (vm.loading) {
-      body = const FloorLoadingView(height: 150);
+      body = FloorLoadingView(height: height);
     } else if (vm.error != null) {
-      body = FloorErrorView(message: vm.error!, onRetry: vm.load, height: 150);
+      body = FloorErrorView(message: vm.error!, onRetry: vm.load, height: height);
     } else {
-      body = BannerCarousel(banners: vm.banners);
+      body = BannerCarousel(banners: vm.banners, height: height);
     }
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 12),
-      child: body,
-    );
+    return Padding(padding: const EdgeInsets.only(top: 12, bottom: 12), child: body);
   }
 }

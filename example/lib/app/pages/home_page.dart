@@ -49,8 +49,23 @@ class _HomeViewState extends State<HomeView> {
   /// 句柄绑定（同 ScrollController 模式），`callRefresh()` 可程序化触发刷新。
   final EasyRefreshController _refreshController = EasyRefreshController();
 
+  /// 首页滚动控制器：监听滚动偏移，驱动顶部导航背景蓝色的渐显。
+  final ScrollController _scrollController = ScrollController();
+
+  /// 蓝色从透明到完全不透明所需的滚动距离。
+  static const double _navFadeDistance = 120;
+
+  /// 顶部导航背景蓝色的透明度：0 = 完全透明（滚动在顶部），1 = 完全不透明。
+  double get _navOpacity {
+    double opacity = _scrollController.offset / _navFadeDistance;
+    if (opacity < 0) opacity = 0;
+    if (opacity > 1) opacity = 1;
+    return opacity;
+  }
+
   @override
   void dispose() {
+    _scrollController.dispose();
     _refreshController.dispose();
     super.dispose();
   }
@@ -85,23 +100,18 @@ class _HomeViewState extends State<HomeView> {
     }
     return Container(
       color: const Color(0xFFF4F5F7),
-      // 顶部头（定位 / 刷新 / 消息 / 搜索）固定在滚动区之外：下拉刷新手势只作用
-      // 在下方滚动内容上，因此刷新指示器从第一个楼层处开始下拉，头不会跟着移动。
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      // 顶部头浮在滚动内容之上：默认背景透明（露出下方内容），滚动时蓝色渐显。
+      // 下拉刷新手势仍作用在下方滚动内容上，头不会跟着移动。
+      child: Stack(
         children: [
-          HomeHeader(
-            city: vm.city,
-            onRefresh: _refresh,
-            onPickCity: _pickCity,
-          ),
-          Expanded(
+          Positioned.fill(
             // 下拉刷新：用户下拉 → 宿主触发 JS 侧 `_onRefresh()` → 逐个楼层刷新
             // → await 完指示器才收起。
             child: EasyRefresh(
               controller: _refreshController,
               onRefresh: _onRefresh,
               child: CustomScrollView(
+                controller: _scrollController,
                 slivers: [
                   SliverToBoxAdapter(
                     child: Column(
@@ -112,6 +122,21 @@ class _HomeViewState extends State<HomeView> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            // 只让头部跟着滚动偏移重建，不重建整页楼层。
+            child: ListenableBuilder(
+              listenable: _scrollController,
+              builder: (context, child) => HomeHeader(
+                city: vm.city,
+                navOpacity: _navOpacity,
+                onRefresh: _refresh,
+                onPickCity: _pickCity,
               ),
             ),
           ),
@@ -162,6 +187,7 @@ class HomeHeader extends StatelessWidget {
     super.key,
     required this.onRefresh,
     required this.city,
+    required this.navOpacity,
     required this.onPickCity,
   });
 
@@ -170,6 +196,9 @@ class HomeHeader extends StatelessWidget {
 
   /// 当前城市名（来自首页 VM，选择器选完由 VM 回写并通知刷新）。
   final String city;
+
+  /// 导航背景蓝色的透明度：0 = 透明（在顶部），1 = 不透明（已滚动）。
+  final double navOpacity;
 
   /// 点击城市 → 首页唤起宿主城市选择器。
   final VoidCallback onPickCity;
@@ -186,9 +215,12 @@ class HomeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1E88FF), Color(0xFF0E7AFB)],
+          colors: [
+            const Color(0xFF1E88FF).withValues(alpha: navOpacity),
+            const Color(0xFF0E7AFB).withValues(alpha: navOpacity),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

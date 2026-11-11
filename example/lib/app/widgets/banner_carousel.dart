@@ -15,7 +15,9 @@ import '../model/app_models.dart';
 ///
 /// 无 banner 时不渲染（高度塌陷为 0），避免出现空白占位。
 class BannerCarousel extends StatefulWidget {
-  const BannerCarousel({super.key, required this.banners});
+  const BannerCarousel({super.key, required this.banners, this.height = 150});
+
+  final double height;
 
   /// 轮播页数据（任意长度：1 页时只显示不加计时器，0 页时不渲染）。
   final List<HomeBanner> banners;
@@ -25,9 +27,6 @@ class BannerCarousel extends StatefulWidget {
 }
 
 class _BannerCarouselState extends State<BannerCarousel> {
-  /// 轮播高度固定，避免图片加载完成后高度跳动。
-  static const double _height = 150;
-
   /// 自动切换间隔。
   static const Duration _interval = Duration(seconds: 5);
 
@@ -102,11 +101,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
     final count = widget.banners.length;
     if (count < 2) return;
     final next = (_index + 1) % count;
-    _controller.animateToPage(
-      next,
-      duration: _animate,
-      curve: Curves.easeOut,
-    );
+    _controller.animateToPage(next, duration: _animate, curve: Curves.easeOut);
     setState(() => _index = next);
   }
 
@@ -118,21 +113,18 @@ class _BannerCarouselState extends State<BannerCarousel> {
   @override
   Widget build(BuildContext context) {
     final banners = widget.banners;
-    if (banners.length == 0) {
+    if (banners.isEmpty) {
       return const SizedBox.shrink();
     }
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: _height,
+          height: widget.height,
           child: PageView(
             controller: _controller,
             onPageChanged: _onPageChanged,
-            children: [
-              for (var i = 0; i < banners.length; i++)
-                BannerSlide(banner: banners[i]),
-            ],
+            children: [for (var i = 0; i < banners.length; i++) BannerSlide(banner: banners[i])],
           ),
         ),
         const SizedBox(height: 10),
@@ -146,9 +138,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                 width: 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: i == _index
-                      ? const Color(0xFF0E7AFB)
-                      : const Color(0xFFD5D9E0),
+                  color: i == _index ? const Color(0xFF0E7AFB) : const Color(0xFFD5D9E0),
                   borderRadius: const BorderRadius.all(Radius.circular(3)),
                 ),
               ),
@@ -202,20 +192,10 @@ class BannerSlide extends StatelessWidget {
                   children: [
                     Text(
                       banner.title,
-                      style: const TextStyle(
-                        color: Color(0xFFFFFFFF),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 17, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      banner.sub,
-                      style: const TextStyle(
-                        color: Color(0xE6FFFFFF),
-                        fontSize: 12,
-                      ),
-                    ),
+                    Text(banner.sub, style: const TextStyle(color: Color(0xE6FFFFFF), fontSize: 12)),
                   ],
                 ),
               ),

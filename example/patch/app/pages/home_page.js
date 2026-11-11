@@ -12,7 +12,7 @@ import { BannerFloor } from '../floors/banner_floor.js';
 import { GridFloor } from '../floors/grid_floor.js';
 import { SpotFloor } from '../floors/spot_floor.js';
 import { PromoFloor } from '../floors/promo_floor.js';
-import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, Icon, Icons, InkWell, LinearGradient, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverToBoxAdapter, Spacer, Stack, StatefulWidget, StatelessWidget, Text, TextStyle } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, FontWeight, Icon, Icons, InkWell, LinearGradient, ListenableBuilder, Padding, Positioned, Radius, Row, SafeArea, ScrollController, SizedBox, SliverToBoxAdapter, Spacer, Stack, StatefulWidget, StatelessWidget, Text, TextStyle } from '../../flutter.js';
 import { ChangeNotifierProvider } from '../../packages/provider.js';
 
 // 组件 HomePage
@@ -31,11 +31,24 @@ export class HomePage extends StatelessWidget {
 
 // 组件 HomeView
 export class HomeView extends StatefulWidget {
+  static _navFadeDistance = 120;
   constructor(args) {
     super(args);
     this._refreshController = new EasyRefreshController();
+    this._scrollController = new ScrollController();
+  }
+  get _navOpacity() {
+    let opacity = (this._scrollController.offset / HomeView._navFadeDistance);
+    if ((opacity < 0)) {
+      opacity = 0;
+    }
+    if ((opacity > 1)) {
+      opacity = 1;
+    }
+    return opacity;
   }
   dispose() {
+    this._scrollController.dispose();
     this._refreshController.dispose();
     super.dispose();
   }
@@ -71,19 +84,14 @@ export class HomeView extends StatefulWidget {
       "color": (this.__k1 || (this.__k1 = new Color({
         "value": 0xFFF4F5F7
       }))),
-      "child": new Column({
-        "crossAxisAlignment": CrossAxisAlignment.stretch,
+      "child": new Stack({
         "children": [
-          new HomeHeader({
-            "city": vm.city,
-            "onRefresh": () => this._refresh(),
-            "onPickCity": () => this._pickCity()
-          }),
-          new Expanded({
+          Positioned.fill({
             "child": new EasyRefresh({
               "controller": this._refreshController,
               "onRefresh": () => this._onRefresh(),
               "child": new CustomScrollView({
+                "controller": this._scrollController,
                 "slivers": [
                   new SliverToBoxAdapter({
                     "child": new Column({
@@ -96,6 +104,20 @@ export class HomeView extends StatefulWidget {
                     })
                   })
                 ]
+              })
+            })
+          }),
+          new Positioned({
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "child": new ListenableBuilder({
+              "listenable": this._scrollController,
+              "builder": (context, child) => new HomeHeader({
+                "city": vm.city,
+                "navOpacity": this._navOpacity,
+                "onRefresh": () => this._refresh(),
+                "onPickCity": () => this._pickCity()
               })
             })
           })
@@ -164,6 +186,7 @@ export class HomeHeader extends StatelessWidget {
   __applyProps(args) {
     this.onRefresh = (args && args.onRefresh !== undefined) ? args.onRefresh : null;
     this.city = (args && args.city !== undefined) ? args.city : '';
+    this.navOpacity = (args && args.navOpacity !== undefined) ? args.navOpacity : 0;
     this.onPickCity = (args && args.onPickCity !== undefined) ? args.onPickCity : null;
   }
   openSearch() {
@@ -180,20 +203,16 @@ export class HomeHeader extends StatelessWidget {
         "right": 16,
         "top": 14
       }))),
-      "decoration": (this.__k1 || (this.__k1 = new BoxDecoration({
+      "decoration": new BoxDecoration({
         "gradient": new LinearGradient({
           "colors": [
-            new Color({
-              "value": 0xFF1E88FF
-            }),
-            new Color({
-              "value": 0xFF0E7AFB
-            })
+            new Color({value: 0xFF1E88FF}).withValues({ "alpha": this.navOpacity }),
+            new Color({value: 0xFF0E7AFB}).withValues({ "alpha": this.navOpacity })
           ],
           "begin": Alignment.topLeft,
           "end": Alignment.bottomRight
         })
-      }))),
+      }),
       "child": new SafeArea({
         "bottom": false,
         "child": new Column({
@@ -205,18 +224,18 @@ export class HomeHeader extends StatelessWidget {
                   "onTap": this.onPickCity,
                   "child": new Row({
                     "children": [
-                      (this.__k2 || (this.__k2 = new Icon({
+                      (this.__k1 || (this.__k1 = new Icon({
                         "color": new Color({
                           "value": 0xFFFFFFFF
                         }),
                         "icon": Icons.location_on,
                         "size": 18
                       }))),
-                      (this.__k3 || (this.__k3 = new SizedBox({
+                      (this.__k2 || (this.__k2 = new SizedBox({
                         "width": 2
                       }))),
                       new Text({
-                        "style": (this.__k4 || (this.__k4 = new TextStyle({
+                        "style": (this.__k3 || (this.__k3 = new TextStyle({
                           "color": new Color({
                             "value": 0xFFFFFFFF
                           }),
@@ -225,7 +244,7 @@ export class HomeHeader extends StatelessWidget {
                         }))),
                         "data": this.city
                       }),
-                      (this.__k5 || (this.__k5 = new Icon({
+                      (this.__k4 || (this.__k4 = new Icon({
                         "color": new Color({
                           "value": 0xFFFFFFFF
                         }),
@@ -235,15 +254,15 @@ export class HomeHeader extends StatelessWidget {
                     ]
                   })
                 }),
-                (this.__k6 || (this.__k6 = new Spacer({}))),
+                (this.__k5 || (this.__k5 = new Spacer({}))),
                 new InkWell({
                   "onTap": this.onRefresh,
-                  "borderRadius": (this.__k7 || (this.__k7 = BorderRadius.all({
+                  "borderRadius": (this.__k6 || (this.__k6 = BorderRadius.all({
                     "radius": Radius.circular({
                       "radius": 18
                     })
                   }))),
-                  "child": (this.__k8 || (this.__k8 = new Padding({
+                  "child": (this.__k7 || (this.__k7 = new Padding({
                     "child": new Icon({
                       "color": new Color({
                         "value": 0xFFFFFFFF
@@ -256,17 +275,17 @@ export class HomeHeader extends StatelessWidget {
                     })
                   })))
                 }),
-                (this.__k9 || (this.__k9 = new SizedBox({
+                (this.__k8 || (this.__k8 = new SizedBox({
                   "width": 8
                 }))),
                 new InkWell({
                   "onTap": () => this.openMessages(),
-                  "borderRadius": (this.__k7 || (this.__k7 = BorderRadius.all({
+                  "borderRadius": (this.__k6 || (this.__k6 = BorderRadius.all({
                     "radius": Radius.circular({
                       "radius": 18
                     })
                   }))),
-                  "child": (this.__k10 || (this.__k10 = new Stack({
+                  "child": (this.__k9 || (this.__k9 = new Stack({
                     "children": [
                       new Padding({
                         "padding": EdgeInsets.all({
@@ -305,22 +324,22 @@ export class HomeHeader extends StatelessWidget {
                 })
               ]
             }),
-            (this.__k11 || (this.__k11 = new SizedBox({
+            (this.__k10 || (this.__k10 = new SizedBox({
               "height": 12
             }))),
             new InkWell({
               "onTap": () => this.openSearch(),
-              "borderRadius": (this.__k12 || (this.__k12 = BorderRadius.all({
+              "borderRadius": (this.__k11 || (this.__k11 = BorderRadius.all({
                 "radius": Radius.circular({
                   "radius": 20
                 })
               }))),
               "child": new Container({
                 "height": 42,
-                "padding": (this.__k13 || (this.__k13 = EdgeInsets.symmetric({
+                "padding": (this.__k12 || (this.__k12 = EdgeInsets.symmetric({
                   "horizontal": 14
                 }))),
-                "decoration": (this.__k14 || (this.__k14 = new BoxDecoration({
+                "decoration": (this.__k13 || (this.__k13 = new BoxDecoration({
                   "borderRadius": BorderRadius.all({
                     "radius": Radius.circular({
                       "radius": 21
@@ -330,7 +349,7 @@ export class HomeHeader extends StatelessWidget {
                     "value": 0xFFFFFFFF
                   })
                 }))),
-                "child": (this.__k15 || (this.__k15 = new Row({
+                "child": (this.__k14 || (this.__k14 = new Row({
                   "children": [
                     new Icon({
                       "color": new Color({
