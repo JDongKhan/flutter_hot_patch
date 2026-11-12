@@ -27,8 +27,7 @@ class AppRouter {
   /// JS 页面的点击经 `@HostInjected` 通道回到这里执行同一条代码路径。
   static const AppService _service = AppService();
 
-  static NavigatorState? get _navigator =>
-      JsRuntimeManager.navigatorKey?.currentState;
+  static NavigatorState? get _navigator => JsRuntimeManager.navigatorKey?.currentState;
 
   static void _push(Widget page) {
     assert(_navigator != null, 'Navigator 未初始化');
@@ -58,16 +57,16 @@ class AppRouter {
   /// 打开搜索页（热搜词 + 猜你想去随接口下发）。
   @HostInjected()
   static Future<void> openSearch() => _guard('打开搜索页', () async {
-        final SearchFeed feed = await _service.fetchSearch();
-        _push(SearchPage(hot: feed.hot, guesses: feed.guesses));
-      });
+    final SearchFeed feed = await _service.fetchSearch();
+    _push(SearchPage(hot: feed.hot, guesses: feed.guesses));
+  });
 
   /// 打开景点详情页（按 id 定位，找不到时回退首个）。
   @HostInjected()
   static Future<void> openSpot(String id) => _guard('打开景点详情', () async {
-        final Spot spot = await _service.fetchSpot(id);
-        _push(SpotDetailPage(spot: spot));
-      });
+    final Spot spot = await _service.fetchSpot(id);
+    _push(SpotDetailPage(spot: spot));
+  });
 
   /// 唤起城市选择器（底部面板），返回选中的城市名；用户直接关闭面板时返回 null。
   ///
@@ -80,9 +79,7 @@ class AppRouter {
     return showModalBottomSheet<String>(
       context: ctx,
       backgroundColor: const Color(0xFFFFFFFF),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
       builder: (_) => CityPickerSheet(current: current),
     );
   }
@@ -96,30 +93,30 @@ class AppRouter {
   /// 打开通知列表页（消息中心，数据走 `/app/notifications`）。
   @HostInjected()
   static Future<void> openNotifications() => _guard('打开消息中心', () async {
-        final List<AppNotice> notices = await _service.fetchNotifications();
-        _push(NotificationsPage(notices: notices));
-      });
+    final List<AppNotice> notices = await _service.fetchNotifications();
+    _push(NotificationsPage(notices: notices));
+  });
 
   /// 打开帖子详情页。
   @HostInjected()
   static Future<void> openPost(String id) => _guard('打开帖子详情', () async {
-        final Post post = await _service.fetchPost(id);
-        _push(PostDetailPage(post: post));
-      });
+    final Post post = await _service.fetchPost(id);
+    _push(PostDetailPage(post: post));
+  });
 
   /// 打开资源专题页（专题 + 相关推荐随接口下发）。
   @HostInjected()
   static Future<void> openResource(String id) => _guard('打开资源专题', () async {
-        final ResourceFeed feed = await _service.fetchResource(id);
-        _push(ResourceDetailPage(resource: feed.resource, related: feed.related));
-      });
+    final ResourceFeed feed = await _service.fetchResource(id);
+    _push(ResourceDetailPage(resource: feed.resource, related: feed.related));
+  });
 
   /// 打开订单详情页。
   @HostInjected()
   static Future<void> openOrder(String no) => _guard('打开订单详情', () async {
-        final Order order = await _service.fetchOrder(no);
-        _push(OrderDetailPage(order: order));
-      });
+    final Order order = await _service.fetchOrder(no);
+    _push(OrderDetailPage(order: order));
+  });
 
   /// 返回上一页。
   @HostInjected()
@@ -143,7 +140,7 @@ class AppRouter {
   static Future<void> openOrders() async {
     _push(
       Scaffold(
-        appBar: AppBar(title: const Text('我的订单')),
+        appBar: AppBar(title: const Text('我的订单'), backgroundColor: Colors.white),
         body: const OrdersPage(),
       ),
     );
@@ -152,7 +149,12 @@ class AppRouter {
   /// 打开「组件案例」页。
   @HostInjected()
   static Future<void> openWidgetShowcase() async {
-    _push(const WidgetShowcase());
+    _push(
+      Scaffold(
+        appBar: AppBar(title: const Text('组件案例'), backgroundColor: Colors.white),
+        body: const WidgetShowcase(),
+      ),
+    );
   }
 
   /// 打开「热更 Demo 列表」页。

@@ -69,7 +69,7 @@ class BannerFloorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<BannerFloorVm>();
-    double height = 250;
+    double height = 300;
     Widget body;
     if (vm.loading) {
       body = FloorLoadingView(height: height);
