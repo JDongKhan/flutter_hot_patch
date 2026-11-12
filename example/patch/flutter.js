@@ -1097,7 +1097,7 @@ export class ListView extends Component {
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
-      return Component.host('ListView', this.props, ["itemExtent"]);
+      return Component.host('ListView', this.props, false);
     }
   }
   __hasBuilder() {
@@ -1109,7 +1109,7 @@ export class ListView extends Component {
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
       __warn('[ListView] itemBuilder 不是闭包，按普通构造渲染');
-      return Component.host('ListView', this.props, ["itemExtent"]);
+      return Component.host('ListView', this.props, false);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
@@ -1121,7 +1121,8 @@ export class ListView extends Component {
       count: this.props.itemCount || 0,
       ctx: context
     };
-    return Component.host('ListView', p, ["itemExtent"]);
+    p.__pullItems = true;
+    return Component.host('ListView', p, false);
   }
   static builder(props) { return new ListView(Object.assign({}, props, { factory: 'builder' })); }
   static custom(props) { return new ListView(Object.assign({}, props, { factory: 'custom' })); }

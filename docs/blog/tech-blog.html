@@ -2055,18 +2055,21 @@ bash start_patch_server.sh
           <li><code>LayoutBuilder</code> / <code>OrientationBuilder</code> 同理：父约束按值去重后回调 JS，JS 执行 builder 后下发新子树。</li>
         </ul>
 
-        <h4>懒容器：是否懒只在构建期决定</h4>
-        <p>生成包装类的唯一事实源是生成器的 <code>lazyChildHostTypes</code>。生成器把规则写进 <code>flutter.js</code>：无条件懒用包装类的 <code>static __lazy</code>，条件懒（如带 <code>itemExtent</code> 的 <code>ListView</code>）用 <code>Component.host(..., lazyRule)</code>；<code>Component.__splitHost</code> 在构造期打 <code>lazyChildren: true</code>。运行时只认这个元素标记，不认识具体类型。业务自维护的 <code>js/&lt;package&gt;.js</code> 类直接写 <code>static __lazy</code>，不需要登记这张表。只有「子项尺寸由容器强制、不由内容决定」的容器才能懒。</p>
+        <h4>懒容器：两条路径，判据都在构建期</h4>
+        <p>生成包装类的唯一事实源是生成器的 <code>lazyChildHostTypes</code> 与 <code>pullChildHostTypes</code>。前者产出 <code>static __lazy</code> / <code>Component.host(..., lazyRule)</code>，由 <code>Component.__splitHost</code> 在构造期打 <code>lazyChildren: true</code>；子项先下发 0×0 占位，宿主 inflate 到该槽位时再回调 JS 构造。后者产出 <code>props.__pullItems</code>，容器不展开子项，宿主 <code>ListView.builder</code> / <code>.separated</code> 在布局到某个 index 时同步调 <code>__jsui.pullSlot</code> 拉取该槽位。运行时只认元素标记，不认识具体类型。业务自维护的 <code>js/&lt;package&gt;.js</code> 类直接写 <code>static __lazy</code>，不需要登记这张表。</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th style="width:32%">可以懒</th><th>不要懒</th></tr></thead>
+            <thead><tr><th style="width:26%">容器</th><th style="width:20%">路径</th><th>原因</th></tr></thead>
             <tbody>
-              <tr><td><code>PageView</code> / <code>TabBarView</code> / <code>GridView</code> / <code>SliverGrid</code> / <code>SliverFixedExtentList</code> / <code>SliverFillViewport</code> / 带 <code>itemExtent</code> 的 <code>ListView</code></td><td>无 <code>itemExtent</code> 的 <code>ListView</code>、<code>SliverList</code>、<code>ReorderableListView</code>、<code>Column</code>：零尺寸占位会让视口把所有 item 判为可见，懒加载反而失效</td></tr>
+              <tr><td><code>PageView</code> / <code>TabBarView</code> / <code>GridView</code> / <code>SliverGrid</code> / <code>SliverFixedExtentList</code> / <code>SliverFillViewport</code></td><td>懒槽位（0×0 占位）</td><td>子项尺寸由容器强制，零尺寸占位是布局中性的</td></tr>
+              <tr><td><code>ListView.builder</code> / <code>ListView.separated</code>（含 delegate 形态）</td><td>宿主按槽位拉取</td><td>按内容自适应高度，占位会塌陷；由宿主布局期主动拉取，高度真实测量</td></tr>
+              <tr><td><code>SliverList</code> / <code>ReorderableListView</code> / <code>Column</code></td><td>不懒</td><td>没有可用的按槽位拉取实现；占位会失效</td></tr>
             </tbody>
           </table>
         </div>
         <ul class="note-list">
           <li><strong>懒槽位生命周期与宿主 element 同寿</strong>：inflate → <code>lazyMount</code>；滚出缓存 / 切走 Tab / 整页退出 → <code>lazyUnmount</code>。item 的 State 会被销毁，滚回来是新实例。</li>
+          <li><strong>宿主拉取的 item 同寿</strong>：首次布局到该 index → <code>pullSlot</code>（构造 + <code>initState</code> + build）；element dispose → <code>releaseSlot</code>。父级重建会对已挂载项走增量 patch，与原生 <code>didUpdateWidget</code> 一致。</li>
           <li><strong>跨滚动保留数据放父组件或模型层</strong>；item 内创建的控制器 / Key 句柄随 item 实例释放，不要跨 item 共享。</li>
           <li><strong>保活</strong>：子树中任一组件声明 <code>wantKeepAlive =&gt; true</code> 时，JS 把声明经 <code>__keepAlive</code> 下发，宿主注册真实 <code>KeepAlive</code>；切走 Tab 不再销毁 element，也就不会 <code>lazyUnmount</code>。保活只看子树，不越过嵌套懒槽位。</li>
         </ul>

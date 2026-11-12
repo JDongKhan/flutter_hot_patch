@@ -310,6 +310,39 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final padding = c.edgeInsets('padding');
       final physics = c.scrollPhysics('physics');
       final itemExtent = c.double_('itemExtent');
+      // 宿主按槽位拉取（`props.__pullItems`，见生成器 pullChildHostTypes）：
+      // 子项不在 JS 侧预先展开，itemBuilder 首次布局到该项时同步拉取。子项
+      // 高度由宿主真实测量，因此没有 itemExtent 也能懒、且不抖动。
+      final pull = c.map('__pullItems');
+      if (pull != null) {
+        final count = (pull['count'] as num?)?.toInt() ?? 0;
+        if (pull['sep'] == true) {
+          // `.separated`：槽位按 [item, sep, item, sep, …] 交替（见 JS
+          // `__pullTotal`），itemBuilder 取偶数槽、separatorBuilder 取奇数槽。
+          return ListView.separated(
+            key: key,
+            controller: controller,
+            shrinkWrap: shrinkWrap,
+            scrollDirection: scrollDirection,
+            padding: padding,
+            physics: physics,
+            itemCount: count,
+            itemBuilder: (_, i) => c.lazySlot(i * 2),
+            separatorBuilder: (_, i) => c.lazySlot(i * 2 + 1),
+          );
+        }
+        return ListView.builder(
+          key: key,
+          controller: controller,
+          shrinkWrap: shrinkWrap,
+          scrollDirection: scrollDirection,
+          padding: padding,
+          physics: physics,
+          itemExtent: itemExtent,
+          itemCount: count,
+          itemBuilder: (_, i) => c.lazySlot(i),
+        );
+      }
       if (!builder) {
         return ListView(
           key: key,

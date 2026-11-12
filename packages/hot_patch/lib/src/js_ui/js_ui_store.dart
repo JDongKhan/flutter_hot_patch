@@ -368,6 +368,16 @@ class JsUiStore {
     _parents?.remove(id);
     nodes.remove(id);
   }
+
+  /// 释放一棵**不在任何父结点 slot 里**的子树（宿主按槽位拉取的 item）。
+  ///
+  /// 这类结点由创建 op 落进 store，但不发 insert（宿主 `ListView.builder`
+  /// 直接按 item 自己的 index 渲染），因此父索引找不到它，[apply] 的 remove 也
+  /// 覆盖不到。宿主在 item element dispose、且已通知 JS `releaseSlot` 之后调本方法。
+  void removeSubtree(String id) {
+    _unlink(id);
+    _removeSubtree(id);
+  }
 }
 
 /// 页面 key → 该页面的 [JsUiStore]（全局注册表）。

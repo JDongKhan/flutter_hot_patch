@@ -56,6 +56,7 @@ class JsRenderContext {
     required this.children,
     this.key,
     this.context,
+    this.lazySlotBuilder,
   });
 
   /// 本结点 renderer 所在位置的 [BuildContext]（宿主构建期提供）。
@@ -92,6 +93,23 @@ class JsRenderContext {
   /// 取值方直接 `c.children['body'] as Widget?` /
   /// `c.children['children'] as List<Widget>?`，key 由 renderer 自己决定。
   final Map<String, Object?> children;
+
+  /// 宿主按槽位拉取的入口（容器 props 带 `__pullItems` 时由运行时注入）。
+  ///
+  /// renderer 在 `itemBuilder` / `separatorBuilder` 里调 [lazySlot]：宿主首次
+  /// 布局到该槽位时同步向 JS 拉取子树，因此子项 `initState` 与 Flutter 原生
+  /// 一样只对可见项（含 `cacheExtent`）执行。
+  final Widget Function(int slotIndex)? lazySlotBuilder;
+
+  /// 取第 [slotIndex] 个惰性子项。非按槽位拉取的结点调用时给出明确的错误视图
+  /// （不静默返回空，避免「列表空白但无日志」）。
+  Widget lazySlot(int slotIndex) {
+    final f = lazySlotBuilder;
+    if (f == null) {
+      return uiFallback('结点 "$type" 不支持按槽位拉取（slot $slotIndex）');
+    }
+    return f(slotIndex);
+  }
 
   /// 把事件句柄（`{'__fn': id}`）回传到 JS 侧执行。
   void invoke(Object? handler, [List<Object?> args = const []]) =>

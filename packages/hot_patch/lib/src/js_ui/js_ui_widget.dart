@@ -705,7 +705,7 @@ Widget _renderStoreNode(
   }
   //其注册的组件
   final widget =
-      builder(_renderContextOf(store, node, pageKey, declared, context));
+      builder(_renderContextOf(store, id, node, pageKey, declared, context));
   // key 统一由 renderer 传给**真实 widget**（`key: c.key`），运行时不做任何
   // wrapper 兜底：`GlobalKey.currentContext / currentState` 因此直接指向真实
   // widget 的 Element，与原生 Flutter 一致。renderer 漏传时出声提示补 key
@@ -728,6 +728,7 @@ final Set<String> _missingKeyWarned = <String>{};
 /// （子 widget / 数据载体 / delegate）。
 JsRenderContext _renderContextOf(
   JsUiStore store,
+  String nodeId,
   JsUiNode node,
   String pageKey,
   Key? key, [
@@ -768,6 +769,17 @@ JsRenderContext _renderContextOf(
     children: children,
     key: key,
     context: context,
+    // 宿主按槽位拉取（`props.__pullItems` 的容器）：itemBuilder 每次要第 i 项时
+    // 返回一个按 index 稳定的 wrapper，首次 build 同步向 JS 拉取该槽位。
+    lazySlotBuilder: node.props['__pullItems'] is Map
+        ? (slotIndex) => _JsLazyItemHost(
+            key: ValueKey(slotIndex),
+            store: store,
+            containerId: nodeId,
+            slotIndex: slotIndex,
+            pageKey: pageKey,
+          )
+        : null,
   );
 }
 
@@ -838,6 +850,38 @@ abstract class _JsHostBaseState<T extends _JsHostBase> extends State<T> {
   }
 }
 
+/// 宿主 build / layout 期的同步拉取：执行 [expression]（JS 表达式，返回值经
+/// `JSON.stringify`），解码后返回 `(decoded, error)`。
+///
+/// 两类拉取共用同一外壳：组件 wrapper 的 `__jsui.pull` 与列表 item 的
+/// `__jsui.pullSlot`。失败时返回 `(null, 错误文本)`，由调用方渲染明确的错误
+/// 视图（不静默降级）。
+(Object?, String?) _pullJson(String expression, String what) {
+  final result = JsRuntimeManager.instance.evaluate(
+    'JSON.stringify($expression)',
+  );
+  if (result.isError) {
+    JsLog.error('js_ui pull failed ($what): ${result.stringResult}');
+    return (null, 'JS 拉取失败：${result.stringResult}');
+  }
+  final text = result.stringResult;
+  if (text.isEmpty || text == 'undefined' || text == 'null') {
+    JsLog.error('js_ui pull returned empty: $what');
+    return (null, 'JS 侧未返回补丁（$what）');
+  }
+  final Object? decoded;
+  try {
+    decoded = jsonDecode(text);
+  } catch (e) {
+    JsLog.error('js_ui pull decode failed: $e');
+    return (null, '补丁不是合法 JSON: $text');
+  }
+  if (decoded is Map && decoded['error'] != null) {
+    return (null, '${decoded['error']}');
+  }
+  return (decoded, null);
+}
+
 /// **JS 组件结点**（有 `build` 的那类）的宿主 wrapper ——「Flutter build 驱动
 /// JS build」的落点。
 ///
@@ -883,37 +927,17 @@ class _JsComponentHostState extends _JsHostBaseState<_JsComponentHost> {
   void _pullOnce() {
     if (_pulled) return;
     _pulled = true;
-    final result = JsRuntimeManager.instance.evaluate(
-      'JSON.stringify(__jsui.pull(${jsonEncode(widget.pageKey)}, '
-      '${jsonEncode(widget.id)}))',
+    final (decoded, error) = _pullJson(
+      '__jsui.pull(${jsonEncode(widget.pageKey)}, ${jsonEncode(widget.id)})',
+      '组件 ${widget.id}',
     );
-    if (result.isError) {
-      _error = 'JS pull 失败：${result.stringResult}';
-      JsLog.error('js_ui component pull failed: ${result.stringResult}');
-      return;
-    }
-    final text = result.stringResult;
-    if (text.isEmpty || text == 'undefined' || text == 'null') {
-      _error = 'JS 侧未返回补丁（组件 "${widget.id}"）';
-      JsLog.error('js_ui component pull returned empty: ${widget.id}');
-      return;
-    }
-    final Object? decoded;
-    try {
-      decoded = jsonDecode(text);
-    } catch (e) {
-      _error = '补丁不是合法 JSON: $text';
-      JsLog.error('js_ui component pull decode failed: $e');
-      return;
-    }
-    if (decoded is Map && decoded['error'] != null) {
-      // JS 侧已记录详细日志，这里只把原因呈现到界面上。
-      _error = '${decoded['error']}';
+    if (error != null) {
+      _error = error;
       return;
     }
     if (decoded is! List) {
-      _error = '补丁形态非法: $text';
-      JsLog.error('js_ui component pull payload invalid: $text');
+      _error = '补丁形态非法: $decoded';
+      JsLog.error('js_ui component pull payload invalid: $decoded');
       return;
     }
     // pull 发生在 build 期间：只落数据，不触发任何 wrapper 的 setState
@@ -1040,6 +1064,7 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
     }
     final ctx = _renderContextOf(
       widget.store,
+      widget.id,
       node,
       widget.pageKey,
       jsKeyOf(node.props['key']),
@@ -1085,3 +1110,101 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
 
 /// 未注册类型已告警过的结点（page|id|type）。
 final Set<String> _unknownLogged = <String>{};
+
+/// **宿主按槽位拉取的 item**（`ListView.builder` / `.separated`）。
+///
+/// 与 [_JsComponentHost] 走同一条同步拉取通道，区别只在「拉谁」：
+///   - [_JsComponentHost] 拉组件自身的 build 结果（`__jsui.pull`）；
+///   - 本类按槽位号拉容器的第 i 项（`__jsui.pullSlot`）。拉取发生在宿主
+///     `itemBuilder` 被调用时，即 Flutter 布局判定该项进入视口（含
+///     `cacheExtent`）之后 → 子项 `initState` 与原生一样只对可见项执行。
+///
+/// 生命周期与 Flutter 的 item element 同寿：dispose 时通知 JS `releaseSlot`
+/// 并从 store 删除该子树；滚回来是新实例（`initState` 重跑），与原生一致。
+class _JsLazyItemHost extends StatefulWidget {
+  const _JsLazyItemHost({
+    super.key,
+    required this.store,
+    required this.containerId,
+    required this.slotIndex,
+    required this.pageKey,
+  });
+
+  final JsUiStore store;
+  final String containerId;
+  final int slotIndex;
+  final String pageKey;
+
+  @override
+  State<_JsLazyItemHost> createState() => _JsLazyItemHostState();
+}
+
+class _JsLazyItemHostState extends State<_JsLazyItemHost> {
+  String? _rootId;
+  String? _error;
+
+  @override
+  void dispose() {
+    final root = _rootId;
+    if (root != null) {
+      // dispose 在 finalizeTree 的 lockState 内执行：JS 侧卸载与 store 删除都
+      // 延后到帧末，避免同步补丁在框架锁定期触发 setState 断言。
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          JsRuntimeManager.instance.evaluate(
+            '__jsui.releaseSlot(${jsonEncode(widget.containerId)}, '
+            '${widget.slotIndex});',
+          );
+        } catch (e, s) {
+          JsLog.error('js_ui slot release failed: $e', error: e, stackTrace: s);
+        }
+        widget.store.removeSubtree(root);
+      });
+    }
+    super.dispose();
+  }
+
+  /// 同步拉取本槽位并落到 store（build / layout 期间：只落数据不 setState）。
+  ///
+  /// **每次 build 都拉**：本 wrapper 只在父级（ListView）重建时 build，与 Flutter
+  /// 原生 `itemBuilder` 随父级 `setState` 重跑的语义一致；JS 侧对已挂载项走
+  /// 增量 patch（`didUpdateWidget` → build），数据未变时由元素引用短路。
+  void _pull() {
+    _error = null;
+    final what = '槽位 ${widget.containerId}#${widget.slotIndex}';
+    final (decoded, error) = _pullJson(
+      '__jsui.pullSlot(${jsonEncode(widget.pageKey)}, '
+      '${jsonEncode(widget.containerId)}, ${widget.slotIndex})',
+      what,
+    );
+    if (error != null) {
+      _error = error;
+      return;
+    }
+    if (decoded is! Map || decoded['root'] is! String) {
+      _error = '槽位补丁形态非法: $decoded';
+      JsLog.error('js_ui slot payload invalid: $what');
+      return;
+    }
+    final ops = decoded['ops'];
+    if (ops is List) {
+      widget.store.apply(ops, notify: false);
+    }
+    _rootId = decoded['root'] as String;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _pull();
+    final error = _error;
+    if (error != null) {
+      return uiFallback('列表项构建失败（${widget.slotIndex}）：$error');
+    }
+    final root = _rootId;
+    if (root == null) {
+      return uiFallback('列表项 ${widget.slotIndex} 未产出渲染根');
+    }
+    return _renderStoreNode(widget.store, root, widget.pageKey, context);
+  }
+}
+

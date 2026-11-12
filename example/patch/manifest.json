@@ -1,15 +1,15 @@
 {
   "name": "flutter_hot_example",
-  "protocol": "0.13.0",
-  "buildTime": "2026-11-12T14:10:24.492769",
+  "protocol": "0.14.0",
+  "buildTime": "2026-11-12T15:03:19.593770",
   "resources": {
-    "flutter.js": "4a696142c25963889c42d5b23a2ce33223fb5a154ed8411ecc01ab1dd049de21",
+    "flutter.js": "28c03b375fb09c751cd60c62651f94578b0e453e40f116d7a1933b124321d553",
     "packages/easy_refresh.js": "7606f91d791306289ebf4d47a37f6b30ac1fcdccbceeea53e6192818c9b09740",
     "packages/get.js": "f8aa6f3b477af33cdf3214a64e46d1a98f8d96aaa06dbeb2be5a1bf0a8aa7027",
     "packages/provider.js": "998f91ba6314dff5b811a88baacffdb07a6b35f0901eb5a04e5e8f1d65d93414",
     "packages/uuid.js": "315bfa1aecc89c4c253d5aded272e9fa7f072c7902878c68ebbb084a60ebf57b",
     "packages/visibility_detector.js": "5d72eb9a82628596cc50038e34f475ba1aeb4b531cf93d7353f6728319670d7a",
-    "runtime.js": "e43ad2697ada12bdaaad23b2e90809fb8226cc023ab389d03ede0d9a2f1754b4",
+    "runtime.js": "4a5a2215333930f7d6b7886c00d49d53d0ef11e5523da3f6b7fe81329911da34",
     "packages/hot_module_base/hot_module_base.js": "a6d50df16623b09b1de1ee795fac35c962350c12cc2468b00c06c59cc016ca7a",
     "packages/hot_module_base/src/account_center.js": "1e0b2389c45cf44f37d762ca12dcbbbc6b0d96f7ba1df7256f9481a251ef006e",
     "packages/hot_module_base/src/guide_bubble_widget.js": "8fc9270c7b523dc7d185a055456beab601232530b00377370114659814c4bb22",
@@ -85,6 +85,7 @@
     "components/grid_detail.js": "b486a8bc37e8f57b572d746aa34299b9bb92eab474d510eeedc4c2ea186dae67",
     "components/drawer_detail.js": "2eac58055f288cc43f087c4f389860d05deb318ac1add624ad2d864b42b4a032",
     "components/dialog_detail.js": "fba201c0f020a3b74a888b12f0dc8565ad170fab7c4135505dfc3b5aac669178",
+    "components/list_view_detail.js": "1143bbbd25565c1bce13581dfc907097ff2c02ef9729f151da1f48ef6930fe4f",
     "components/provider_component.js": "54aea8d4433f86d1da889c5ba4ead7a02c779fd75379c943de3871488054364c",
     "components/banner_component.js": "9fd8a28ff69112e1a367ba42b599e27eeffd6cd24af61707c93ce6a39f62ddca",
     "components/visibility_detail.js": "e81826fde34f076721a87c70e46291be4525e71bdb3bf6b0ead0f5feddef01ae",
@@ -149,7 +150,6 @@
     "base/app_router.js": "49bddfad3670613d57985a623fc85af9f37930a09304b88289a23caca22d6efb",
     "base/tracker.js": "d4664b4ea74e6fae26b5facc2881b1d2e953b7754293ea5ad13a453e443e8a5d",
     "base/web_view.js": "ed4cfc2b46fd3928dbe87a84069b8403ba875aaafa657b1e4cdeae83e9aaaff7",
-    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e",
-    "components/list_view_detail.js": "89dece6e61f6fce045d199a53abfe9a1a529fef1773581c468dbf114cfdd0cc5"
+    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e"
   }
 }

@@ -162,12 +162,12 @@ const Set<String> valueClassTypes = {'OverlayEntry'};
 /// 时才挂载，initState 与 Flutter 一致）：
 ///   - PageView / TabBarView：子项被 `SliverFillViewport` 强制成整屏；
 ///   - GridView / SliverGrid：子项被格尺寸强制（按 delegate 参数算出）；
-///   - SliverFixedExtentList / ListView(itemExtent:)：`itemExtent` 强制。
+///   - SliverFixedExtentList：`itemExtent` 强制。
 ///
-/// 按**内容**量尺寸的 ListView（无 itemExtent）/ SliverList /
-/// ReorderableListView **不在此列**：零尺寸占位会让视口把全部 item 判为
-/// 可见 → 懒加载反而失效。CustomScrollView 的 sliver 子项 Flutter 本来就
-/// 全部 inflate，无需声明。
+/// 按**内容**量尺寸的 ListView / SliverList / ReorderableListView **不在此列**：
+/// 零尺寸占位会让视口把全部 item 判为可见 → 懒加载反而失效。这类「按 index
+/// 回调生成子项」的容器改走 [pullChildHostTypes]（宿主布局期主动拉取）。
+/// CustomScrollView 的 sliver 子项 Flutter 本来就全部 inflate，无需声明。
 const Map<String, List<String>> lazyChildHostTypes = {
   'TabBarView': [],
   'PageView': [],
@@ -175,10 +175,22 @@ const Map<String, List<String>> lazyChildHostTypes = {
   'SliverGrid': [],
   'SliverFixedExtentList': [],
   'SliverFillViewport': [],
-  // 只有带 itemExtent 时才懒（`ListView.separated` 在 SDK 里不接受 itemExtent，
-  // 故该 props 只可能来自普通 / `.builder` 形态）。
-  'ListView': ['itemExtent'],
 };
+
+/// 子项由**宿主按槽位同步拉取**的容器类型（构建期配置）。
+///
+/// 与 [lazyChildHostTypes] 的区别只在「谁触发子项构造」：
+///   - 懒槽位：JS 下发 0×0 占位，宿主 inflate 到占位时回调 JS；要求子项尺寸
+///     由容器强制（否则占位塌陷 → 全部可见）。
+///   - 宿主拉取：容器不下发子项，只下发 `props.__pullItems = {id, count, sep}`；
+///     宿主还原成原生 `ListView.builder` / `.separated`，在 `itemBuilder` 里同步
+///     调 `__jsui.pullSlot(...)`。子项高度由宿主真实测量，因此**按内容自适应
+///     高度的列表也能懒**（不需要 `itemExtent`）。
+///
+/// 当前只登记 `ListView`（含 `.builder` / `.separated`）。运行时按
+/// `__pullItems` 标记执行，不认识类型名；新增容器只需在此登记并让宿主 renderer
+/// 消费该标记。
+const Set<String> pullChildHostTypes = {'ListView'};
 
 /// 「元素 type 是 JS 类」的 widget 类型集合 = 有 JS 类的类型（唯一事实源：
 /// 逻辑 widget 表 + builder 代理表 + 值类表）。渲染层据此决定元素 type 用类

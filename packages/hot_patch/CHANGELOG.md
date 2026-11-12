@@ -1,5 +1,14 @@
 > 注：本文件是历史版本记录，早期协议名称可能与当前实现不同；当前协议见 `docs/项目架构文档.md`。
 
+## 0.5.0
+
+**加法：`ListView.builder` / `.separated` 支持宿主按槽位拉取；无破坏性协议变更。**
+
+- **`JsRenderContext.lazySlot(int slotIndex)`**：容器 props 带 `__pullItems` 时可用。renderer 在 `itemBuilder` / `separatorBuilder` 里返回它，宿主首次布局到该槽位时同步调 `__jsui.pullSlot` 拉取子树；子项高度真实测量，无 `itemExtent` 也能懒。非按槽位拉取的结点调用会返回明确的错误视图。
+- **`JsUiStore.removeSubtree(String id)`**：释放不在任何父 slot 里的 item 子树（宿主 `ListView.builder` 按 index 渲染，store 里没有 insert 关系）。
+- **`ListView` renderer**：识别 `props.__pullItems = {id, count, sep}` 并还原成原生 `ListView.builder` / `.separated`；separated 按 `[item, sep, …]` 交替槽位拉取。
+- **`ListView(children: …)` 行为不变**。
+
 ## 0.4.2
 
 **加法：`MethodChannel` 宿主通道；无破坏性协议变更。**

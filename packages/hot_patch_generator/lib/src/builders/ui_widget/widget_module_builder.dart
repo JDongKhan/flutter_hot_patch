@@ -327,6 +327,11 @@ String builderProxySource(String type) {
   final lazyJs = rule == null
       ? 'false'
       : (rule.isEmpty ? 'true' : '[${rule.map(jsonEncode).join(', ')}]');
+  // 宿主按槽位拉取（见 pullChildHostTypes）：只下发标记，不展开子项；宿主
+  // renderer 据此在 itemBuilder 里同步走 `__jsui.pullSlot`。运行时不认类型名。
+  final pullLine = pullChildHostTypes.contains(type)
+      ? '    p.__pullItems = true;\n'
+      : '';
   return '''
 export class $type extends Component {
   constructor(props) {
@@ -358,7 +363,7 @@ export class $type extends Component {
       count: this.props.$countKey || 0,
       ctx: context
     };
-    return Component.host('$type', p, $lazyJs);
+$pullLine    return Component.host('$type', p, $lazyJs);
   }
 ${namedCtorStatics(type, extra: const ['builder', 'separated'])}
 }''';

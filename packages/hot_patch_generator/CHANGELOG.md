@@ -2,7 +2,11 @@
 
 ## 0.14.0
 
-**加法：顶层函数支持（与成员函数共用形参 / 函数体翻译）；无破坏性协议变更。**
+**加法：`ListView.builder` / `.separated` 改为宿主按槽位拉取；顶层函数支持（与成员函数共用形参 / 函数体翻译）；无破坏性协议变更。**
+
+- **`ListView` 不再要求 `itemExtent` 才能懒**：`shared/js_class_defs.dart` 移除 `lazyChildHostTypes` 里的 `'ListView': ['itemExtent']`，新增 `pullChildHostTypes = {'ListView'}`。builder / separated 形态的元素带 `p.__pullItems = true`，运行时把它折算成 `props.__pullItems = {id, count, sep}` 下发；容器自身不再展开子项。宿主 `ListView.builder` / `.separated` 的 `itemBuilder` 在布局到该槽位时同步调 `__jsui.pullSlot(pageKey, 容器id, 槽位号)`，子项 `initState` / `build` 只对可见项（含 `cacheExtent`）执行。子项高度由宿主真实测量，因此按内容自适应高度的列表也能懒、不需要 `itemExtent`。
+- **运行时新增 `__jsui.pullSlot` / `__jsui.releaseSlot`**：前者同步返回 `{root, ops}` 并把子树落进宿主 store；后者在宿主 item element dispose 时卸载该槽位。`__pulled` 子树随容器卸载递归释放；容器 `itemCount` 缩小时自动卸载越界槽位。
+- **`ListView(children: …)` 行为不变**：静态子项不走 `__pullItems`，仍一次性构建。
 
 - **跨包源文件解析容忍新语法诊断**：`shared/source_index.dart` 的 `parseUnitFile` 改为 `parseString(..., throwIfDiagnostics: false)`。它只做声明级索引（类型参数名 / import 可见性），不翻译表达式；此前依赖包使用比 pin 的 analyzer 更新的语法（如 `win32` 的 `macros.dart` 用了 dot-shorthands）会让整个构建直接失败。
 - **`MediaQuery` 改为 JS 侧继承取值（按 aspect 粒度）**：`MediaQuery` JS 类补 `build()`——登记为类型名 `'MediaQuery'` 的继承结点（`__inheritElement`）、按逐 aspect 指纹只通知「变化 ∩ 依赖方用到」的位置，并产出宿主 `'MediaQuery'` 结点负责原生渲染；`of / sizeOf / ...` 优先同步读最近 JS 声明的值，取不到才走宿主桥；`removePadding / removeViewPadding / removeViewInsets` 在 JS 侧按 `MediaQueryData.remove*` 计算派生 `data`（宿主仍按 `factory` 调 Flutter 同名 API）。

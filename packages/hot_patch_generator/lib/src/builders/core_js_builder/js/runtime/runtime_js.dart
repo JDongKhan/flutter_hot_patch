@@ -1048,6 +1048,10 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
     // 这是唯一一条「宿主 build → JS build」的入口：保证 JS build 执行时
     // BuildContext 锚点已由 wrapper 登记。
     pull: __pullComponent,
+    // 宿主按槽位拉取（`ListView.builder` / `.separated`）：同步返回该槽位的
+    // `{root, ops}`；宿主 item element dispose 时经 `releaseSlot` 卸载。
+    pullSlot: __pullSlot,
+    releaseSlot: __releaseSlot,
     dispose: __disposeRoot,
     updateProps: __updateRootProps,
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建

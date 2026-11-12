@@ -2,13 +2,14 @@
 // 由 hot_patch_generator 从 lib/components/list_view_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Axis, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, FontWeight, ListView, NotificationListener, Padding, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Alignment, Axis, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, FontWeight, InkWell, ListView, MainAxisAlignment, NotificationListener, Padding, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 ListViewDetail
 export class ListViewDetail extends StatefulWidget {
   constructor(args) {
     super(args);
     this._lazyOffset = 0;
+    this._listBuilds = 0;
   }
   _onLazyScroll(n) {
     this.setState(() => {
@@ -17,6 +18,7 @@ export class ListViewDetail extends StatefulWidget {
     return false;
   }
   build(context) {
+    this._listBuilds += 1;
     return new Column({
       "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
@@ -25,14 +27,14 @@ export class ListViewDetail extends StatefulWidget {
             "value": 12
           }))),
           "color": Colors.amber.shade50,
-          "child": (this.__k1 || (this.__k1 = new Text({
-            "data": "日志说明：initState = 首次挂载，dispose = 滚出缓存被回收。" + "JS 侧只有带 itemExtent 的 builder 是懒的；原生 Flutter 的 builder / " + "separated 本身懒，因此两栏日志条数不同。",
-            "style": new TextStyle({
+          "child": new Text({
+            "style": (this.__k1 || (this.__k1 = new TextStyle({
               "fontSize": 12
-            })
-          })))
+            }))),
+            "data": "父级 build 次数：" + this._listBuilds + "（点击 item 刷新时不应变化）。" + "日志：initState = 首次挂载，dispose = 滚出缓存被回收。" + "现在 builder / separated 无论有没有 itemExtent 都是懒的。"
+          })
         }),
-        this._section("ListView.builder + itemExtent：JS 懒加载（offset: " + this._lazyOffset.toStringAsFixed(1) + "）", "只构建可见项；滚动时逐项 initState，离屏回收 dispose。"),
+        this._section("ListView.builder + itemExtent：懒加载（offset: " + this._lazyOffset.toStringAsFixed(1) + "）", "只构建可见项；滚动时逐项 initState，离屏回收 dispose。"),
         new SizedBox({
           "height": 180,
           "child": new NotificationListener({
@@ -41,7 +43,7 @@ export class ListViewDetail extends StatefulWidget {
               "padding": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
                 "horizontal": 8
               }))),
-              "itemExtent": 56,
+              "itemExtent": 64,
               "itemCount": 40,
               "itemBuilder": (context, index) => new _ListProbeItem({
                 "tag": "lazy",
@@ -51,7 +53,7 @@ export class ListViewDetail extends StatefulWidget {
             "typeArguments": {"T": "ScrollNotification"}
           })
         }),
-        this._section("ListView.builder（无 itemExtent）：JS 非懒", "进入页面即构建全部 20 项：日志台会连续出现 20 条 initState。"),
+        this._section("ListView.builder（无 itemExtent）：同样懒", "宿主布局到该项时才向 JS 拉取；进入页面只构建可见的几条。"),
         new SizedBox({
           "height": 150,
           "child": ListView.builder({
@@ -60,12 +62,12 @@ export class ListViewDetail extends StatefulWidget {
             }))),
             "itemCount": 20,
             "itemBuilder": (context, index) => new _ListProbeItem({
-              "tag": "eager",
+              "tag": "auto",
               "index": index
             })
           })
         }),
-        this._section("ListView.separated：JS 非懒", "separatorBuilder 不参与懒判定；进入页面即构建全部 12 项。"),
+        this._section("ListView.separated：同样懒", "item / separator 分槽拉取；separator 只在对应项进入视口时才构造。"),
         new SizedBox({
           "height": 140,
           "child": ListView.separated({
@@ -82,7 +84,7 @@ export class ListViewDetail extends StatefulWidget {
             })
           })
         }),
-        this._section("ListView(children: …)：静态子项", "子项在 build 时已确定，原生与 JS 都一次性构建全部 8 项。"),
+        this._section("ListView(children: …)：静态子项", "子项在 build 时已确定，原生与 JS 都一次性构建全部 18 项。"),
         new SizedBox({
           "height": 140,
           "child": new ListView({
@@ -97,18 +99,18 @@ export class ListViewDetail extends StatefulWidget {
             ]
           })
         }),
-        this._section("横向 ListView.builder + itemExtent：JS 懒加载", "横向滚动同样只构建可见项。"),
+        this._section("横向 ListView.builder + itemExtent：懒加载", "横向滚动同样只构建可见项。"),
         new SizedBox({
-          "height": 72,
+          "height": 76,
           "child": ListView.builder({
             "scrollDirection": Axis.horizontal,
             "padding": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
               "horizontal": 8
             }))),
-            "itemExtent": 96,
+            "itemExtent": 132,
             "itemCount": 26,
             "itemBuilder": (context, index) => new _ListProbeItem({
-              "tag": "lazy-horizontal",
+              "tag": "h-lazy",
               "index": index
             })
           })
@@ -158,6 +160,8 @@ export class _ListProbeItem extends StatefulWidget {
   constructor(args) {
     super(args);
     this.__applyProps(args);
+    this._builds = 0;
+    this._refreshes = 0;
   }
   __applyProps(args) {
     this.tag = (args && args.tag !== undefined) ? args.tag : '';
@@ -171,19 +175,42 @@ export class _ListProbeItem extends StatefulWidget {
     print("[ListView][" + this.tag + "] dispose #" + this.index);
     super.dispose();
   }
+  _refresh() {
+    this.setState(() => {
+      this._refreshes += 1;
+    });
+    print("[ListView][" + this.tag + "] item refresh #" + this.index + " " + "(refreshes=" + this._refreshes + ", builds=" + (this._builds + 1) + ")");
+  }
   build(context) {
-    return new Container({
-      "alignment": Alignment.centerLeft,
-      "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
-        "horizontal": 12,
-        "vertical": 20
-      }))),
-      "child": new Text({
-        "style": (this.__k1 || (this.__k1 = new TextStyle({
-          "fontSize": 13,
-          "fontWeight": FontWeight.w600
+    this._builds += 1;
+    return new InkWell({
+      "onTap": () => this._refresh(),
+      "child": new Container({
+        "alignment": Alignment.centerLeft,
+        "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
+          "horizontal": 12,
+          "vertical": 6
         }))),
-        "data": this.tag + " #" + this.index
+        "child": new Column({
+          "mainAxisAlignment": MainAxisAlignment.center,
+          "crossAxisAlignment": CrossAxisAlignment.start,
+          "children": [
+            new Text({
+              "style": (this.__k1 || (this.__k1 = new TextStyle({
+                "fontSize": 13,
+                "fontWeight": FontWeight.w600
+              }))),
+              "data": this.tag + " #" + this.index
+            }),
+            new Text({
+              "style": (this.__k2 || (this.__k2 = new TextStyle({
+                "color": Colors.grey,
+                "fontSize": 11
+              }))),
+              "data": "build " + this._builds + " · 点击刷新 " + this._refreshes
+            })
+          ]
+        })
       })
     });
   }

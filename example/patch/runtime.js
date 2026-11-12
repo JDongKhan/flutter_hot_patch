@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 21a458d4） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 5bbe9277） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '21a458d4') { return; }
-  G.__jsuiVersion = '21a458d4';
+  if (G.__jsui && G.__jsuiVersion === '5bbe9277') { return; }
+  G.__jsuiVersion = '5bbe9277';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2295,13 +2295,23 @@ __defineProtoMember(Map.prototype, {
 
     if (__isHostElement(el)) {
       var hostType = __hostTypeName(el);
+      // 宿主按槽位拉取（路径 2，见 pullChildHostTypes）：容器自身不展开 builder
+      // 子项，只下发 `props.__pullItems = {id, count, sep}`；子项由宿主
+      // `ListView.builder` 的 itemBuilder 在布局期同步调 `__jsui.pullSlot` 拉起。
+      // 这样「按内容自适应高度」的列表也能懒，不需要 itemExtent。
+      var pullSpec = null;
+      if (el.props && el.props.__pullItems === true) {
+        pullSpec = __builderSpec(el);
+      }
       var hi = {
         __k: __HOST, __id: __nextNodeId(hostType), __type: hostType,
         __root: __rootOf(parent), __props: null,
-        __children: [], __parent: parent, __el: el
+        __children: [], __parent: parent, __el: el,
+        __pullSpec: pullSpec, __pulled: null
       };
       // 宿主 props 里的函数值在这里换成句柄（唯一的句柄创建点）。
-      hi.__props = __hostProps(hi, el.props || {}, el.__anchor || null, __hostFnNamesOf(el));
+      var hostProps = __hostProps(hi, el.props || {}, el.__anchor || null, __hostFnNamesOf(el));
+      hi.__props = pullSpec ? __withPullProps(hi, hostProps) : hostProps;
       __hostNodes[hi.__id] = hi;
       __trackNode(hi.__id);
       __attachKeyContext(hi);
@@ -2315,7 +2325,7 @@ __defineProtoMember(Map.prototype, {
       // 回调再挂；builder 形态连 itemBuilder 的调用也一并推迟（见 __childSources）。
       // 懒标记在元素构造期已由 Component / 包装类声明写好，运行时不做类型判断。
       var lazyChildren = el.lazyChildren === true;
-      var srcs = __childSources(el, hi, lazyChildren);
+      var srcs = pullSpec ? [] : __childSources(el, hi, lazyChildren);
       for (var i = 0; i < srcs.length; i++) {
         var src = srcs[i];
         if (!lazyChildren && (src.el == null || src.el === false)) { continue; }
@@ -2392,6 +2402,42 @@ __defineProtoMember(Map.prototype, {
     return ci;
   }
 
+  // 宿主同步拉取的**统一执行外壳**（组件 build 与容器槽位共用）：
+  //   - 拒绝在 mount / flush 期间重入（否则会覆盖 root.ops）；
+  //   - 切到目标页面根、开挂载事务帧；
+  //   - 执行 [fn]（返回错误文本 = 失败），收集本帧 ops；
+  //   - 失败按帧精确回滚，恢复现场。
+  //
+  // 两类拉取的差异只在 [fn] 里「构造哪个元素」，外壳与生命周期顺序完全一致。
+  function __hostPull(root, what, fn) {
+    if (root.mounting || root.flushing) {
+      __error('jsui: pull re-entered during mount/flush: ' + what);
+      return { error: '拉取与挂载/flush 重入: ' + what };
+    }
+    var prevRoot = __activeRoot;
+    __activeRoot = root;
+    root.ops = [];
+    var frame = __beginMountFrame();
+    var error = null;
+    var ops = null;
+    try {
+      error = fn();
+      ops = root.ops;
+    } catch (e) {
+      error = (e && e.message ? e.message : String(e));
+    } finally {
+      __endMountFrame(frame);
+      root.ops = null;
+      __activeRoot = prevRoot;
+    }
+    if (error != null) {
+      __rollbackMountFrame(frame);
+      __error('jsui: pull failed (' + what + '): ' + error);
+      return { error: error };
+    }
+    return { ops: ops || [] };
+  }
+
   // 宿主 element 挂载 → **同步拉取**组件的首次 build 结果。
   //
   // 调用点：宿主给每个组件结点建 wrapper，wrapper 在 build 里同步 evaluate
@@ -2406,17 +2452,7 @@ __defineProtoMember(Map.prototype, {
     var inst = __compNodes[compId];
     if (!root || !inst || inst.__unmounted) { return []; }
     if (inst.__built) { return []; }
-    if (root.mounting || root.flushing) {
-      __error('jsui: component pull re-entered during mount/flush: ' + compId);
-      return { error: '组件 build 与挂载/flush 重入: ' + compId };
-    }
-    var prevRoot = __activeRoot;
-    __activeRoot = root;
-    root.ops = [];
-    var frame = __beginMountFrame();
-    var error = null;
-    var ops = null;
-    try {
+    var r = __hostPull(root, 'component ' + compId, function () {
       // 继承依赖：与 Flutter 的重建语义一致——每次 build 前重新收集依赖，
       // 旧边先摘掉（didChangeDependencies 里也能重新登记）。
       __clearDependencies(inst);
@@ -2431,30 +2467,103 @@ __defineProtoMember(Map.prototype, {
       inst.__child = __mount(__buildOf(inst), inst, null);
       var rootId = __renderRootIdOf(inst);
       if (rootId == null) {
-        error = '组件 build 未产出任何结点: ' + __componentName(inst.constructor);
-      } else {
-        inst.__built = true;
-        __emitOp({ op: 'propsChild', parent: inst.__id, key: 'child', childId: rootId });
+        return '组件 build 未产出任何结点: ' + __componentName(inst.constructor);
       }
+      inst.__built = true;
+      __emitOp({ op: 'propsChild', parent: inst.__id, key: 'child', childId: rootId });
       // 子树里的 keep-alive 声明随挂载同步到最近的懒槽位（与 __lazyMount 同义）。
       __syncEnclosingKeepAlive(inst);
-      ops = root.ops;
-    } catch (e) {
-      error = (e && e.message ? e.message : String(e));
-    } finally {
-      __endMountFrame(frame);
-      root.ops = null;
-      __activeRoot = prevRoot;
-    }
-    if (error != null) {
+      return null;
+    });
+    if (r.error != null) {
       // build 失败：按帧回滚本次新增的结点 / 句柄（宿主尚未 commit，无需 remove）。
       inst.__built = false;
       inst.__child = null;
-      __rollbackMountFrame(frame);
-      __error('jsui: component build failed (' + compId + '): ' + error);
-      return { error: error };
+      return { error: r.error };
     }
-    return ops || [];
+    return r.ops || [];
+  }
+
+  // 宿主按槽位拉取（见生成器 pullChildHostTypes）：容器结点 props 带
+  // `__pullItems = {id, count, sep}`，子项由宿主 `ListView.builder` /
+  // `.separated` 的 itemBuilder 在**布局期**同步索取。与懒槽位的区别只在触发方：
+  // 这里由宿主知道「第 i 项进入了视口」，因此按内容自适应高度的列表也能懒。
+  //   - __withPullProps：注入 {id, count, sep}（id 只有挂载后才分配）；
+  //   - __pullSlot：构造并挂载第 slotIndex 项，返回 {root, ops}；
+  //   - __releaseSlot：宿主 item element dispose 时卸载对应槽位；
+  //   - __prunePulled：容器 itemCount 缩小时卸载越界槽位。
+  function __withPullProps(hi, props) {
+    var out = {};
+    for (var k in props) {
+      if (Object.prototype.hasOwnProperty.call(props, k)) { out[k] = props[k]; }
+    }
+    out.__pullItems = {
+      id: hi.__id,
+      count: hi.__pullSpec.count,
+      sep: !!hi.__pullSpec.sep
+    };
+    return out;
+  }
+
+  // 槽位总数：`.separated` 是 item / separator 交替（尾项后无分隔符）。
+  function __pullTotal(spec) {
+    return spec.sep ? Math.max(0, spec.count * 2 - 1) : spec.count;
+  }
+
+  function __prunePulled(hi, spec) {
+    var pd = hi.__pulled;
+    if (!pd) { return; }
+    var total = __pullTotal(spec);
+    for (var k in pd) {
+      if (!Object.prototype.hasOwnProperty.call(pd, k)) { continue; }
+      if (+k >= total) {
+        var old = pd[k];
+        delete pd[k];
+        __unmount(old);
+      }
+    }
+  }
+
+  // 宿主同步拉取第 slotIndex 个槽位。返回值：`{root, ops}`；未产出时报
+  // `{error}`（宿主渲染明确的错误视图，不静默降级）。
+  function __pullSlot(pageKey, hostId, slotIndex) {
+    var root = __roots[pageKey];
+    var hi = __hostNodes[hostId];
+    if (!root || !hi || !hi.__pullSpec) {
+      return { error: '槽位拉取失败：容器不存在或未声明 __pullItems（' + hostId + '）' };
+    }
+    var idx = slotIndex | 0;
+    var total = __pullTotal(hi.__pullSpec);
+    if (idx < 0 || idx >= total) {
+      return { error: '槽位越界：' + idx + '（总数 ' + total + '）' };
+    }
+    var cached = hi.__pulled && hi.__pulled[idx];
+    var inst = null;
+    var r = __hostPull(root, 'slot ' + hostId + '#' + idx, function () {
+      // 每次拉取都重新执行 itemBuilder：容器重建（父级 setState）时与 Flutter
+      // 的 itemBuilder 重跑语义一致。已挂载项走 __patch（didUpdateWidget →
+      // build，产出增量 ops）；数据未变时由构建产物里的 const 引用短路。
+      var el = __buildItem(hi, hi.__pullSpec, idx);
+      inst = (cached && !cached.__unmounted)
+          ? __patch(cached, el, hi, { index: idx })
+          : __mount(el, hi, { index: idx });
+      return inst ? null : 'itemBuilder 未产出结点（' + hostId + '#' + idx + '）';
+    });
+    if (r.error != null) { return { error: r.error }; }
+    hi.__pulled = hi.__pulled || {};
+    hi.__pulled[idx] = inst;
+    return { root: __nodeIdOf(inst), ops: r.ops || [] };
+  }
+
+  // 槽位卸载：宿主 item element 已 dispose，不再下发 remove op。
+  function __releaseSlot(hostId, slotIndex) {
+    var hi = __hostNodes[hostId];
+    if (!hi || !hi.__pulled) { return; }
+    var idx = slotIndex | 0;
+    var inst = hi.__pulled[idx];
+    if (inst === undefined) { return; }
+    delete hi.__pulled[idx];
+    if (inst && !inst.__unmounted) { __markUnmounted(inst); }
   }
 
   function __patch(oldInst, el, parent, slot, propSlot) {
@@ -2496,8 +2605,13 @@ __defineProtoMember(Map.prototype, {
 
     if (oldIsHost) {
       var oldProps = oldInst.__props;
+      // 宿主按槽位拉取：builder 描述取新元素的（count / sep 可能变化）。
+      var pullSpec = (el.props && el.props.__pullItems === true)
+        ? __builderSpec(el) : null;
+      oldInst.__pullSpec = pullSpec;
       // 先按新元素折算（函数 → 结点上已缓存的同一句柄，只更新实现），再比较。
       var newProps = __hostProps(oldInst, el.props || {}, el.__anchor || null, __hostFnNamesOf(el));
+      if (pullSpec) { newProps = __withPullProps(oldInst, newProps); }
       if (!__propsEqual(oldProps, newProps)) {
         __emitOp({ op: 'props', id: oldInst.__id, props: newProps });
       }
@@ -2506,8 +2620,9 @@ __defineProtoMember(Map.prototype, {
       // 子项来源按新元素声明的懒标记生成：懒容器下 builder 形态只带延迟工厂，
       // 已挂载的槽位由 __patchLazySlot 现场调用工厂重建该项。
       var lazyChildren = el.lazyChildren === true;
-      __patchChildren(oldInst, __childSources(el, oldInst, lazyChildren), lazyChildren);
+      __patchChildren(oldInst, pullSpec ? [] : __childSources(el, oldInst, lazyChildren), lazyChildren);
       __patchPropSlots(oldInst, el.__children || {}, lazyChildren);
+      if (pullSpec) { __prunePulled(oldInst, pullSpec); }
       return oldInst;
     }
 
@@ -2845,6 +2960,13 @@ __defineProtoMember(Map.prototype, {
         for (var lk in pcl) {
           for (var li = 0; li < pcl[lk].length; li++) { __markUnmounted(pcl[lk][li]); }
         }
+      }
+      // 宿主按槽位拉取的子项（`__pulled`）：不挂在 children / prop slots 上，
+      // 这里必须显式递归卸载，否则容器销毁后这些子树仍在 __hostNodes 里。
+      var pulled = inst.__pulled;
+      if (pulled) {
+        for (var pk in pulled) { __markUnmounted(pulled[pk]); }
+        inst.__pulled = null;
       }
     } else {
       // 组件结点索引同步摘除：宿主不会再拉取一个已卸载的组件。
@@ -3509,6 +3631,10 @@ __defineProtoMember(Map.prototype, {
     // 这是唯一一条「宿主 build → JS build」的入口：保证 JS build 执行时
     // BuildContext 锚点已由 wrapper 登记。
     pull: __pullComponent,
+    // 宿主按槽位拉取（`ListView.builder` / `.separated`）：同步返回该槽位的
+    // `{root, ops}`；宿主 item element dispose 时经 `releaseSlot` 卸载。
+    pullSlot: __pullSlot,
+    releaseSlot: __releaseSlot,
     dispose: __disposeRoot,
     updateProps: __updateRootProps,
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
