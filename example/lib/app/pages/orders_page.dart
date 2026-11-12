@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +32,23 @@ class OrdersPage extends StatelessWidget {
   }
 }
 
+/// 倒计时文案：秒 → `hh:mm:ss`（不足 1 小时只显示 `mm:ss`）。
+///
+/// 顶层函数（与组件同模块）：JS 产物里就是一个模块内函数，卡片直接调用。
+String _countdownText(int sec) {
+  final int safe = sec < 0 ? 0 : sec;
+  final int h = safe ~/ 3600;
+  final int m = (safe % 3600) ~/ 60;
+  final int s = safe % 60;
+  final String mm = m < 10 ? '0$m' : '$m';
+  final String ss = s < 10 ? '0$s' : '$s';
+  if (h > 0) {
+    final String hh = h < 10 ? '0$h' : '$h';
+    return '$hh:$mm:$ss';
+  }
+  return '$mm:$ss';
+}
+
 /// 订单视图：订阅 [OrdersVm]。
 class OrdersView extends StatefulWidget {
   const OrdersView({super.key});
@@ -39,8 +58,35 @@ class OrdersView extends StatefulWidget {
 }
 
 class _OrdersViewState extends State<OrdersView> {
+  /// 秒表：待付款卡片的倒计时 = 接口下发的 `remainSec` - 本页已过去的秒数。
+  /// 只用一个页面级定时器，不为每张卡片各开一个（100 条时开销可控）。
+  int _tick = 0;
+
+  /// 上一次构建时的状态筛选值：切状态 = 换了一批列表数据，倒计时从头开始。
+  String _lastStatus = '';
+
+  Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      setState(() => _tick += 1);
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    super.dispose();
+  }
+
   Color _statusColor(String status) => switch (status) {
     '待付款' => kPrice,
+    '待发货' => const Color(0xFFF08A00),
+    '待收货' => kBrand,
     '已完成' => const Color(0xFF8B909A),
     _ => kBrand,
   };
@@ -53,6 +99,7 @@ class _OrdersViewState extends State<OrdersView> {
     return _OrderCard(
       order: o,
       statusColor: _statusColor(o.status),
+      remainSec: o.remainSec - _tick,
       onOpen: () => AppRouter.openOrder(o.no),
     );
   }
@@ -61,6 +108,11 @@ class _OrdersViewState extends State<OrdersView> {
   Widget build(BuildContext context) {
     final vm = context.watch<OrdersVm>();
     final feed = vm.feed;
+    // 切状态后列表会重发：倒计时基准跟着重置，避免沿用上一批数据的秒表。
+    if (_lastStatus != vm.status) {
+      _lastStatus = vm.status;
+      _tick = 0;
+    }
     // 失败后必须退出 loading 态：给出异常信息与重试入口。
     if (feed == null) {
       final error = vm.feedError;
@@ -123,6 +175,14 @@ class _OrdersViewState extends State<OrdersView> {
             ),
           ),
         ),
+        // 本状态下的订单条数（数据一多先看清楚总量）
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+          child: Text(
+            vm.orders == null ? '订单加载中…' : '共 ${vm.orders!.length} 笔订单',
+            style: const TextStyle(fontSize: 12, color: Color(0xFF8B909A)),
+          ),
+        ),
         // 列表请求中：贴一条细进度条（列表接口的加载反馈）
         if (vm.listLoading) const LinearProgressIndicator(minHeight: 2),
         Expanded(
@@ -140,10 +200,9 @@ class _OrdersViewState extends State<OrdersView> {
                     style: TextStyle(fontSize: 13, color: Color(0xFF98A0AC)),
                   ),
                 )
-              : ListView.separated(
+              : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
                   itemCount: vm.orders!.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: _buildOrderItem,
                 ),
         ),
@@ -152,17 +211,35 @@ class _OrdersViewState extends State<OrdersView> {
   }
 }
 
-/// 订单卡：头（订单号 + 状态）/ 商品行 / 底（合计 + 操作）。
+/// 订单卡：店铺行 / 商品行 / 进度步骤 / 倒计时（或时间文案）/ 地址备注 / 底栏。
+///
+/// 一张卡里刻意堆足信息量（店铺、状态、标签、进度、倒计时、地址、优惠、备注、
+/// 合计、操作按钮），用来观察 JS 侧复杂 item 的构建与滚动表现。
 class _OrderCard extends StatelessWidget {
   const _OrderCard({
     required this.order,
     required this.statusColor,
+    required this.remainSec,
     required this.onOpen,
   });
 
   final Order order;
+
+  /// 状态色（由页面按状态映射，卡片不判断业务）。
   final Color statusColor;
+
+  /// 倒计时剩余秒数（已扣除页面秒表；非待付款状态不使用）。
+  final int remainSec;
+
   final VoidCallback onOpen;
+
+  /// 流程步骤文案（下标的含义与模型 `step` 一致）。
+  static const List<String> _stageLabels = [
+    '提交订单',
+    '支付成功',
+    '商家发货',
+    '已完成',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -170,36 +247,60 @@ class _OrderCard extends StatelessWidget {
     return GestureDetector(
       onTap: onOpen,
       child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 店铺行：店铺 + 状态胶囊
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+              padding: const EdgeInsets.fromLTRB(14, 12, 12, 10),
               child: Row(
                 children: [
-                  Text(
-                    '订单号 ${order.no}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF8B909A),
+                  const Icon(
+                    Icons.storefront,
+                    size: 15,
+                    color: Color(0xFF5C6270),
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      order.store,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2A2F3A),
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    order.status,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Text(
+                      order.status,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             const Divider(height: 1, color: Color(0xFFF0F2F6)),
+            // 商品行：图 + 标题 / 规格 / 标签
             Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
@@ -209,12 +310,12 @@ class _OrderCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     child: Image.asset(
                       order.img,
-                      width: 66,
-                      height: 66,
+                      width: 82,
+                      height: 82,
                       fit: BoxFit.cover,
                       errorBuilder: (_, e, s) => Container(
-                        width: 66,
-                        height: 66,
+                        width: 82,
+                        height: 82,
                         color: const Color(0xFFE8EBF0),
                       ),
                     ),
@@ -226,11 +327,12 @@ class _OrderCard extends StatelessWidget {
                       children: [
                         Text(
                           order.title,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
+                            height: 1.25,
                           ),
                         ),
                         const SizedBox(height: 5),
@@ -243,13 +345,30 @@ class _OrderCard extends StatelessWidget {
                             color: Color(0xFF8B909A),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          '×1',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFFA3A9B4),
-                          ),
+                        const SizedBox(height: 7),
+                        Wrap(
+                          spacing: 5,
+                          runSpacing: 4,
+                          children: [
+                            for (final tag in order.tags)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF2E8),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  tag,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Color(0xFFC8621E),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
@@ -257,7 +376,141 @@ class _OrderCard extends StatelessWidget {
                 ],
               ),
             ),
+            // 流程进度：四个节点 + 连线
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                children: [
+                  for (var i = 0; i < _stageLabels.length; i++) ...[
+                    if (i > 0)
+                      Expanded(
+                        child: Container(
+                          height: 1.5,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          color: i <= order.step
+                              ? kBrand
+                              : const Color(0xFFE3E7EF),
+                        ),
+                      ),
+                    _StageNode(
+                      label: _stageLabels[i],
+                      active: i <= order.step,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            // 倒计时（待付款）/ 时间文案（其它状态）
+            if (pending)
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3F0),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time,
+                      size: 15,
+                      color: kPrice,
+                    ),
+                    const SizedBox(width: 5),
+                    const Text(
+                      '剩余支付时间',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF8B5A4A),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _countdownText(remainSec),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: kPrice,
+                      ),
+                    ),
+                    const Spacer(),
+                    const Text(
+                      '超时自动取消',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFFA89089),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.schedule,
+                      size: 14,
+                      color: Color(0xFF8B909A),
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        order.deadline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF8B909A),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // 地址 / 优惠 / 备注
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: Color(0xFF8B909A),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          order.address,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: Color(0xFF5C6270),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '优惠：${order.discount} · 备注：${order.remark} · 共 ${order.count} 件',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF9AA0AC),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const Divider(height: 1, color: Color(0xFFF0F2F6)),
+            // 底栏：合计 + 操作
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 12, 12),
               child: Row(
@@ -274,22 +527,93 @@ class _OrderCard extends StatelessWidget {
                       color: kPrice,
                     ),
                   ),
-                  const Spacer(),
-                  if (pending) ...[
-                    MiniButton(
-                      label: '取消',
-                      onTap: () => AppRouter.toast('已取消订单 ${order.no}（演示）'),
+                  const SizedBox(width: 6),
+                  Text(
+                    '（${order.count} 件）',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Color(0xFF9AA0AC),
                     ),
-                    const SizedBox(width: 8),
-                    MiniButton(label: '去支付', primary: true, onTap: onOpen),
-                  ] else
-                    MiniButton(label: '查看详情', onTap: onOpen),
+                  ),
+                  const Spacer(),
+                  ..._actions(pending),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// 底栏操作按钮：按状态给不同组合（演示用 toast，点击卡片本身进详情）。
+  List<Widget> _actions(bool pending) {
+    if (pending) {
+      return [
+        MiniButton(
+          label: '取消订单',
+          onTap: () => AppRouter.toast('已取消订单 ${order.no}（演示）'),
+        ),
+        const SizedBox(width: 8),
+        MiniButton(label: '去支付', primary: true, onTap: onOpen),
+      ];
+    }
+    if (order.status == '待发货') {
+      return [
+        MiniButton(label: '申请退款', onTap: () => AppRouter.toast('已提交退款申请（演示）')),
+        const SizedBox(width: 8),
+        MiniButton(
+          label: '提醒发货',
+          primary: true,
+          onTap: () => AppRouter.toast('已提醒商家发货（演示）'),
+        ),
+      ];
+    }
+    if (order.status == '待收货') {
+      return [
+        MiniButton(label: '查看物流', onTap: () => AppRouter.toast('包裹运输中（演示）')),
+        const SizedBox(width: 8),
+        MiniButton(label: '确认收货', primary: true, onTap: onOpen),
+      ];
+    }
+    return [
+      MiniButton(label: '删除订单', onTap: () => AppRouter.toast('已删除订单（演示）')),
+      const SizedBox(width: 8),
+      MiniButton(label: '再次购买', primary: true, onTap: onOpen),
+    ];
+  }
+}
+
+/// 进度节点：圆点 + 步骤文案（当前及之前的节点高亮）。
+class _StageNode extends StatelessWidget {
+  const _StageNode({required this.label, required this.active});
+
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: active ? kBrand : const Color(0xFFE3E7EF),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: active ? kBrand : const Color(0xFFA3A9B4),
+            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ],
     );
   }
 }

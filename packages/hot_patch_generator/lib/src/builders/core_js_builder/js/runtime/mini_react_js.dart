@@ -1458,12 +1458,18 @@ const String miniReactReconcilerSource = r'''
   }
 
   // 槽位卸载：宿主 item element 已 dispose，不再下发 remove op。
-  function __releaseSlot(hostId, slotIndex) {
+  //
+  // [rootId] 是宿主 dispose 的那个槽位当时的根结点 id。快速滚动时同一 index
+  // 可能「旧 element dispose → 新 element 在同帧内重新 pull」：旧 dispose 的
+  // post-frame 回调若直接按 index 删，会把**新建的**槽位误杀。因此只在当前
+  // 缓存仍是该根结点时才卸载（幂等 + 防误删）。
+  function __releaseSlot(hostId, slotIndex, rootId) {
     var hi = __hostNodes[hostId];
     if (!hi || !hi.__pulled) { return; }
     var idx = slotIndex | 0;
     var inst = hi.__pulled[idx];
     if (inst === undefined) { return; }
+    if (rootId != null && __nodeIdOf(inst) !== rootId) { return; }
     delete hi.__pulled[idx];
     if (inst && !inst.__unmounted) { __markUnmounted(inst); }
   }

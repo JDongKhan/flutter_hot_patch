@@ -1153,7 +1153,7 @@ class _JsLazyItemHostState extends State<_JsLazyItemHost> {
         try {
           JsRuntimeManager.instance.evaluate(
             '__jsui.releaseSlot(${jsonEncode(widget.containerId)}, '
-            '${widget.slotIndex});',
+            '${widget.slotIndex}, ${jsonEncode(root)});',
           );
         } catch (e, s) {
           JsLog.error('js_ui slot release failed: $e', error: e, stackTrace: s);

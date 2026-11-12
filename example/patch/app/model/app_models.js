@@ -166,8 +166,20 @@ export class Order {
     this.img = (args && args.img !== undefined) ? args.img : '';
     this.price = (args && args.price !== undefined) ? args.price : 0;
     this.step = (args && args.step !== undefined) ? args.step : 0;
+    this.store = (args && args.store !== undefined) ? args.store : '';
+    this.tags = (args && args.tags !== undefined) ? args.tags : [];
+    this.remainSec = (args && args.remainSec !== undefined) ? args.remainSec : 0;
+    this.deadline = (args && args.deadline !== undefined) ? args.deadline : '';
+    this.address = (args && args.address !== undefined) ? args.address : '';
+    this.remark = (args && args.remark !== undefined) ? args.remark : '';
+    this.discount = (args && args.discount !== undefined) ? args.discount : '';
+    this.count = (args && args.count !== undefined) ? args.count : 0;
   }
   static fromJson(e) {
+    const tags = [];
+    for (let t of __idx(e, "tags")) {
+      tags.add(t);
+    }
     return new Order({
       "no": e["no"],
       "status": e["status"],
@@ -175,7 +187,15 @@ export class Order {
       "spec": e["spec"],
       "img": e["img"],
       "price": e["price"],
-      "step": e["step"]
+      "step": e["step"],
+      "store": e["store"],
+      "tags": tags,
+      "remainSec": e["remainSec"],
+      "deadline": e["deadline"],
+      "address": e["address"],
+      "remark": e["remark"],
+      "discount": e["discount"],
+      "count": e["count"]
     });
   }
 }

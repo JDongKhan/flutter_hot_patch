@@ -8,9 +8,9 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 ///     宿主布局到某个槽位时才向 JS 拉取该项，只构建可见项（含 cacheExtent）；
 ///   - `ListView(children: …)` → 静态子项，进入页面即全部构建。
 ///
-/// 每个子项的 `initState` / `dispose` 都打日志，可直接在日志台观察懒加载的
-/// 挂载与回收。子项内的「点击刷新」只 `setState` 自身，用于验证 item 局部
-/// 刷新不会带动整个 ListView 重建（看顶部「父级 build 次数」是否变化）。
+/// 每个子项的 `initState` / `dispose` 都打日志。两个验证入口：
+///   - 顶部「模拟接口刷新」：条目数不变、只换内容，看可见项是否立即更新；
+///   - item 短按改父组件模型（跨滚动验证），长按只刷新自身（验证局部更新）。
 @PatchEntry('ListViewDetail')
 class ListViewDetail extends StatefulWidget {
   const ListViewDetail({super.key});
@@ -23,12 +23,35 @@ class _ListViewDetailState extends State<ListViewDetail> {
   /// 懒列表的滚动偏移（NotificationListener 演示）。
   double _lazyOffset = 0;
 
-  /// 父级 build 次数：item 点击刷新时若保持不变，说明只有该项在重建。
+  /// 父级 build 次数：item 本地刷新时不应变化。
   int _listBuilds = 0;
+
+  /// 模型数据：条目数固定 20，演示「条目不变但内容变」。
+  final List<String> _rows = [for (var i = 0; i < 20; i++) 'row-$i'];
+
+  /// 模拟接口版本号（每次刷新 +1）。
+  int _apiTick = 0;
 
   bool _onLazyScroll(ScrollNotification n) {
     setState(() => _lazyOffset = n.metrics.pixels);
     return false;
+  }
+
+  /// 模拟接口返回：条目数不变，只换每项内容。
+  void _refreshFromApi() {
+    _apiTick += 1;
+    setState(() {
+      for (var i = 0; i < _rows.length; i++) {
+        _rows[i] = '接口 v$_apiTick · 行 $i';
+      }
+    });
+    print('[ListView] api refresh v$_apiTick（条目数 ${_rows.length} 未变）');
+  }
+
+  /// item 短按：改父组件模型（跨滚动可见性验证）。
+  void _onRowTap(int index) {
+    setState(() => _rows[index] = '已点击 · 行 $index · v$_apiTick');
+    print('[ListView] model change #$index -> "${_rows[index]}"');
   }
 
   @override
@@ -40,11 +63,20 @@ class _ListViewDetailState extends State<ListViewDetail> {
         Container(
           padding: const EdgeInsets.all(12),
           color: Colors.amber.shade50,
-          child: Text(
-            '父级 build 次数：$_listBuilds（点击 item 刷新时不应变化）。'
-            '日志：initState = 首次挂载，dispose = 滚出缓存被回收。'
-            '现在 builder / separated 无论有没有 itemExtent 都是懒的。',
-            style: const TextStyle(fontSize: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '父级 build 次数：$_listBuilds（item 长按刷新时不应变化）。'
+                '日志：initState = 首次挂载，dispose = 滚出缓存被回收。',
+                style: const TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 6),
+              ElevatedButton(
+                onPressed: _refreshFromApi,
+                child: const Text('模拟接口刷新（条目数不变，只换内容）'),
+              ),
+            ],
           ),
         ),
         _section(
@@ -65,16 +97,20 @@ class _ListViewDetailState extends State<ListViewDetail> {
           ),
         ),
         _section(
-          'ListView.builder（无 itemExtent）：同样懒',
-          '宿主布局到该项时才向 JS 拉取；进入页面只构建可见的几条。',
+          'ListView.builder（无 itemExtent）：同样懒 · 接模型数据',
+          '短按改父级模型（滚走再滚回应显示新值）；长按只刷新自身。',
         ),
         SizedBox(
           height: 150,
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            itemCount: 20,
-            itemBuilder: (context, index) =>
-                _ListProbeItem(tag: 'auto', index: index),
+            itemCount: _rows.length,
+            itemBuilder: (context, index) => _ListProbeItem(
+              tag: 'auto',
+              index: index,
+              label: _rows[index],
+              onTap: () => _onRowTap(index),
+            ),
           ),
         ),
         _section(
@@ -145,12 +181,25 @@ class _ListViewDetailState extends State<ListViewDetail> {
   }
 }
 
-/// 列表探针：挂载 / 回收打日志；点击只刷新自身，便于验证局部更新。
+/// 列表探针：挂载 / 回收打日志。
+///
+/// 短按 = 触发 [onTap]（改父级模型）；长按 = 只 setState 自身。
 class _ListProbeItem extends StatefulWidget {
-  const _ListProbeItem({super.key, required this.tag, required this.index});
+  const _ListProbeItem({
+    required this.tag,
+    required this.index,
+    this.label,
+    this.onTap,
+  });
 
   final String tag;
   final int index;
+
+  /// 父级模型里的内容（条目不变、内容变化的验证入口）。
+  final String? label;
+
+  /// 短按回调：由父级改模型并 setState。
+  final VoidCallback? onTap;
 
   @override
   State<_ListProbeItem> createState() => _ListProbeItemState();
@@ -173,19 +222,33 @@ class _ListProbeItemState extends State<_ListProbeItem> {
   }
 
   /// 只改本项状态：父级 `_listBuilds` 不变 = ListView 没有整体重建。
-  void _refresh() {
+  void _localRefresh() {
     setState(() => _refreshes += 1);
     print(
-      '[ListView][${widget.tag}] item refresh #${widget.index} '
+      '[ListView][${widget.tag}] local refresh #${widget.index} '
       '(refreshes=$_refreshes, builds=${_builds + 1})',
     );
+  }
+
+  /// 短按：有父级回调就交给模型，否则只刷新自身。
+  ///
+  /// 不用 `widget.onTap ?? _localRefresh` 直接做默认值：该混合表达式在翻译
+  /// 阶段会被丢弃（onTap 键直接消失），点击静默失效。
+  void _handleTap() {
+    final onTap = widget.onTap;
+    if (onTap != null) {
+      onTap();
+    } else {
+      _localRefresh();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     _builds += 1;
     return InkWell(
-      onTap: _refresh,
+      onTap: _handleTap,
+      onLongPress: _localRefresh,
       child: Container(
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -194,14 +257,14 @@ class _ListProbeItemState extends State<_ListProbeItem> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${widget.tag} #${widget.index}',
+              widget.label ?? '${widget.tag} #${widget.index}',
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
             Text(
-              'build $_builds · 点击刷新 $_refreshes',
+              'build $_builds · 长按刷新 $_refreshes',
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],

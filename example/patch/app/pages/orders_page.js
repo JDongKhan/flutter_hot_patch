@@ -8,8 +8,20 @@ import { AppRouter } from '../../base/app_router.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
+import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, Duration, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, MainAxisSize, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Timer, Wrap } from '../../flutter.js';
 import { ChangeNotifierProvider } from '../../packages/provider.js';
+
+const _countdownText = (sec) => { const safe = ((sec < 0) ? 0 : sec);
+  const h = Math.trunc(safe / 3600);
+  const m = Math.trunc((__mod(safe, 3600)) / 60);
+  const s = __mod(safe, 60);
+  const mm = ((m < 10) ? "0" + m : "" + m);
+  const ss = ((s < 10) ? "0" + s : "" + s);
+  if ((h > 0)) {
+    const hh = ((h < 10) ? "0" + h : "" + h);
+    return hh + ":" + mm + ":" + ss;
+  }
+  return mm + ":" + ss; };
 
 // 组件 OrdersPage
 export class OrdersPage extends StatelessWidget {
@@ -33,10 +45,29 @@ export class OrdersPage extends StatelessWidget {
 export class OrdersView extends StatefulWidget {
   constructor(args) {
     super(args);
+    this._tick = 0;
+    this._lastStatus = "";
+    this._countdownTimer = null;
+  }
+  initState() {
+    super.initState();
+    this._countdownTimer = Timer.periodic({duration: new Duration({seconds: 1}), callback: (timer) => { if ((!!this.__unmounted)) {
+          return;
+        }
+        this.setState(() => {
+          this._tick += 1;
+        }); }});
+  }
+  dispose() {
+    this._countdownTimer?.cancel();
+    this._countdownTimer = null;
+    super.dispose();
   }
   _statusColor(status) {
     return (() => { switch (status) {
         case "待付款": return kPrice;
+        case "待发货": return new Color({value: 0xFFF08A00});
+        case "待收货": return kBrand;
         case "已完成": return new Color({value: 0xFF8B909A});
         default: return kBrand;
       } })();
@@ -47,12 +78,17 @@ export class OrdersView extends StatefulWidget {
     return new _OrderCard({
       "order": o,
       "statusColor": this._statusColor(o.status),
+      "remainSec": (o.remainSec - this._tick),
       "onOpen": () => AppRouter.openOrder(o.no)
     });
   }
   build(context) {
     const vm = context.watch({ typeArguments: {"T": "OrdersVm"} });
     const feed = vm.feed;
+    if ((this._lastStatus !== vm.status)) {
+      this._lastStatus = vm.status;
+      this._tick = 0;
+    }
     if ((__nn(feed) == null)) {
       const error = vm.feedError;
       if ((__nn(error) != null)) {
@@ -121,7 +157,24 @@ export class OrdersView extends StatefulWidget {
             })
           })
         }),
-        ...(vm.listLoading ? [(this.__k6 || (this.__k6 = new LinearProgressIndicator({
+        new Padding({
+          "padding": (this.__k6 || (this.__k6 = EdgeInsets.fromLTRB({
+            "bottom": 0,
+            "left": 14,
+            "right": 14,
+            "top": 8
+          }))),
+          "child": new Text({
+            "style": (this.__k7 || (this.__k7 = new TextStyle({
+              "color": new Color({
+                "value": 0xFF8B909A
+              }),
+              "fontSize": 12
+            }))),
+            "data": (vm.orders == null) ? "订单加载中…" : "共 " + vm.orders.length + " 笔订单"
+          })
+        }),
+        ...(vm.listLoading ? [(this.__k8 || (this.__k8 = new LinearProgressIndicator({
             "minHeight": 2
           })))] : []),
         new Expanded({
@@ -130,7 +183,7 @@ export class OrdersView extends StatefulWidget {
             "onRetry": (...__a) => vm.retry(...__a)
           }) : (this.__k0 || (this.__k0 = new Center({
             "child": new CircularProgressIndicator({})
-          }))) : vm.orders.isEmpty ? (this.__k7 || (this.__k7 = new Center({
+          }))) : vm.orders.isEmpty ? (this.__k9 || (this.__k9 = new Center({
             "child": new Text({
               "style": new TextStyle({
                 "fontSize": 13,
@@ -140,17 +193,14 @@ export class OrdersView extends StatefulWidget {
               }),
               "data": "该状态下暂无订单"
             })
-          }))) : ListView.separated({
-            "padding": (this.__k8 || (this.__k8 = EdgeInsets.fromLTRB({
+          }))) : ListView.builder({
+            "padding": (this.__k10 || (this.__k10 = EdgeInsets.fromLTRB({
               "bottom": 20,
               "left": 12,
               "right": 12,
               "top": 12
             }))),
             "itemCount": vm.orders.length,
-            "separatorBuilder": (context, index) => (this.__k9 || (this.__k9 = new SizedBox({
-              "height": 10
-            }))),
             "itemBuilder": (__a0, __a1) => this._buildOrderItem(__a0, __a1)
           })
         })
@@ -161,6 +211,7 @@ export class OrdersView extends StatefulWidget {
 
 // 组件 _OrderCard
 export class _OrderCard extends StatelessWidget {
+  static _stageLabels = ["提交订单", "支付成功", "商家发货", "已完成"];
   constructor(args) {
     super(args);
     this.__applyProps(args);
@@ -168,6 +219,7 @@ export class _OrderCard extends StatelessWidget {
   __applyProps(args) {
     this.order = (args && args.order !== undefined) ? args.order : null;
     this.statusColor = (args && args.statusColor !== undefined) ? args.statusColor : null;
+    this.remainSec = (args && args.remainSec !== undefined) ? args.remainSec : 0;
     this.onOpen = (args && args.onOpen !== undefined) ? args.onOpen : null;
   }
   build(context) {
@@ -175,6 +227,9 @@ export class _OrderCard extends StatelessWidget {
     return new GestureDetector({
       "onTap": this.onOpen,
       "child": new Container({
+        "margin": (this.__k0 || (this.__k0 = EdgeInsets.only({
+          "bottom": 10
+        }))),
         "decoration": new BoxDecoration({
           "color": Colors.white,
           "borderRadius": BorderRadius.circular({
@@ -182,45 +237,72 @@ export class _OrderCard extends StatelessWidget {
           })
         }),
         "child": new Column({
+          "crossAxisAlignment": CrossAxisAlignment.stretch,
           "children": [
             new Padding({
-              "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({
+              "padding": (this.__k1 || (this.__k1 = EdgeInsets.fromLTRB({
                 "bottom": 10,
                 "left": 14,
-                "right": 14,
+                "right": 12,
                 "top": 12
               }))),
               "child": new Row({
                 "children": [
-                  new Text({
-                    "style": (this.__k1 || (this.__k1 = new TextStyle({
-                      "color": new Color({
-                        "value": 0xFF8B909A
-                      }),
-                      "fontSize": 12
-                    }))),
-                    "data": "订单号 " + this.order.no
-                  }),
-                  (this.__k2 || (this.__k2 = new Spacer({}))),
-                  new Text({
-                    "style": new TextStyle({
-                      "fontSize": 12.5,
-                      "fontWeight": FontWeight.w700,
-                      "color": this.statusColor
+                  (this.__k2 || (this.__k2 = new Icon({
+                    "color": new Color({
+                      "value": 0xFF5C6270
                     }),
-                    "data": this.order.status
+                    "icon": Icons.storefront,
+                    "size": 15
+                  }))),
+                  (this.__k3 || (this.__k3 = new SizedBox({
+                    "width": 5
+                  }))),
+                  new Expanded({
+                    "child": new Text({
+                      "maxLines": 1,
+                      "overflow": TextOverflow.ellipsis,
+                      "style": (this.__k4 || (this.__k4 = new TextStyle({
+                        "color": new Color({
+                          "value": 0xFF2A2F3A
+                        }),
+                        "fontSize": 12.5,
+                        "fontWeight": FontWeight.w600
+                      }))),
+                      "data": this.order.store
+                    })
+                  }),
+                  new Container({
+                    "padding": (this.__k5 || (this.__k5 = EdgeInsets.symmetric({
+                      "horizontal": 8,
+                      "vertical": 3
+                    }))),
+                    "decoration": new BoxDecoration({
+                      "color": this.statusColor.withValues({ "alpha": 0.1 }),
+                      "borderRadius": BorderRadius.circular({
+                        "radius": 9
+                      })
+                    }),
+                    "child": new Text({
+                      "style": new TextStyle({
+                        "fontSize": 11.5,
+                        "fontWeight": FontWeight.w700,
+                        "color": this.statusColor
+                      }),
+                      "data": this.order.status
+                    })
                   })
                 ]
               })
             }),
-            (this.__k3 || (this.__k3 = new Divider({
+            (this.__k6 || (this.__k6 = new Divider({
               "color": new Color({
                 "value": 0xFFF0F2F6
               }),
               "height": 1
             }))),
             new Padding({
-              "padding": (this.__k4 || (this.__k4 = EdgeInsets.all({
+              "padding": (this.__k7 || (this.__k7 = EdgeInsets.all({
                 "value": 12
               }))),
               "child": new Row({
@@ -231,20 +313,20 @@ export class _OrderCard extends StatelessWidget {
                       "radius": 10
                     }),
                     "child": Image.asset({
-                      "width": 66,
-                      "height": 66,
+                      "width": 82,
+                      "height": 82,
                       "fit": BoxFit.cover,
                       "errorBuilder": (context, e, s) => new Container({
-                        "width": 66,
-                        "height": 66,
-                        "color": (this.__k5 || (this.__k5 = new Color({
+                        "width": 82,
+                        "height": 82,
+                        "color": (this.__k8 || (this.__k8 = new Color({
                           "value": 0xFFE8EBF0
                         })))
                       }),
                       "name": this.order.img
                     })
                   }),
-                  (this.__k6 || (this.__k6 = new SizedBox({
+                  (this.__k9 || (this.__k9 = new SizedBox({
                     "width": 11
                   }))),
                   new Expanded({
@@ -252,21 +334,22 @@ export class _OrderCard extends StatelessWidget {
                       "crossAxisAlignment": CrossAxisAlignment.start,
                       "children": [
                         new Text({
-                          "maxLines": 1,
+                          "maxLines": 2,
                           "overflow": TextOverflow.ellipsis,
-                          "style": (this.__k7 || (this.__k7 = new TextStyle({
+                          "style": (this.__k10 || (this.__k10 = new TextStyle({
                             "fontSize": 14,
-                            "fontWeight": FontWeight.w600
+                            "fontWeight": FontWeight.w600,
+                            "height": 1.25
                           }))),
                           "data": this.order.title
                         }),
-                        (this.__k8 || (this.__k8 = new SizedBox({
+                        (this.__k11 || (this.__k11 = new SizedBox({
                           "height": 5
                         }))),
                         new Text({
                           "maxLines": 1,
                           "overflow": TextOverflow.ellipsis,
-                          "style": (this.__k9 || (this.__k9 = new TextStyle({
+                          "style": (this.__k12 || (this.__k12 = new TextStyle({
                             "color": new Color({
                               "value": 0xFF8B909A
                             }),
@@ -274,32 +357,228 @@ export class _OrderCard extends StatelessWidget {
                           }))),
                           "data": this.order.spec
                         }),
-                        (this.__k10 || (this.__k10 = new SizedBox({
-                          "height": 6
+                        (this.__k13 || (this.__k13 = new SizedBox({
+                          "height": 7
                         }))),
-                        (this.__k11 || (this.__k11 = new Text({
-                          "data": "×1",
-                          "style": new TextStyle({
-                            "fontSize": 11,
-                            "color": new Color({
-                              "value": 0xFFA3A9B4
-                            })
-                          })
-                        })))
+                        new Wrap({
+                          "spacing": 5,
+                          "runSpacing": 4,
+                          "children": [
+                            ...(() => { var out = []; for (let tag of this.order.tags) { out.push.apply(out, [new Container({
+                                    "padding": (this.__k14 || (this.__k14 = EdgeInsets.symmetric({
+                                      "horizontal": 6,
+                                      "vertical": 2
+                                    }))),
+                                    "decoration": new BoxDecoration({
+                                      "color": (this.__k15 || (this.__k15 = new Color({
+                                        "value": 0xFFFFF2E8
+                                      }))),
+                                      "borderRadius": BorderRadius.circular({
+                                        "radius": 4
+                                      })
+                                    }),
+                                    "child": new Text({
+                                      "style": (this.__k16 || (this.__k16 = new TextStyle({
+                                        "color": new Color({
+                                          "value": 0xFFC8621E
+                                        }),
+                                        "fontSize": 10
+                                      }))),
+                                      "data": tag
+                                    })
+                                  })]); } return out; })()
+                          ]
+                        })
                       ]
                     })
                   })
                 ]
               })
             }),
-            (this.__k3 || (this.__k3 = new Divider({
+            new Padding({
+              "padding": (this.__k17 || (this.__k17 = EdgeInsets.fromLTRB({
+                "bottom": 12,
+                "left": 16,
+                "right": 16,
+                "top": 0
+              }))),
+              "child": new Row({
+                "children": [
+                  ...(() => { var out = []; for (let i = 0; (i < _OrderCard._stageLabels.length); (i++)) { out.push.apply(out, [...((i > 0) ? [new Expanded({
+                            "child": new Container({
+                              "height": 1.5,
+                              "margin": (this.__k18 || (this.__k18 = EdgeInsets.symmetric({
+                                "horizontal": 4
+                              }))),
+                              "color": (i <= this.order.step) ? kBrand : (this.__k19 || (this.__k19 = new Color({
+                                "value": 0xFFE3E7EF
+                              })))
+                            })
+                          })] : []), new _StageNode({
+                          "label": _OrderCard._stageLabels[i],
+                          "active": (i <= this.order.step)
+                        })]); } return out; })()
+                ]
+              })
+            }),
+            ...(pending ? [new Container({
+                "margin": (this.__k20 || (this.__k20 = EdgeInsets.fromLTRB({
+                  "bottom": 10,
+                  "left": 12,
+                  "right": 12,
+                  "top": 0
+                }))),
+                "padding": (this.__k21 || (this.__k21 = EdgeInsets.symmetric({
+                  "horizontal": 10,
+                  "vertical": 8
+                }))),
+                "decoration": new BoxDecoration({
+                  "color": (this.__k22 || (this.__k22 = new Color({
+                    "value": 0xFFFFF3F0
+                  }))),
+                  "borderRadius": BorderRadius.circular({
+                    "radius": 8
+                  })
+                }),
+                "child": new Row({
+                  "children": [
+                    (this.__k23 || (this.__k23 = new Icon({
+                      "color": kPrice,
+                      "icon": Icons.access_time,
+                      "size": 15
+                    }))),
+                    (this.__k3 || (this.__k3 = new SizedBox({
+                      "width": 5
+                    }))),
+                    (this.__k24 || (this.__k24 = new Text({
+                      "data": "剩余支付时间",
+                      "style": new TextStyle({
+                        "fontSize": 11.5,
+                        "color": new Color({
+                          "value": 0xFF8B5A4A
+                        })
+                      })
+                    }))),
+                    (this.__k25 || (this.__k25 = new SizedBox({
+                      "width": 6
+                    }))),
+                    new Text({
+                      "style": (this.__k26 || (this.__k26 = new TextStyle({
+                        "color": kPrice,
+                        "fontSize": 13.5,
+                        "fontWeight": FontWeight.w700
+                      }))),
+                      "data": _countdownText(this.remainSec)
+                    }),
+                    (this.__k27 || (this.__k27 = new Spacer({}))),
+                    (this.__k28 || (this.__k28 = new Text({
+                      "data": "超时自动取消",
+                      "style": new TextStyle({
+                        "fontSize": 10.5,
+                        "color": new Color({
+                          "value": 0xFFA89089
+                        })
+                      })
+                    })))
+                  ]
+                })
+              })] : [new Padding({
+                "padding": (this.__k29 || (this.__k29 = EdgeInsets.fromLTRB({
+                  "bottom": 10,
+                  "left": 14,
+                  "right": 14,
+                  "top": 0
+                }))),
+                "child": new Row({
+                  "children": [
+                    (this.__k30 || (this.__k30 = new Icon({
+                      "color": new Color({
+                        "value": 0xFF8B909A
+                      }),
+                      "icon": Icons.schedule,
+                      "size": 14
+                    }))),
+                    (this.__k3 || (this.__k3 = new SizedBox({
+                      "width": 5
+                    }))),
+                    new Expanded({
+                      "child": new Text({
+                        "maxLines": 1,
+                        "overflow": TextOverflow.ellipsis,
+                        "style": (this.__k12 || (this.__k12 = new TextStyle({
+                          "color": new Color({
+                            "value": 0xFF8B909A
+                          }),
+                          "fontSize": 11.5
+                        }))),
+                        "data": this.order.deadline
+                      })
+                    })
+                  ]
+                })
+              })]),
+            new Padding({
+              "padding": (this.__k29 || (this.__k29 = EdgeInsets.fromLTRB({
+                "bottom": 10,
+                "left": 14,
+                "right": 14,
+                "top": 0
+              }))),
+              "child": new Column({
+                "crossAxisAlignment": CrossAxisAlignment.start,
+                "children": [
+                  new Row({
+                    "children": [
+                      (this.__k31 || (this.__k31 = new Icon({
+                        "color": new Color({
+                          "value": 0xFF8B909A
+                        }),
+                        "icon": Icons.location_on_outlined,
+                        "size": 14
+                      }))),
+                      (this.__k32 || (this.__k32 = new SizedBox({
+                        "width": 4
+                      }))),
+                      new Expanded({
+                        "child": new Text({
+                          "maxLines": 1,
+                          "overflow": TextOverflow.ellipsis,
+                          "style": (this.__k33 || (this.__k33 = new TextStyle({
+                            "color": new Color({
+                              "value": 0xFF5C6270
+                            }),
+                            "fontSize": 11.5
+                          }))),
+                          "data": this.order.address
+                        })
+                      })
+                    ]
+                  }),
+                  (this.__k34 || (this.__k34 = new SizedBox({
+                    "height": 4
+                  }))),
+                  new Text({
+                    "maxLines": 1,
+                    "overflow": TextOverflow.ellipsis,
+                    "style": (this.__k35 || (this.__k35 = new TextStyle({
+                      "color": new Color({
+                        "value": 0xFF9AA0AC
+                      }),
+                      "fontSize": 11
+                    }))),
+                    "data": "优惠：" + this.order.discount + " · 备注：" + this.order.remark + " · 共 " + this.order.count + " 件"
+                  })
+                ]
+              })
+            }),
+            (this.__k6 || (this.__k6 = new Divider({
               "color": new Color({
                 "value": 0xFFF0F2F6
               }),
               "height": 1
             }))),
             new Padding({
-              "padding": (this.__k12 || (this.__k12 = EdgeInsets.fromLTRB({
+              "padding": (this.__k36 || (this.__k36 = EdgeInsets.fromLTRB({
                 "bottom": 12,
                 "left": 14,
                 "right": 12,
@@ -307,7 +586,7 @@ export class _OrderCard extends StatelessWidget {
               }))),
               "child": new Row({
                 "children": [
-                  (this.__k13 || (this.__k13 = new Text({
+                  (this.__k37 || (this.__k37 = new Text({
                     "data": "合计 ",
                     "style": new TextStyle({
                       "fontSize": 12.5,
@@ -317,33 +596,125 @@ export class _OrderCard extends StatelessWidget {
                     })
                   }))),
                   new Text({
-                    "style": (this.__k14 || (this.__k14 = new TextStyle({
+                    "style": (this.__k38 || (this.__k38 = new TextStyle({
                       "color": kPrice,
                       "fontSize": 16,
                       "fontWeight": FontWeight.w700
                     }))),
                     "data": "￥" + this.order.price
                   }),
-                  (this.__k2 || (this.__k2 = new Spacer({}))),
-                  ...(pending ? [new MiniButton({
-                      "label": "取消",
-                      "onTap": () => AppRouter.toast("已取消订单 " + this.order.no + "（演示）")
-                    }), (this.__k15 || (this.__k15 = new SizedBox({
-                      "width": 8
-                    }))), new MiniButton({
-                      "label": "去支付",
-                      "primary": true,
-                      "onTap": this.onOpen
-                    })] : [new MiniButton({
-                      "label": "查看详情",
-                      "onTap": this.onOpen
-                    })])
+                  (this.__k25 || (this.__k25 = new SizedBox({
+                    "width": 6
+                  }))),
+                  new Text({
+                    "style": (this.__k39 || (this.__k39 = new TextStyle({
+                      "color": new Color({
+                        "value": 0xFF9AA0AC
+                      }),
+                      "fontSize": 10.5
+                    }))),
+                    "data": "（" + this.order.count + " 件）"
+                  }),
+                  (this.__k27 || (this.__k27 = new Spacer({}))),
+                  ...this._actions(pending)
                 ]
               })
             })
           ]
         })
       })
+    });
+  }
+  _actions(pending) {
+    if (pending) {
+      return [new MiniButton({
+          "label": "取消订单",
+          "onTap": () => AppRouter.toast("已取消订单 " + this.order.no + "（演示）")
+        }), (this.__k40 || (this.__k40 = new SizedBox({
+          "width": 8
+        }))), new MiniButton({
+          "label": "去支付",
+          "primary": true,
+          "onTap": this.onOpen
+        })];
+    }
+    if ((this.order.status === "待发货")) {
+      return [new MiniButton({
+          "label": "申请退款",
+          "onTap": () => AppRouter.toast("已提交退款申请（演示）")
+        }), (this.__k40 || (this.__k40 = new SizedBox({
+          "width": 8
+        }))), new MiniButton({
+          "label": "提醒发货",
+          "primary": true,
+          "onTap": () => AppRouter.toast("已提醒商家发货（演示）")
+        })];
+    }
+    if ((this.order.status === "待收货")) {
+      return [new MiniButton({
+          "label": "查看物流",
+          "onTap": () => AppRouter.toast("包裹运输中（演示）")
+        }), (this.__k40 || (this.__k40 = new SizedBox({
+          "width": 8
+        }))), new MiniButton({
+          "label": "确认收货",
+          "primary": true,
+          "onTap": this.onOpen
+        })];
+    }
+    return [new MiniButton({
+        "label": "删除订单",
+        "onTap": () => AppRouter.toast("已删除订单（演示）")
+      }), (this.__k40 || (this.__k40 = new SizedBox({
+        "width": 8
+      }))), new MiniButton({
+        "label": "再次购买",
+        "primary": true,
+        "onTap": this.onOpen
+      })];
+  }
+}
+
+// 组件 _StageNode
+export class _StageNode extends StatelessWidget {
+  constructor(args) {
+    super(args);
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.label = (args && args.label !== undefined) ? args.label : '';
+    this.active = (args && args.active !== undefined) ? args.active : false;
+  }
+  build(context) {
+    return new Column({
+      "mainAxisSize": MainAxisSize.min,
+      "children": [
+        new Container({
+          "width": 7,
+          "height": 7,
+          "decoration": new BoxDecoration({
+            "color": this.active ? kBrand : (this.__k0 || (this.__k0 = new Color({
+              "value": 0xFFE3E7EF
+            }))),
+            "borderRadius": BorderRadius.circular({
+              "radius": 4
+            })
+          })
+        }),
+        (this.__k1 || (this.__k1 = new SizedBox({
+          "height": 4
+        }))),
+        new Text({
+          "style": new TextStyle({
+            "fontSize": 10,
+            "color": this.active ? kBrand : (this.__k2 || (this.__k2 = new Color({
+              "value": 0xFFA3A9B4
+            }))),
+            "fontWeight": this.active ? FontWeight.w600 : FontWeight.w400
+          }),
+          "data": this.label
+        })
+      ]
     });
   }
 }

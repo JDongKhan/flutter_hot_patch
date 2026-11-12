@@ -10,7 +10,6 @@ import 'components/composite_component.dart';
 import 'components/hello_component.dart';
 import 'components/inherited_widget_demo.dart';
 import 'components/leak_demo_card.dart';
-import 'components/list_view_detail.dart';
 import 'components/widget_showcase.dart';
 import 'components/test_widget.dart';
 import 'custom/custom_capabilities.dart';
@@ -192,13 +191,10 @@ class DemoListPage extends StatelessWidget {
     ),
     _DemoEntry('基础语法 · 列表', 'Dart mixin / extension：State 扩展日志、String 扩展打印（原生 vs JS 热更）', const GrammarShowcase()),
     _DemoEntry(
-      'ListView · 懒加载日志',
-      '原生 vs JS：children / builder / separated / itemExtent，对照 initState / dispose 日志',
-      CompareTest(
-        native: const ListViewDetail(),
-        js: JsUiWidget(
-          jsAsset: _patchUrl('ListViewDetail', 'components/list_view_detail.js'),
-        ),
+      '性能 · 大图长列表',
+      '单个 ListView.builder：200 项通栏大图 + 每项隐式动画（JS 热更），看滚动与构建表现',
+      JsUiWidget(
+        jsAsset: _patchUrl('PerfListPage', 'components/perf_list_page.js'),
       ),
     ),
     _DemoEntry('常用组件 · 列表', '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）', const WidgetShowcase()),

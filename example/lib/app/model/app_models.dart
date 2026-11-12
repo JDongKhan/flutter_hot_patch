@@ -196,6 +196,30 @@ class Order {
   /// 流程进度（0=提交订单 1=支付成功 2=商家发货 3=已完成）。
   final int step;
 
+  /// 店铺名（卡片顶部左侧）。
+  final String store;
+
+  /// 商品标签（满减 / 包邮 / 可改期 …），卡片里以胶囊展示。
+  final List<String> tags;
+
+  /// 待付款剩余秒数（其它状态为 0）。倒计时由页面按秒递减，模型本身不可变。
+  final int remainSec;
+
+  /// 时间文案：待付款是支付截止时间，其它状态是发货 / 送达 / 完成时间。
+  final String deadline;
+
+  /// 收货地址。
+  final String address;
+
+  /// 买家备注。
+  final String remark;
+
+  /// 优惠说明（满减 / 优惠券 …）。
+  final String discount;
+
+  /// 商品件数。
+  final int count;
+
   const Order({
     required this.no,
     required this.status,
@@ -204,9 +228,23 @@ class Order {
     required this.img,
     required this.price,
     required this.step,
+    required this.store,
+    required this.tags,
+    required this.remainSec,
+    required this.deadline,
+    required this.address,
+    required this.remark,
+    required this.discount,
+    required this.count,
   });
 
   static Order fromJson(Map<String, dynamic> e) {
+    // 动态 json 的 `List<dynamic>` 直接赋给 `List<String>` 会在运行时抛类型
+    // 错误，列表字段一律循环收窄（与其它模型同一口径）。
+    final tags = <String>[];
+    for (final t in e['tags']) {
+      tags.add(t);
+    }
     return Order(
       no: e['no'],
       status: e['status'],
@@ -215,6 +253,14 @@ class Order {
       img: e['img'],
       price: e['price'],
       step: e['step'],
+      store: e['store'],
+      tags: tags,
+      remainSec: e['remainSec'],
+      deadline: e['deadline'],
+      address: e['address'],
+      remark: e['remark'],
+      discount: e['discount'],
+      count: e['count'],
     );
   }
 }

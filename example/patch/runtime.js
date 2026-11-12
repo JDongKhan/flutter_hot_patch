@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 5bbe9277） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 69fc0ac6） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '5bbe9277') { return; }
-  G.__jsuiVersion = '5bbe9277';
+  if (G.__jsui && G.__jsuiVersion === '69fc0ac6') { return; }
+  G.__jsuiVersion = '69fc0ac6';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2556,12 +2556,18 @@ __defineProtoMember(Map.prototype, {
   }
 
   // 槽位卸载：宿主 item element 已 dispose，不再下发 remove op。
-  function __releaseSlot(hostId, slotIndex) {
+  //
+  // [rootId] 是宿主 dispose 的那个槽位当时的根结点 id。快速滚动时同一 index
+  // 可能「旧 element dispose → 新 element 在同帧内重新 pull」：旧 dispose 的
+  // post-frame 回调若直接按 index 删，会把**新建的**槽位误杀。因此只在当前
+  // 缓存仍是该根结点时才卸载（幂等 + 防误删）。
+  function __releaseSlot(hostId, slotIndex, rootId) {
     var hi = __hostNodes[hostId];
     if (!hi || !hi.__pulled) { return; }
     var idx = slotIndex | 0;
     var inst = hi.__pulled[idx];
     if (inst === undefined) { return; }
+    if (rootId != null && __nodeIdOf(inst) !== rootId) { return; }
     delete hi.__pulled[idx];
     if (inst && !inst.__unmounted) { __markUnmounted(inst); }
   }
