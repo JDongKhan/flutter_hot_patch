@@ -29,6 +29,9 @@ final Map<String, Map<String?, String>> _subscribed = {};
 /// 已告警过「取不到 BuildContext」的 ctx（同一次运行只出声一次）。
 final Set<String> _unresolvedLogged = {};
 
+/// 已告警过「该位置上方没有 MediaQuery」的 ctx（同一次运行只出声一次）。
+final Set<String> _absentLogged = {};
+
 bool _mediaQueryOpRegistered = false;
 
 /// 把 `mediaQuery` 这个 context op 注册进核心的分发缝（由 MediaQueryLibrary 调用）。
@@ -73,6 +76,10 @@ void registerMediaQueryWidgets(JsWidgetRegistry r) {
   r.register('MediaQuery', (c) {
     final child =
         (c.children['child'] as Widget?) ?? const SizedBox.shrink();
+    // 所有分支都把 child 包一层：`MediaQuery(data: ...)` / `remove*` 的数据由 JS
+    // 声明，变化时不会产生任何平台级事件；子树里的 JS 组件按位置读到的值必须在
+    // 数据变化后重读一次（见 [_MediaQueryRepush]）。
+    final watchedChild = _MediaQueryRepush(child: child);
     final factory = c.str('factory');
     if (factory == 'removePadding' ||
         factory == 'removeViewPadding' ||
@@ -97,7 +104,7 @@ void registerMediaQueryWidgets(JsWidgetRegistry r) {
             removeTop: removeTop,
             removeRight: removeRight,
             removeBottom: removeBottom,
-            child: child,
+            child: watchedChild,
           );
         case 'removeViewPadding':
           return MediaQuery.removeViewPadding(
@@ -107,7 +114,7 @@ void registerMediaQueryWidgets(JsWidgetRegistry r) {
             removeTop: removeTop,
             removeRight: removeRight,
             removeBottom: removeBottom,
-            child: child,
+            child: watchedChild,
           );
         default:
           return MediaQuery.removeViewInsets(
@@ -117,7 +124,7 @@ void registerMediaQueryWidgets(JsWidgetRegistry r) {
             removeTop: removeTop,
             removeRight: removeRight,
             removeBottom: removeBottom,
-            child: child,
+            child: watchedChild,
           );
       }
     }
@@ -125,7 +132,7 @@ void registerMediaQueryWidgets(JsWidgetRegistry r) {
     return MediaQuery(
       key: c.key,
       data: data ?? const MediaQueryData(),
-      child: child,
+      child: watchedChild,
     );
   });
 }
@@ -224,6 +231,54 @@ EdgeInsets? _edgesOf(Object? v) => v is Map
       )
     : null;
 
+/// 监视「本结点 MediaQuery 的数据」并在变化后让 JS 侧重读一次。
+///
+/// 为什么需要：JS 子树按**构建位置**取 `MediaQueryData` 并订阅回推，而回推目前只
+/// 由平台级事件（[_MediaQueryWatcher]）驱动。`MediaQuery(data: ...)` / `remove*`
+/// 这类**由 JS 自己声明**的 MediaQuery，数据变化不产生任何平台事件——不补这一跳，
+/// 子树里的 JS 组件会一直停在旧值（典型：页面根首帧读到的兜底值被派发进子树）。
+///
+/// 挂在 MediaQuery 内部：`didChangeDependencies` 拿到的就是这一层的数据；变化后
+/// 统一在帧末重推一遍（[_refreshAll] 内部「没变不推」，重复触发无副作用）。
+class _MediaQueryRepush extends StatefulWidget {
+  const _MediaQueryRepush({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_MediaQueryRepush> createState() => _MediaQueryRepushState();
+}
+
+class _MediaQueryRepushState extends State<_MediaQueryRepush> {
+  MediaQueryData? _seen;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final data = MediaQuery.maybeOf(context);
+    // 首次挂载时子树与数据同时产生，不需要重推；只处理**变化**。
+    if (_seen != null && data != _seen) {
+      _scheduleRepush();
+    }
+    _seen = data;
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+bool _repushScheduled = false;
+
+/// 同一帧内多次变化合并成帧末一次重推。
+void _scheduleRepush() {
+  if (_repushScheduled) return;
+  _repushScheduled = true;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _repushScheduled = false;
+    _refreshAll();
+  });
+}
+
 /// `MediaQuery` 相关的系统级变化 → 给所有订阅者回推新值。
 ///
 /// 覆盖 `MediaQueryData` 的全部平台来源：窗口尺寸 / 字号 / 深色模式 / 无障碍
@@ -282,7 +337,16 @@ Object? _readAspect(String ctxId, String? aspect) {
   switch (aspect) {
     case null:
       final d = MediaQuery.maybeOf(ctx);
-      if (d == null) return null;
+      if (d == null) {
+        // 该位置上方确实没有 MediaQuery（页面根直接挂在无 MaterialApp 的根上）：
+        // 不是竞态，JS 侧会记 missing 不再重试——但必须出声，否则就是静默降级。
+        if (_absentLogged.add('$ctxId|all')) {
+          HotPatchLog.warn(
+            'js_ui: mediaQuery 取不到整份数据（ctx=$ctxId）：该位置上方没有 MediaQuery',
+          );
+        }
+        return null;
+      }
       return {
         'size': _sizeJson(d.size),
         'padding': _edgesJson(d.padding),
