@@ -1,16 +1,16 @@
 import 'package:flutter/foundation.dart';
 
 /// 日志级别（低 → 高）。本地打印与上报共用同一套口径：各级别方法产出一条
-/// [HotPatchLogRecord]，由 [HotPatchLog.sink] **统一拦截**。
-enum HotPatchLevel { debug, info, warn, error }
+/// [JsLogRecord]，由 [JsLog.sink] **统一拦截**。
+enum JsLogLevel { debug, info, warn, error }
 
-/// 一条日志记录：统一拦截（[HotPatchLog.sink]）的载荷。
+/// 一条日志记录：统一拦截（[JsLog.sink]）的载荷。
 ///
 /// 字段即上报所需的最小集合（级别 / 文本 / 时间 / 异常 / 堆栈）；宿主拿到后
 /// 按自己日志平台的协议序列化上传即可，包内不做任何平台约定。
 @immutable
-class HotPatchLogRecord {
-  const HotPatchLogRecord({
+class JsLogRecord {
+  const JsLogRecord({
     required this.level,
     required this.message,
     required this.time,
@@ -18,7 +18,7 @@ class HotPatchLogRecord {
     this.stackTrace,
   });
 
-  final HotPatchLevel level;
+  final JsLogLevel level;
   final String message;
   final DateTime time;
   final Object? error;
@@ -29,9 +29,9 @@ class HotPatchLogRecord {
       '${error == null ? '' : ' | $error'}';
 }
 
-/// 上报出口：宿主注册（如接到日志平台）。所有达到 [HotPatchLog.minSinkLevel]
+/// 上报出口：宿主注册（如接到日志平台）。所有达到 [JsLog.minSinkLevel]
 /// 的记录都会经过它；为空则只本地打印。**不得抛异常**（抛出会被兜底吞掉）。
-typedef HotPatchLogSink = void Function(HotPatchLogRecord record);
+typedef JsLogSink = void Function(JsLogRecord record);
 
 /// 热更包日志的统一出口。
 ///
@@ -42,7 +42,7 @@ typedef HotPatchLogSink = void Function(HotPatchLogRecord record);
 ///
 /// 宿主接入（如 `main()`）：
 /// ```dart
-/// HotPatchLog.sink = (r) => MyLogPlatform.upload(
+/// JsLog.sink = (r) => MyLogPlatform.upload(
 ///       level: r.level.name,
 ///       message: r.message,
 ///       error: r.error,
@@ -50,10 +50,10 @@ typedef HotPatchLogSink = void Function(HotPatchLogRecord record);
 ///       time: r.time,
 ///     );
 /// // 默认只上报 warn/error；要全量（含链路 info）就调低阈值：
-/// HotPatchLog.minSinkLevel = HotPatchLevel.info;
+/// JsLog.minSinkLevel = JsLogLevel.info;
 /// ```
-class HotPatchLog {
-  HotPatchLog._();
+class JsLog {
+  JsLog._();
 
   /// 本地打印开关：true 输出，false 静默。**不影响** [sink] 上报。
   static bool enabled = kDebugMode;
@@ -72,33 +72,33 @@ class HotPatchLog {
   static bool verboseCache = false;
 
   /// 统一上报出口（宿主注册；为空 = 只本地打印）。
-  static HotPatchLogSink? sink;
+  static JsLogSink? sink;
 
   /// 进入 [sink] 的最低级别（默认 warn：只上报告警与报错）。
-  static HotPatchLevel minSinkLevel = HotPatchLevel.warn;
+  static JsLogLevel minSinkLevel = JsLogLevel.warn;
 
   /// 调试细节（默认不上报）。用于排查期的高噪声日志。
   static void debug(String message, {Object? error, StackTrace? stackTrace}) =>
-      emit(HotPatchLevel.debug, message,
+      emit(JsLogLevel.debug, message,
           error: error, stackTrace: stackTrace);
 
   /// 常规日志（链路信息），保持原有 `[hot_patch] xxx` 格式。
   static void log(String message, {Object? error, StackTrace? stackTrace}) =>
-      emit(HotPatchLevel.info, message, error: error, stackTrace: stackTrace);
+      emit(JsLogLevel.info, message, error: error, stackTrace: stackTrace);
 
   /// 告警：可降级/兜底继续的异常（回退旧产物、未知 op、类型未注册等）。
   static void warn(String message, {Object? error, StackTrace? stackTrace}) =>
-      emit(HotPatchLevel.warn, message, error: error, stackTrace: stackTrace);
+      emit(JsLogLevel.warn, message, error: error, stackTrace: stackTrace);
 
   /// 报错：功能已失败的异常（加载失败、JS 求值失败、宿主方法调用失败等）。
   static void error(String message, {Object? error, StackTrace? stackTrace}) =>
-      emit(HotPatchLevel.error, message,
+      emit(JsLogLevel.error, message,
           error: error, stackTrace: stackTrace);
 
   /// 唯一出口：打印（[enabled]）+ 上报（[sink]，按 [minSinkLevel] 过滤）。
   /// 需要按名称**动态**定级的调用方（如 JS 侧日志桥）直接用它。
   static void emit(
-    HotPatchLevel level,
+    JsLogLevel level,
     String message, {
     Object? error,
     StackTrace? stackTrace,
@@ -114,7 +114,7 @@ class HotPatchLog {
     // 上报是旁路：宿主 sink 抛异常只兜底记一条，绝不向外冒泡（不许因为
     // 上传日志把业务打断）。
     try {
-      s(HotPatchLogRecord(
+      s(JsLogRecord(
         level: level,
         message: message,
         time: DateTime.now(),
@@ -127,9 +127,9 @@ class HotPatchLog {
   }
 
   /// 打印前缀：warn/error 加标签（日志里一眼可检索），debug/info 维持原格式。
-  static String _label(HotPatchLevel level) => switch (level) {
-        HotPatchLevel.warn => '[WARN] ',
-        HotPatchLevel.error => '[ERROR] ',
+  static String _label(JsLogLevel level) => switch (level) {
+        JsLogLevel.warn => '[WARN] ',
+        JsLogLevel.error => '[ERROR] ',
         _ => '',
       };
 }

@@ -78,7 +78,7 @@ Future<void> _onPanelOpen(Map payload) async {
   final ctx = (anchorNode == null ? null : jsBuildContextOfNode(anchorNode)) ??
       JsRuntimeManager.navigatorKey?.currentContext;
   if (ctx == null || !ctx.mounted) {
-    HotPatchLog.warn(
+    JsLog.warn(
       'jsuiPanelOpen: 找不到可用的 BuildContext（anchor=${anchorNode ?? '-'}），'
       '弹层无法打开',
     );

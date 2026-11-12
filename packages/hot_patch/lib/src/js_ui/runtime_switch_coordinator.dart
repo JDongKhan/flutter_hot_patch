@@ -106,7 +106,7 @@ class JsRuntimeSwitchCoordinator {
       if (page.epoch < _epoch) _pending.add(page);
     }
     if (_pending.isEmpty) return;
-    HotPatchLog.log('补丁版本切换：${_pending.length} 个已打开页面待重新加载'
+    JsLog.log('补丁版本切换：${_pending.length} 个已打开页面待重新加载'
         '（代次 $_epoch）');
     _flush();
   }
@@ -135,7 +135,7 @@ class JsRuntimeSwitchCoordinator {
         try {
           await _showReloadDialog(visible.first);
         } catch (e) {
-          HotPatchLog.warn('补丁更新提示弹窗失败，直接重载页面: $e');
+          JsLog.warn('补丁更新提示弹窗失败，直接重载页面: $e');
         } finally {
           _dialogShowing = false;
         }

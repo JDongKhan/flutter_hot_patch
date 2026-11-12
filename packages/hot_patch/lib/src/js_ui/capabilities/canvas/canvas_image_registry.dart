@@ -58,10 +58,10 @@ ui.Image? canvasImageFromJson(Object? v) {
     if (id is String && id.isNotEmpty) {
       final image = _images[id];
       if (image != null) return image;
-      HotPatchLog.error('CustomPaint: 图片句柄 "$id" 不存在（只能使用宿主返回值里的句柄）');
+      JsLog.error('CustomPaint: 图片句柄 "$id" 不存在（只能使用宿主返回值里的句柄）');
       return null;
     }
   }
-  HotPatchLog.error('CustomPaint: 图片不是宿主返回的图片句柄: $v');
+  JsLog.error('CustomPaint: 图片不是宿主返回的图片句柄: $v');
   return null;
 }

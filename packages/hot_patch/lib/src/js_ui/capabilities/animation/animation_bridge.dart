@@ -88,7 +88,7 @@ final JsControllerBridge<AnimationController> _animationBridge =
       case 'reset':
         c.reset();
       default:
-        HotPatchLog.warn('AnimationController: 未支持的调用 "$method"');
+        JsLog.warn('AnimationController: 未支持的调用 "$method"');
     }
     return null;
   },
@@ -149,7 +149,7 @@ Animation<double>? jsDoubleAnimationOf(Object? prop) {
 Duration _animationDuration(JsRenderContext c, String type) {
   final d = c.duration('duration');
   if (d == null) {
-    HotPatchLog.warn('$type: 缺少 duration，按 Duration.zero 处理（动画不会执行）');
+    JsLog.warn('$type: 缺少 duration，按 Duration.zero 处理（动画不会执行）');
     return Duration.zero;
   }
   return d;
@@ -160,7 +160,7 @@ Duration _animationDuration(JsRenderContext c, String type) {
 void _warnUnsupportedProps(JsRenderContext c, String type, List<String> keys) {
   final hit = keys.where((k) => c.props.containsKey(k) && c.props[k] != null);
   if (hit.isEmpty) return;
-  HotPatchLog.warn('$type: 暂不支持 props ${hit.join(', ')}（已忽略）');
+  JsLog.warn('$type: 暂不支持 props ${hit.join(', ')}（已忽略）');
 }
 
 /// 幂等注册 AnimationController 句柄 kind（由 js_ui_capabilities 聚合调用）。
@@ -339,7 +339,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     final animation = jsDoubleAnimationOf(c.props['opacity']);
     final child = c.children['child'] as Widget?;
     if (animation == null) {
-      HotPatchLog.warn('FadeTransition: opacity 不是 Animation 句柄，已退化为直接渲染子树');
+      JsLog.warn('FadeTransition: opacity 不是 Animation 句柄，已退化为直接渲染子树');
       return child ?? const SizedBox.shrink();
     }
     return FadeTransition(
@@ -354,7 +354,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     final animation = jsDoubleAnimationOf(c.props['scale']);
     final child = c.children['child'] as Widget?;
     if (animation == null) {
-      HotPatchLog.warn('ScaleTransition: scale 不是 Animation 句柄，已退化为直接渲染子树');
+      JsLog.warn('ScaleTransition: scale 不是 Animation 句柄，已退化为直接渲染子树');
       return child ?? const SizedBox.shrink();
     }
     return ScaleTransition(
@@ -369,7 +369,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     final animation = jsDoubleAnimationOf(c.props['turns']);
     final child = c.children['child'] as Widget?;
     if (animation == null) {
-      HotPatchLog.warn('RotationTransition: turns 不是 Animation 句柄，已退化为直接渲染子树');
+      JsLog.warn('RotationTransition: turns 不是 Animation 句柄，已退化为直接渲染子树');
       return child ?? const SizedBox.shrink();
     }
     return RotationTransition(
@@ -384,7 +384,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     final animation = jsDoubleAnimationOf(c.props['sizeFactor']);
     final child = c.children['child'] as Widget?;
     if (animation == null) {
-      HotPatchLog.warn('SizeTransition: sizeFactor 不是 Animation 句柄，已退化为直接渲染子树');
+      JsLog.warn('SizeTransition: sizeFactor 不是 Animation 句柄，已退化为直接渲染子树');
       return child ?? const SizedBox.shrink();
     }
     return SizeTransition(

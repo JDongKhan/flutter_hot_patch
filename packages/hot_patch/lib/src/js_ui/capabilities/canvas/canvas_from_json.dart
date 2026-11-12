@@ -4,7 +4,7 @@
 // dart:ui 的 Rect / RRect / Path / Paint / Shader，供宿主逐条重放。
 //
 // **禁止静默**：无法解析的值、未知 Paint 属性、未知 Path 指令一律
-// `HotPatchLog.error`（调用方据此跳过该条，而不是猜一个默认值）。
+// `JsLog.error`（调用方据此跳过该条，而不是猜一个默认值）。
 import 'dart:ui' show ClipOp;
 
 import 'package:flutter/material.dart';
@@ -96,13 +96,13 @@ Shader? shaderFromJson(Object? v) {
   if (v is! Map) return null;
   final gradientJson = v['__gradient'];
   if (gradientJson is! Map) {
-    HotPatchLog.error('CustomPaint: Paint.shader 暂只支持 Gradient.createShader（收到 $v）');
+    JsLog.error('CustomPaint: Paint.shader 暂只支持 Gradient.createShader（收到 $v）');
     return null;
   }
   final rect = rectFromJson(v['rect']);
   final gradient = gradientFromJson(gradientJson.cast<String, dynamic>());
   if (rect == null || gradient == null) {
-    HotPatchLog.error('CustomPaint: 渐变 shader 还原失败（rect=$rect）');
+    JsLog.error('CustomPaint: 渐变 shader 还原失败（rect=$rect）');
     return null;
   }
   return gradient.createShader(rect);
@@ -136,7 +136,7 @@ Paint? paintFromJson(Object? v) {
         if (color != null) {
           paint.color = color;
         } else {
-          HotPatchLog.error('CustomPaint: Paint.color 无法解析: $value');
+          JsLog.error('CustomPaint: Paint.color 无法解析: $value');
         }
       case 'style':
         paint.style = paintingStyleFromJson(value);
@@ -145,7 +145,7 @@ Paint? paintFromJson(Object? v) {
         if (w != null) {
           paint.strokeWidth = w;
         } else {
-          HotPatchLog.error('CustomPaint: Paint.strokeWidth 无法解析: $value');
+          JsLog.error('CustomPaint: Paint.strokeWidth 无法解析: $value');
         }
       case 'strokeCap':
         paint.strokeCap = strokeCapFromJson(value);
@@ -156,7 +156,7 @@ Paint? paintFromJson(Object? v) {
         if (m != null) {
           paint.strokeMiterLimit = m;
         } else {
-          HotPatchLog.error('CustomPaint: Paint.strokeMiterLimit 无法解析: $value');
+          JsLog.error('CustomPaint: Paint.strokeMiterLimit 无法解析: $value');
         }
       case 'isAntiAlias':
       case 'antiAlias':
@@ -166,14 +166,14 @@ Paint? paintFromJson(Object? v) {
         if (mode != null) {
           paint.blendMode = mode;
         } else {
-          HotPatchLog.error('CustomPaint: Paint.blendMode 无法解析: $value');
+          JsLog.error('CustomPaint: Paint.blendMode 无法解析: $value');
         }
       case 'shader':
         final shader = shaderFromJson(value);
         if (shader != null) paint.shader = shader;
       default:
         if (!_paintKeys.contains(key)) {
-          HotPatchLog.error('CustomPaint: Paint 属性 "$key" 暂不支持');
+          JsLog.error('CustomPaint: Paint 属性 "$key" 暂不支持');
         }
     }
   }
@@ -188,7 +188,7 @@ Path? pathFromJson(Object? v) {
   final path = Path();
   for (final raw in ops) {
     if (raw is! List || raw.isEmpty) {
-      HotPatchLog.error('CustomPaint: Path 指令形态非法: $raw');
+      JsLog.error('CustomPaint: Path 指令形态非法: $raw');
       continue;
     }
     final name = '${raw[0]}';
@@ -197,7 +197,7 @@ Path? pathFromJson(Object? v) {
         final x = _d(raw[1]);
         final y = _d(raw[2]);
         if (x == null || y == null) {
-          HotPatchLog.error('CustomPaint: Path.moveTo 实参非法: $raw');
+          JsLog.error('CustomPaint: Path.moveTo 实参非法: $raw');
         } else {
           path.moveTo(x, y);
         }
@@ -205,7 +205,7 @@ Path? pathFromJson(Object? v) {
         final x = _d(raw[1]);
         final y = _d(raw[2]);
         if (x == null || y == null) {
-          HotPatchLog.error('CustomPaint: Path.lineTo 实参非法: $raw');
+          JsLog.error('CustomPaint: Path.lineTo 实参非法: $raw');
         } else {
           path.lineTo(x, y);
         }
@@ -213,7 +213,7 @@ Path? pathFromJson(Object? v) {
         final dx = _d(raw[1]);
         final dy = _d(raw[2]);
         if (dx == null || dy == null) {
-          HotPatchLog.error('CustomPaint: Path.relativeMoveTo 实参非法: $raw');
+          JsLog.error('CustomPaint: Path.relativeMoveTo 实参非法: $raw');
         } else {
           path.relativeMoveTo(dx, dy);
         }
@@ -221,7 +221,7 @@ Path? pathFromJson(Object? v) {
         final dx = _d(raw[1]);
         final dy = _d(raw[2]);
         if (dx == null || dy == null) {
-          HotPatchLog.error('CustomPaint: Path.relativeLineTo 实参非法: $raw');
+          JsLog.error('CustomPaint: Path.relativeLineTo 实参非法: $raw');
         } else {
           path.relativeLineTo(dx, dy);
         }
@@ -230,7 +230,7 @@ Path? pathFromJson(Object? v) {
           for (var i = 1; i <= 4; i++) _d(raw[i]),
         ];
         if (a.contains(null)) {
-          HotPatchLog.error('CustomPaint: Path.quadraticBezierTo 实参非法: $raw');
+          JsLog.error('CustomPaint: Path.quadraticBezierTo 实参非法: $raw');
         } else {
           path.quadraticBezierTo(a[0]!, a[1]!, a[2]!, a[3]!);
         }
@@ -239,7 +239,7 @@ Path? pathFromJson(Object? v) {
           for (var i = 1; i <= 6; i++) _d(raw[i]),
         ];
         if (a.contains(null)) {
-          HotPatchLog.error('CustomPaint: Path.cubicTo 实参非法: $raw');
+          JsLog.error('CustomPaint: Path.cubicTo 实参非法: $raw');
         } else {
           path.cubicTo(a[0]!, a[1]!, a[2]!, a[3]!, a[4]!, a[5]!);
         }
@@ -248,7 +248,7 @@ Path? pathFromJson(Object? v) {
         final start = _d(raw[2]);
         final sweep = _d(raw[3]);
         if (rect == null || start == null || sweep == null) {
-          HotPatchLog.error('CustomPaint: Path.arcTo 实参非法: $raw');
+          JsLog.error('CustomPaint: Path.arcTo 实参非法: $raw');
         } else {
           path.arcTo(rect, start, sweep, raw[4] == true);
         }
@@ -257,43 +257,43 @@ Path? pathFromJson(Object? v) {
       case 'addRect':
         final rect = rectFromJson(raw[1]);
         if (rect == null) {
-          HotPatchLog.error('CustomPaint: Path.addRect 矩形非法: $raw');
+          JsLog.error('CustomPaint: Path.addRect 矩形非法: $raw');
         } else {
           if (raw[2] == false) {
-            HotPatchLog.error('CustomPaint: Path.addRect 暂不支持 clockwise=false');
+            JsLog.error('CustomPaint: Path.addRect 暂不支持 clockwise=false');
           }
           path.addRect(rect);
         }
       case 'addOval':
         final rect = rectFromJson(raw[1]);
         if (rect == null) {
-          HotPatchLog.error('CustomPaint: Path.addOval 矩形非法: $raw');
+          JsLog.error('CustomPaint: Path.addOval 矩形非法: $raw');
         } else {
           if (raw[2] == false) {
-            HotPatchLog.error('CustomPaint: Path.addOval 暂不支持 clockwise=false');
+            JsLog.error('CustomPaint: Path.addOval 暂不支持 clockwise=false');
           }
           path.addOval(rect);
         }
       case 'addRRect':
         final rrect = rrectFromJson(raw[1]);
         if (rrect == null) {
-          HotPatchLog.error('CustomPaint: Path.addRRect 圆角矩形非法: $raw');
+          JsLog.error('CustomPaint: Path.addRRect 圆角矩形非法: $raw');
         } else {
           if (raw[2] == false) {
-            HotPatchLog.error('CustomPaint: Path.addRRect 暂不支持 clockwise=false');
+            JsLog.error('CustomPaint: Path.addRRect 暂不支持 clockwise=false');
           }
           path.addRRect(rrect);
         }
       case 'addPolygon':
         final points = raw[1];
         if (points is! List) {
-          HotPatchLog.error('CustomPaint: Path.addPolygon 点集非法: $raw');
+          JsLog.error('CustomPaint: Path.addPolygon 点集非法: $raw');
         } else {
           final offsets = <Offset>[];
           for (final p in points) {
             final o = offsetFromJson(p);
             if (o == null) {
-              HotPatchLog.error('CustomPaint: Path.addPolygon 点非法: $p');
+              JsLog.error('CustomPaint: Path.addPolygon 点非法: $p');
               continue;
             }
             offsets.add(o);
@@ -301,7 +301,7 @@ Path? pathFromJson(Object? v) {
           path.addPolygon(offsets, raw[2] == true);
         }
       default:
-        HotPatchLog.error('CustomPaint: 未知 Path 指令 "$name"');
+        JsLog.error('CustomPaint: 未知 Path 指令 "$name"');
     }
   }
   return path;
@@ -328,29 +328,29 @@ const Set<String> _textPainterKeys = {
 TextPainter? textPainterFromJson(Object? spanJson, Object? optionsJson) {
   final span = textSpanFromJson(spanJson);
   if (span == null) {
-    HotPatchLog.error('CustomPaint: TextPainter.text 无法还原: $spanJson');
+    JsLog.error('CustomPaint: TextPainter.text 无法还原: $spanJson');
     return null;
   }
   final opts = optionsJson is Map ? optionsJson : const {};
   for (final key in opts.keys) {
     if (!_textPainterKeys.contains('$key')) {
-      HotPatchLog.error('CustomPaint: TextPainter 属性 "$key" 暂不支持');
+      JsLog.error('CustomPaint: TextPainter 属性 "$key" 暂不支持');
       return null;
     }
   }
   final direction = textDirectionFromJson(opts['textDirection']);
   if (direction == null) {
-    HotPatchLog.error('CustomPaint: TextPainter.textDirection 必须提供（ltr / rtl）');
+    JsLog.error('CustomPaint: TextPainter.textDirection 必须提供（ltr / rtl）');
     return null;
   }
   final rawMaxLines = opts['maxLines'];
   if (rawMaxLines != null && rawMaxLines is! num) {
-    HotPatchLog.error('CustomPaint: TextPainter.maxLines 必须是数字: $rawMaxLines');
+    JsLog.error('CustomPaint: TextPainter.maxLines 必须是数字: $rawMaxLines');
     return null;
   }
   final rawEllipsis = opts['ellipsis'];
   if (rawEllipsis != null && rawEllipsis is! String) {
-    HotPatchLog.error('CustomPaint: TextPainter.ellipsis 必须是字符串: $rawEllipsis');
+    JsLog.error('CustomPaint: TextPainter.ellipsis 必须是字符串: $rawEllipsis');
     return null;
   }
   final painter = TextPainter(

@@ -1,6 +1,6 @@
 name: hot_patch
 description: "Flutter hot update runtime: loads build-time generated JS patch modules to render components and drive logic in JS, while rendering still happens on native Flutter."
-version: 0.4.1
+version: 0.4.2
 # 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
 resolution: workspace
 # pub.dev 溯源信息。
@@ -21,3 +21,7 @@ dependencies:
   # cached_network_image 能力（磁盘缓存网络图）的宿主桥接依赖：见
   # lib/src/js_ui/capabilities/cached_network_image/。
   cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

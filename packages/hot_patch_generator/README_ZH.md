@@ -128,7 +128,7 @@ separatorBuilder: …}`、`Image.network` → `{factory: 'network', src: …}`�
 （`itemBuilder` / `separatorBuilder` / `itemCount`）。
 
 宿主没有对应 renderer 的 widget 不会被静默丢弃：产物保留其**具体类型名**，运行时由宿主
-`widgetRegistry.register(name, build)` 解析。回调收到完整的 `JsRenderContext`
+`jsWidgetRegistry.register(name, build)` 解析。回调收到完整的 `JsRenderContext`
 （`props` + `children` slot + `invoke`），原生实现可以渲染子组件并把事件回传到 JS。
 
 ## 代码结构

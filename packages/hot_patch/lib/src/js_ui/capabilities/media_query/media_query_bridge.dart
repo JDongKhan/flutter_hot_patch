@@ -82,7 +82,7 @@ void registerMediaQueryWidgets(JsWidgetRegistry r) {
         factory == 'removeViewInsets') {
       final context = c.context;
       if (context == null) {
-        HotPatchLog.warn(
+        JsLog.warn(
           'js_ui: MediaQuery.$factory 取不到 BuildContext，按原样渲染 child',
         );
         return child;
@@ -275,7 +275,7 @@ Object? _readAspect(String ctxId, String? aspect) {
   final ctx = jsBuildContextOf(ctxId);
   if (ctx == null) {
     if (_unresolvedLogged.add(ctxId)) {
-      HotPatchLog.warn(
+      JsLog.warn(
         'js_ui: mediaQuery 取不到 BuildContext（ctx=$ctxId, aspect=$aspect）'
         '：组件结点的锚点未登记或已卸载',
       );
@@ -289,7 +289,7 @@ Object? _readAspect(String ctxId, String? aspect) {
         // 该位置上方确实没有 MediaQuery（页面根直接挂在无 MaterialApp 的根上）：
         // 不是竞态，JS 侧会记 missing 不再重试——但必须出声，否则就是静默降级。
         if (_absentLogged.add('$ctxId|all')) {
-          HotPatchLog.warn(
+          JsLog.warn(
             'js_ui: mediaQuery 取不到整份数据（ctx=$ctxId）：该位置上方没有 MediaQuery',
           );
         }

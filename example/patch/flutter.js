@@ -2646,7 +2646,7 @@ export class Canvas {
     this.ops.push(['drawImageRect', image, src, dst, paint]);
   }
 
-  // 未支持：显式抛错（宿主 evaluate 会记 HotPatchLog.error，不静默）。
+  // 未支持：显式抛错（宿主 evaluate 会记 JsLog.error，不静默）。
   drawImageNine() { throw new Error('CustomPaint: Canvas.drawImageNine 暂不支持'); }
   drawAtlas() { throw new Error('CustomPaint: Canvas.drawAtlas 暂不支持'); }
   drawVertices() { throw new Error('CustomPaint: Canvas.drawVertices 暂不支持'); }

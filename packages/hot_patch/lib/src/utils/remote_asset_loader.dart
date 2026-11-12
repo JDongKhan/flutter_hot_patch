@@ -110,7 +110,7 @@ class RemoteAssetLoader {
     final manifest = _readManifest(root);
     final protocol = _manifestString(manifest, 'protocol');
     if (protocol != null && _majorOf(protocol) != _supportedProtocolMajor) {
-      HotPatchLog.warn('patch protocol mismatch: bundle=$protocol, '
+      JsLog.warn('patch protocol mismatch: bundle=$protocol, '
           'app=$_supportedProtocolMajor.x — refusing to mount');
       return null;
     }
@@ -165,12 +165,12 @@ class RemoteAssetLoader {
       if (!file.existsSync()) return null;
       final decoded = jsonDecode(file.readAsStringSync());
       if (decoded is! Map) {
-        HotPatchLog.debug('manifest.json 不是对象：$path');
+        JsLog.debug('manifest.json 不是对象：$path');
         return null;
       }
       return decoded.cast<String, dynamic>();
     } catch (e) {
-      HotPatchLog.debug('manifest.json 解析失败：$path -> $e');
+      JsLog.debug('manifest.json 解析失败：$path -> $e');
       return null;
     }
   }
@@ -202,9 +202,9 @@ class RemoteAssetLoader {
     final dir = Directory('${doc.path}/hot_patch');
     if (dir.existsSync()) {
       dir.deleteSync(recursive: true);
-      HotPatchLog.log('已清除本地补丁缓存：${dir.path}');
+      JsLog.log('已清除本地补丁缓存：${dir.path}');
     } else {
-      HotPatchLog.debug('本地补丁缓存目录不存在，无需清除：${dir.path}');
+      JsLog.debug('本地补丁缓存目录不存在，无需清除：${dir.path}');
     }
   }
 
@@ -242,14 +242,14 @@ class RemoteAssetLoader {
         if (response.statusCode == HttpStatus.notModified && existing != null) {
           final cached = _cachedBundle(root, existing);
           if (cached != null) {
-            HotPatchLog.log('remote bundle reused (304): $url -> $existing');
+            JsLog.log('remote bundle reused (304): $url -> $existing');
             return cached;
           }
           // 本地缓存损坏（文件丢失/空文件）→  fallthrough 到 200 重新下载。
-          HotPatchLog.warn('remote bundle cache corrupted, re-downloading: $url');
+          JsLog.warn('remote bundle cache corrupted, re-downloading: $url');
         }
         if (response.statusCode != HttpStatus.ok) {
-          HotPatchLog.error('remote asset HTTP ${response.statusCode}: $url');
+          JsLog.error('remote asset HTTP ${response.statusCode}: $url');
           // 非 200 且本地有旧缓存 → 降级回退用旧缓存。
           return _fallback(root, url, existing, 'HTTP ${response.statusCode}');
         }
@@ -259,7 +259,7 @@ class RemoteAssetLoader {
         // 旧缓存完好无损，可直接回退。
         final declaredLength = response.contentLength;
         if (declaredLength > _maxDownloadBytes) {
-          HotPatchLog.error(
+          JsLog.error(
               'remote asset too large ($declaredLength bytes): $url');
           return _fallback(root, url, existing, 'too large');
         }
@@ -278,7 +278,7 @@ class RemoteAssetLoader {
         if (bytes.length < 4 ||
             bytes[0] != 0x50 ||
             bytes[1] != 0x4B) {
-          HotPatchLog.error('remote asset is not a zip: $url');
+          JsLog.error('remote asset is not a zip: $url');
           return _fallback(root, url, existing, 'bad zip');
         }
         final archive = ZipDecoder().decodeBytes(bytes);
@@ -313,7 +313,7 @@ class RemoteAssetLoader {
           // 入口：entryPath 直达 / 按组件名反查（在临时目录上验证）。
           final entry = _resolveEntry(tmp.path, component, entryPath);
           if (entry == null) {
-            HotPatchLog.error(
+            JsLog.error(
                 'remote asset zip entry not found ($entryPath / $component): $url');
             tmp.deleteSync(recursive: true);
             return _fallback(root, url, existing, 'entry not found');
@@ -330,7 +330,7 @@ class RemoteAssetLoader {
           if (current.existsSync()) current.renameSync(old.path);
           tmp.renameSync(root);
           if (old.existsSync()) old.deleteSync(recursive: true);
-          HotPatchLog.log('remote bundle loaded (fresh): $url -> $entry');
+          JsLog.log('remote bundle loaded (fresh): $url -> $entry');
           return _bundle(entry, root, fresh: true);
         } catch (_) {
           if (tmp.existsSync()) tmp.deleteSync(recursive: true);
@@ -340,7 +340,7 @@ class RemoteAssetLoader {
         client.close(force: true);
       }
     } catch (e) {
-      HotPatchLog.error('remote asset load failed: $url -> $e', error: e);
+      JsLog.error('remote asset load failed: $url -> $e', error: e);
       // 网络异常（含超时 / 坏 zip / 解压失败）时回退本地旧缓存（有且完整才用）。
       try {
         final root = await localRootFor(url);
@@ -349,7 +349,7 @@ class RemoteAssetLoader {
         if (fallback != null) return fallback;
       } catch (e2) {
         // 回退也失败：主异常已记录，这里补一条回退侧原因，避免只剩一条笼统报错。
-        HotPatchLog.debug('remote asset fallback errored: $url -> $e2');
+        JsLog.debug('remote asset fallback errored: $url -> $e2');
       }
       return null;
     }
@@ -364,7 +364,7 @@ class RemoteAssetLoader {
     // 缓存目录存在但入口缺失/为空 = 缓存损坏（首次加载时目录根本不存在，属于
     // 正常“无缓存”，不在这里刷日志）。
     if (Directory(root).existsSync()) {
-      HotPatchLog.warn('本地补丁缓存入口缺失或为空，视为不可用：${entryFile.path}');
+      JsLog.warn('本地补丁缓存入口缺失或为空，视为不可用：${entryFile.path}');
     }
     return null;
   }
@@ -373,14 +373,14 @@ class RemoteAssetLoader {
   static RemoteAssetBundle? _fallback(
       String root, String url, String? entry, String reason) {
     if (entry == null) {
-      HotPatchLog.debug('remote asset fallback unavailable ($reason): $url');
+      JsLog.debug('remote asset fallback unavailable ($reason): $url');
       return null;
     }
     final cached = _cachedBundle(root, entry);
     if (cached != null) {
-      HotPatchLog.warn('remote asset fallback to cached ($reason): $url -> $entry');
+      JsLog.warn('remote asset fallback to cached ($reason): $url -> $entry');
     } else {
-      HotPatchLog.warn('remote asset fallback failed ($reason): $url（旧缓存不可用）');
+      JsLog.warn('remote asset fallback failed ($reason): $url（旧缓存不可用）');
     }
     return cached;
   }

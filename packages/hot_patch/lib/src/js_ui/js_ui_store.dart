@@ -274,7 +274,7 @@ class JsUiStore {
         default:
           // 未知 op：JS 侧下发了宿主不认识的指令。静默丢弃会让 JS 状态与
           // 宿主渲染悄悄分叉（与「未注册组件」同性质）——必须留痕。
-          HotPatchLog.warn('js_ui: unknown op "${raw['op']}" dropped');
+          JsLog.warn('js_ui: unknown op "${raw['op']}" dropped');
       }
     }
     if (notify) {
@@ -290,7 +290,7 @@ class JsUiStore {
 
   /// 丢弃一条无法应用的补丁 op：必须留痕（否则 JS 状态与宿主渲染会悄悄分叉）。
   static void _drop(String? op, String reason, Object? raw) {
-    HotPatchLog.warn('js_ui: patch op "${op ?? '?'}" 已丢弃：$reason | $raw');
+    JsLog.warn('js_ui: patch op "${op ?? '?'}" 已丢弃：$reason | $raw');
   }
 
   /// 批量 op 应用完后按当前结点规模升/降级父索引（见 [_parents] 注释）。
@@ -325,7 +325,7 @@ class JsUiStore {
   static Map<String, dynamic> _props(Object? v, String where) {
     if (v is Map) return v.cast<String, dynamic>();
     if (v != null) {
-      HotPatchLog.warn('js_ui: $where 的 props 不是对象（${v.runtimeType}），'
+      JsLog.warn('js_ui: $where 的 props 不是对象（${v.runtimeType}），'
           '已按空 props 处理');
     }
     return <String, dynamic>{};

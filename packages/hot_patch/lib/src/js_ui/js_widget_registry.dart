@@ -30,14 +30,14 @@ import 'ui_fallback.dart';
 void invokeJsHandler(Object? handler, [List<Object?> args = const []]) {
   if (handler is! Map) {
     // handler 形态不对 → 事件无法执行（点了没反应）。不能静默。
-    HotPatchLog.warn('js_ui: 事件句柄形态非法（${handler.runtimeType}），'
+    JsLog.warn('js_ui: 事件句柄形态非法（${handler.runtimeType}），'
         '本次回调已丢弃（args=${args.length}）');
     return;
   }
   final id = handler['__fn'];
   if (id is! String) {
     // 句柄缺 __fn → 事件无法执行。不能静默。
-    HotPatchLog.warn('js_ui: 事件句柄缺少 __fn（$handler），本次回调已丢弃');
+    JsLog.warn('js_ui: 事件句柄缺少 __fn（$handler），本次回调已丢弃');
     return;
   }
   // args 双重编码：内层把数组变成 JSON 文本，外层再包成 JS 字符串字面量；
@@ -184,7 +184,7 @@ class JsRenderContext {
   Map<String, dynamic>? elementProps(Object? raw) {
     if (raw == null) return null;
     if (raw is! Map) {
-      HotPatchLog.warn('js_ui: props 值不是 Map（${raw.runtimeType}），已忽略');
+      JsLog.warn('js_ui: props 值不是 Map（${raw.runtimeType}），已忽略');
       return null;
     }
     final inner = raw['props'];
@@ -211,7 +211,7 @@ class JsRenderContext {
       if (w != null) {
         out.add(w);
       } else if (e != null) {
-        HotPatchLog.warn('js_ui: 元素数组里有无法解析的项'
+        JsLog.warn('js_ui: 元素数组里有无法解析的项'
             '（${_elementTypeLabel(e)}），已丢弃');
       }
     }
@@ -227,12 +227,12 @@ class JsRenderContext {
 Widget? buildJsElement(Object? raw) {
   if (raw == null) return null;
   if (raw is! Map) {
-    HotPatchLog.warn('js_ui: 元素描述不是对象（${raw.runtimeType}），已丢弃');
+    JsLog.warn('js_ui: 元素描述不是对象（${raw.runtimeType}），已丢弃');
     return null;
   }
   final type = raw['type'];
   if (type is! String || type.isEmpty) {
-    HotPatchLog.warn('js_ui: 元素描述缺少 type，已丢弃: $raw');
+    JsLog.warn('js_ui: 元素描述缺少 type，已丢弃: $raw');
     return null;
   }
   final props = raw['props'] is Map
@@ -240,7 +240,7 @@ Widget? buildJsElement(Object? raw) {
       : <String, dynamic>{};
   final children = _childrenFromSlots(raw['children']);
 
-  final builder = widgetRegistry.lookup(type) ?? widgetRegistry.fallback;
+  final builder = jsWidgetRegistry.lookup(type) ?? jsWidgetRegistry.fallback;
   if (builder == null) {
     return buildMissingJsWidget(
       type,
@@ -270,7 +270,7 @@ Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
   final children = <String, Object?>{};
   if (rawSlots == null) return children;
   if (rawSlots is! Map) {
-    HotPatchLog.warn('js_ui: 元素 children 槽位不是对象（${rawSlots.runtimeType}），'
+    JsLog.warn('js_ui: 元素 children 槽位不是对象（${rawSlots.runtimeType}），'
         '已按无子结点处理');
     return children;
   }
@@ -285,7 +285,7 @@ Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
         if (w != null) {
           widgets.add(w);
         } else if (ch != null) {
-          HotPatchLog.warn('js_ui: 槽位 "$key" 的子元素无法解析'
+          JsLog.warn('js_ui: 槽位 "$key" 的子元素无法解析'
               '（${_elementTypeLabel(ch)}），已丢弃');
         }
       }

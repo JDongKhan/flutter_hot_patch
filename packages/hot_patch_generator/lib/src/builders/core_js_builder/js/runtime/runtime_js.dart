@@ -156,7 +156,7 @@ function __formatValue(v, stack) {
   return '{' + out.join(', ') + '}';
 }
 function __str(v) { return __formatValue(v, []); }
-// 日志唯一出口：桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）。
+// 日志唯一出口：桥到逻辑通道 'log'（宿主 log 处理器 → JsLog）。
 //
 // **release 下关闭、零跨桥**：kDebugMode 为 false 时直接返回 —— 一次日志的
 // 代价是「格式化 + JSON 编码 + 桥消息 + Promise」，线上既看不到也担不起；

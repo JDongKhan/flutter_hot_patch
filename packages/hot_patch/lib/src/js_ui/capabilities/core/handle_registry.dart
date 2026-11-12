@@ -78,12 +78,12 @@ void ensureHandleChannels() {
   _handleChannelsRegistered = true;
   JsRuntimeManager.registerHostMethod('jsHandle', (Object? payload) {
     if (payload is! Map) {
-      HotPatchLog.warn('jsHandle: 载荷不是对象（${payload.runtimeType}），已丢弃');
+      JsLog.warn('jsHandle: 载荷不是对象（${payload.runtimeType}），已丢弃');
       return null;
     }
     final id = payload['id']?.toString();
     if (id == null || id.isEmpty) {
-      HotPatchLog.warn('jsHandle: 缺少 id，已丢弃: $payload');
+      JsLog.warn('jsHandle: 缺少 id，已丢弃: $payload');
       return null;
     }
     final op = payload['op']?.toString() ?? '';
@@ -98,7 +98,7 @@ void ensureHandleChannels() {
         if (desc == null) {
           if (_warnedHandleOps.length >= 512) _warnedHandleOps.clear();
           if (_warnedHandleOps.add('create|$kind')) {
-            HotPatchLog.warn('jsHandle: 未注册的句柄 kind "$kind"（id=$id），'
+            JsLog.warn('jsHandle: 未注册的句柄 kind "$kind"（id=$id），'
                 '宿主不会创建对应真实对象');
           }
         } else {
@@ -117,7 +117,7 @@ void ensureHandleChannels() {
           final key = 'op|${kind ?? '?'}|$op';
           if (_warnedHandleOps.length >= 512) _warnedHandleOps.clear();
           if (_warnedHandleOps.add(key)) {
-            HotPatchLog.warn('jsHandle: 句柄 "$id"（kind=${kind ?? '未登记'}）'
+            JsLog.warn('jsHandle: 句柄 "$id"（kind=${kind ?? '未登记'}）'
                 '的 op "$op" 无宿主实现，已按 null 返回');
           }
           return null;
@@ -157,7 +157,7 @@ void releasePageHandles(String pageKey) {
 void _evalJs(String code) {
   final r = JsRuntimeManager.instance.evaluate(code);
   if (r.isError) {
-    HotPatchLog.error('jsHandle eval failed: ${r.stringResult} | code: $code');
+    JsLog.error('jsHandle eval failed: ${r.stringResult} | code: $code');
   }
 }
 

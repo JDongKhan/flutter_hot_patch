@@ -24,7 +24,7 @@
 //     旋转由 `save/translate/rotate` 的矩阵自然生效，无需额外协议。
 //
 // 不支持的能力**必须出声**：`drawImageNine` / `drawParagraph` / `toImage` 等直接
-// 抛异常，由宿主 JsRuntimeManager.evaluate 记 HotPatchLog.error（禁止静默降级）。
+// 抛异常，由宿主 JsRuntimeManager.evaluate 记 JsLog.error（禁止静默降级）。
 const String canvasJsSource = r'''
   // ---------------------------------------------------------------------------
   // Rect：`Rect.fromLTWH(...)` 等命名构造在 JS 侧是 `Rect.fromLTWH({left, …})`
@@ -233,7 +233,7 @@ const String canvasJsSource = r'''
       this.ops.push(['drawImageRect', image, src, dst, paint]);
     }
 
-    // 未支持：显式抛错（宿主 evaluate 会记 HotPatchLog.error，不静默）。
+    // 未支持：显式抛错（宿主 evaluate 会记 JsLog.error，不静默）。
     drawImageNine() { throw new Error('CustomPaint: Canvas.drawImageNine 暂不支持'); }
     drawAtlas() { throw new Error('CustomPaint: Canvas.drawAtlas 暂不支持'); }
     drawVertices() { throw new Error('CustomPaint: Canvas.drawVertices 暂不支持'); }

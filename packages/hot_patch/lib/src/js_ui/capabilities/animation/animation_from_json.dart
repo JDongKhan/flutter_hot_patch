@@ -30,7 +30,7 @@ Curve curveFromJson(Object? v) {
   if (v is! String) return Curves.linear;
   final curve = _curves[v];
   if (curve == null) {
-    HotPatchLog.warn('curveFromJson: 未登记的曲线 "$v"，按 linear 处理');
+    JsLog.warn('curveFromJson: 未登记的曲线 "$v"，按 linear 处理');
     return Curves.linear;
   }
   return curve;

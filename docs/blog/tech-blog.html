@@ -806,6 +806,13 @@ td code{font-size:11.5px}
     </div>
 
     <div class="nav-group">
+      <div class="nav-label">教程</div>
+      <a class="nav-link" href="getting-started.html"><span class="idx">↗</span>使用教程</a>
+      <a class="nav-link" href="custom-components.html"><span class="idx">↗</span>自定义组件</a>
+      <a class="nav-link" href="third-party.html"><span class="idx">↗</span>接入三方库</a>
+    </div>
+
+    <div class="nav-group">
       <div class="nav-label">架构</div>
       <a class="nav-link" href="#laws"><span class="idx">02</span>五条设计定律</a>
       <a class="nav-link" href="#layers"><span class="idx">03</span>分层与职责边界</a>
@@ -2524,7 +2531,7 @@ bash start_patch_server.sh
         <p class="cap-intro">图片、JSON 等 assets 也可以随补丁包发布：<strong>补丁包根下存在同路径文件时优先使用补丁内资源</strong>，否则回退项目 assets。业务代码不需要区分资源来源。</p>
 
         <div class="meta-strip">
-          <span><b>解析入口</b> HotPatchAssets</span>
+          <span><b>解析入口</b> JsAssets</span>
           <span><b>优先级</b> 补丁包 → 项目 assets</span>
           <span><b>失败策略</b> 告警并回退</span>
           <span><b>图片接入</b> 5 类读取路径</span>
@@ -2551,7 +2558,7 @@ bash start_patch_server.sh
               <tr><td><code>ImageIcon</code> / <code>CircleAvatar.backgroundImage</code> / <code>FadeInImage</code></td><td>与 <code>Image.asset</code> 共用同一 provider 入口</td></tr>
               <tr><td><code>BoxDecoration(image: DecorationImage(...))</code></td><td>背景图同样走补丁包优先</td></tr>
               <tr><td><code>rootBundle.loadString(key)</code></td><td>JS 侧同名顶层对象 → 宿主通道 <code>assetLoadString</code>，按同一规则读文本 / JSON</td></tr>
-              <tr><td>宿主自定义资源读取</td><td>使用 <code>HotPatchAssets.bundle</code>（如示例 <code>CanvasImage.load</code>）即可复用该规则</td></tr>
+              <tr><td>宿主自定义资源读取</td><td>使用 <code>JsAssets.bundle</code>（如示例 <code>CanvasImage.load</code>）即可复用该规则</td></tr>
             </tbody>
           </table>
         </div>
@@ -2639,7 +2646,7 @@ bash start_patch_server.sh
           <h3>04 · 日志、隔离与构建产物</h3>
           <span class="tag amber">可观测</span>
         </div>
-        <p class="cap-intro">所有输出走唯一出口 <code>HotPatchLog</code>。本地打印与上报彼此独立：注册一个 sink 即可接入日志平台，release 下依然可上报。</p>
+        <p class="cap-intro">所有输出走唯一出口 <code>JsLog</code>。本地打印与上报彼此独立：注册一个 sink 即可接入日志平台，release 下依然可上报。</p>
 
         <div class="table-wrap">
           <table>
@@ -2654,7 +2661,7 @@ bash start_patch_server.sh
         </div>
 
         <div class="code-block" data-lang="dart">
-<pre><span class="t">HotPatchLog</span>.sink = (r) =&gt; <span class="t">MyLogPlatform</span>.upload(
+<pre><span class="t">JsLog</span>.sink = (r) =&gt; <span class="t">MyLogPlatform</span>.upload(
       level: r.level.name,          <span class="c">// debug / info / warn / error</span>
       message: r.message,
       error: r.error,
@@ -2662,13 +2669,13 @@ bash start_patch_server.sh
       time: r.time,
     );
 
-<span class="t">HotPatchLog</span>.minSinkLevel = <span class="t">HotPatchLevel</span>.info; <span class="c">// 默认只上报 warn/error</span>
-<span class="t">HotPatchLog</span>.enabled = <span class="k">false</span>;                   <span class="c">// 只关本地打印，不影响上报</span></pre>
+<span class="t">JsLog</span>.minSinkLevel = <span class="t">JsLogLevel</span>.info; <span class="c">// 默认只上报 warn/error</span>
+<span class="t">JsLog</span>.enabled = <span class="k">false</span>;                   <span class="c">// 只关本地打印，不影响上报</span></pre>
         </div>
         <ul class="note-list">
           <li>Dart 的 <code>print</code> / <code>debugPrint</code> 在 JS 侧是一比一同名全局函数，桥回同一出口：<code>print</code> → <code>info</code>，<code>debugPrint</code> → <code>debug</code>（仅 kDebugMode 输出），宿主前缀 <code>[js-log] </code>。</li>
           <li>sink 自身抛异常会被兜底吞掉，不会因为上传日志打断业务。</li>
-          <li>运行时自身（reconciler / 能力模块）的诊断日志走引擎自带的 <code>console</code>，不再经过 <code>HotPatchLog</code>。</li>
+          <li>运行时自身（reconciler / 能力模块）的诊断日志走引擎自带的 <code>console</code>，不再经过 <code>JsLog</code>。</li>
         </ul>
 
         <h4>构建产物与本地服务</h4>
@@ -2824,7 +2831,7 @@ bash start_patch_server.sh
         <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 9v5M12 17.2v.1"/></svg></span>
         <div class="callout-body">
           <span class="callout-title">限制的处理原则</span>
-          <p>未支持项必须出声：构建期告警、运行期 <code>HotPatchLog.error</code>、或 debug 可见占位。占位是诊断兜底，不是长期方案；需要某个能力时优先补正式翻译分支 / renderer / 能力库，而不是在业务里绕过。</p>
+          <p>未支持项必须出声：构建期告警、运行期 <code>JsLog.error</code>、或 debug 可见占位。占位是诊断兜底，不是长期方案；需要某个能力时优先补正式翻译分支 / renderer / 能力库，而不是在业务里绕过。</p>
         </div>
       </div>
     </section>

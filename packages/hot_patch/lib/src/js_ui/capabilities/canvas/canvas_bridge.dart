@@ -9,7 +9,7 @@
 //   - 录制结果按 (size) 缓存在当前 [_JsPainter] 实例上：同一尺寸重复绘制不重复
 //     求值，尺寸变化（窗口缩放）时重新录制。
 //
-// 不支持的能力在 JS 侧抛错（evaluate 会记 HotPatchLog.error）或在这里报错，
+// 不支持的能力在 JS 侧抛错（evaluate 会记 JsLog.error）或在这里报错，
 // 不做任何静默降级。
 import 'dart:convert';
 
@@ -47,7 +47,7 @@ CustomPainter? _painterFromProp(Object? raw, String name) {
     final id = raw['__handle'];
     if (id is String && id.isNotEmpty) return _JsPainter(id);
   }
-  HotPatchLog.error('CustomPaint: $name 不是 CustomPainter 句柄: $raw');
+  JsLog.error('CustomPaint: $name 不是 CustomPainter 句柄: $raw');
   return null;
 }
 
@@ -92,7 +92,7 @@ class _JsPainter extends CustomPainter {
     final text = result.stringResult;
     if (text.isEmpty || text == 'undefined' || text == 'null') {
       _failed = true;
-      HotPatchLog.error('CustomPaint: painter($handleId) 录制失败（句柄可能已释放）');
+      JsLog.error('CustomPaint: painter($handleId) 录制失败（句柄可能已释放）');
       return null;
     }
     final Object? decoded;
@@ -100,18 +100,18 @@ class _JsPainter extends CustomPainter {
       decoded = jsonDecode(text);
     } catch (e) {
       _failed = true;
-      HotPatchLog.error('CustomPaint: 录制结果不是合法 JSON: $e');
+      JsLog.error('CustomPaint: 录制结果不是合法 JSON: $e');
       return null;
     }
     if (decoded is! Map) {
       _failed = true;
-      HotPatchLog.error('CustomPaint: 录制结果形态非法: $text');
+      JsLog.error('CustomPaint: 录制结果形态非法: $text');
       return null;
     }
     final ops = decoded['ops'];
     if (ops is! List) {
       _failed = true;
-      HotPatchLog.error('CustomPaint: 录制结果缺少 ops: $text');
+      JsLog.error('CustomPaint: 录制结果缺少 ops: $text');
       return null;
     }
     final list = <List<dynamic>>[];
@@ -119,7 +119,7 @@ class _JsPainter extends CustomPainter {
       if (op is List && op.isNotEmpty) {
         list.add(op);
       } else {
-        HotPatchLog.error('CustomPaint: 绘制指令形态非法: $op');
+        JsLog.error('CustomPaint: 绘制指令形态非法: $op');
       }
     }
     _opsBySize[cacheKey] = list;
@@ -181,7 +181,7 @@ class _JsPainter extends CustomPainter {
           } else {
             // dart:ui 的 clipRRect 没有 clipOp（只支持 intersect 语义）。
             if (op[2] == 'difference') {
-              HotPatchLog.error(
+              JsLog.error(
                 'CustomPaint: Canvas.clipRRect 不支持 clipOp=difference',
               );
             }
@@ -194,7 +194,7 @@ class _JsPainter extends CustomPainter {
           } else {
             // dart:ui 的 clipPath 没有 clipOp（只支持 intersect 语义）。
             if (op[2] == 'difference') {
-              HotPatchLog.error(
+              JsLog.error(
                 'CustomPaint: Canvas.clipPath 不支持 clipOp=difference',
               );
             }
@@ -301,7 +301,7 @@ class _JsPainter extends CustomPainter {
             canvas.drawImageRect(image, src, dst, paint);
           }
         default:
-          HotPatchLog.error('CustomPaint: 未知绘制指令 "$name"');
+          JsLog.error('CustomPaint: 未知绘制指令 "$name"');
       }
     }
   }
@@ -314,6 +314,6 @@ class _JsPainter extends CustomPainter {
   }
 
   void _badOp(String name, List<dynamic> op) {
-    HotPatchLog.error('CustomPaint: 绘制指令 "$name" 实参非法: $op');
+    JsLog.error('CustomPaint: 绘制指令 "$name" 实参非法: $op');
   }
 }

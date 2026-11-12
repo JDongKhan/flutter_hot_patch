@@ -126,7 +126,7 @@ void ensureBuildContextChannels() {
 Object? _dispatchContextOp(String id, String op, Map payload) {
   final handler = _contextOps[op];
   if (handler == null) {
-    HotPatchLog.warn('[jsui] 不支持context.$op()方法 ');
+    JsLog.warn('[jsui] 不支持context.$op()方法 ');
     return null;
   }
   return handler.onOp(id, op, payload);

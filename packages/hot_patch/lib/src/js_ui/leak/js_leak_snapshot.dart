@@ -31,7 +31,7 @@ import 'leak_stats.dart';
 ///
 /// 用法（JsUiWidget 已接线）：**运行时就绪、本页模块加载完、组件尚未 mount**
 /// 时取基线 [capture]（模块级单例因此算「进入前已有」），dispose 清理后取第二次
-/// 再调 [reportLeaks]。仅 debug 构建**调用**（kDebugMode + HotPatchLog 门控）；
+/// 再调 [reportLeaks]。仅 debug 构建**调用**（kDebugMode + JsLog 门控）；
 /// `leakSnapshot` 本身在 runtime.js 里恒存在（产物分不出 debug/release），
 /// release 下不被调用即零开销。
 class JsLeakSnapshot {
@@ -71,7 +71,7 @@ class JsLeakSnapshot {
       '? __jsui.leakSnapshot() : "null";',
     );
     if (r.isError) {
-      HotPatchLog.debug('泄漏快照跳过：JS leakSnapshot 求值失败（$pageKey）: '
+      JsLog.debug('泄漏快照跳过：JS leakSnapshot 求值失败（$pageKey）: '
           '${r.stringResult}');
       return null;
     }
@@ -79,11 +79,11 @@ class JsLeakSnapshot {
     try {
       raw = jsonDecode(r.stringResult);
     } catch (e) {
-      HotPatchLog.debug('泄漏快照跳过：返回不是合法 JSON（$pageKey）: $e');
+      JsLog.debug('泄漏快照跳过：返回不是合法 JSON（$pageKey）: $e');
       return null;
     }
     if (raw is! Map) {
-      HotPatchLog.debug('泄漏快照跳过：返回不是对象（$pageKey）: $raw');
+      JsLog.debug('泄漏快照跳过：返回不是对象（$pageKey）: $raw');
       return null;
     }
     final handles = <Map<String, Object?>>[
@@ -200,11 +200,11 @@ class JsLeakSnapshot {
     // 页面名（`HelloCard（jsui_0）`）：人类名在前、pageKey 保留在后，便于与 JS 侧日志对齐。
     final page = LeakStats.labelOf(pageKey);
     if (leaks.isEmpty) {
-      HotPatchLog.log('leak-check $page: clean');
+      JsLog.log('leak-check $page: clean');
       return;
     }
     // 只说「多了哪个」：每条都带 id / kind / scope / 登记方，不再打规模统计。
-    HotPatchLog.warn(
+    JsLog.warn(
       'leak-check $page: ${leaks.length} 项残留'
       '\n  ${leaks.join('\n  ')}',
     );
@@ -223,6 +223,6 @@ class JsLeakSnapshot {
       '? __jsui.cacheDump() : "null";',
     );
     if (r.isError) return;
-    HotPatchLog.log(r.stringResult);
+    JsLog.log(r.stringResult);
   }
 }

@@ -128,7 +128,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 运行时是全局单例（所有实例共用一个 JS 引擎），不支持从外部注入。
     _manager = JsRuntimeManager.instance;
     // 宿主 widget 注册表是**进程内单例**（懒建一次性注册全部内建/能力/三方库
-    // 组件，见 js_ui_capabilities 的 widgetRegistry）——不需要、也不由外部传入。
+    // 组件，见 js_ui_capabilities 的 jsWidgetRegistry）——不需要、也不由外部传入。
     registerBuiltinHostMethods();
     _initStore();
     // 能力桥接通道（ScrollController / TextEditingController …）：必须在任何
@@ -236,7 +236,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       // 逐条打印会把进入页面的日志刷满。顺序即加载顺序（依赖先于自身）。
       final loaded = _manager.drainLoadedModules();
       if (loaded.isNotEmpty) {
-        HotPatchLog.log('模块加载完成（${loaded.length} 个）：${loaded.join(', ')}');
+        JsLog.log('模块加载完成（${loaded.length} 个）：${loaded.join(', ')}');
       }
       // 泄漏观测基线（仅 debug）：运行时就绪、本页模块已加载完（模块级单例已
       // 登记），但组件还没 mount——此刻的双端缓存就是「进入时」的基准；dispose
@@ -259,7 +259,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       if (mounted && _loading) setState(() => _loading = false);
     } catch (e) {
       if (_bootSuperseded(token)) return;
-      HotPatchLog.error('js_ui boot failed: $e', error: e);
+      JsLog.error('js_ui boot failed: $e', error: e);
       if (!mounted) return;
       setState(() {
         _error = '$e';
@@ -279,7 +279,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     super.didUpdateWidget(oldWidget);
     // jsAsset 变更需要重走加载/挂载流程，当前不做热切换；出声而不是静默忽略。
     if (oldWidget.jsAsset != widget.jsAsset) {
-      HotPatchLog.warn(
+      JsLog.warn(
         'JsUiWidget: jsAsset 变更当前不支持热切换（需重建 widget）：'
         '${oldWidget.jsAsset} -> ${widget.jsAsset}',
       );
@@ -293,7 +293,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
         '${jsonEncode(jsonEncode(widget.props))});',
       );
     } catch (e, s) {
-      HotPatchLog.error(
+      JsLog.error(
         'js_ui updateProps failed: $e',
         error: e,
         stackTrace: s,
@@ -377,7 +377,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       return;
     }
     setState(() {});
-    HotPatchLog.log('页面 $_pageName（$_pageKey）重新加载：$reason');
+    JsLog.log('页面 $_pageName（$_pageKey）重新加载：$reason');
     _boot(allowBundleSwitch: allowBundleSwitch);
   }
 
@@ -495,7 +495,7 @@ class _JsUiContentState extends State<JsUiContent> {
         where: 'panelMount',
       );
     } catch (e) {
-      HotPatchLog.error('js_ui panel mount failed: $e', error: e);
+      JsLog.error('js_ui panel mount failed: $e', error: e);
       widget.onMountFailed?.call();
     }
   }
@@ -675,7 +675,7 @@ Widget _renderStoreNode(
     );
   }
   //lazy组件
-  final builder = widgetRegistry.lookup(node.type);
+  final builder = jsWidgetRegistry.lookup(node.type);
   if (node.props['__lazy'] == true || builder == null) {
     return _JsPlainNodeHost(
       key: declared ?? ValueKey(id),
@@ -694,7 +694,7 @@ Widget _renderStoreNode(
   if (declared != null &&
       widget.key == null &&
       _missingKeyWarned.add(node.type)) {
-    HotPatchLog.warn(
+    JsLog.warn(
       'js_ui: 宿主组件 "${node.type}" 的 renderer 没有把 key 传给真实 widget；'
       '请补 `key: c.key`（否则声明式 key 不生效）',
     );
@@ -870,13 +870,13 @@ class _JsComponentHostState extends _JsHostBaseState<_JsComponentHost> {
     );
     if (result.isError) {
       _error = 'JS pull 失败：${result.stringResult}';
-      HotPatchLog.error('js_ui component pull failed: ${result.stringResult}');
+      JsLog.error('js_ui component pull failed: ${result.stringResult}');
       return;
     }
     final text = result.stringResult;
     if (text.isEmpty || text == 'undefined' || text == 'null') {
       _error = 'JS 侧未返回补丁（组件 "${widget.id}"）';
-      HotPatchLog.error('js_ui component pull returned empty: ${widget.id}');
+      JsLog.error('js_ui component pull returned empty: ${widget.id}');
       return;
     }
     final Object? decoded;
@@ -884,7 +884,7 @@ class _JsComponentHostState extends _JsHostBaseState<_JsComponentHost> {
       decoded = jsonDecode(text);
     } catch (e) {
       _error = '补丁不是合法 JSON: $text';
-      HotPatchLog.error('js_ui component pull decode failed: $e');
+      JsLog.error('js_ui component pull decode failed: $e');
       return;
     }
     if (decoded is Map && decoded['error'] != null) {
@@ -894,7 +894,7 @@ class _JsComponentHostState extends _JsHostBaseState<_JsComponentHost> {
     }
     if (decoded is! List) {
       _error = '补丁形态非法: $text';
-      HotPatchLog.error('js_ui component pull payload invalid: $text');
+      JsLog.error('js_ui component pull payload invalid: $text');
       return;
     }
     // pull 发生在 build 期间：只落数据，不触发任何 wrapper 的 setState
@@ -985,7 +985,7 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
       try {
         invokeJsHandler(lazyOffFn, [nodeId]);
       } catch (e, s) {
-        HotPatchLog.error(
+        JsLog.error(
           'js_ui lazy unmount failed: $e',
           error: e,
           stackTrace: s,
@@ -1029,14 +1029,14 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
     // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
     // lookup 未命中走单例注册表的默认 builder（原生注入 / 占位）。
     final builder =
-        widgetRegistry.lookup(node.type) ?? widgetRegistry.fallback;
+        jsWidgetRegistry.lookup(node.type) ?? jsWidgetRegistry.fallback;
     if (builder == null) {
       _logUnknownType(node);
       final items =
           (ctx.children['__items'] as List<Widget>?) ?? const <Widget>[];
       return buildMissingJsWidget(node.type, items);
     }
-    if (widgetRegistry.lookup(node.type) == null) {
+    if (jsWidgetRegistry.lookup(node.type) == null) {
       _logUnknownType(node);
     }
     return builder(ctx);
@@ -1050,7 +1050,7 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
     if (_unknownLogged.length > 512) _unknownLogged.clear();
     final keys = node.props.keys.take(12).join(',');
     final preview = _previewValue(node.props['data'] ?? node.props['text']);
-    HotPatchLog.error(
+    JsLog.error(
       'js_ui: 未注册的结点类型 "${node.type}"'
       '（page=${widget.pageKey}, node=${widget.id}, props=[$keys]'
       '${preview == null ? '' : ', data=$preview'}）',

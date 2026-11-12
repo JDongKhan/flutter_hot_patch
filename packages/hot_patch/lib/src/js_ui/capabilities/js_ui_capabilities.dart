@@ -50,10 +50,10 @@ void registerAllJsWidgets(JsWidgetRegistry r) {
 /// （只读传入的 `JsRenderContext`，不持有任何实例状态），故进程内共享完全等价。
 ///
 /// **懒建**：首次访问时构建并**一次性**注册全部内建/能力/三方库组件；因此
-/// `registerJsUiLibrary(...)` / 外部 `widgetRegistry.register(...)` 必须在首个
+/// `registerJsUiLibrary(...)` / 外部 `jsWidgetRegistry.register(...)` 必须在首个
 /// [JsUiWidget] 构造前调用（约定：App 的 `main()` 里、`runApp` 之前，与
 /// `registerHostMethods` 同一位置）。
-final JsWidgetRegistry _widgetRegistry = _createWidgetRegistry();
+final JsWidgetRegistry _jsWidgetRegistry = _createWidgetRegistry();
 
 JsWidgetRegistry _createWidgetRegistry() {
   final registry = JsWidgetRegistry();
@@ -61,9 +61,9 @@ JsWidgetRegistry _createWidgetRegistry() {
   return registry;
 }
 
-/// 全局唯一的宿主 widget 注册表（见 [_widgetRegistry]）。
+/// 全局唯一的宿主 widget 注册表（见 [_jsWidgetRegistry]）。
 ///
 /// 外部自定义组件（含 `@PatchIgnore` / 无注解私有组件保留的具体类型名结点）
-/// 只需在 App 的 `main()` 里 `widgetRegistry.register(type, (c) => ...)` 注册，
+/// 只需在 App 的 `main()` 里 `jsWidgetRegistry.register(type, (c) => ...)` 注册，
 /// 与内建能力共用同一张表，无需额外的原生组件注入入口。
-JsWidgetRegistry get widgetRegistry => _widgetRegistry;
+JsWidgetRegistry get jsWidgetRegistry => _jsWidgetRegistry;

@@ -10,10 +10,10 @@ import 'hot_patch_log.dart';
 /// 保留同名路径：`<localRoot>/assets/images/a.jpg`。命中则读补丁包文件，缺失或
 /// 读取失败回退 `rootBundle`——与 JS 模块加载「文件存在读本地、否则回退
 /// Flutter assets」同一口径。
-class HotPatchAssets {
-  HotPatchAssets._();
+class JsAssets {
+  JsAssets._();
 
-  static HotPatchAssetBundle _bundle = HotPatchAssetBundle(null);
+  static JsAssetBundle _bundle = JsAssetBundle(null);
 
   /// 当前补丁包对应的 bundle；无远程补丁包时全部回退 Flutter assets。
   static AssetBundle get bundle => _bundle;
@@ -21,12 +21,12 @@ class HotPatchAssets {
   /// 切换到 [localRoot] 对应的补丁包；同一根复用实例（保持图片缓存 key 稳定）。
   static void activate(String? localRoot) {
     if (localRoot == null || localRoot == _bundle.localRoot) return;
-    _bundle = HotPatchAssetBundle(localRoot);
+    _bundle = JsAssetBundle(localRoot);
   }
 
   /// 回到纯 Flutter assets（运行时切换为无包版本时）。
   static void reset() {
-    if (_bundle.localRoot != null) _bundle = HotPatchAssetBundle(null);
+    if (_bundle.localRoot != null) _bundle = JsAssetBundle(null);
   }
 }
 
@@ -34,8 +34,8 @@ class HotPatchAssets {
 ///
 /// 实例身份即当前补丁包身份：切换补丁包时创建新实例，`AssetImage` 的缓存 key
 /// 随之变化，避免旧包图片被复用。
-class HotPatchAssetBundle extends CachingAssetBundle {
-  HotPatchAssetBundle(this.localRoot);
+class JsAssetBundle extends CachingAssetBundle {
+  JsAssetBundle(this.localRoot);
 
   /// 补丁包解压根（绝对路径）；null = 只用 Flutter assets。
   final String? localRoot;
@@ -49,7 +49,7 @@ class HotPatchAssetBundle extends CachingAssetBundle {
         try {
           return ByteData.sublistView(await file.readAsBytes());
         } catch (e, s) {
-          HotPatchLog.warn(
+          JsLog.warn(
             '补丁资源读取失败，回退 Flutter assets：$key（$e）',
             error: e,
             stackTrace: s,
@@ -65,7 +65,7 @@ class HotPatchAssetBundle extends CachingAssetBundle {
     if (key.isEmpty) return null;
     final normalized = key.replaceAll('\\', '/');
     if (normalized.startsWith('/') || normalized.split('/').contains('..')) {
-      HotPatchLog.warn('补丁资源路径非法，已忽略：$key');
+      JsLog.warn('补丁资源路径非法，已忽略：$key');
       return null;
     }
     final file = File('$root/$normalized');

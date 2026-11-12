@@ -112,7 +112,7 @@ class JsRuntimeManager {
     // 同一通道注册两次会覆盖前一个实现，JS 侧调到的实现与预期不符且无从察觉。
     // debug 下直接断言让问题在启动时暴露；release 下断言被裁掉，但仍必须留痕。
     if (globalMessageHandlers.containsKey(channel)) {
-      HotPatchLog.warn(
+      JsLog.warn(
         'registerHostMethod: 通道 "$channel" 已注册，'
         '本次注册将覆盖前一个实现（通道名必须唯一）',
       );
@@ -125,7 +125,7 @@ class JsRuntimeManager {
     globalMessageHandlers[channel] = (dynamic args) async {
       final map = args is Map ? args : const {};
       if (args is! Map) {
-        HotPatchLog.warn(
+        JsLog.warn(
           'registerHostMethod("$channel"): 参数载荷不是对象'
           '（${args.runtimeType}），按空参数调用',
         );
@@ -140,7 +140,7 @@ class JsRuntimeManager {
         // 完全不知道宿主侧压根没调成功（具名参数不匹配就是这样被吞掉的）。
         // 现在把异常原样抛回 JS 调用者（reject → await 处抛出，可被 JS 自己的
         // try/catch 接住）；完整堆栈仍留在宿主日志里。
-        HotPatchLog.error(
+        JsLog.error(
           'registerHostMethod("$channel") 调用宿主实现失败: $e',
           error: e,
           stackTrace: s,
@@ -203,7 +203,7 @@ class JsRuntimeManager {
   ]) {
     final id = handler is Map ? handler['__fn'] : null;
     if (id is! String) {
-      HotPatchLog.debug('invokeAwait: 回调句柄缺少 __fn，按「无回调」返回 null');
+      JsLog.debug('invokeAwait: 回调句柄缺少 __fn，按「无回调」返回 null');
       return Future<Object?>.value(null);
     }
     _ensureEventResultChannel();
@@ -220,7 +220,7 @@ class JsRuntimeManager {
       const Duration(seconds: 30),
       onTimeout: () {
         _pendingEvents.remove(token);
-        HotPatchLog.warn('invokeAwait 超时（30s，token=$token），按 null 结算');
+        JsLog.warn('invokeAwait 超时（30s，token=$token），按 null 结算');
         return null;
       },
     );
@@ -247,13 +247,13 @@ class JsRuntimeManager {
       if (completer == null || completer.isCompleted) {
         // 超时后回程才到 / 重复回程：正常竞态，但必须留痕，否则「回调结果被
         // 丢弃」看起来像业务没执行。
-        HotPatchLog.warn('[jsui] 收到未知或重复的 invokeAwait 回程 token=$token，已丢弃');
+        JsLog.warn('[jsui] 收到未知或重复的 invokeAwait 回程 token=$token，已丢弃');
         return null;
       }
       if (error != null) {
         // 回调在 JS 侧抛错：按「无结果」结算（调用方按 Flutter 默认行为兜底），
         // 异常细节已由 JS 侧日志输出。
-        HotPatchLog.warn('[jsui] invokeAwait 回调抛错: $error');
+        JsLog.warn('[jsui] invokeAwait 回调抛错: $error');
         completer.complete(null);
         return null;
       }
@@ -262,7 +262,7 @@ class JsRuntimeManager {
         try {
           value = jsonDecode(resultJson);
         } catch (e) {
-          HotPatchLog.warn(
+          JsLog.warn(
             '[jsui] invokeAwait 结果不是合法 JSON（token=$token），'
             '按 null 结算: $e',
           );
@@ -310,22 +310,22 @@ class JsRuntimeManager {
   }
 
   /// **详细缓存追踪开关**（debug-only，默认关）：等价于直接设置
-  /// [HotPatchLog.verboseCache]，但会**立刻**把 JS 侧的句柄日志切面装 / 卸，
+  /// [JsLog.verboseCache]，但会**立刻**把 JS 侧的句柄日志切面装 / 卸，
   /// 不必等下一次运行时初始化。
   ///
   /// 打开后逐条打印双端缓存进出：Dart 侧 `[binding] + / - <条目摘要>`，JS 侧
   /// `[js-log] [binding] + / - JS <句柄摘要>`，两边摘要都以句柄 id 起头，可直接
   /// 按 id 对齐。关闭后仅剩包装内的一次布尔短路，不影响任何业务逻辑。
   static void setVerboseCacheTrace(bool on) {
-    HotPatchLog.verboseCache = on;
+    JsLog.verboseCache = on;
     _applyCacheTrace();
   }
 
-  /// 把 [HotPatchLog.verboseCache] 推给所有活跃 runtime（未就绪的跳过，下次
+  /// 把 [JsLog.verboseCache] 推给所有活跃 runtime（未就绪的跳过，下次
   /// [ensureJsUiRuntime] 完成时会再同步一次）。
   static void _applyCacheTrace() {
     if (!kDebugMode) return;
-    final on = HotPatchLog.verboseCache;
+    final on = JsLog.verboseCache;
     evaluateAll(
       'if (typeof __jsui !== "undefined" && __jsui.setCacheVerbose) '
       '__jsui.setCacheVerbose($on);',
@@ -438,16 +438,16 @@ class JsRuntimeManager {
       if (loaded == null && version != null) _loadedBundleVersion = version;
       if (version == null && _jsUiInited && !_warnedMissingBundleVersion) {
         _warnedMissingBundleVersion = true;
-        HotPatchLog.warn(
+        JsLog.warn(
           '补丁包 manifest 缺少身份版本字段，'
           '后续版本切换将无法判定（请用配套生成器重新产出 manifest）',
         );
       }
       // 同一版本复用内存：资源根仍以本次加载的包为准（同一版本 = 同一份产物）。
-      HotPatchAssets.activate(localRoot);
+      JsAssets.activate(localRoot);
       return false;
     }
-    HotPatchLog.log(
+    JsLog.log(
       '补丁包版本变化：memory=${loaded ?? '(none)'} '
       'bundle=${version ?? '(none)'} fresh=$fresh —— '
       '清除内存并重新加载 JS 运行时',
@@ -456,9 +456,9 @@ class JsRuntimeManager {
     _loadedBundleVersion = version;
     // 切换后资源解析跟随新包；回到 asset 场景（localRoot=null）时恢复纯 assets。
     if (localRoot != null) {
-      HotPatchAssets.activate(localRoot);
+      JsAssets.activate(localRoot);
     } else {
-      HotPatchAssets.reset();
+      JsAssets.reset();
     }
     return true;
   }
@@ -509,7 +509,7 @@ class JsRuntimeManager {
       final brief = preview.length > 80
           ? '${preview.substring(0, 80)}…'
           : preview;
-      HotPatchLog.error(
+      JsLog.error(
         'JS eval failed [$where]: ${result.stringResult} | code: $brief',
       );
     }
@@ -655,7 +655,7 @@ class JsRuntimeManager {
   /// evaluate 进 JS 全局（__modules 注册）。幂等：同 jsAsset 只执行一次。
   Future<void> loadModule(String jsAsset, {String? localRoot}) async {
     if (jsAsset.isEmpty) {
-      HotPatchLog.warn('loadModule: jsAsset 为空，已跳过');
+      JsLog.warn('loadModule: jsAsset 为空，已跳过');
       return;
     }
     // 已加载成功 → 短路。注意：只有**完整成功**才进 _loadedModules，
@@ -710,7 +710,7 @@ class JsRuntimeManager {
       if (evalResult.isError ||
           text.startsWith('ERROR:') ||
           text.contains('\nERROR:')) {
-        HotPatchLog.error('module eval failed: $jsAsset: $text');
+        JsLog.error('module eval failed: $jsAsset: $text');
         // evaluate 把异常序列化进返回值 → 视为加载失败，不进
         // _loadedModules，下次可重试。
         throw StateError('module evaluate failed: $text');
@@ -759,7 +759,7 @@ class JsRuntimeManager {
       // 远程包里缺模块却静默读内置 asset，会让新旧产物混装、行为无法解释。
       // 允许回退（保证老包可跑），但每个文件至少告警一次。
       if (_assetFallbackWarned.add(jsAsset)) {
-        HotPatchLog.warn(
+        JsLog.warn(
           '网络补丁缺少模块 "$jsAsset"（$localRoot），'
           '已回退内置 asset —— 新旧产物可能混装',
         );
@@ -990,7 +990,7 @@ $out
         }
       })();
     ''', 'invalidateModules');
-    HotPatchLog.log('已清空内存中的 JS 模块与运行时标记（$count 个模块）');
+    JsLog.log('已清空内存中的 JS 模块与运行时标记（$count 个模块）');
   }
 
   /// 并发加载等待表：同 jsAsset 正在加载时，后续调用者 await 对应
@@ -1012,19 +1012,19 @@ $out
   /// 不存在」处理：留一条日志 + 回填 null 收尾。
   void _dispatch(dynamic raw) {
     if (raw is! Map) {
-      HotPatchLog.warn('桥消息不是对象（${raw.runtimeType}），已丢弃');
+      JsLog.warn('桥消息不是对象（${raw.runtimeType}），已丢弃');
       return;
     }
     final channel = raw['ch']?.toString() ?? '';
     if (channel.isEmpty) {
-      HotPatchLog.warn('桥消息缺少 ch 字段，已丢弃: $raw');
+      JsLog.warn('桥消息缺少 ch 字段，已丢弃: $raw');
       return;
     }
     final handler = globalMessageHandlers[channel];
     if (handler == null) {
       final data = raw['data'];
       final id = data is Map ? data['id']?.toString() : null;
-      HotPatchLog.warn('未注册的宿主通道 "$channel"（id=${id ?? '-'}）：回填 null 收尾');
+      JsLog.warn('未注册的宿主通道 "$channel"（id=${id ?? '-'}）：回填 null 收尾');
       _settleHost(id, value: null);
       return;
     }

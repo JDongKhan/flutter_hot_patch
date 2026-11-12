@@ -15,7 +15,7 @@ final class NativeToastHostMethods extends BuiltinHostMethodGroup {
   void _nativeToast({String? message}) {
     final ctx = JsRuntimeManager.navigatorKey?.currentContext;
     if (ctx == null || !ctx.mounted) {
-      HotPatchLog.warn(
+      JsLog.warn(
         'nativeToast ignored: navigatorKey not configured / context not ready',
       );
       return;

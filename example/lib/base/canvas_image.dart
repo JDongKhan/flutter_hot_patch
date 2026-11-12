@@ -20,13 +20,13 @@ class CanvasImage {
 
   /// 加载图片（http(s) → [NetworkImage]，其余按 assets 路径处理）。
   ///
-  /// assets 统一走 [HotPatchAssets.bundle]：补丁包内同名图片优先，缺失回退
+  /// assets 统一走 [JsAssets.bundle]：补丁包内同名图片优先，缺失回退
   /// Flutter assets。
   @HostInjected('loadCanvasImage')
   static Future<ui.Image> load(String url) {
     final ImageProvider provider = url.startsWith('http')
         ? NetworkImage(url)
-        : AssetImage(url, bundle: HotPatchAssets.bundle);
+        : AssetImage(url, bundle: JsAssets.bundle);
     final completer = Completer<ui.Image>();
     final stream = provider.resolve(ImageConfiguration.empty);
     late final ImageStreamListener listener;

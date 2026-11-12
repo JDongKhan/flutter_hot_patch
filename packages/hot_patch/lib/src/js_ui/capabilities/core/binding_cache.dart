@@ -257,8 +257,8 @@ class JsBindingCache {
     final e = b?.remove(id);
     if (e == null) return;
     if (b!.isEmpty) _buckets.remove(bucket);
-    if (kDebugMode && HotPatchLog.verboseCache) {
-      HotPatchLog.debug('[binding] - ${e.describe()}');
+    if (kDebugMode && JsLog.verboseCache) {
+      JsLog.debug('[binding] - ${e.describe()}');
     }
   }
 
@@ -336,12 +336,12 @@ class JsBindingCache {
 
   /// 打一条全景日志（仅 debug）。
   void dumpLog() {
-    if (kDebugMode) HotPatchLog.log(dump());
+    if (kDebugMode) JsLog.log(dump());
   }
 
   void _logPut(JsBinding<Object> e) {
-    if (!kDebugMode || !HotPatchLog.verboseCache) return;
-    HotPatchLog.log('[binding] + ${e.describe()}');
+    if (!kDebugMode || !JsLog.verboseCache) return;
+    JsLog.log('[binding] + ${e.describe()}');
   }
 
   /// ---- 统计切面挂载点（debug-only）----

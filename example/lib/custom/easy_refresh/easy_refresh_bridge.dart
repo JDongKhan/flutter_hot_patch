@@ -137,7 +137,7 @@ _callArgs(List<Object?> args) {
         duration ??= d;
       } else if (a['__handle'] != null) {
         // scrollController: 未支持——不静默吞掉，给出明确日志。
-        HotPatchLog.warn(
+        JsLog.warn(
           'EasyRefreshController: scrollController 实参未支持（已忽略）：$a',
         );
       }

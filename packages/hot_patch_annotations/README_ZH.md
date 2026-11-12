@@ -75,7 +75,7 @@ class _CounterState extends State<Counter> {
 
 - 生成器跳过该组件（不生成 JS 类、不注册）；
 - build 树里引用它的位置保留**具体类型名**的结点（无 import、不降级成统一的 `Component`
-  占位），运行时由业务方在 `main()` 里注册的宿主实现渲染（`widgetRegistry.register(名字, 构造)`）。
+  占位），运行时由业务方在 `main()` 里注册的宿主实现渲染（`jsWidgetRegistry.register(名字, 构造)`）。
 
 适用场景：组件逻辑复杂 / 含原生依赖，不适合翻译成 JS，希望线上热更时始终使用原生实现。
 

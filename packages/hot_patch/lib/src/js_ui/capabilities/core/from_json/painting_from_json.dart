@@ -252,7 +252,7 @@ DecorationImage? decorationImageFromJson(Map<String, dynamic>? json) {
   return DecorationImage(
     image: source.startsWith('http')
         ? NetworkImage(source)
-        : AssetImage(source, bundle: HotPatchAssets.bundle) as ImageProvider,
+        : AssetImage(source, bundle: JsAssets.bundle) as ImageProvider,
     fit: boxFitFromJson(json['fit']),
   );
 }

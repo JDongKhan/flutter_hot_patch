@@ -29,7 +29,7 @@ class PatchEntry {
 ///   - 生成器跳过该组件（不生成该类的翻译产物、不注册）；
 ///   - build 树里引用它的位置仍按 Dart 一比一翻译成 `new 类型名({...})`，
 ///     `isComponent: true` 时由**声明它的源文件产物**里的同名包装类承接，运行时
-///     由业务方在 `main()` 里注册的宿主实现渲染（`widgetRegistry.register`）。
+///     由业务方在 `main()` 里注册的宿主实现渲染（`jsWidgetRegistry.register`）。
 ///
 /// 适用场景：某组件逻辑复杂/含原生依赖、不适合翻译成 JS，希望线上
 /// 热更时始终使用原生实现；或临时下线某个嵌套组件的 JS 版本。
@@ -37,7 +37,7 @@ class PatchEntry {
 /// [isComponent] 决定使用方怎么翻译：
 ///   - `true`：不翻译该类，但在声明它的源文件产物里生成同名**包装类**
 ///     （`class 类名 extends Component {}`，构造即宿主元素），使用方仍按 Dart
-///     一比一翻译成 `new 类名({...})`，宿主按 `widgetRegistry.register` 注册的
+///     一比一翻译成 `new 类名({...})`，宿主按 `jsWidgetRegistry.register` 注册的
 ///     宿主实现渲染；
 ///   - `false`（默认）：整类忽略——不翻译、不生成任何类，使用方引用它的结点
 ///     直接丢弃（构建期告警）。

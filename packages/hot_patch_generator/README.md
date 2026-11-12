@@ -151,7 +151,7 @@ Callbacks, sizes and counts always keep their Dart parameter names (`itemBuilder
 `itemCount`).
 
 Widgets with no host renderer are not dropped silently: the output keeps their **concrete type name**, and
-at runtime the host resolves it via `widgetRegistry.register(name, build)`. The callback receives the full
+at runtime the host resolves it via `jsWidgetRegistry.register(name, build)`. The callback receives the full
 `JsRenderContext` (`props` + `children` slots + `invoke`), so native implementations can render child widgets
 and forward events.
 

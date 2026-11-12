@@ -24,9 +24,9 @@ class AppLogRecord {
 ///
 /// 采集口径（两路都汇到这里）：
 ///   - Dart 侧 `print`：由 [installLogCapture] 中的 zone `print` 钩子捕获；
-///   - Dart 侧 `debugPrint`（Flutter 框架 / hot_patch 的 HotPatchLog 都走它）：
+///   - Dart 侧 `debugPrint`（Flutter 框架 / hot_patch 的 JsLog 都走它）：
 ///     由 [installLogCapture] 统一改写成 `print`，进入同一条通道；
-///   - JS 侧 `print` / `debugPrint`：经运行时 `log` 通道 → HotPatchLog → `debugPrint`，
+///   - JS 侧 `print` / `debugPrint`：经运行时 `log` 通道 → JsLog → `debugPrint`，
 ///     同样落到上面的通道，无需额外接线。
 class AppLogCenter extends ChangeNotifier {
   AppLogCenter._();

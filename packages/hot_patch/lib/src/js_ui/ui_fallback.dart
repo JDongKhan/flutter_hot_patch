@@ -45,5 +45,5 @@ void _reportOnce(String reason) {
   if (_reported.contains(reason)) return;
   if (_reported.length >= 512) _reported.clear();
   _reported.add(reason);
-  HotPatchLog.error('js_ui: $reason');
+  JsLog.error('js_ui: $reason');
 }

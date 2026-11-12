@@ -13,7 +13,7 @@ final class JsUiCommitHostMethods extends BuiltinHostMethodGroup {
     final store = jsUiPageStores[key];
     if (store == null) {
       // 页面已销毁 / 还没登记：补丁无处可落，整批丢弃。属于正常竞态，但必须留痕。
-      HotPatchLog.debug(
+      JsLog.debug(
         'jsuiCommit: 页面 "$key" 已销毁或未登记，'
         '${ops.length} 条补丁已丢弃',
       );

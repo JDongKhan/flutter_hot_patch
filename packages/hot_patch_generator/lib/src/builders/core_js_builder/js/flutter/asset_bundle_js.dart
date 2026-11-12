@@ -2,7 +2,7 @@
 //
 // Dart 的 `rootBundle` 是 `dart:services` 的顶层对象，产物里按名保持
 // `rootBundle.loadString(key)`。宿主实现按「补丁包内同名资源优先，缺失或
-// 读取失败回退 Flutter assets」解析（见 HotPatchAssets）。
+// 读取失败回退 Flutter assets」解析（见 JsAssets）。
 //
 // 只登记当前运行时真正承接的成员：`loadString` 返回 `Future<String>`，
 // 与 Dart 同名方法同义。`load` / `loadStructuredData` 尚未实现，写入源码时

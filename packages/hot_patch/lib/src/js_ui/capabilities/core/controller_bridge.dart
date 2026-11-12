@@ -97,7 +97,7 @@ class JsControllerBridge<T extends Object> {
               final key = '$id|$op';
               if (_warnedMissingOps.length >= 256) _warnedMissingOps.clear();
               if (_warnedMissingOps.add(key)) {
-                HotPatchLog.warn('$_kind: 句柄 $id 尚未创建或已释放，'
+                JsLog.warn('$_kind: 句柄 $id 尚未创建或已释放，'
                     'op "$op" 已丢弃（按 null 返回）');
               }
               return null;

@@ -19,7 +19,7 @@ import 'grammar/grammar_showcase.dart';
 import 'third_party/third_party_showcase.dart';
 
 void main() {
-  // 日志捕获：print / debugPrint（含 Flutter 框架与 hot_patch 的 HotPatchLog，
+  // 日志捕获：print / debugPrint（含 Flutter 框架与 hot_patch 的 JsLog，
   // JS 侧 print 最终也走这里）全部收进 AppLogCenter，供右侧日志控制台展示。
   installLogCapture();
   runZoned(() {
@@ -137,7 +137,7 @@ class DemoListPage extends StatelessWidget {
           // 嵌套组件（BannerCard）与公开 widget（LabeledDivider）都由生成器
           // 连带翻译进同一产物（JS 类引用），运行时直接 new，使用方无需声明依赖。
           // 只有标了 @PatchIgnore 的私有组件走宿主注册（私有类跨库不可见），
-          // 其等价实现见 main() 里的 widgetRegistry.register。
+          // 其等价实现见 main() 里的 jsWidgetRegistry.register。
         ),
       ),
     ),

@@ -42,12 +42,12 @@ MaterialType? _materialTypeFromJson(Object? v) => switch ('$v') {
 /// 源字符串 → 图片 provider：`FadeInImage.assetNetwork` 的 placeholder 永远是
 /// 资源路径（[forceAsset]），其余按 `http` 前缀判网络 / 资源（与 `Image` 一致）。
 ///
-/// 资源图统一走 [HotPatchAssets.bundle]：补丁包内同名图片优先，缺失回退
+/// 资源图统一走 [JsAssets.bundle]：补丁包内同名图片优先，缺失回退
 /// Flutter assets。
 ImageProvider _imageProvider(String source, {bool forceAsset = false}) =>
     (!forceAsset && source.startsWith('http'))
     ? NetworkImage(source)
-    : AssetImage(source, bundle: HotPatchAssets.bundle);
+    : AssetImage(source, bundle: JsAssets.bundle);
 
 /// 注册 Flutter 基础视觉组件的宿主侧映射。
 ///
@@ -566,7 +566,7 @@ void registerBaseWidgets(JsWidgetRegistry r) {
         : Image.asset(
             source,
             key: c.key,
-            bundle: HotPatchAssets.bundle,
+            bundle: JsAssets.bundle,
             width: width,
             height: height,
             fit: fit,

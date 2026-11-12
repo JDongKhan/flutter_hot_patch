@@ -4,7 +4,7 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// assets 覆盖 demo：
 ///
-/// - 图片走 `Image.asset`（宿主统一经 `HotPatchAssets.bundle` 解析）；
+/// - 图片走 `Image.asset`（宿主统一经 `JsAssets.bundle` 解析）；
 /// - JSON 走 `rootBundle.loadString`（JS 侧同名顶层对象 → 宿主 `assetLoadString`）。
 ///
 /// 补丁包（`patch.zip`）根下放同路径文件即可覆盖：

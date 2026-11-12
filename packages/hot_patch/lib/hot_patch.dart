@@ -30,8 +30,8 @@ export 'src/js_ui/capabilities/dialog/dialog_api.dart';
 export 'src/js_ui/js_ui_widget.dart';
 export 'src/js_ui/js_widget_registry.dart';
 // 全局宿主 widget 注册表：外部自定义组件（含保留具体类型名的纯原生结点）
-// 在 main() 里 `widgetRegistry.register(type, build)` 即可，与内建能力同表。
-export 'src/js_ui/capabilities/js_ui_capabilities.dart' show widgetRegistry;
+// 在 main() 里 `jsWidgetRegistry.register(type, build)` 即可，与内建能力同表。
+export 'src/js_ui/capabilities/js_ui_capabilities.dart' show jsWidgetRegistry;
 export 'src/js_ui/capabilities/js_ui_library.dart';
 // 自定义能力（App 侧实现，如三方包的 Controller 句柄桥）需要的通用构件：
 // 句柄桥基类。

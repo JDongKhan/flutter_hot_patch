@@ -61,7 +61,7 @@ InlineSpan? textSpanFromJson(Object? v) {
   if (v == null) return null;
   if (v is String) return TextSpan(text: v);
   if (v is! Map) {
-    HotPatchLog.warn('[RichText] 不支持的 InlineSpan 节点已跳过：$v');
+    JsLog.warn('[RichText] 不支持的 InlineSpan 节点已跳过：$v');
     return null;
   }
   final rawChildren = v['children'];
