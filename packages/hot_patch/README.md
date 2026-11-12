@@ -66,8 +66,15 @@ JsUiWidget(
   // The component name and the entry are both passed as query parameters
   // (convenient for operations configuration).
   jsAsset: 'assets/patch/components/counter.js?component=Counter',
+  // Developer-provided defaults; same-named business query params win.
+  params: const {'title': 'Counter'},
 )
 ```
+
+`params` and the business query parameters in `jsAsset` are merged into the
+component props: `component` / `entry` only locate the entry, every other query
+parameter is passed as a prop and takes precedence over `params` (query values
+are always strings).
 
 `jsAsset` accepts three kinds of patch source:
 

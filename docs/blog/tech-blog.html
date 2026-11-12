@@ -2495,7 +2495,8 @@ bash start_patch_server.sh
   <span class="c">// query 会被剥离；component 必须与入口模块注册的类名一致</span>
   jsAsset: <span class="s">'http://127.0.0.1:8765/patch/patch.zip'</span>
            <span class="s">'?component=HelloCard&amp;entry=components/hello_component.js'</span>,
-  props: <span class="k">const</span> {<span class="s">'title'</span>: <span class="s">'Hot patch'</span>},
+  <span class="c">// 除 component / entry 外的 query 会覆盖同名 params</span>
+  params: <span class="k">const</span> {<span class="s">'title'</span>: <span class="s">'Hot patch'</span>},
   showBuildTime: <span class="k">true</span>,  <span class="c">// 右上角显示补丁打包时间，不参与命中测试</span>
 )</pre>
         </div>

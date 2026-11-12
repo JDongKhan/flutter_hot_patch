@@ -666,7 +666,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final js = JsUiWidget(jsAsset: _jsAsset, props: _jsProps());
+    final js = JsUiWidget(jsAsset: _jsAsset, params: _jsProps());
 
     // 窄屏（手机）默认 JS 热更版，右上角开关切原生组件对照；宽屏始终双栏对比。
     final narrow = MediaQuery.sizeOf(context).width < 700;

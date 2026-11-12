@@ -59,8 +59,13 @@ JS 引擎基线：ES2020 + 部分 ES2021（iOS 15+ JSC / Android QuickJS 2021-03
 JsUiWidget(
   // 组件名与入口都走 query 参数（方便运营配置）
   jsAsset: 'assets/patch/components/counter.js?component=Counter',
+  // 开发固定参数；jsAsset query 里的同名业务参数会覆盖它
+  params: const {'title': 'Counter'},
 )
 ```
+
+`params` 与 `jsAsset` query 中的业务参数会合并成组件 props：`component` / `entry`
+只用于定位入口，其余 query 全部进入 props 且优先于 `params`（URL 值按字符串处理）。
 
 `jsAsset` 支持三种补丁源：
 

@@ -4,7 +4,7 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 /// StatelessWidget 详情：无 State、无 createState，build 在 widget 类自身
 /// （生成器自动识别：有 createState 用 State 类承载 build，否则用 widget
 /// 类自身）。构造参数（title / subtitle / badge）→ JS constructor(args)，
-/// 由 JsUiWidget.props 传入。
+/// 由 JsUiWidget.params 传入。
 @PatchEntry('StatelessCard')
 class StatelessCard extends StatelessWidget {
   const StatelessCard({

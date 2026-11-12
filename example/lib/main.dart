@@ -299,7 +299,7 @@ class _PropsUpdateDemoState extends State<_PropsUpdateDemo> {
         Expanded(
           child: JsUiWidget(
             jsAsset: _patchUrl('StatelessCard', 'components/stateless_card.js'),
-            props: {
+            params: {
               'title': 'Props 更新 #$_revision',
               'subtitle': '宿主重建 JsUiWidget，新 props 已下发到 JS',
               'badge': 'R$_revision',

@@ -70,7 +70,7 @@
         <p>业务 App 的 <code>pubspec.yaml</code>：</p>
         <pre><code>dependencies:
   hot_patch_annotations: ^0.1.5   # 注解
-  hot_patch: ^0.4.1               # 运行时
+  hot_patch: ^0.4.2               # 运行时
 
 dev_dependencies:
   hot_patch_generator: ^0.13.0    # 构建期翻译（dev 依赖，不进包体）
@@ -127,18 +127,28 @@ class _CounterState extends State&lt;Counter&gt; {
       <div class="step-num">4</div>
       <div>
         <h3>声明资源并加载</h3>
-        <p>Flutter 的<strong>目录 asset 声明不递归</strong>，需要在 <code>pubspec.yaml</code> 里逐目录 / 逐文件声明：</p>
-        <pre><code>flutter:
-  assets:
-    - patch/components/
-    - patch/flutter.js</code></pre>
+        <p>线上一般把 <code>patch.zip</code> 放到 CDN / 静态服务，让 <code>jsAsset</code> 直接指向 zip；运行时下载解压后，按与本地 asset 相同的规则加载入口模块。</p>
         <pre><code>JsUiWidget(
-  // 剥离 query 后按 asset 路径加载；component 即 @PatchEntry 的组件名
-  jsAsset: 'assets/patch/components/counter.js?component=Counter',
+  jsAsset:
+      'https://cdn.example.com/hot_patch/patch.zip'
+      '?component=Counter'                // 必填：入口模块里注册的组件类名
+      '&amp;entry=components/counter.js'     // 可选：zip 内入口 JS 的相对路径
+      '&amp;lang=zh_CN',                     // 运营配置：进入业务 props
+  params: const {'theme': 'dark'},        // 开发固定参数
 )</code></pre>
+        <ul>
+          <li><code>component</code> 必填；<code>entry</code> 不传时按组件名反查入口模块。</li>
+          <li>除 <code>component</code> / <code>entry</code> 外的 query 都会合并进 props；同一 key 以 <strong>URL 为准</strong>，URL 值按字符串处理。</li>
+          <li>zip 根目录保持产物布局：<code>manifest.json</code>、<code>runtime.js</code>、<code>flutter.js</code>、<code>components/…</code>、<code>packages/…</code>。</li>
+          <li>补丁更新只需替换服务端 zip，App 无需发版；运行时按 <code>manifest.json</code> 的身份版本判断是否需要切换。</li>
+        </ul>
+        <div class="callout tip">
+          <span class="ico">i</span>
+          <div><p>本地联调同样走 HTTP：<code>http://127.0.0.1:8765/patch/patch.zip?component=Counter&amp;entry=components/counter.js</code>，产物不必打进 App。</p></div>
+        </div>
         <div class="callout warn">
           <span class="ico">!</span>
-          <div><p>asset 场景组件名同样必填。目录漏声明是最常见的「运行时加载不到产物」原因。</p></div>
+          <div><p>只有必须随包内置时才用本地 asset：Flutter 的目录 asset 声明<strong>不递归</strong>，需在 <code>pubspec.yaml</code> 的 <code>assets:</code> 里逐目录 / 逐文件列出，然后写 <code>jsAsset: 'assets/patch/components/counter.js?component=Counter'</code>。目录漏声明是最常见的「加载不到产物」原因。</p></div>
         </div>
       </div>
     </div>
@@ -164,15 +174,15 @@ class _CounterState extends State&lt;Counter&gt; {
       <thead><tr><th>参数</th><th>说明</th></tr></thead>
       <tbody>
         <tr><td><code>jsAsset</code></td><td>补丁入口 JS（asset 路径或 <code>http(s)://...zip</code>），必填</td></tr>
-        <tr><td><code>props</code></td><td>传给组件构造的 props，如 <code>{'title': 'xxx'}</code></td></tr>
+        <tr><td><code>params</code></td><td>传给组件构造的业务参数；与 <code>jsAsset</code> query 合并，同 key 以 URL 为准</td></tr>
         <tr><td><code>showBuildTime</code></td><td>调试开关：右上角显示补丁打包时间（取自 <code>manifest.json</code>），不参与命中测试</td></tr>
       </tbody>
     </table>
 
     <h3>三种补丁源</h3>
     <ul>
-      <li><code>assets/patch/...js</code>：随包资源；</li>
-      <li><code>http(s)://host/xxx.zip?component=Name&amp;entry=path/to.js</code>：网络补丁包，下载解压后与 asset 走同一加载逻辑；<code>component</code> 必填，<code>entry</code> 可选（zip 内入口 JS 相对路径）；</li>
+      <li><code>http(s)://host/xxx.zip?component=Name&amp;entry=path/to.js</code>：网络补丁包（生产默认），下载解压后与 asset 走同一加载逻辑；<code>component</code> 必填，<code>entry</code> 可选（zip 内入口 JS 相对路径）；</li>
+      <li><code>assets/patch/...js</code>：随包资源（仅本地 / 离线场景）；</li>
       <li>同一 JS 运行时里其它已加载模块。</li>
     </ul>
 

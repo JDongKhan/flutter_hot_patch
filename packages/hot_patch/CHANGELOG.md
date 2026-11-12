@@ -5,6 +5,7 @@
 **加法：`MethodChannel` 宿主通道；无破坏性协议变更。**
 
 - **公开 API 统一 `Js` 前缀（破坏性 Dart API 变更，产物协议不变）**：`HotPatchLog` / `HotPatchLogRecord` / `HotPatchLogSink` / `HotPatchLevel` / `HotPatchAssets` / `HotPatchAssetBundle` 分别更名为 `JsLog` / `JsLogRecord` / `JsLogSink` / `JsLogLevel` / `JsAssets` / `JsAssetBundle`；全局 `widgetRegistry` 更名为 `jsWidgetRegistry`。不保留别名与兼容 shim，接入方按新名迁移。命名约定见 `docs/项目架构文档.md` §5.1。
+- **`JsUiWidget.props` → `params`，并与 `jsAsset` query 合并**：最终 props = `jsAsset` query 中的业务参数覆盖 `params`；`component` / `entry` 只用于定位入口，不进入业务 props；query 值一律按字符串处理。运营可直接在 URL 上覆盖同名参数，无需重新发版。
 
 - **宿主 JSON 还原统一为 `JsRenderContext` 扩展方法**：`capabilities/**/*_from_json.dart` 的还原入口改为按 props 键取值的短名扩展，例如 `c.color('color')`、`c.textStyle('style')`、`c.edgeInsets('padding')`、`c.boxDecoration('decoration')`。`hot_patch.dart` 统一导出这些扩展，外部自定义 register 只需 `import 'package:hot_patch/hot_patch.dart'`，不必再 import 具体实现文件。嵌套结构、绘制指令、弹层 options、Controller 实参等无渲染上下文的路径继续复用底层 `*FromJson` 函数（`curveFromJson` / `durationFromJson` 保持导出）。
 - **`edgeInsets` 统一为单一可空方法**：删除 `nullableEdgeInsets` / 非空 `edgeInsets` 两个入口，只保留返回 `EdgeInsets?` 的 `edgeInsetsFromJson` / `c.edgeInsets(key)`；缺省返回 null 以保留组件/主题默认值。需要非空的位置由调用方按 Flutter 官方默认兜底（如 `?? EdgeInsets.zero`）。

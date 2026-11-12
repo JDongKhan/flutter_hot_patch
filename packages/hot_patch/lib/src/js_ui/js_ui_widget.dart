@@ -41,22 +41,28 @@ import 'ui_fallback.dart';
 /// query 参数：
 /// - `component`（必填）：入口模块里注册进 `__modules` 的组件类名
 /// - `entry`（可选）：zip 内入口 .js 的相对路径；不指定则按 component 反查
+/// - 其余 key：作为业务参数进入组件 props（URL 配置优先于 [params]）
 class JsUiWidget extends StatefulWidget {
   const JsUiWidget({
     super.key,
     required this.jsAsset,
-    this.props = const {},
+    this.params = const {},
     this.showBuildTime = false,
   });
 
   /// 补丁入口 JS（asset 路径或 http(s):// zip 网络补丁）。
   ///
   /// 网络补丁时可带 query 参数：`?component=Xxx&entry=path/to.js`——
-  /// 下载 zip 前会剥离 query，只用 path 部分请求。
+  /// 下载 zip 前会剥离 query，只用 path 部分请求。除 `component` / `entry`
+  /// 外的 query 参数会合并进组件 props。
   final String jsAsset;
 
-  /// 传给组件构造的 props（如 `MyStatelessCard(title: ...)` 的 {title: ...}）。
-  final Map<String, dynamic> props;
+  /// 传给组件构造的业务参数（如 `MyStatelessCard(title: ...)` 的 {title: ...}）。
+  ///
+  /// 最终 props = `jsAsset` query 中的业务参数覆盖本字段：同一 key 以 URL
+  /// 配置为准（运营可不改包覆盖），URL 值一律按字符串处理。`component` /
+  /// `entry` 是路由参数，不进入 props。
+  final Map<String, dynamic> params;
 
   /// 调试开关：在**右上角**显示所加载补丁的打包时间（取自包根 `manifest.json`
   /// 的 `buildTime`，由 build_runner 产出、随 zip 分发）。
@@ -94,7 +100,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
   bool _loading = true;
 
   /// JS 侧根是否已经 mount 成功。props 更新只在 mount 之后下发；
-  /// 首次 mount 会读取调用时刻最新的 `widget.props`。
+  /// 首次 mount 会读取调用时刻最新的 `widget.params`。
   bool _jsMounted = false;
 
   /// 所加载补丁的打包时间（包根 `manifest.json` 的 `buildTime`）；无清单为 null。
@@ -167,6 +173,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
       }
       // 剥离 query 后的真实资源地址（zip 下载 / asset 加载用）。
       final realAsset = uri.replace(queryParameters: {}).toString();
+      // 业务参数：jsAsset query（component / entry 除外）覆盖调用方 params。
+      final props = _mergedProps(uri, widget.params);
 
       // 网络补丁包：http(s):// → 下载 zip 解压到本地根；入口改为包内虚拟路径，
       // 其余（递归 import / 实例化 / 相对路径）与 asset 场景一致。
@@ -250,7 +258,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       _manager.evaluateOrThrow(
         '__jsui.mountRoot(${jsonEncode(_pageKey)}, ${jsonEncode(_entryJsAsset)}, '
         '${jsonEncode(component)}, '
-        '${jsonEncode(jsonEncode(widget.props))});',
+        '${jsonEncode(jsonEncode(props))});',
         where: 'mountRoot',
       );
       _jsMounted = true;
@@ -274,6 +282,22 @@ class JsUiWidgetState extends State<JsUiWidget> {
   /// 本次 boot 是否已被页面级重载 / 卸载取代：取代后不再落任何状态。
   bool _bootSuperseded(int token) => !mounted || token != _bootToken;
 
+  /// 合并业务参数：jsAsset query 覆盖调用方 [JsUiWidget.params]。
+  ///
+  /// `component` / `entry` 只用于定位入口，不进入业务 props；query 值统一按
+  /// 字符串处理（不做 bool / 数字猜测），需要类型转换时由组件自行处理。
+  static Map<String, dynamic> _mergedProps(
+    Uri uri,
+    Map<String, dynamic> params,
+  ) {
+    return {
+      ...params,
+      for (final entry in uri.queryParameters.entries)
+        if (entry.key != 'component' && entry.key != 'entry')
+          entry.key: entry.value,
+    };
+  }
+
   @override
   void didUpdateWidget(covariant JsUiWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -285,12 +309,14 @@ class JsUiWidgetState extends State<JsUiWidget> {
       );
       return;
     }
-    // 首次 mount 尚未完成时无需下发：mount 会读取此刻最新的 widget.props。
+    // 首次 mount 尚未完成时无需下发：mount 会读取此刻最新的 params。
     if (!_jsMounted) return;
     try {
+      final uri = Uri.parse(widget.jsAsset);
+      final props = _mergedProps(uri, widget.params);
       _manager.evaluate(
         '__jsui.updateProps(${jsonEncode(_pageKey)}, '
-        '${jsonEncode(jsonEncode(widget.props))});',
+        '${jsonEncode(jsonEncode(props))});',
       );
     } catch (e, s) {
       JsLog.error(
