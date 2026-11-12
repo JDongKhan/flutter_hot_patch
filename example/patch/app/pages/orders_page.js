@@ -6,22 +6,11 @@ import { OrdersVm } from '../vm/orders_vm.js';
 import { Order } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
+import { CountdownText } from '../widgets/countdown_text.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, Duration, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, MainAxisSize, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Timer, Wrap } from '../../flutter.js';
+import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, MainAxisSize, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Wrap } from '../../flutter.js';
 import { ChangeNotifierProvider } from '../../packages/provider.js';
-
-const _countdownText = (sec) => { const safe = ((sec < 0) ? 0 : sec);
-  const h = Math.trunc(safe / 3600);
-  const m = Math.trunc((__mod(safe, 3600)) / 60);
-  const s = __mod(safe, 60);
-  const mm = ((m < 10) ? "0" + m : "" + m);
-  const ss = ((s < 10) ? "0" + s : "" + s);
-  if ((h > 0)) {
-    const hh = ((h < 10) ? "0" + h : "" + h);
-    return hh + ":" + mm + ":" + ss;
-  }
-  return mm + ":" + ss; };
 
 // 组件 OrdersPage
 export class OrdersPage extends StatelessWidget {
@@ -45,23 +34,6 @@ export class OrdersPage extends StatelessWidget {
 export class OrdersView extends StatefulWidget {
   constructor(args) {
     super(args);
-    this._tick = 0;
-    this._lastStatus = "";
-    this._countdownTimer = null;
-  }
-  initState() {
-    super.initState();
-    this._countdownTimer = Timer.periodic({duration: new Duration({seconds: 1}), callback: (timer) => { if ((!!this.__unmounted)) {
-          return;
-        }
-        this.setState(() => {
-          this._tick += 1;
-        }); }});
-  }
-  dispose() {
-    this._countdownTimer?.cancel();
-    this._countdownTimer = null;
-    super.dispose();
   }
   _statusColor(status) {
     return (() => { switch (status) {
@@ -78,17 +50,12 @@ export class OrdersView extends StatefulWidget {
     return new _OrderCard({
       "order": o,
       "statusColor": this._statusColor(o.status),
-      "remainSec": (o.remainSec - this._tick),
       "onOpen": () => AppRouter.openOrder(o.no)
     });
   }
   build(context) {
     const vm = context.watch({ typeArguments: {"T": "OrdersVm"} });
     const feed = vm.feed;
-    if ((this._lastStatus !== vm.status)) {
-      this._lastStatus = vm.status;
-      this._tick = 0;
-    }
     if ((__nn(feed) == null)) {
       const error = vm.feedError;
       if ((__nn(error) != null)) {
@@ -219,7 +186,6 @@ export class _OrderCard extends StatelessWidget {
   __applyProps(args) {
     this.order = (args && args.order !== undefined) ? args.order : null;
     this.statusColor = (args && args.statusColor !== undefined) ? args.statusColor : null;
-    this.remainSec = (args && args.remainSec !== undefined) ? args.remainSec : 0;
     this.onOpen = (args && args.onOpen !== undefined) ? args.onOpen : null;
   }
   build(context) {
@@ -462,16 +428,12 @@ export class _OrderCard extends StatelessWidget {
                     (this.__k25 || (this.__k25 = new SizedBox({
                       "width": 6
                     }))),
-                    new Text({
-                      "style": (this.__k26 || (this.__k26 = new TextStyle({
-                        "color": kPrice,
-                        "fontSize": 13.5,
-                        "fontWeight": FontWeight.w700
-                      }))),
-                      "data": _countdownText(this.remainSec)
+                    new CountdownText({
+                      "deadlineMillis": this.order.deadlineMs,
+                      "color": kPrice
                     }),
-                    (this.__k27 || (this.__k27 = new Spacer({}))),
-                    (this.__k28 || (this.__k28 = new Text({
+                    (this.__k26 || (this.__k26 = new Spacer({}))),
+                    (this.__k27 || (this.__k27 = new Text({
                       "data": "超时自动取消",
                       "style": new TextStyle({
                         "fontSize": 10.5,
@@ -483,7 +445,7 @@ export class _OrderCard extends StatelessWidget {
                   ]
                 })
               })] : [new Padding({
-                "padding": (this.__k29 || (this.__k29 = EdgeInsets.fromLTRB({
+                "padding": (this.__k28 || (this.__k28 = EdgeInsets.fromLTRB({
                   "bottom": 10,
                   "left": 14,
                   "right": 14,
@@ -491,7 +453,7 @@ export class _OrderCard extends StatelessWidget {
                 }))),
                 "child": new Row({
                   "children": [
-                    (this.__k30 || (this.__k30 = new Icon({
+                    (this.__k29 || (this.__k29 = new Icon({
                       "color": new Color({
                         "value": 0xFF8B909A
                       }),
@@ -518,7 +480,7 @@ export class _OrderCard extends StatelessWidget {
                 })
               })]),
             new Padding({
-              "padding": (this.__k29 || (this.__k29 = EdgeInsets.fromLTRB({
+              "padding": (this.__k28 || (this.__k28 = EdgeInsets.fromLTRB({
                 "bottom": 10,
                 "left": 14,
                 "right": 14,
@@ -529,21 +491,21 @@ export class _OrderCard extends StatelessWidget {
                 "children": [
                   new Row({
                     "children": [
-                      (this.__k31 || (this.__k31 = new Icon({
+                      (this.__k30 || (this.__k30 = new Icon({
                         "color": new Color({
                           "value": 0xFF8B909A
                         }),
                         "icon": Icons.location_on_outlined,
                         "size": 14
                       }))),
-                      (this.__k32 || (this.__k32 = new SizedBox({
+                      (this.__k31 || (this.__k31 = new SizedBox({
                         "width": 4
                       }))),
                       new Expanded({
                         "child": new Text({
                           "maxLines": 1,
                           "overflow": TextOverflow.ellipsis,
-                          "style": (this.__k33 || (this.__k33 = new TextStyle({
+                          "style": (this.__k32 || (this.__k32 = new TextStyle({
                             "color": new Color({
                               "value": 0xFF5C6270
                             }),
@@ -554,13 +516,13 @@ export class _OrderCard extends StatelessWidget {
                       })
                     ]
                   }),
-                  (this.__k34 || (this.__k34 = new SizedBox({
+                  (this.__k33 || (this.__k33 = new SizedBox({
                     "height": 4
                   }))),
                   new Text({
                     "maxLines": 1,
                     "overflow": TextOverflow.ellipsis,
-                    "style": (this.__k35 || (this.__k35 = new TextStyle({
+                    "style": (this.__k34 || (this.__k34 = new TextStyle({
                       "color": new Color({
                         "value": 0xFF9AA0AC
                       }),
@@ -578,7 +540,7 @@ export class _OrderCard extends StatelessWidget {
               "height": 1
             }))),
             new Padding({
-              "padding": (this.__k36 || (this.__k36 = EdgeInsets.fromLTRB({
+              "padding": (this.__k35 || (this.__k35 = EdgeInsets.fromLTRB({
                 "bottom": 12,
                 "left": 14,
                 "right": 12,
@@ -586,7 +548,7 @@ export class _OrderCard extends StatelessWidget {
               }))),
               "child": new Row({
                 "children": [
-                  (this.__k37 || (this.__k37 = new Text({
+                  (this.__k36 || (this.__k36 = new Text({
                     "data": "合计 ",
                     "style": new TextStyle({
                       "fontSize": 12.5,
@@ -596,7 +558,7 @@ export class _OrderCard extends StatelessWidget {
                     })
                   }))),
                   new Text({
-                    "style": (this.__k38 || (this.__k38 = new TextStyle({
+                    "style": (this.__k37 || (this.__k37 = new TextStyle({
                       "color": kPrice,
                       "fontSize": 16,
                       "fontWeight": FontWeight.w700
@@ -607,7 +569,7 @@ export class _OrderCard extends StatelessWidget {
                     "width": 6
                   }))),
                   new Text({
-                    "style": (this.__k39 || (this.__k39 = new TextStyle({
+                    "style": (this.__k38 || (this.__k38 = new TextStyle({
                       "color": new Color({
                         "value": 0xFF9AA0AC
                       }),
@@ -615,7 +577,7 @@ export class _OrderCard extends StatelessWidget {
                     }))),
                     "data": "（" + this.order.count + " 件）"
                   }),
-                  (this.__k27 || (this.__k27 = new Spacer({}))),
+                  (this.__k26 || (this.__k26 = new Spacer({}))),
                   ...this._actions(pending)
                 ]
               })
@@ -630,7 +592,7 @@ export class _OrderCard extends StatelessWidget {
       return [new MiniButton({
           "label": "取消订单",
           "onTap": () => AppRouter.toast("已取消订单 " + this.order.no + "（演示）")
-        }), (this.__k40 || (this.__k40 = new SizedBox({
+        }), (this.__k39 || (this.__k39 = new SizedBox({
           "width": 8
         }))), new MiniButton({
           "label": "去支付",
@@ -642,7 +604,7 @@ export class _OrderCard extends StatelessWidget {
       return [new MiniButton({
           "label": "申请退款",
           "onTap": () => AppRouter.toast("已提交退款申请（演示）")
-        }), (this.__k40 || (this.__k40 = new SizedBox({
+        }), (this.__k39 || (this.__k39 = new SizedBox({
           "width": 8
         }))), new MiniButton({
           "label": "提醒发货",
@@ -654,7 +616,7 @@ export class _OrderCard extends StatelessWidget {
       return [new MiniButton({
           "label": "查看物流",
           "onTap": () => AppRouter.toast("包裹运输中（演示）")
-        }), (this.__k40 || (this.__k40 = new SizedBox({
+        }), (this.__k39 || (this.__k39 = new SizedBox({
           "width": 8
         }))), new MiniButton({
           "label": "确认收货",
@@ -665,7 +627,7 @@ export class _OrderCard extends StatelessWidget {
     return [new MiniButton({
         "label": "删除订单",
         "onTap": () => AppRouter.toast("已删除订单（演示）")
-      }), (this.__k40 || (this.__k40 = new SizedBox({
+      }), (this.__k39 || (this.__k39 = new SizedBox({
         "width": 8
       }))), new MiniButton({
         "label": "再次购买",

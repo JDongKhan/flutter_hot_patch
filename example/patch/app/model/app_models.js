@@ -2,6 +2,7 @@
 // 由 hot_patch_generator 从 lib/app/model/app_models.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { DateTime } from '../../flutter.js';
 
 // 模型 Spot
 export class Spot {
@@ -169,6 +170,7 @@ export class Order {
     this.store = (args && args.store !== undefined) ? args.store : '';
     this.tags = (args && args.tags !== undefined) ? args.tags : [];
     this.remainSec = (args && args.remainSec !== undefined) ? args.remainSec : 0;
+    this.deadlineMs = (args && args.deadlineMs !== undefined) ? args.deadlineMs : 0;
     this.deadline = (args && args.deadline !== undefined) ? args.deadline : '';
     this.address = (args && args.address !== undefined) ? args.address : '';
     this.remark = (args && args.remark !== undefined) ? args.remark : '';
@@ -180,6 +182,8 @@ export class Order {
     for (let t of __idx(e, "tags")) {
       tags.add(t);
     }
+    const remainSec = __nn(__idx(e, "remainSec"));
+    const deadlineMs = ((remainSec <= 0) ? 0 : (DateTime.now().millisecondsSinceEpoch + (remainSec * 1000)));
     return new Order({
       "no": e["no"],
       "status": e["status"],
@@ -190,7 +194,8 @@ export class Order {
       "step": e["step"],
       "store": e["store"],
       "tags": tags,
-      "remainSec": e["remainSec"],
+      "remainSec": remainSec,
+      "deadlineMs": deadlineMs,
       "deadline": e["deadline"],
       "address": e["address"],
       "remark": e["remark"],

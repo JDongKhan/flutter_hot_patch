@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.0",
-  "buildTime": "2026-11-12T15:42:03.829606",
+  "buildTime": "2026-11-12T15:51:06.553590",
   "resources": {
     "flutter.js": "28c03b375fb09c751cd60c62651f94578b0e453e40f116d7a1933b124321d553",
     "packages/easy_refresh.js": "7606f91d791306289ebf4d47a37f6b30ac1fcdccbceeea53e6192818c9b09740",
@@ -57,7 +57,7 @@
     "app/vm/community_vm.js": "ad360d8513b2d8114fcaa0441987a2a48936e77e3f32ed329f271c1e15b42127",
     "app/vm/mine_vm.js": "6e905b1656e097887b212809ad02a80bf90e889f86d9ab6ed471e496f9703be7",
     "app/vm/orders_vm.js": "cb36d6cbc3df7ae1f696f406050686a30c468368311dee2c13b60fd86bf107c3",
-    "app/model/app_models.js": "77c309b1cbda1033ee9955e5271a978cae6c289c471f1d052e397c0317837d8d",
+    "app/model/app_models.js": "40d754feadcf2382e29c995a0c2b77e490e7df6bf812f417662d3b6d6aa82cb1",
     "app/floors/promo_floor.js": "383a497f6d6569232593e5ed5d32a8aadebac7626409d381e765da9619261e82",
     "app/floors/floor_status.js": "8155114ea3f9dbbc29b6e00db6d33f188f28e8cf4497dec64dcc1a70bdb7d504",
     "app/floors/banner_floor.js": "174eca120cdea09053be96a4ff1876451162bf3840bc66de81f9833233ee320e",
@@ -65,7 +65,7 @@
     "app/floors/floor_base.js": "c00b39d55fce384cc1d8b48b05d33e43767e0e05d71199eb7e69da4bd601ef7f",
     "app/floors/spot_floor.js": "f716f79c0fc52d2321f37f9a578a679152d38556ae417dc6ac644e335dbed45d",
     "app/service/app_service.js": "1e6ce8a82d39fe320784153f52fecd945714ea7be5d5bad1754e53f22c635293",
-    "app/pages/orders_page.js": "6f33c5231e7a8672a554168b6b2176d2595b578010c84fe3dcd50089d8867444",
+    "app/pages/orders_page.js": "ef6584c843019068004a515b84b8b9c7093452acdfed43f0455a861bd8a11c7c",
     "app/pages/community_page.js": "be38b833b0888b9c273a57925da55d34d9ea9794448c7fe3fe69ea0e7d8423d7",
     "app/pages/home_page.js": "1c4f949a272c364fc083ade2f5b21c8f29304c5b9fb8b7df200fb2d9832b6901",
     "app/pages/mine_page.js": "c3a4dbf962cc53279511390bbe82004c37046922134cf654986cf77d5302a590",
@@ -151,6 +151,7 @@
     "base/tracker.js": "d4664b4ea74e6fae26b5facc2881b1d2e953b7754293ea5ad13a453e443e8a5d",
     "base/web_view.js": "ed4cfc2b46fd3928dbe87a84069b8403ba875aaafa657b1e4cdeae83e9aaaff7",
     "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e",
-    "components/perf_list_page.js": "0f55d264120dc7b3b915c6b6b0541a5c7bc863fcd23fc4622aa9b5a11a2d8ce2"
+    "components/perf_list_page.js": "0f55d264120dc7b3b915c6b6b0541a5c7bc863fcd23fc4622aa9b5a11a2d8ce2",
+    "app/widgets/countdown_text.js": "e4f5a8a78d3ec64d1fdf91011ba92cd96e651af666865d1ac12afae5203bebe7"
   }
 }

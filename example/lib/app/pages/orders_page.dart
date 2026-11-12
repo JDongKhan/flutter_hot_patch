@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../base/app_router.dart';
 import '../model/app_models.dart';
 import '../vm/orders_vm.dart';
+import '../widgets/countdown_text.dart';
 import '../widgets/load_error_view.dart';
 import 'detail_pages.dart';
 
@@ -32,23 +31,6 @@ class OrdersPage extends StatelessWidget {
   }
 }
 
-/// 倒计时文案：秒 → `hh:mm:ss`（不足 1 小时只显示 `mm:ss`）。
-///
-/// 顶层函数（与组件同模块）：JS 产物里就是一个模块内函数，卡片直接调用。
-String _countdownText(int sec) {
-  final int safe = sec < 0 ? 0 : sec;
-  final int h = safe ~/ 3600;
-  final int m = (safe % 3600) ~/ 60;
-  final int s = safe % 60;
-  final String mm = m < 10 ? '0$m' : '$m';
-  final String ss = s < 10 ? '0$s' : '$s';
-  if (h > 0) {
-    final String hh = h < 10 ? '0$h' : '$h';
-    return '$hh:$mm:$ss';
-  }
-  return '$mm:$ss';
-}
-
 /// 订单视图：订阅 [OrdersVm]。
 class OrdersView extends StatefulWidget {
   const OrdersView({super.key});
@@ -58,30 +40,8 @@ class OrdersView extends StatefulWidget {
 }
 
 class _OrdersViewState extends State<OrdersView> {
-  /// 秒表：待付款卡片的倒计时 = 接口下发的 `remainSec` - 本页已过去的秒数。
-  /// 只用一个页面级定时器，不为每张卡片各开一个（100 条时开销可控）。
-  int _tick = 0;
-
-  /// 上一次构建时的状态筛选值：切状态 = 换了一批列表数据，倒计时从头开始。
-  String _lastStatus = '';
-
-  Timer? _countdownTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return;
-      setState(() => _tick += 1);
-    });
-  }
-
-  @override
-  void dispose() {
-    _countdownTimer?.cancel();
-    _countdownTimer = null;
-    super.dispose();
-  }
+  // 倒计时不在页面里：`CountdownText` 自己持定时器、自己 setState，
+  // 页面只在 VM 数据变化时重建，避免 100 条时每秒整页刷一遍。
 
   Color _statusColor(String status) => switch (status) {
     '待付款' => kPrice,
@@ -99,7 +59,6 @@ class _OrdersViewState extends State<OrdersView> {
     return _OrderCard(
       order: o,
       statusColor: _statusColor(o.status),
-      remainSec: o.remainSec - _tick,
       onOpen: () => AppRouter.openOrder(o.no),
     );
   }
@@ -108,11 +67,6 @@ class _OrdersViewState extends State<OrdersView> {
   Widget build(BuildContext context) {
     final vm = context.watch<OrdersVm>();
     final feed = vm.feed;
-    // 切状态后列表会重发：倒计时基准跟着重置，避免沿用上一批数据的秒表。
-    if (_lastStatus != vm.status) {
-      _lastStatus = vm.status;
-      _tick = 0;
-    }
     // 失败后必须退出 loading 态：给出异常信息与重试入口。
     if (feed == null) {
       final error = vm.feedError;
@@ -212,6 +166,7 @@ class _OrdersViewState extends State<OrdersView> {
 }
 
 /// 订单卡：店铺行 / 商品行 / 进度步骤 / 倒计时（或时间文案）/ 地址备注 / 底栏。
+/// 倒计时那行由 [CountdownText] 自己刷新，卡片本身不参与每秒重建。
 ///
 /// 一张卡里刻意堆足信息量（店铺、状态、标签、进度、倒计时、地址、优惠、备注、
 /// 合计、操作按钮），用来观察 JS 侧复杂 item 的构建与滚动表现。
@@ -219,7 +174,6 @@ class _OrderCard extends StatelessWidget {
   const _OrderCard({
     required this.order,
     required this.statusColor,
-    required this.remainSec,
     required this.onOpen,
   });
 
@@ -227,9 +181,6 @@ class _OrderCard extends StatelessWidget {
 
   /// 状态色（由页面按状态映射，卡片不判断业务）。
   final Color statusColor;
-
-  /// 倒计时剩余秒数（已扣除页面秒表；非待付款状态不使用）。
-  final int remainSec;
 
   final VoidCallback onOpen;
 
@@ -425,13 +376,9 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      _countdownText(remainSec),
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: kPrice,
-                      ),
+                    CountdownText(
+                      deadlineMillis: order.deadlineMs,
+                      color: kPrice,
                     ),
                     const Spacer(),
                     const Text(

@@ -202,8 +202,14 @@ class Order {
   /// 商品标签（满减 / 包邮 / 可改期 …），卡片里以胶囊展示。
   final List<String> tags;
 
-  /// 待付款剩余秒数（其它状态为 0）。倒计时由页面按秒递减，模型本身不可变。
+  /// 待付款剩余秒数（其它状态为 0）。接口口径，页面/组件只读不改。
   final int remainSec;
+
+  /// 支付截止的绝对时间（epoch 毫秒），由 [remainSec] 在解析时折算。
+  ///
+  /// 倒计时用绝对时间而不是「剩余秒数」：列表项滚出屏幕再滚回来会重新
+  /// 建组件，只有绝对时间才能保证多次挂载算出的剩余秒一致（不会越滚越新）。
+  final int deadlineMs;
 
   /// 时间文案：待付款是支付截止时间，其它状态是发货 / 送达 / 完成时间。
   final String deadline;
@@ -231,6 +237,7 @@ class Order {
     required this.store,
     required this.tags,
     required this.remainSec,
+    required this.deadlineMs,
     required this.deadline,
     required this.address,
     required this.remark,
@@ -245,6 +252,11 @@ class Order {
     for (final t in e['tags']) {
       tags.add(t);
     }
+    // 绝对截止时间：非待付款（remainSec=0）给 0，卡片不会用到。
+    final int remainSec = e['remainSec'];
+    final int deadlineMs = remainSec <= 0
+        ? 0
+        : DateTime.now().millisecondsSinceEpoch + remainSec * 1000;
     return Order(
       no: e['no'],
       status: e['status'],
@@ -255,7 +267,8 @@ class Order {
       step: e['step'],
       store: e['store'],
       tags: tags,
-      remainSec: e['remainSec'],
+      remainSec: remainSec,
+      deadlineMs: deadlineMs,
       deadline: e['deadline'],
       address: e['address'],
       remark: e['remark'],
