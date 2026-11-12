@@ -1,8 +1,8 @@
 // ===== 能力：ScrollController 代理 =====
 //
-// 与 capabilities/scroll_controller/ 的桥接表同一能力域：JS 片段（代理类）走
-// [jsFragments]，句柄通道走 [ensureChannels]，宿主组件（ListView / GridView /
-// SingleChildScrollView 等）走 [registerWidgets]。
+// 与 capabilities/scroll_controller/ 的桥接表同一能力域：句柄通道走
+// [ensureChannels]，宿主组件（ListView / GridView / SingleChildScrollView 等）
+// 走 [registerWidgets]；JS 代理类随 `patch/flutter.js` 发布。
 import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';
 import 'scroll_controller_bridge.dart';

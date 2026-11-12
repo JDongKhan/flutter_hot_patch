@@ -5,18 +5,15 @@
 // （Key / 各 Controller / BuildContext 代理 / NotificationListener），也包括
 // 新引入的三方库（provider / GetX / Riverpod …）——两者机制完全一致。
 //
-// 一个能力在宿主侧的落点无非三类，本模板各留一个可重写钩子：
-//   1. [jsFragments]      —— 仅**外部库**使用：App 在 runApp 前注册的库，
-//                            片段在 `runtime.js` 之后求值（独立 IIFE，只能
-//                            用全局出口 `__jsui` / `_app_host_`）。内建能力的
-//                            JS 已随产物发布——核心机制写进 `patch/runtime.js`，
-//                            库自己的 API 面写进该包的 `patch/<pkg>.js`
-//                            （生成器 `builders/runtime/js/**`），内建库的该
-//                            钩子为空。
-//   2. [ensureChannels]   —— 幂等登记本能力用到的跨语言句柄 kind，以及把本库的
+// 一个能力在宿主侧的落点分两类，本模板各留一个可重写钩子：
+//   1. [ensureChannels]   —— 幂等登记本能力用到的跨语言句柄 kind，以及把本库的
 //                            `context.<op>(...)` 处理注册进核心的通用缝
 //                            （`registerContextOp`，见 build_context_bridge.dart）；
-//   3. [registerWidgets]  —— 本能力的宿主侧组件映射（`type` → Flutter widget）。
+//   2. [registerWidgets]  —— 本能力的宿主侧组件映射（`type` → Flutter widget）。
+//
+// **JS 侧代码不进本模板**：核心机制写进 `patch/runtime.js`（生成器
+// `builders/runtime/js/**`，随补丁发布）；库自己的 API 面写进该包的
+// `patch/<pkg>.js` 或宿主维护的 `js/<pkg>.js`。
 //
 // **本类刻意没有 context 语义的钩子**：`context.watch/read` 是 provider 那类
 // `extension BuildContextX on BuildContext`，属库自己；JS 侧补丁由宿主维护在
@@ -74,28 +71,6 @@ abstract class JsUiLibrary {
   /// 库标识（幂等去重键、日志用）。
   String get id;
 
-  /// 注入 JS 运行时的片段：**仅供 App 侧注册的外部库**使用。
-  ///
-  /// 内建能力的 JS 已在构建期拼进 `patch/runtime.js`（生成器
-  /// `builders/runtime/js/**`，随补丁发布，修复无需发版），故内建库都返回空。
-  /// 外部库的片段在 runtime.js 之后以独立 IIFE 求值，**不能**再引用核心闭包
-  /// 内部函数（`__inheritElement` / `__getInheritedElement` 等，它们不在全局），只能用
-  /// `__jsui` 与 `_app_host_`；需要核心能力的库应把代码并入运行时产物。
-  List<String> get jsFragments => const [];
-
-  /// 本库**随补丁包发布的独立 JS 模块**（相对补丁根目录的文件名，如
-  /// `'packages/provider.js'`）。
-  ///
-  /// 三方库的 JS 由宿主维护在工程根 `js/<package>.js`，构建时原样拷贝到
-  /// `patch/packages/<package>.js`，库对运行时提出的额外要求（继承结点登记 /
-  /// 扩展方法原型补丁）也写在该模块里。这些模块必须在**任何组件 build 之前**
-  /// 求值；若页面产物 import 了它，就绪点无需重复声明，故由运行时就绪点统一
-  /// 加载（见 `JsRuntimeManager._loadCapabilityModules`）作为兜底。
-  ///
-  /// 能力模块也走 `loadModule`（相对 import 递归、幂等），与组件产物 import
-  /// 同一份文件时只求值一次。
-  List<String> get jsModuleAssets => const [];
-
   /// 幂等登记本库的跨语言句柄 kind（宿主侧句柄注册表）。
   /// 在 JS 组件 mount（即 `new` 本库对象 → `reg(...)`）之前调用一次。
   void ensureChannels() {}
@@ -112,8 +87,7 @@ bool _seeded = false;
 /// 注册一个能力（幂等：同 [JsUiLibrary.id] 只保留首个）。
 ///
 /// 可在 App 的 `main()` 里调用（`runApp` 之前），从而**完全不改 hot_patch**。
-/// 会先注入内建能力，保证内建片段**永远排在外部库之前**——外部库的片段可以
-/// 安全引用内建片段里的东西（如给 `JsBuildContext.prototype` 补方法）。
+/// 会先注入内建能力，保证内建能力永远排在外部库之前。
 void registerJsUiLibrary(JsUiLibrary library) {
   _seedBuiltins();
   for (final l in _libraries) {

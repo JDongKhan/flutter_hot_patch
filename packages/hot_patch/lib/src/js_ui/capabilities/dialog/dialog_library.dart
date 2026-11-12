@@ -189,7 +189,7 @@ void registerDialogWidgets(JsWidgetRegistry r) {
   });
 }
 
-/// 本能力的插件声明（内建：JS 片段随运行时产物发布，故 `jsFragments` 为空）。
+/// 本能力的插件声明（JS 片段随运行时产物发布）。
 class DialogLibrary extends JsUiLibrary {
   const DialogLibrary();
 

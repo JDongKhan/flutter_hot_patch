@@ -11,7 +11,6 @@ import 'package:flutter_js/flutter_js.dart';
 import '../utils/hot_patch_assets.dart';
 import '../utils/js_asset_resolver.dart';
 import '../utils/remote_asset_loader.dart';
-import '../js_ui/capabilities/js_ui_library.dart';
 import '../utils/hot_patch_log.dart';
 
 /// JS 运行时管理器：与底层 [JavascriptRuntime] **一对一**。
@@ -549,31 +548,8 @@ class JsRuntimeManager {
       throw StateError('$asset evaluate failed: $text');
     }
     _jsUiInited = true;
-    _evalExternalLibraryFragments();
     // 详细缓存追踪开关可能在运行时就绪前就被打开：这里补一次同步。
     _applyCacheTrace();
-  }
-
-  /// 加载内建能力随补丁包发布的独立 JS 模块（[JsUiLibrary.jsModuleAssets]）。
-  ///
-  /// 由页面 boot 在 [ensureJsUiRuntime] 之后、入口模块之前调用：能力模块的
-  /// 原型补丁 / 作用域声明必须早于任何组件 build。
-  ///
-  /// **不能**放进 [ensureJsUiRuntime]：后者可能正被某个模块的加载过程调用
-  /// （如 `flutter.js` 的 `loadModule` 内部），而能力模块往往 import 那个正在
-  /// 加载的模块（packages/provider.js → flutter.js），会等自己 → 死锁。
-  ///
-  /// 走 [loadModule] 同一套流程：相对 import 递归、幂等，故与组件产物 import
-  /// 同一份文件时只求值一次。
-  Future<void> loadCapabilityModules({
-    String? localRoot,
-    String? moduleAsset,
-  }) async {
-    for (final library in jsUiLibraries) {
-      for (final name in library.jsModuleAssets) {
-        await loadModule(_assetNear(moduleAsset, name), localRoot: localRoot);
-      }
-    }
   }
 
   /// 运行时产物在补丁根目录下的文件名（与 `patch/<package>.js` 同级）。
@@ -601,20 +577,6 @@ class JsRuntimeManager {
     final i = moduleAsset.lastIndexOf(marker);
     if (i < 0) return fileName;
     return '${moduleAsset.substring(0, i + marker.length)}$fileName';
-  }
-
-  /// App 在 `runApp` 前 `registerJsUiLibrary(...)` 注册的**外部能力**片段。
-  ///
-  /// 内建能力的 JS 已随 `runtime.js` 发布（其 `jsFragments` 为空），这里只处理
-  /// 外部库新增的片段。它们无法再访问核心 IIFE 的闭包内部函数（`__inheritElement`
-  /// 等），只能使用全局出口 `__jsui` / `_app_host_` / `G.__core`；需要内核能力的库
-  /// 应改为随补丁发布（写进 `runtime.js`）。
-  void _evalExternalLibraryFragments() {
-    for (final library in jsUiLibraries) {
-      for (final fragment in library.jsFragments) {
-        _eval('(function () {\n$fragment\n})();', 'library:${library.id}');
-      }
-    }
   }
 
   /// 编译期标志：`kDebugMode` / `kReleaseMode` / `kInJsRuntime` / `Platform.isXxx`，

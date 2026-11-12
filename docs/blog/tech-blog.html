@@ -2256,23 +2256,20 @@ bash start_patch_server.sh
       <div class="meta-strip">
         <span><b>已注册能力库</b> 26</span>
         <span><b>模板</b> JsUiLibrary</span>
-        <span><b>钩子</b> jsFragments / ensureChannels / registerWidgets</span>
+        <span><b>钩子</b> ensureChannels / registerWidgets</span>
         <span><b>目录</b> capabilities/&lt;name&gt;/</span>
         <span><b>核心改动</b> 0</span>
       </div>
       <p class="subtle">下列为能力域地图；完整注册表见 <code>packages/hot_patch/lib/src/js_ui/capabilities/js_ui_library.dart</code> 的 <code>_seedBuiltins</code>。</p>
 
       <h3>接入模板</h3>
-      <p>一个能力在宿主侧的落点无非三类，模板各留一个可重写钩子。内建能力的 JS 已随 <code>patch/runtime.js</code> 发布；外部库还可以在 App 的 <code>main()</code> 里注册自己的 <code>JsUiLibrary</code>，完全不改 <code>hot_patch</code>。</p>
+      <p>一个能力在宿主侧的落点分两类，模板各留一个可重写钩子。内建能力的 JS 已随 <code>patch/runtime.js</code> 发布；外部库也可以在 App 的 <code>main()</code> 里注册自己的 <code>JsUiLibrary</code>，完全不改 <code>hot_patch</code>。</p>
       <div class="code-block" data-lang="dart">
 <pre><span class="k">class</span> <span class="t">MyLibrary</span> <span class="k">extends</span> <span class="t">JsUiLibrary</span> {
   <span class="k">const</span> MyLibrary();
 
   <span class="p">@override</span>
   <span class="t">String</span> <span class="k">get</span> id =&gt; <span class="s">'my-lib'</span>;             <span class="c">// 幂等去重键</span>
-
-  <span class="p">@override</span>
-  <span class="t">List</span>&lt;<span class="t">String</span>&gt; <span class="k">get</span> jsModuleAssets =&gt; [];   <span class="c">// 随补丁发布的独立模块</span>
 
   <span class="p">@override</span>
   <span class="k">void</span> ensureChannels() {                    <span class="c">// 幂等登记句柄 kind / context op</span>
@@ -2285,7 +2282,7 @@ bash start_patch_server.sh
   }
 }</pre>
       </div>
-      <p class="subtle">注册顺序 = <code>ensureChannels</code> / <code>registerWidgets</code> 的遍历顺序。内建能力先注入，外部库的片段可以安全引用内建片段里的东西。</p>
+      <p class="subtle">注册顺序 = <code>ensureChannels</code> / <code>registerWidgets</code> 的遍历顺序。内建能力先注入，外部库随后注册。</p>
 
       <h3>能力库地图</h3>
       <div class="table-wrap">
@@ -2428,7 +2425,6 @@ bash start_patch_server.sh
               <tr><td>构建拷贝</td><td><code>ui_third_party_js</code> 原样拷贝到 <code>patch/packages/&lt;package&gt;.js</code>，无需改 <code>build.yaml</code></td></tr>
               <tr><td>类型归属</td><td>按「类声明所在包 + 该包是否有宿主 JS 模块」自动判定；没有白名单</td></tr>
               <tr><td>缺失处理</td><td>源码用到某三方包的类型但 <code>js/&lt;package&gt;.js</code> 缺失 → <strong>构建期直接报错</strong>，不会留到运行期才暴露</td></tr>
-              <tr><td>运行时就绪</td><td>能力库可用 <code>jsModuleAssets</code> 声明需要在任何组件 build 前求值的模块；运行时统一加载作为兜底</td></tr>
             </tbody>
           </table>
         </div>

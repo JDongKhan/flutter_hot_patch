@@ -90,7 +90,7 @@ import { ChangeNotifierProvider, Consumer } from '../packages/provider.js';</cod
           <td>状态管理 / 无宿主结点</td>
           <td><code>provider</code>、<code>get</code></td>
           <td>把状态与订阅闭环在 JS；需要时登记继承结点 / 全局实例表</td>
-          <td><span class="tag green">无</span>（或仅 <code>jsModuleAssets</code> 声明模块）</td>
+          <td><span class="tag green">无</span></td>
         </tr>
         <tr>
           <td>视觉组件 / 平台能力</td>
@@ -175,13 +175,12 @@ import 'package:visibility_detector/visibility_detector.dart';</code></pre>
   @override
   void registerWidgets(JsWidgetRegistry r) =&gt; registerEasyRefreshWidgets(r);
 }</code></pre>
-        <p>三个钩子各管一段：</p>
+        <p>两个钩子各管一段：</p>
         <table>
           <thead><tr><th>钩子</th><th>用途</th></tr></thead>
           <tbody>
             <tr><td><code>ensureChannels()</code></td><td>幂等登记跨语言句柄 kind（如 Controller）</td></tr>
             <tr><td><code>registerWidgets(r)</code></td><td>登记 <code>type</code> → 真实 Flutter widget</td></tr>
-            <tr><td><code>jsModuleAssets</code></td><td>声明本库随补丁发布的独立 JS 模块（如 <code>packages/provider.js</code>），保证在任何组件 build 之前求值</td></tr>
           </tbody>
         </table>
       </div>
