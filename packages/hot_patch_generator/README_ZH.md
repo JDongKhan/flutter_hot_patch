@@ -113,7 +113,7 @@ targets:
 |---|---|
 | `hostWidgetTypes` | 构建期从运行时源码自动抽取（`hot_patch/lib/src/js_ui/**` 的 `r.register('X', …)`）；决定 `flutter.js` 生成哪些宿主包装类、产物 import 哪些类名。生成器不维护组件表。值对象（装饰 / 条目等）不在此列，它们在 `flutter.js` 值类区是普通类 |
 | `builderFormTypes` | 有 `.builder` / `.separated` 命名构造的类型；为它们生成 JS 代理类（运行时只认 `factory` / `__delegate` 协议，不再有类型白名单） |
-| `lazyChildHostTypes` | 懒容器类型 → 触发懒的 props 键（空 = 无条件懒）。生成期写入 `flutter.js`（包装类 `static __lazy` / `Component.host` 的 lazyRule），由 `Component.__splitHost` 在构造期打 `lazyChildren` 标记；运行时只认元素标记、不认识类型 —— 新增懒容器（含 carousel_slider 这类三方组件）只改这张表并重出产物，运行时代码零改动 |
+| `lazyChildHostTypes` | 懒容器类型 → 触发懒的 props 键（空 = 无条件懒）。只作用于**生成包装类**：生成期写入 `flutter.js`（包装类 `static __lazy` / `Component.host` 的 lazyRule），由 `Component.__splitHost` 在构造期打 `lazyChildren` 标记；运行时只认元素标记、不认识类型。新增 / 调整生成包装类的懒容器只改这张表并重出产物，运行时代码零改动；业务自维护的 `js/<package>.js` 类直接写 `static __lazy`，不受本表影响 |
 
 位置实参按**源码构造签名**自动抽取形参名（`shared/ctor_signatures.dart`）：`Text('hi')` → `{data: 'hi'}`、
 `Image.network(url)` → `{src: url}`。不维护任何按类型的登记表；签名索引不到时构建期告警并丢弃该结点

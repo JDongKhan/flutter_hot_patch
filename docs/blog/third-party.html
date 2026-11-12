@@ -229,10 +229,21 @@ import 'package:visibility_detector/visibility_detector.dart';</code></pre>
     <p>宿主发起、需要等 JS 完成任务的事件（如 EasyRefresh 的 <code>onRefresh</code>）走通用 <code>JsRuntimeManager.invokeAwait(handler)</code>；JS 侧 await 完成后经 <code>jsuiEventResult</code> 回传 token 与结果。这是通用机制，不是某个库专属。</p>
 
     <h3>三方容器与懒加载</h3>
-    <p>如果三方组件是「子项尺寸由容器强制」的容器（如横向 PageView），在 <code>js_class_defs.dart</code> 的 <code>lazyChildHostTypes</code> 登记即可获得懒加载，运行时代码零改动。带 <code>.builder</code> / <code>.separated</code> 形态的容器登记到 <code>builderFormTypes</code>，由生成器产出代理类。</p>
+    <p>三方组件的 JS 类由你在 <code>js/&lt;package&gt;.js</code> 里维护，懒加载也直接在类上声明，<strong>不需要改生成器或 hot_patch</strong>：</p>
+    <pre><code>import { Component } from '../flutter.js';
+
+export class MyCarousel extends Component {
+  static __lazy = true;              // 无条件懒
+  // static __lazy = ['itemExtent'];  // 只有带该 props 时才懒
+}</code></pre>
+    <ul>
+      <li>声明必须落在<strong>宿主元素类</strong>上：继承 <code>Component</code> 且不重写 <code>build</code>，由基类在构造期读取并标记 <code>lazyChildren</code>。</li>
+      <li>如果类重写了 <code>build</code>（逻辑组件），自身不产生宿主元素；应在它创建宿主结点的位置（<code>Component.host(type, props, lazy)</code>）传入 lazy 规则。</li>
+      <li><code>lazyChildHostTypes</code> / <code>builderFormTypes</code> 只作用于<strong>生成器产出的包装类</strong>（内建 SDK 组件、<code>@PatchIgnore(isComponent: true)</code> 的包装类），对 <code>js/&lt;package&gt;.js</code> 里手写的类不生效，也无需登记。</li>
+    </ul>
     <div class="callout warn">
       <span class="ico">!</span>
-      <div><p>不要把按内容量尺寸的容器加进懒加载清单（无 <code>itemExtent</code> 的 <code>ListView</code>、<code>SliverList</code>、<code>ReorderableListView</code>、<code>Column</code>）：零尺寸占位会让视口把所有 item 判为可见，懒加载反而失效。</p></div>
+      <div><p>只有「子项尺寸由容器强制」的容器才能懒（如分页、网格、带 <code>itemExtent</code> 的列表）。按内容量尺寸的容器（无 <code>itemExtent</code> 的 <code>ListView</code>、<code>Column</code> 类）不要设 <code>__lazy</code>：零尺寸占位会让视口把所有 item 判为可见，懒加载反而失效。</p></div>
     </div>
 
     <h2 id="faq">常见问题</h2>

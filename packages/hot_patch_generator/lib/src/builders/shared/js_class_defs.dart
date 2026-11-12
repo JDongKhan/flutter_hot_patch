@@ -151,10 +151,11 @@ const Set<String> valueClassTypes = {'OverlayEntry'};
 
 /// 懒容器类型 → 触发懒的 props 键（空列表 = 无条件懒）。
 ///
-/// **这是懒加载语义的唯一事实源**（构建期配置）：生成器把它写进 `flutter.js`，
-/// 由包装类 `static __lazy` / `Component.host` 的 lazyRule 在构造期打 `lazyChildren` 标记；运行时只认元素标记，不认识任何类型，
-/// 也不维护任何类型表 —— 新增懒容器（包括 carousel_slider 这类三方组件）只改
-/// 这里 + 重出产物，运行时代码零改动。
+/// **这是生成包装类懒加载语义的唯一事实源**（构建期配置）：生成器把它写进
+/// `flutter.js`，由包装类 `static __lazy` / `Component.host` 的 lazyRule 在构造期
+/// 打 `lazyChildren` 标记；运行时只认元素标记，不认识任何类型，也不维护任何
+/// 类型表。业务自维护的 `js/<package>.js` 类不受本表影响，直接在自己的类上写
+/// `static __lazy` 即可。
 ///
 /// **为什么只有一部分容器可以懒**：Flutter 侧只有「子项尺寸由容器强制、
 /// 不由内容决定」的容器，零尺寸占位才是布局中性的（子项可延迟到宿主 inflate

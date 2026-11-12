@@ -2056,7 +2056,7 @@ bash start_patch_server.sh
         </ul>
 
         <h4>懒容器：是否懒只在构建期决定</h4>
-        <p>唯一事实源是生成器的 <code>lazyChildHostTypes</code>。生成器把规则写进 <code>flutter.js</code>：无条件懒用包装类的 <code>static __lazy</code>，条件懒（如带 <code>itemExtent</code> 的 <code>ListView</code>）用 <code>Component.host(..., lazyRule)</code>；<code>Component.__splitHost</code> 在构造期打 <code>lazyChildren: true</code>。运行时只认这个元素标记，不认识具体类型。只有「子项尺寸由容器强制、不由内容决定」的容器才能懒。</p>
+        <p>生成包装类的唯一事实源是生成器的 <code>lazyChildHostTypes</code>。生成器把规则写进 <code>flutter.js</code>：无条件懒用包装类的 <code>static __lazy</code>，条件懒（如带 <code>itemExtent</code> 的 <code>ListView</code>）用 <code>Component.host(..., lazyRule)</code>；<code>Component.__splitHost</code> 在构造期打 <code>lazyChildren: true</code>。运行时只认这个元素标记，不认识具体类型。业务自维护的 <code>js/&lt;package&gt;.js</code> 类直接写 <code>static __lazy</code>，不需要登记这张表。只有「子项尺寸由容器强制、不由内容决定」的容器才能懒。</p>
         <div class="table-wrap">
           <table>
             <thead><tr><th style="width:32%">可以懒</th><th>不要懒</th></tr></thead>
@@ -2435,9 +2435,10 @@ bash start_patch_server.sh
           <div>
             <h4>构建期</h4>
             <ul class="note-list">
-              <li><code>lazyChildHostTypes</code> 是唯一事实源，构建期生成包装类的 <code>static __lazy</code> 或 <code>Component.host</code> 的 lazyRule</li>
-              <li>包装类 / <code>Component.host</code> 按构建期规则，在构造期打 <code>lazyChildren: true</code></li>
-              <li>新增 / 调整懒容器 = 改这一处配置 + 重出产物</li>
+              <li><code>lazyChildHostTypes</code> 是<strong>生成包装类</strong>（内建 SDK / <code>@PatchIgnore</code>）的唯一事实源，构建期写入其 <code>static __lazy</code> 或 <code>Component.host</code> 的 lazyRule</li>
+              <li>业务自维护的 <code>js/&lt;package&gt;.js</code> 直接在类上写 <code>static __lazy</code>，不需要登记生成器配置</li>
+              <li>包装类 / <code>Component.host</code> 按规则在构造期打 <code>lazyChildren: true</code></li>
+              <li>新增 / 调整生成包装类的懒容器 = 改配置 + 重出产物；业务 JS 类只改自己的 <code>static __lazy</code></li>
             </ul>
           </div>
           <div>
