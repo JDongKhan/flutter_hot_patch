@@ -8,6 +8,8 @@
 - **builder 产物统一为 `__builder = {item(slotIndex), slots, ctx}`**：`.separated` 的 `[item, sep, …]` 交替规则由构建期的代理模板折叠进 `item`，槽位总数直接给出 `slots`。运行时只按槽位号调用 `item`，不再认识 `sep`、`count` 或任何数量字段名；数量字段差异仍由 `builderCountPropKeys` 在构建期归一。宿主侧 pull 路径统一渲染槽位序列，不再按 separated 分叉。
 - **业务 / 三方 JS 列表组件接入**：在 `js/<package>.js` 的 `build` 里用 `Component.host('<类型名>', {...props, __pullItems: true, __builder: {item(slotIndex), slots, ctx}})` 产出宿主元素即可接入，数量字段与回调签名由该类自己折叠，无需修改生成器的 `builderCountPropKeys` / `pullChildHostTypes`。
 - **运行时新增 `__jsui.pullSlot` / `__jsui.releaseSlot`**：前者同步返回 `{root, ops}` 并把子树落进宿主 store；后者在宿主 item element dispose 时卸载该槽位，并校验根结点 id（避免快速滚动时旧的 post-frame 回调误删同 index 的新槽位）。`__pulled` 子树随容器卸载递归释放；容器 `slots` 缩小时自动卸载越界槽位。
+- **事件闭包块体与箭头体统一解析**：`element2js._eventFnJs` 的块体分支改为逐条把 `ExpressionStatement` 交给 `eventExpr(..., asStatement: true)`（与箭头体同一套事件解析：项目类静态调用 / `@HostInjected` / 实例成员 / 三方顶层值），其余语句仍走通用语句翻译。修复 `onTap: () { AppRouter.openLogin(); AppRouter.toast('…'); }` 因通用语句翻译的类表为空而被整条丢弃（同一调用放箭头体却正常）。同时 `translateStmtList` / `closureToJs` 增加 `quiet`，回退事件管线前的首次尝试不再输出误导性告警。规则已写入手册第 06 章。
+- **语句级多余告警收敛**：`translateStmtList` 的 `ExpressionStatement` 在语句级翻译失败后回退 `rhsToJs`（与箭头体方法体的兜底一致），仅两者都失败才告警。
 - **`ListView(children: …)` 行为不变**：静态子项不走 `__pullItems`，仍一次性构建。
 
 - **跨包源文件解析容忍新语法诊断**：`shared/source_index.dart` 的 `parseUnitFile` 改为 `parseString(..., throwIfDiagnostics: false)`。它只做声明级索引（类型参数名 / import 可见性），不翻译表达式；此前依赖包使用比 pin 的 analyzer 更新的语法（如 `win32` 的 `macros.dart` 用了 dot-shorthands）会让整个构建直接失败。

@@ -464,6 +464,7 @@ td code{font-size:12px}
     <tr><td><code>((x) =&gt; x)(3)</code> / <code>(f)(x)</code></td><td>同</td><td>AST 是 FunctionExpressionInvocation</td><td><span class="lv lv-ok">直译</span></td><td><code>_fnValueCallJs</code>（位置实参 + 尾参对象）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>a ?? (v) =&gt; v</code></td><td><code>a ?? ((v) =&gt; v)</code></td><td>箭头函数优先级低于二元 / 三目 / <code>??</code></td><td><span class="lv lv-must">必须改写</span> 操作数位置补括号</td><td><code>_fnParen</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td>顶层函数 <code>void foo(int x)</code> / <code>int bar() =&gt; …</code></td><td><code>export const foo = &lt;closure&gt;</code></td><td>顶层函数无类承载</td><td><span class="lv lv-ok">直译</span> 与成员函数共用 <code>_functionParamPlan</code> + <code>closureToJs</code></td><td>同文件 / 跨文件均已支持；跨文件按顶层常量 <code>import { foo }</code>；<code>main</code> 不参与补丁翻译；<code>@HostInjected</code> 顶层函数走 <code>_app_host_.invoke</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>事件闭包块体 <code>onTap: () { A.m(); B.n(); }</code></td><td><code>onTap: () =&gt; { A.m(); B.n(); }</code>（逐条按事件调用解析）</td><td>块体若走通用语句翻译，类表为空，项目类静态调用（<code>AppRouter.x()</code>）会被判为「接收者不可解析」而丢弃；同一调用放箭头体却正常</td><td><span class="lv lv-care">注意</span> 表达式语句复用事件表达式管线（与箭头体同一解析），其余语句仍走通用语句翻译</td><td><code>element2js.dart</code> 的 <code>_eventFnJs</code> 块体分支 + <code>eventExpr</code> 的 <code>asStatement</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
   </tbody>
 </table>
 </div>

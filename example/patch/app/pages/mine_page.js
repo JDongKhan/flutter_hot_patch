@@ -293,7 +293,8 @@ export class MineView extends StatelessWidget {
             "top": 0
           }))),
           "child": new GestureDetector({
-            "onTap": () => AppRouter.toast("已退出登录（演示）"),
+            "onTap": () => { AppRouter.openLogin();
+              AppRouter.toast("已退出登录（演示）"); },
             "child": new Container({
               "height": 46,
               "alignment": Alignment.center,

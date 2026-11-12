@@ -1499,6 +1499,7 @@ String? closureToJs(
   FieldScope scope,
   Map<String, ClassInfo> classes, [
   ExprRenderer? renderer,
+  bool quiet = false,
 ]) {
   // 形参与默认值走全仓库唯一实现：可选位置参数补缺省、具名形参从尾参对象
   // `__o` 解构。默认值是常量表达式，用闭包定义处的作用域翻译。
@@ -1605,6 +1606,7 @@ String? closureToJs(
       bodyScope,
       classes,
       renderer,
+      quiet: quiet,
     );
     if (stmts.trim().isEmpty) return null;
     return '$asyncKw($pjs) => { ${pro}${stmts.trim()} }';
@@ -3383,6 +3385,7 @@ String translateStmtList(
   ExprRenderer? renderer, {
   int depth = 0,
   bool returnsWidget = true,
+  bool quiet = false,
 }) {
   final out = <String>[];
   final ind = '  ' * depth;
@@ -3425,12 +3428,21 @@ String translateStmtList(
       if (t != null) {
         out.add('$ind$t');
       } else {
-        log.warning(
-          '[hot_patch_generator] '
-          '${sourceAt(scope.sourcePath, e)}: 语句无法翻译，已在 JS 产物中'
-          '丢弃：${e.toSource()}'
-          '（原因：${_expressionFailureReason(e, scope, classes)}）',
-        );
+        // 语句级不认的表达式：回退到通用表达式翻译——与箭头体方法（见
+        // ExpressionFunctionBody 分支）的兜底保持一致。缺这一步会让块体闭包里
+        // 的合法调用被丢弃，而同一调用放在箭头体 `() => AppRouter.toast()` 里
+        // 却能正常产出（表现为「写法一改就不生效」）。
+        final v = rhsToJs(e, scope, classes);
+        if (v != null) {
+          out.add('$ind$v;');
+        } else if (!quiet) {
+          log.warning(
+            '[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, e)}: 语句无法翻译，已在 JS 产物中'
+            '丢弃：${e.toSource()}'
+            '（原因：${_expressionFailureReason(e, scope, classes)}）',
+          );
+        }
       }
     } else if (s is VariableDeclarationStatement) {
       // 局部变量声明 `String? name = await X.y();` → `let name = ...;` /

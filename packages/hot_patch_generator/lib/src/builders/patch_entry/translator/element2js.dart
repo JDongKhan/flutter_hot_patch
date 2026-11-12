@@ -1086,7 +1086,7 @@ class ElementTranslateContext implements ExprRenderer {
   /// [scope] 缺省为事件作用域 [_eventScope]；事件闭包的**形参**（`(v) => ...`
   /// 里的 `v`）由调用方经 [FieldScope.withParams] 并入后传入，保证实参里的
   /// 形参名原样落成 JS 标识符。
-  String eventExpr(Expression e, [FieldScope? scope]) {
+  String eventExpr(Expression e, [FieldScope? scope, bool asStatement = false]) {
     final activeScope = scope ?? _eventScope();
     if (e is Identifier) {
       // `widget.<name>`（State 里引用 widget 自身的字段/方法，如
@@ -1104,9 +1104,13 @@ class ElementTranslateContext implements ExprRenderer {
       if (prop != null) return 'this.$prop()';
       return eventOf(e.name);
     }
-    if (e is FunctionExpression) {
-      final inner = functionInner(e);
-      if (inner is MethodInvocation) {
+    // 事件闭包体里的**单条调用语句**（`() { AppRouter.x(); }`）：与箭头体
+    // `() => AppRouter.x()` 共用同一套解析（[asStatement] 直接把调用本身当
+    // 内部调用处理，不再要求外层包一层闭包）。
+    final inner = asStatement
+        ? e
+        : (e is FunctionExpression ? functionInner(e) : null);
+    if (inner is MethodInvocation) {
         // `setState(() {...})`：组件自身的状态更新，不是 @PatchEntry 声明的方法
         // （Dart 的 State.setState 由框架提供）。翻译成 `this.setState(<closure>)`，
         // 运行时基类已提供 setState（见 mini_react_js）。
@@ -1199,7 +1203,6 @@ class ElementTranslateContext implements ExprRenderer {
           return 'this.$prop(${_eventArgsJs(inner.argumentList, activeScope)})';
         }
         return eventOf(method);
-      }
     }
     throw FormatException('事件参数需要直接引用方法（如 onTap: _tap 或 () => _tap()）');
   }
@@ -1228,16 +1231,32 @@ class ElementTranslateContext implements ExprRenderer {
         // 空块体（`onPressed: () {}`）是**合法的空操作事件**：原样产出
         // `() => {}`，不当作翻译失败（否则会误报「事件闭包块体为空」）。
         if (body.block.statements.isEmpty) return '($pjs) => {}';
-        final stmts = translateStmtList(
-          body.block.statements,
-          scope,
-          const {},
-          null,
-        );
-        if (stmts.trim().isEmpty) {
-          throw const FormatException('事件闭包块体为空');
+        // 表达式语句走**事件表达式**翻译（与箭头体同一管线）：事件作用域带
+        // 构建期类表（`modelClassNames` / `@HostInjected` 静态方法），能解析
+        // `AppRouter.openLogin()` 这类项目类静态调用；通用语句翻译的 `classes`
+        // 是空表，会把它们判成「接收者不可解析」而丢弃（同一调用放箭头体却
+        // 正常，表现为「写法一改就不生效」）。
+        final parts = <String>[];
+        for (final st in body.block.statements) {
+          String? line;
+          if (st is ExpressionStatement) {
+            try {
+              line = '${eventExpr(st.expression, scope, true)};';
+            } catch (_) {
+              // 事件管线不认的形态（如纯赋值）：落到下面的通用语句翻译。
+              line = null;
+            }
+          }
+          if (line == null) {
+            final js = translateStmtList([st], scope, const {}, null);
+            if (js.trim().isEmpty) {
+              throw FormatException('事件闭包语句无法翻译：${st.toSource()}');
+            }
+            line = js.trim();
+          }
+          parts.add(line);
         }
-        return '($pjs) => { ${stmts.trim()} }';
+        return '($pjs) => { ${parts.join('\n')} }';
       }
       throw const FormatException('不支持的事件闭包体');
     }
@@ -1719,7 +1738,7 @@ class ElementTranslateContext implements ExprRenderer {
       // 闭包体里可能 return 组件（`builder: (context, o) { ... return Row(...) }`），
       // 与 build 树走同一条管线：属性归一 + import 登记。
       final js = withExprRenderer(
-        () => closureToJs(e, _dataScope(), const {}, this),
+        () => closureToJs(e, _dataScope(), const {}, this, true),
       );
       if (js != null) return js;
       // 通用闭包翻译翻不出的表达式（典型：闭包里是 @HostInjected 静态调用 /
