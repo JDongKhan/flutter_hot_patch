@@ -3,13 +3,20 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// MediaQuery 演示：完整打印 `MediaQuery.of(context)` 的每个字段，
 /// 方便在「原生渲染」与「JS 热更」两种模式下逐项对比取值是否一致；
-/// 同时展示 `MediaQuery.removePadding` 与 `MediaQuery(data: ...)` 的覆盖效果。
+/// 同时展示方向 / 尺寸的常见直接读取、`MediaQuery.removePadding` 与
+/// `MediaQuery(data: ...)` 的覆盖效果。
 @PatchEntry('MediaQueryDetail')
 class MediaQueryDetail extends StatelessWidget {
   const MediaQueryDetail({super.key});
 
+  Widget _line(String s) => Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Text(s, style: const TextStyle(fontSize: 12)),
+      );
+
   @override
   Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -22,6 +29,14 @@ class MediaQueryDetail extends StatelessWidget {
           '下面逐项显示 MediaQuery.of(context) 的全部字段：原生模式与 JS 热更模式各看一次即可对比。',
           style: TextStyle(fontSize: 12, color: Colors.black54),
         ),
+        const SizedBox(height: 8),
+        _line(
+          'orientation：${mq.orientation == Orientation.portrait ? 'portrait' : 'landscape'}',
+        ),
+        _line('size：${mq.size.width.toStringAsFixed(0)} x '
+            '${mq.size.height.toStringAsFixed(0)}'),
+        _line('devicePixelRatio：${mq.devicePixelRatio.toStringAsFixed(2)}'),
+        _line('padding.top：${mq.padding.top.toStringAsFixed(0)}'),
         const SizedBox(height: 8),
         const _MediaQueryDump(label: '外层 MediaQuery.of(context)', accent: Colors.orange),
         const SizedBox(height: 8),

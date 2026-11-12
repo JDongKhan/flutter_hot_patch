@@ -2,41 +2,62 @@
 // 由 hot_patch_generator 从 lib/components/media_query_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MediaQuery, Padding, Radius, Row, SizedBox, StatelessWidget, Text, TextScaler, TextStyle, double } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MediaQuery, Orientation, Padding, Radius, Row, SizedBox, StatelessWidget, Text, TextScaler, TextStyle, double } from '../flutter.js';
 
 // 组件 MediaQueryDetail
 export class MediaQueryDetail extends StatelessWidget {
   constructor(args) {
     super(args);
   }
+  _line(s) {
+    return new Padding({
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.only({
+        "bottom": 2
+      }))),
+      "child": new Text({
+        "style": (this.__k1 || (this.__k1 = new TextStyle({
+          "fontSize": 12
+        }))),
+        "data": s
+      })
+    });
+  }
   build(context) {
+    const mq = MediaQuery.of(context);
     return new Column({
       "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
-        (this.__k0 || (this.__k0 = new Text({
+        (this.__k2 || (this.__k2 = new Text({
           "data": "MediaQuery",
           "style": new TextStyle({
             "fontWeight": FontWeight.bold
           })
         }))),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k3 || (this.__k3 = new SizedBox({
           "height": 4
         }))),
-        (this.__k2 || (this.__k2 = new Text({
+        (this.__k4 || (this.__k4 = new Text({
           "data": "下面逐项显示 MediaQuery.of(context) 的全部字段：原生模式与 JS 热更模式各看一次即可对比。",
           "style": new TextStyle({
             "fontSize": 12,
             "color": Colors.black54
           })
         }))),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 8
         }))),
-        (this.__k4 || (this.__k4 = new _MediaQueryDump({
+        this._line("orientation：" + ((mq.orientation === Orientation.portrait) ? "portrait" : "landscape")),
+        this._line("size：" + mq.size.width.toStringAsFixed(0) + " x " + "" + mq.size.height.toStringAsFixed(0)),
+        this._line("devicePixelRatio：" + mq.devicePixelRatio.toStringAsFixed(2)),
+        this._line("padding.top：" + mq.padding.top.toStringAsFixed(0)),
+        (this.__k5 || (this.__k5 = new SizedBox({
+          "height": 8
+        }))),
+        (this.__k6 || (this.__k6 = new _MediaQueryDump({
           "accent": Colors.orange,
           "label": "外层 MediaQuery.of(context)"
         }))),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 8
         }))),
         new Container({
@@ -47,13 +68,13 @@ export class MediaQueryDetail extends StatelessWidget {
             "removeBottom": true,
             "removeLeft": true,
             "removeRight": true,
-            "child": (this.__k5 || (this.__k5 = new _MediaQueryDump({
+            "child": (this.__k7 || (this.__k7 = new _MediaQueryDump({
               "accent": Colors.teal,
               "label": "removePadding 四边移除"
             })))
           })
         }),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 8
         }))),
         new Container({
@@ -61,32 +82,32 @@ export class MediaQueryDetail extends StatelessWidget {
           "child": MediaQuery.removePadding({
             "context": context,
             "removeTop": true,
-            "child": (this.__k6 || (this.__k6 = new _MediaQueryDump({
+            "child": (this.__k8 || (this.__k8 = new _MediaQueryDump({
               "accent": Colors.indigo,
               "label": "removePadding 仅移除 top"
             })))
           })
         }),
-        (this.__k7 || (this.__k7 = new SizedBox({
+        (this.__k9 || (this.__k9 = new SizedBox({
           "height": 12
         }))),
-        (this.__k8 || (this.__k8 = new Text({
+        (this.__k10 || (this.__k10 = new Text({
           "data": "MediaQuery(data: ...)：覆盖子树读到的数据",
           "style": new TextStyle({
             "fontWeight": FontWeight.bold
           })
         }))),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k3 || (this.__k3 = new SizedBox({
           "height": 4
         }))),
-        (this.__k9 || (this.__k9 = new Text({
+        (this.__k11 || (this.__k11 = new Text({
           "data": "下面这段文字被 MediaQuery 覆盖了 textScaler（1.6x），其余字段沿用外层；下方 dump 里可看到 textScaler 变化。",
           "style": new TextStyle({
             "fontSize": 12,
             "color": Colors.black54
           })
         }))),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 8
         }))),
         new MediaQuery({
