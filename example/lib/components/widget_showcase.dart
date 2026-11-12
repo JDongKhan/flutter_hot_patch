@@ -175,11 +175,17 @@ class WidgetShowcase extends StatelessWidget {
         'Key / ValueKey / ObjectKey / UniqueKey / PageStorageKey / GlobalKey',
         '列表匹配 / 对象身份 / 强制重建 / 滚动位置持久化 / 宿主端量测',
         'KeyDetail',
+        fillPane: true,
       ),
     ]),
     _Group('Sliver 滚动', [
-      _Entry('CustomScrollView', 'Sliver 全家桶整页', 'SliverDetail'),
-      _Entry('GridView', 'GridView 懒加载验证', 'GridDetail'),
+      _Entry(
+        'CustomScrollView',
+        'Sliver 全家桶整页',
+        'SliverDetail',
+        fillPane: true,
+      ),
+      _Entry('GridView', 'GridView 懒加载验证', 'GridDetail', fillPane: true),
       _Entry(
         'NestedScrollView',
         '头部 slivers 与内层 body 联动：pinned 折叠 / floating 浮出',
@@ -189,24 +195,33 @@ class WidgetShowcase extends StatelessWidget {
         'SliverFillViewport',
         '每屏占视口 fraction：切 1.0/0.8/0.5，padEnds 对比',
         'SliverFillViewportDetail',
+        fillPane: true,
       ),
       _Entry(
         'SliverFillRemaining',
         '填满视口剩余高度：hasScrollBody / fillOverscroll / 贴底',
         'SliverFillRemainingDetail',
+        fillPane: true,
       ),
       _Entry(
         'SliverPersistentHeader',
         '滚动折叠 / 浮出的头部：pinned + floating 两个 delegate',
         'SliverPersistentHeaderDetail',
+        fillPane: true,
       ),
     ]),
     _Group('页面骨架', [
-      _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
+      _Entry(
+        'Scaffold / AppBar / Center',
+        '页面级组件：AppBar + body + FAB 整页骨架',
+        'ScaffoldDetail',
+        fillPane: true,
+      ),
       _Entry(
         'Drawer / endDrawer',
-        '抽屉 + AppBar 汉堡按钮（仅 JS 热更版）',
+        '抽屉 + AppBar 汉堡按钮',
         'DrawerDetail',
+        fillPane: true,
       ),
       _Entry(
         'OrientationBuilder / MediaQuery',
@@ -225,8 +240,9 @@ class WidgetShowcase extends StatelessWidget {
       ),
       _Entry(
         'PreferredSize',
-        '自定义顶栏高度：任意子树声明成 PreferredSizeWidget（仅 JS 热更版）',
+        '自定义顶栏高度：任意子树声明成 PreferredSizeWidget',
         'PreferredSizeDetail',
+        fillPane: true,
       ),
       _Entry(
         'RadioGroup',
@@ -285,7 +301,7 @@ class WidgetShowcase extends StatelessWidget {
     _Group('拖拽', [
       _Entry(
         'Draggable / DragTarget',
-        '任意 JS 负载往返、长按拖拽、悬停高亮（仅 JS 热更版）',
+        '任意 JS 负载往返、长按拖拽、悬停高亮',
         'DragDetail',
       ),
     ]),
@@ -387,13 +403,7 @@ class WidgetShowcase extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => WidgetDetailPage(
                     component: e.component,
-                    fullPage:
-                        e.component == 'ScaffoldDetail' ||
-                        e.component == 'DrawerDetail' ||
-                        e.component == 'PreferredSizeDetail' ||
-                        e.component == 'SliverFillViewportDetail' ||
-                        e.component == 'SliverFillRemainingDetail' ||
-                        e.component == 'SliverPersistentHeaderDetail',
+                    fillPane: e.fillPane,
                   ),
                 ),
               ),
@@ -414,26 +424,38 @@ class _Entry {
   final String title;
   final String subtitle;
   final String component;
-  const _Entry(this.title, this.subtitle, this.component);
+
+  /// 详情页对比时外层不再套 [SingleChildScrollView]，组件铺满一栏。
+  /// 用于自带滚动容器的 demo（CustomScrollView / GridView）与 Scaffold 根整页。
+  final bool fillPane;
+
+  const _Entry(
+    this.title,
+    this.subtitle,
+    this.component, {
+    this.fillPane = false,
+  });
 }
 
 /// 详情容器页：原生组件 ↔ JS 热更版本同屏对比。
-/// 页面级组件（fullPage=true，如 Scaffold / Drawer）无法同屏，直接展示 JS 热更版；
-/// Key / CustomScrollView / GridView 这类 Scaffold 根的整页 demo 用定高面板同屏对比。
+///
+/// 普通组件两栏各套滚动容器；[fillPane] 为 true 的整页 demo（自带滚动的
+/// CustomScrollView / GridView、Scaffold 根页面）两栏直接铺满，避免嵌套滚动
+/// 与无界高度。
 ///
 /// 窄屏（手机）默认只显示 JS 热更版，右上角开关可切到原生组件对照。
 class WidgetDetailPage extends StatefulWidget {
   const WidgetDetailPage({
     super.key,
     required this.component,
-    this.fullPage = false,
+    this.fillPane = false,
   });
 
   /// 详情组件名（components 下对应源文件里的 @PatchEntry 类名）。
   final String component;
 
-  /// 页面级组件（Scaffold 等）不比对，直接 JS 热更版全屏展示。
-  final bool fullPage;
+  /// 整页 demo（自带滚动 / Scaffold 根）：对比时外层不加滚动容器，铺满一栏。
+  final bool fillPane;
 
   @override
   State<WidgetDetailPage> createState() => _WidgetDetailPageState();
@@ -533,13 +555,6 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
   };
 
   String get _jsEntry => _jsEntries[widget.component]!;
-
-  /// Scaffold 根的整页 demo：不能塞进滚动容器，但可以放进定高面板同屏对比。
-  static const Set<String> _boundedCompare = {
-    'KeyDetail',
-    'SliverDetail',
-    'GridDetail',
-  };
 
   /// 拼接补丁 URL：component 动态、entry 按源文件，走 query 参数。
   String get _jsAsset =>
@@ -652,7 +667,6 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
   @override
   Widget build(BuildContext context) {
     final js = JsUiWidget(jsAsset: _jsAsset, props: _jsProps());
-    if (widget.fullPage) return js;
 
     // 窄屏（手机）默认 JS 热更版，右上角开关切原生组件对照；宽屏始终双栏对比。
     final narrow = MediaQuery.sizeOf(context).width < 700;
@@ -674,13 +688,13 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // 整页 demo 用定高面板（fill）铺满一栏，其余组件用可滚动容器。
-          final bounded = _boundedCompare.contains(widget.component);
+          // 整页 demo 两栏直接铺满，其余组件各自套滚动容器。
+          final fillPane = widget.fillPane;
           // 只有宽屏才做原生 / JS 双栏对比；手机这类窄屏按开关二选一。
           final wide = constraints.maxWidth >= 700;
           if (!wide) {
-            // 整页 demo 自带 Scaffold，直接铺满 body；套滚动容器会给它无界高度。
-            if (bounded) return _narrowShowJs ? js : _native();
+            // 整页 demo 自带滚动容器 / Scaffold，直接铺满 body；套滚动容器会给它无界高度。
+            if (fillPane) return _narrowShowJs ? js : _native();
             return SingleChildScrollView(child: _narrowShowJs ? js : _native());
           }
 
@@ -711,7 +725,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
             );
           }
 
-          if (bounded) {
+          if (fillPane) {
             // 两栏各自铺满，内部滚动交给组件自己的滚动容器。
             return Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,

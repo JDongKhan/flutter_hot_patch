@@ -43,7 +43,7 @@ JS 引擎基线：ES2020 + 部分 ES2021（iOS 15+ JSC / Android QuickJS 2021-03
    不能依赖同一模块路径的不同版本；不允许另建引擎实例。
 3. **协议主版本必须匹配**。运行时拒绝 `manifest.json` 中 `protocol` 主版本与应用不支持的包；
    `hot_patch` 跨主版本升级后，必须用配套的 `hot_patch_generator` 重新生成补丁。
-4. **渲染受组件 / API 支持矩阵限制**。宿主无 renderer 的 widget 需 `registerNativeComponent(name, build)`
+4. **渲染受组件 / API 支持矩阵限制**。宿主无 renderer 的 widget 需 `widgetRegistry.register(name, build)`
    注册；`Image.memory` / 动态字节、`SnackBar`、`showMenu` / `showSearch` / 日期选择器、`RadioGroup`、
    `Container.transform`、需同步返回值的回调（`DragTarget.onWillAccept*`）、`Theme.of(context)` 取值等
    **均不支持**（完整清单见 [组件支持文档 §6](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/组件支持文档.md)）。未覆盖的 Dart 写法
@@ -96,7 +96,7 @@ JsUiWidget(
   （结点树 / provider / 订阅 / 脏队列），同屏多实例互不影响。注意：**模块注册表
   `__modules` 是运行时全局的**——任一远程包 fresh 会清空全部页面已加载的模块，因此
   两个页面不能依赖同一模块路径的不同版本。
-- **渲染扩展点**：`registerNativeComponent(type, build)` 注册原生 widget 实现，
+- **渲染扩展点**：`widgetRegistry.register(type, build)` 注册宿主 widget 实现，
   全局一次性注册，放在 `runApp` 之前。条目 / 配置类值对象
   （`InputDecoration` / `BottomNavigationBarItem` / `DropdownMenuItem` …）无需登记：
   它们是普通 JS 值类，携带的 Widget 由父 renderer 就地还原。

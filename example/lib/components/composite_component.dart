@@ -39,8 +39,8 @@ class _DashboardCardState extends State<DashboardCard> {
         // 有注解的自定义组件：JS 版递归渲染 BannerCard（含其自身状态）
         const BannerCard(),
         const SizedBox(height: 12),
-        // 私有组件（_ 开头）：@PatchIgnore 退出翻译，运行时由原生注入实现渲染；
-        // 它的 child slot 会原样传给 registerNativeComponent 的 JsRenderContext。
+        // 私有组件（_ 开头）：@PatchIgnore 退出翻译，运行时由宿主注册实现渲染；
+        // 它的 child slot 会原样传给 widgetRegistry 注册回调的 JsRenderContext。
         const _LabeledDivider(
           text: 'private widget',
           child: Text('native child slot'),
@@ -66,14 +66,14 @@ class _DashboardCardState extends State<DashboardCard> {
 /// 这里标 `@PatchIgnore(isComponent: true)` 演示「不参与连带转换」：生成器跳过
 /// 该类的翻译（产物里无该 JS 类），但在它自己的源文件产物里生成同名包装类，
 /// 使用方仍按 Dart 一比一 `new _LabeledDivider({...})` 翻译，
-/// 运行时由业务方在 `main()` 里注册原生实现（registerNativeComponent）渲染。
+/// 运行时由业务方在 `main()` 里注册宿主实现（widgetRegistry.register）渲染。
 @PatchIgnore(isComponent: true)
 class _LabeledDivider extends StatelessWidget {
   const _LabeledDivider({required this.text, this.child});
 
   final String text;
 
-  /// 子组件 slot：验证 registerNativeComponent 能拿到 children。
+  /// 子组件 slot：验证 widgetRegistry 注册回调能拿到 children。
   final Widget? child;
 
   @override

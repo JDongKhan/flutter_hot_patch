@@ -249,8 +249,8 @@ class ElementTranslateContext implements ExprRenderer {
       if (!isClassName(ctorName)) return _exprAsElement(e);
     }
     // 统一翻译：任意构造 → 结点（不查注册表、不区分内建/自定义）。未识别的
-    // 自定义与三方组件同样产出「保留具体类型名」的结点，运行时按需原生注入
-    // （registerNativeComponent）或给出可见占位。
+    // 自定义与三方组件同样产出「保留具体类型名」的结点，运行时按需由宿主
+    // widgetRegistry 注册（widgetRegistry.register）或给出可见占位。
     // 带 import 前缀的类定义在别的产物里（命名空间 import 已登记），不作为
     // 本产物的依赖递归，否则会按裸名把另一个同名的本地类拉进来。
     if (ctor == bareTypeName(ctor)) collectDependency(ctor);

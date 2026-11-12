@@ -48,19 +48,22 @@ void registerAllJsWidgets(JsWidgetRegistry r) {
 ///
 /// 安全性：注册表内容只是「类型名 → builder」——builder 均为**无状态纯函数**
 /// （只读传入的 `JsRenderContext`，不持有任何实例状态），故进程内共享完全等价。
-/// 这与 `registerNativeComponent`（原生注入表）本就是全局一份同因。
 ///
 /// **懒建**：首次访问时构建并**一次性**注册全部内建/能力/三方库组件；因此
-/// `registerJsUiLibrary(...)` 必须在首个 [JsUiWidget] 构造前调用（约定：App 的
-/// `main()` 里、`runApp` 之前，与 `registerHostMethods` / `registerNativeComponent`
-/// 同一位置）。
-final JsWidgetRegistry _jsWidgetRegistry = _createJsWidgetRegistry();
+/// `registerJsUiLibrary(...)` / 外部 `widgetRegistry.register(...)` 必须在首个
+/// [JsUiWidget] 构造前调用（约定：App 的 `main()` 里、`runApp` 之前，与
+/// `registerHostMethods` 同一位置）。
+final JsWidgetRegistry _widgetRegistry = _createWidgetRegistry();
 
-JsWidgetRegistry _createJsWidgetRegistry() {
+JsWidgetRegistry _createWidgetRegistry() {
   final registry = JsWidgetRegistry();
   registerAllJsWidgets(registry);
   return registry;
 }
 
-/// 全局唯一的宿主 widget 注册表（见 [_jsWidgetRegistry]）。
-JsWidgetRegistry get jsWidgetRegistry => _jsWidgetRegistry;
+/// 全局唯一的宿主 widget 注册表（见 [_widgetRegistry]）。
+///
+/// 外部自定义组件（含 `@PatchIgnore` / 无注解私有组件保留的具体类型名结点）
+/// 只需在 App 的 `main()` 里 `widgetRegistry.register(type, (c) => ...)` 注册，
+/// 与内建能力共用同一张表，无需额外的原生组件注入入口。
+JsWidgetRegistry get widgetRegistry => _widgetRegistry;

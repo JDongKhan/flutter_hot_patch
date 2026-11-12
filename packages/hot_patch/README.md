@@ -48,7 +48,7 @@ JS engine baseline: ES2020 + partial ES2021 (iOS 15+ JSC / Android QuickJS 2021-
    major version differs from what the app supports; after upgrading `hot_patch` across a major
    version, patches must be rebuilt with the matching `hot_patch_generator`.
 4. **Rendering is limited to the supported widget / API matrix.** Widgets without a host renderer
-   need `registerNativeComponent(name, build)`; `Image.memory` / dynamic bytes, `SnackBar`,
+   need `widgetRegistry.register(name, build)`; `Image.memory` / dynamic bytes, `SnackBar`,
    `showMenu` / `showSearch` / date pickers, `RadioGroup`, `Container.transform`, synchronous-return
    callbacks (`DragTarget.onWillAccept*`), `Theme.of(context)` value reads etc. are **not supported**
    (full list: [Widget Support Reference §6 (Chinese)](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/组件支持文档.md)). Uncovered Dart syntax fails with a
@@ -106,7 +106,7 @@ The generated JS of the example app can be browsed online:
   do not affect each other. Note that the **module registry (`__modules`) is runtime-global**: a fresh remote
   bundle invalidates loaded modules for every page, so two pages must not depend on different versions of the
   same module path.
-- **Rendering extension point**: `registerNativeComponent(type, build)` for native widget implementations —
+- **Rendering extension point**: `widgetRegistry.register(type, build)` for host widget implementations —
   a global, one-time registration before `runApp`. Item/config value objects (`InputDecoration`,
   `BottomNavigationBarItem`, `DropdownMenuItem`, …) need no registration: they are ordinary JS value classes and
   their nested widgets are materialized in place by the parent renderer.

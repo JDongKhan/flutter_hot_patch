@@ -145,6 +145,14 @@ class JsRenderContext {
     return v == null ? null : '$v';
   }
 
+  /// props 里的数字（number / 数字字符串）→ [num]；无法解析返回 null。
+  num? num_(String key) {
+    final v = props[key];
+    if (v is num) return v;
+    return num.tryParse('$v');
+  }
+
+  /// props 里的数字（number / 数字字符串）→ [double]；无法解析返回 null。
   double? double_(String key) {
     final v = props[key];
     if (v is num) return v.toDouble();
@@ -162,18 +170,21 @@ class JsRenderContext {
     return v is bool ? v : null;
   }
 
-  Map<String, dynamic>? map(String key) {
-    final v = props[key];
-    return v is Map ? v.cast<String, dynamic>() : null;
-  }
+  /// props 里的 map 值 → `Map<String, dynamic>`。
+  ///
+  /// 值可能是普通 JSON map，也可能是**元素描述的具名实参**
+  /// （`{type, props, children}`——生成器把 `BoxDecoration(...)` /
+  /// `ButtonStyle.styleFrom(...)` 这类「构造形态的值」也译成元素结点）。
+  /// 后者取内层 `props`，普通 map 原样返回。
+  Map<String, dynamic>? map(String key) => elementProps(props[key]);
 
-  /// props 里的值可能是**元素描述的具名实参**（`{type, props, children}`）。
-  /// 生成器把 `ButtonStyle(...)`/`InputDecoration(...)` 这类「构造形态的值」
-  /// 也译成了元素结点，此处取它的内层 props。
+  /// 把 props 里的原始值还原成普通 map（元素描述取内层 props）。
+  ///
+  /// 供需要脱离 props 键、直接处理嵌套值的场景复用；非 Map 值出声并忽略。
   Map<String, dynamic>? elementProps(Object? raw) {
     if (raw == null) return null;
     if (raw is! Map) {
-      HotPatchLog.warn('js_ui: 样式/值对象不是 Map（${raw.runtimeType}），已忽略');
+      HotPatchLog.warn('js_ui: props 值不是 Map（${raw.runtimeType}），已忽略');
       return null;
     }
     final inner = raw['props'];
@@ -182,10 +193,6 @@ class JsRenderContext {
     }
     return raw.cast<String, dynamic>();
   }
-
-  /// 样式 map：值可能是 JSON map（`TextStyle(...)`），也可能是元素结点
-  /// （`ElevatedButton.styleFrom(...)` 被当成构造 → `{type, props}`）——后者取内层 props。
-  Map<String, dynamic>? styleMap(String key) => elementProps(props[key]);
 
   /// 单个元素描述（props 里值为 element 的键，或数组里的一项）→ widget。
   ///
@@ -233,7 +240,7 @@ Widget? buildJsElement(Object? raw) {
       : <String, dynamic>{};
   final children = _childrenFromSlots(raw['children']);
 
-  final builder = jsWidgetRegistry.lookup(type) ?? jsWidgetRegistry.fallback;
+  final builder = widgetRegistry.lookup(type) ?? widgetRegistry.fallback;
   if (builder == null) {
     return buildMissingJsWidget(
       type,
@@ -325,56 +332,17 @@ String _elementTypeLabel(Object? raw) {
   return '${raw.runtimeType}';
 }
 
-// ===== 全局原生组件注入表 =====
-
-/// 「无 JS 产物组件」（产物里保留具体类型名、无 JS 类的结点）的原生实现。
-///
-/// 回调收到完整的 [JsRenderContext]：`props` 是普通属性，`children` 是按
-/// Dart 实参原名索引的子树 slot（`child` / `children` / `actions` …），
-/// `invoke` 可把事件句柄回传到 JS。因此原生注入实现可以像正常 Flutter
-/// 组件一样渲染子组件，不再只有 props。
-///
-/// **进程内全局一份**：同一 App 的所有 `JsUiWidget` 实例、所有「无 JS 产物」
-/// 结点共用同一张表，不再随 widget 参数逐层透传。运行时（hot_patch 包）不
-/// import 任何业务类，实现由业务方在 `main()` 里注册（与 [registerHostMethods]
-/// 同一个位置，须在 `runApp` 之前）。
-final Map<String, JsWidgetBuilder> _nativeComponents = {};
-
-/// 注册一个「无 JS 产物组件」的原生实现（如生成器对 `@PatchIgnore` /
-/// 无注解私有组件产出的「保留具体类型名」结点）。
-///
-/// 回调参数是 [JsRenderContext]：`c.props` / `c.children` / `c.invoke`。
-/// 例如：
-/// ```dart
-/// registerNativeComponent('_LabeledDivider', (c) => LabeledDivider(
-///   text: c.str('text') ?? '',
-///   child: c.children['child'] as Widget?,
-/// ));
-/// ```
-///
-/// **重复注册**：后注册覆盖先注册（Map 语义，幂等、不抛错）——同一实现在
-/// 多处重复注册无副作用；但两个**不同实现**注册同一名字会静默覆盖，故这里
-/// 在覆盖时打一条日志。约定：注册只在启动时做一次，不要在 `build()` 里调。
-void registerNativeComponent(String name, JsWidgetBuilder build) {
-  if (_nativeComponents.containsKey(name)) {
-    HotPatchLog.warn('js_ui: 原生组件 "$name" 重复注册，后者覆盖前者');
-  }
-  _nativeComponents[name] = build;
-}
-
 typedef JsWidgetBuilder = Widget Function(JsRenderContext c);
 
 /// 未注册类型元素的**默认 builder**（[JsWidgetRegistry] 的兜底）：
-/// 按元素 type（= 具体组件名）查全局原生注入实现，命中则由其渲染；
-/// 否则给出可见占位（便于定位缺失的翻译/注入）。
+/// 给出可见占位，便于定位缺失的翻译 / 注册。
 ///
 /// 产物里的元素 type 始终是「具体类型名」，故这里不需要任何「Component」
 /// 哨兵类型——「未注册」只表现为 [JsWidgetRegistry.lookup] 未命中。
-Widget _unknownWidgetBuilder(JsRenderContext c) {
-  final native = _nativeComponents[c.type];
-  if (native != null) return native(c);
-  return buildMissingJsWidget(c.type, ((c.children['__items'] as List<Widget>?) ?? const []));
-}
+Widget _unknownWidgetBuilder(JsRenderContext c) => buildMissingJsWidget(
+  c.type,
+  (c.children['__items'] as List<Widget>?) ?? const [],
+);
 
 /// `type -> Flutter widget` 注册表（宿主唯一扩展点）。
 class JsWidgetRegistry {
@@ -384,9 +352,8 @@ class JsWidgetRegistry {
   ///
   /// 关键设计：**产物里的元素 type 永远是「具体类型名」**（生成器不再把不认识
   /// 的组件降级成统一的 'Component' 占位）。因此「某个类型没注册」只表现为
-  /// [lookup] 返回 null —— 走本默认 builder：宿主按类型名找 `registerNativeComponent`
-  /// 注入的原生实现，找不到再给可见占位。这样之后补上该类型的宿主 builder
-  /// 或原生实现时，**同一份产物无需重新生成、协议不变**。
+  /// [lookup] 返回 null —— 走本默认 builder 给出可见占位。之后补上该类型的
+  /// 宿主 builder 即可，**同一份产物无需重新生成、协议不变**。
   JsWidgetBuilder? _fallback = _unknownWidgetBuilder;
 
   void register(String type, JsWidgetBuilder builder) =>
@@ -410,6 +377,6 @@ class JsWidgetRegistry {
   }
 }
 
-/// 元素 type 未注册（既无宿主 builder、也无原生注入实现）时的兜底。
+/// 元素 type 未注册（无宿主 builder）时的兜底。
 Widget buildMissingJsWidget(String type, List<Widget> children) =>
     uiFallback('未注册的宿主 widget 类型 "$type"', children: children);

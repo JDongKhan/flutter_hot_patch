@@ -6,7 +6,9 @@
 
 - **宿主 JSON 还原统一为 `JsRenderContext` 扩展方法**：`capabilities/**/*_from_json.dart` 的还原入口改为按 props 键取值的短名扩展，例如 `c.color('color')`、`c.textStyle('style')`、`c.edgeInsets('padding')`、`c.boxDecoration('decoration')`。`hot_patch.dart` 统一导出这些扩展，外部自定义 register 只需 `import 'package:hot_patch/hot_patch.dart'`，不必再 import 具体实现文件。嵌套结构、绘制指令、弹层 options、Controller 实参等无渲染上下文的路径继续复用底层 `*FromJson` 函数（`curveFromJson` / `durationFromJson` 保持导出）。
 - **`edgeInsets` 统一为单一可空方法**：删除 `nullableEdgeInsets` / 非空 `edgeInsets` 两个入口，只保留返回 `EdgeInsets?` 的 `edgeInsetsFromJson` / `c.edgeInsets(key)`；缺省返回 null 以保留组件/主题默认值。需要非空的位置由调用方按 Flutter 官方默认兜底（如 `?? EdgeInsets.zero`）。
-- **`JsRenderContext.num_` 更名为 `double_`**：该方法返回 `double?`，原名与返回类型不一致；调用点统一改为 `c.double_(key)`。`int_` / `bool_` / `double_` 命名保持一致。
+- **`JsRenderContext` 数值入口区分 `num_` / `double_`**：原 `num_` 实际返回 `double?`，更名为 `double_`（调用点统一 `c.double_(key)`）；同时补回语义正确的 `num? num_(String key)`，返回 JSON 原始数字（当前宿主渲染未用到，作为框架通用入口保留）。`int_` / `bool_` 命名保持一致。
+- **`styleMap` 合并进 `map`**：`map(key)` 现在同时接受普通 JSON map 与元素描述（`{type, props, ...}`，取内层 props），不再保留样式专用入口；`elementProps(Object?)` 作为脱离 props 键的通用原始值入口保留。
+- **移除 `registerNativeComponent` / 原生组件注入表**：纯原生组件统一走 `widgetRegistry.register(type, build)`（与内建能力同一张宿主注册表），未注册类型只给可见占位。全局 `jsWidgetRegistry` 更名为 `widgetRegistry` 并从 `hot_patch.dart` 导出。
 
 - **宿主对象还原不再自带默认值**：JSON → Flutter 值/组件的解析统一以**官方构造器默认值**为准，缺省属性一律不传（`null` = 组件/主题默认），不再用自定义零值覆盖。
   - `Container` / `AnimatedContainer` 的 `padding` / `margin` 改用可空的 `c.edgeInsets`（此前缺省塞 `EdgeInsets.zero`）；

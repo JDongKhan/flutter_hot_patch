@@ -9,7 +9,7 @@ import 'text_from_json.dart';
 
 /// 对外注册 API：按钮样式从 [JsRenderContext] 的 props 按键还原。
 extension JsRenderContextButtonStyle on JsRenderContext {
-  ButtonStyle? buttonStyle(String key) => buttonStyleFromJson(styleMap(key));
+  ButtonStyle? buttonStyle(String key) => buttonStyleFromJson(map(key));
 }
 
 /// JSON → ButtonStyle（null / 空 Map → null，表示用 widget 默认样式）。

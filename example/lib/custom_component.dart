@@ -6,7 +6,7 @@ import 'components/composite_component.dart';
 /// @author jd
 
 void registerAllNativeComponent() {
-  registerNativeComponent(
+  widgetRegistry.register(
     '_LabeledDivider',
     (c) => LabeledDivider(text: c.str('text') ?? '', child: c.children['child'] as Widget?),
   );

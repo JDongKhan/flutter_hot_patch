@@ -128,7 +128,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 运行时是全局单例（所有实例共用一个 JS 引擎），不支持从外部注入。
     _manager = JsRuntimeManager.instance;
     // 宿主 widget 注册表是**进程内单例**（懒建一次性注册全部内建/能力/三方库
-    // 组件，见 js_ui_capabilities 的 jsWidgetRegistry）——不需要、也不由外部传入。
+    // 组件，见 js_ui_capabilities 的 widgetRegistry）——不需要、也不由外部传入。
     registerBuiltinHostMethods();
     _initStore();
     // 能力桥接通道（ScrollController / TextEditingController …）：必须在任何
@@ -675,7 +675,7 @@ Widget _renderStoreNode(
     );
   }
   //lazy组件
-  final builder = jsWidgetRegistry.lookup(node.type);
+  final builder = widgetRegistry.lookup(node.type);
   if (node.props['__lazy'] == true || builder == null) {
     return _JsPlainNodeHost(
       key: declared ?? ValueKey(id),
@@ -1029,14 +1029,14 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
     // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
     // lookup 未命中走单例注册表的默认 builder（原生注入 / 占位）。
     final builder =
-        jsWidgetRegistry.lookup(node.type) ?? jsWidgetRegistry.fallback;
+        widgetRegistry.lookup(node.type) ?? widgetRegistry.fallback;
     if (builder == null) {
       _logUnknownType(node);
       final items =
           (ctx.children['__items'] as List<Widget>?) ?? const <Widget>[];
       return buildMissingJsWidget(node.type, items);
     }
-    if (jsWidgetRegistry.lookup(node.type) == null) {
+    if (widgetRegistry.lookup(node.type) == null) {
       _logUnknownType(node);
     }
     return builder(ctx);

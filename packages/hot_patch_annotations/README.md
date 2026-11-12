@@ -80,7 +80,7 @@ the same output. With this annotation:
 - the generator skips the component (no JS class, no registration);
 - references to it in the build tree keep their **concrete type name** as the node type (no import, no
   degrading to a generic `Component` placeholder); at runtime they are rendered by the native implementation
-  registered by the app in `main()` (`registerNativeComponent(name, constructor)`).
+  registered by the app in `main()` (`widgetRegistry.register(name, constructor)`).
 
 Use it when a component is complex or depends on native code, and you want hot patches to always use the
 native implementation.

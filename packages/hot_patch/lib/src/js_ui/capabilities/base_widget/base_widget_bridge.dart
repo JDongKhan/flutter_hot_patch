@@ -713,7 +713,7 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   // 四种按钮各自独立注册：type 就是构造名原样，事件键 `onPressed`，文案在
   // children 里（普通构造 `child`、`.icon` 是 `icon` + `label` 两个 slot）。
   // `onPressed` 缺失 = 禁用。style 值可能是 JSON map（`ButtonStyle(...)`），
-  // 也可能是元素结点（`XxxButton.styleFrom(...)` 被当成构造）→ styleMap 两种情况都取。
+  // 也可能是元素结点（`XxxButton.styleFrom(...)` 被当成构造）→ map 两种情况都取。
   r.register('ElevatedButton', (c) {
     final onPressed = c.on('onPressed');
     final style = c.buttonStyle('style');
