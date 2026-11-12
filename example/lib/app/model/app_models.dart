@@ -414,6 +414,78 @@ class MineFeed {
   }
 }
 
+/// 用户中心接口（`/app/user`）：个人信息 + 常用功能 + 账号安全。
+///
+/// 「我的」页点击个人信息跳进用户中心，整页数据来自这一个接口。
+class UserProfile {
+  final String nickname;
+  final String phone;
+  final String avatar;
+
+  /// 会员等级名（如「黄金会员」）与成长值文案。
+  final String level;
+  final String levelSub;
+
+  /// 四项资产数字（卡片里并排展示）。
+  final int points;
+  final int coupons;
+  final int favorites;
+  final int footprints;
+
+  /// 常用功能入口：每项 `[emoji, 标题]`。
+  final List<List<String>> services;
+
+  /// 账号与安全行：每项 `[标题, 说明]`。
+  final List<List<String>> security;
+
+  const UserProfile({
+    required this.nickname,
+    required this.phone,
+    required this.avatar,
+    required this.level,
+    required this.levelSub,
+    required this.points,
+    required this.coupons,
+    required this.favorites,
+    required this.footprints,
+    required this.services,
+    required this.security,
+  });
+
+  static UserProfile fromJson(Map e) {
+    // 动态 json 的 List<dynamic> 不能直接赋 List<String>：逐行收窄（与其它模型同口径）。
+    final services = <List<String>>[];
+    for (final row in e['services']) {
+      final cells = <String>[];
+      for (final v in row) {
+        cells.add(v);
+      }
+      services.add(cells);
+    }
+    final security = <List<String>>[];
+    for (final row in e['security']) {
+      final cells = <String>[];
+      for (final v in row) {
+        cells.add(v);
+      }
+      security.add(cells);
+    }
+    return UserProfile(
+      nickname: e['nickname'],
+      phone: e['phone'],
+      avatar: e['avatar'],
+      level: e['level'],
+      levelSub: e['levelSub'],
+      points: e['points'],
+      coupons: e['coupons'],
+      favorites: e['favorites'],
+      footprints: e['footprints'],
+      services: services,
+      security: security,
+    );
+  }
+}
+
 /// 搜索接口返回：热搜词 + 猜你想去。
 class SearchFeed {
   final List<String> hot;

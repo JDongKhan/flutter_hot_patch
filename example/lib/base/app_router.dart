@@ -5,6 +5,7 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import '../app/model/app_models.dart';
 import '../app/pages/detail_pages.dart';
 import '../app/pages/orders_page.dart';
+import '../app/pages/user_center_page.dart';
 import '../app/service/app_service.dart';
 import '../components/hero_target_page.dart';
 import '../components/widget_showcase.dart';
@@ -129,6 +130,15 @@ class AppRouter {
   @HostInjected()
   static Future<void> openLogin() async {
     _push(const LoginPage());
+  }
+
+  /// 打开用户中心（「我的」页点击个人信息进入）。
+  ///
+  /// 页面自带 `Scaffold` 与返回入口（头部渐变块里 `AppRouter.pop()`），
+  /// 这里只负责推入，数据请求由页面自己的 `UserCenterVm` 发起。
+  @HostInjected()
+  static Future<void> openUserCenter() async {
+    _push(const UserCenterPage());
   }
 
   /// 打开订单 tab 对应的页面（「我的」页统计项/菜单入口）。

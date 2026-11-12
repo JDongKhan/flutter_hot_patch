@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.0",
-  "buildTime": "2026-11-12T16:55:48.761002",
+  "buildTime": "2026-11-12T17:18:49.738625",
   "resources": {
     "flutter.js": "a8d101880ff387dda747acccd17e4abcac672cd6b113f1335963d7cce7816e81",
     "packages/easy_refresh.js": "7606f91d791306289ebf4d47a37f6b30ac1fcdccbceeea53e6192818c9b09740",
@@ -57,18 +57,18 @@
     "app/vm/community_vm.js": "ad360d8513b2d8114fcaa0441987a2a48936e77e3f32ed329f271c1e15b42127",
     "app/vm/mine_vm.js": "6e905b1656e097887b212809ad02a80bf90e889f86d9ab6ed471e496f9703be7",
     "app/vm/orders_vm.js": "cb36d6cbc3df7ae1f696f406050686a30c468368311dee2c13b60fd86bf107c3",
-    "app/model/app_models.js": "40d754feadcf2382e29c995a0c2b77e490e7df6bf812f417662d3b6d6aa82cb1",
+    "app/model/app_models.js": "68114ddc44f63c91afbeb17047a08b2db0872b1d7747ff7e59f81000c6341ae9",
     "app/floors/promo_floor.js": "383a497f6d6569232593e5ed5d32a8aadebac7626409d381e765da9619261e82",
     "app/floors/floor_status.js": "8155114ea3f9dbbc29b6e00db6d33f188f28e8cf4497dec64dcc1a70bdb7d504",
     "app/floors/banner_floor.js": "c14028a6f829ce6d7326a98dd39bfe8af711a3dc16b94747b554c1fbf2a3cb06",
     "app/floors/grid_floor.js": "8fc2e339da3610c127f42be89a4bff3c4706b582a022c283c7619331f4f60a85",
     "app/floors/floor_base.js": "c00b39d55fce384cc1d8b48b05d33e43767e0e05d71199eb7e69da4bd601ef7f",
     "app/floors/spot_floor.js": "f716f79c0fc52d2321f37f9a578a679152d38556ae417dc6ac644e335dbed45d",
-    "app/service/app_service.js": "1e6ce8a82d39fe320784153f52fecd945714ea7be5d5bad1754e53f22c635293",
+    "app/service/app_service.js": "45b8c033566d131fbdfc2460dcbc6a05938d7e04e978f502e3035bfa2de8515a",
     "app/pages/orders_page.js": "ef6584c843019068004a515b84b8b9c7093452acdfed43f0455a861bd8a11c7c",
     "app/pages/community_page.js": "be38b833b0888b9c273a57925da55d34d9ea9794448c7fe3fe69ea0e7d8423d7",
     "app/pages/home_page.js": "40d75e37bce0ed675ba0991ff5d1d07685dfa92e49a07b803379f53b7e3f3022",
-    "app/pages/mine_page.js": "c3a4dbf962cc53279511390bbe82004c37046922134cf654986cf77d5302a590",
+    "app/pages/mine_page.js": "b0c2a14d0d9b545a643c7fb7679134f52cb6340ca2ef4486200e782797a2f62b",
     "app/pages/detail_pages.js": "45069c8d6658f4c9df0f01edb8723bf57d319ed690cd95c55c6f50b7fc859008",
     "app/app.js": "ba63460598bc5e11a12087321100d9b50a2fa0ea52ef71a07749e6c382cafead",
     "app/widgets/load_error_view.js": "bca8790fd318105b764b208c34d67b415433fc18283e8d81365f0081389b86af",
@@ -149,9 +149,11 @@
     "model/getx_counter_vm.js": "0f36d9597db6c127d611e2a735f21822e4cdb16f0f9315bf2ab2e778564de09c",
     "base/host_http.js": "52834208a683c9180b829800ed8db9846a73746563b4d7bce6287200c749d5fc",
     "base/canvas_image.js": "903379c7a8a93053d1ed1a9ce65e410e09ff9d70328c170ecedef4b04ffd8623",
-    "base/app_router.js": "49bddfad3670613d57985a623fc85af9f37930a09304b88289a23caca22d6efb",
+    "base/app_router.js": "0462e9de88e952d6f9230236726c6d256bfc18f9884a5a7eea78e8ddbf42f795",
     "base/tracker.js": "d4664b4ea74e6fae26b5facc2881b1d2e953b7754293ea5ad13a453e443e8a5d",
     "base/web_view.js": "ed4cfc2b46fd3928dbe87a84069b8403ba875aaafa657b1e4cdeae83e9aaaff7",
-    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e"
+    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e",
+    "app/vm/user_center_vm.js": "c7a93560f0c7da9a6166489456290cf8ede9a9aa266c3eca3aea92bf86fccc2c",
+    "app/pages/user_center_page.js": "b066ed19b1da0c125423318593dac697e7735fb907bcc133a379922f9b1c6046"
   }
 }

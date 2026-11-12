@@ -332,6 +332,57 @@ export class MineFeed {
   }
 }
 
+// 模型 UserProfile
+export class UserProfile {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.nickname = (args && args.nickname !== undefined) ? args.nickname : '';
+    this.phone = (args && args.phone !== undefined) ? args.phone : '';
+    this.avatar = (args && args.avatar !== undefined) ? args.avatar : '';
+    this.level = (args && args.level !== undefined) ? args.level : '';
+    this.levelSub = (args && args.levelSub !== undefined) ? args.levelSub : '';
+    this.points = (args && args.points !== undefined) ? args.points : 0;
+    this.coupons = (args && args.coupons !== undefined) ? args.coupons : 0;
+    this.favorites = (args && args.favorites !== undefined) ? args.favorites : 0;
+    this.footprints = (args && args.footprints !== undefined) ? args.footprints : 0;
+    this.services = (args && args.services !== undefined) ? args.services : [];
+    this.security = (args && args.security !== undefined) ? args.security : [];
+  }
+  static fromJson(e) {
+    const services = [];
+    for (let row of __idx(e, "services")) {
+      const cells = [];
+      for (let v of row) {
+        cells.add(v);
+      }
+      services.add(cells);
+    }
+    const security = [];
+    for (let row of __idx(e, "security")) {
+      const cells = [];
+      for (let v of row) {
+        cells.add(v);
+      }
+      security.add(cells);
+    }
+    return new UserProfile({
+      "nickname": e["nickname"],
+      "phone": e["phone"],
+      "avatar": e["avatar"],
+      "level": e["level"],
+      "levelSub": e["levelSub"],
+      "points": e["points"],
+      "coupons": e["coupons"],
+      "favorites": e["favorites"],
+      "footprints": e["footprints"],
+      "services": services,
+      "security": security
+    });
+  }
+}
+
 // 模型 SearchFeed
 export class SearchFeed {
   constructor(args) {

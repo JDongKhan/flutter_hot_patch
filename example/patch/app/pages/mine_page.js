@@ -84,7 +84,7 @@ export class MineView extends StatelessWidget {
           "child": new SafeArea({
             "bottom": false,
             "child": new GestureDetector({
-              "onTap": () => AppRouter.openLogin(),
+              "onTap": () => AppRouter.openUserCenter(),
               "child": new Row({
                 "children": [
                   new ClipOval({
@@ -139,7 +139,7 @@ export class MineView extends StatelessWidget {
                               "value": 0xB3FFFFFF
                             })
                           }),
-                          "data": "点击头像可跳转登录页 ›"
+                          "data": "点击进入用户中心 ›"
                         })
                       ]
                     })

@@ -15,6 +15,7 @@ import { AppNotice } from '../model/app_models.js';
 import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
 import { MineFeed } from '../model/app_models.js';
+import { UserProfile } from '../model/app_models.js';
 import { SearchFeed } from '../model/app_models.js';
 import { ResourceFeed } from '../model/app_models.js';
 
@@ -106,6 +107,10 @@ export class AppService {
   async fetchMine() {
     const data = await this._request("/app/mine");
     return MineFeed.fromJson(data);
+  }
+  async fetchUserProfile() {
+    const data = await this._request("/app/user");
+    return UserProfile.fromJson(data);
   }
   async fetchSearch() {
     const data = await this._request("/app/search");

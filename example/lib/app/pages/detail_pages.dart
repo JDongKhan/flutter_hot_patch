@@ -1,6 +1,8 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../base/app_router.dart';
+import '../../base/web_view.dart';
 import '../model/app_models.dart';
 
 /// App 二级页集合（常规 Flutter 页面，无 @PatchEntry 注解）。
@@ -1061,11 +1063,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: const Text('登录', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '登录即代表同意《用户协议》与《隐私政策》',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, color: Color(0xFF8B909A), height: 1.7),
-                ),
+                const _AgreementLine(),
               ],
             ),
           ),
@@ -1417,6 +1415,88 @@ class NotificationsPage extends StatelessWidget {
 /// 宿主 WebView 页面：展示传入 URL 与模拟的 H5 内容。
 /// 由 `WebView.open(url, title)`（lib/base/web_view.dart，@HostInjected）
 /// 从 JS 侧或原生侧推入。
+/// 登录页协议行：富文本（`Text.rich`）实现——正文灰色，两段协议名是蓝色
+/// 下划线、可点的**超链接**，点击各自打开 WebView（当前为模拟页）。
+///
+/// 为什么是 `StatefulWidget`：`TextSpan.recognizer` 需要 `TapGestureRecognizer`
+/// 实例，识别器必须在 `initState` 建、`dispose` 里释放，不能在 `build` 里现造。
+class _AgreementLine extends StatefulWidget {
+  const _AgreementLine({super.key});
+
+  @override
+  State<_AgreementLine> createState() => _AgreementLineState();
+}
+
+class _AgreementLineState extends State<_AgreementLine> {
+  /// 两段协议名各自的点击识别器（span 级点击）。
+  late final TapGestureRecognizer _userAgreementTap;
+  late final TapGestureRecognizer _privacyTap;
+
+  @override
+  void initState() {
+    super.initState();
+    _userAgreementTap = TapGestureRecognizer()..onTap = _openUserAgreement;
+    _privacyTap = TapGestureRecognizer()..onTap = _openPrivacy;
+  }
+
+  @override
+  void dispose() {
+    _userAgreementTap.dispose();
+    _privacyTap.dispose();
+    super.dispose();
+  }
+
+  /// 《用户协议》→ 模拟 WebView。
+  void _openUserAgreement() {
+    WebView.open('https://travel.example.com/user-agreement', '用户协议');
+  }
+
+  /// 《隐私政策》→ 模拟 WebView。
+  void _openPrivacy() {
+    WebView.open('https://travel.example.com/privacy-policy', '隐私政策');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        style: _agreementTextStyle,
+        children: [
+          const TextSpan(text: '登录即代表同意'),
+          TextSpan(
+            text: '《用户协议》',
+            style: _agreementLinkStyle,
+            recognizer: _userAgreementTap,
+          ),
+          const TextSpan(text: '与'),
+          TextSpan(
+            text: '《隐私政策》',
+            style: _agreementLinkStyle,
+            recognizer: _privacyTap,
+          ),
+        ],
+      ),
+      textAlign: TextAlign.center,
+    );
+  }
+}
+
+/// 协议正文样式（与链接同字号同高度，只有颜色/下划线不同）。
+const TextStyle _agreementTextStyle = TextStyle(
+  fontSize: 11,
+  color: Color(0xFF8B909A),
+  height: 1.7,
+);
+
+/// 协议名链接样式：品牌蓝 + 下划线（与浏览器里的超链接观感一致）。
+const TextStyle _agreementLinkStyle = TextStyle(
+  fontSize: 11,
+  height: 1.7,
+  color: kBrand,
+  decoration: TextDecoration.underline,
+  decorationColor: kBrand,
+);
+
 class WebViewPage extends StatelessWidget {
   const WebViewPage({super.key, required this.url, required this.title});
 

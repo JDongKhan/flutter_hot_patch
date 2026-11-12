@@ -77,7 +77,7 @@ class MineView extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: GestureDetector(
-              onTap: () => AppRouter.openLogin(),
+              onTap: () => AppRouter.openUserCenter(),
               child: Row(
                 children: [
                   ClipOval(
@@ -116,7 +116,7 @@ class MineView extends StatelessWidget {
                         ),
                         SizedBox(height: 6),
                         Text(
-                          '点击头像可跳转登录页 ›',
+                          '点击进入用户中心 ›',
                           style: TextStyle(
                             fontSize: 11,
                             color: Color(0xB3FFFFFF),
@@ -236,7 +236,10 @@ class MineView extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
           child: GestureDetector(
-            onTap: () => AppRouter.toast('已退出登录（演示）'),
+            onTap: () {
+                AppRouter.openLogin();
+                AppRouter.toast('已退出登录（演示）');
+              },
             child: Container(
               height: 46,
               alignment: Alignment.center,

@@ -42,6 +42,9 @@ export class AppRouter {
   static async openLogin() {
     return _app_host_.invoke("openLogin", Array.prototype.slice.call(arguments));
   }
+  static async openUserCenter() {
+    return _app_host_.invoke("openUserCenter", Array.prototype.slice.call(arguments));
+  }
   static async openOrders() {
     return _app_host_.invoke("openOrders", Array.prototype.slice.call(arguments));
   }

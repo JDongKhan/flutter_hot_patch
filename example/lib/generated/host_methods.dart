@@ -32,6 +32,7 @@ void registerHostMethods() {
   JsRuntimeManager.registerHostMethod('openResource', AppRouter.openResource);
   JsRuntimeManager.registerHostMethod('openSearch', AppRouter.openSearch);
   JsRuntimeManager.registerHostMethod('openSpot', AppRouter.openSpot);
+  JsRuntimeManager.registerHostMethod('openUserCenter', AppRouter.openUserCenter);
   JsRuntimeManager.registerHostMethod('openWidgetShowcase', AppRouter.openWidgetShowcase);
   JsRuntimeManager.registerHostMethod('pop', AppRouter.pop);
   JsRuntimeManager.registerHostMethod('toast', AppRouter.toast);

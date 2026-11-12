@@ -141,6 +141,12 @@ class AppService {
     return MineFeed.fromJson(data);
   }
 
+  /// 用户中心：个人信息 + 常用功能 + 账号安全（「我的」页点头像进入）。
+  Future<UserProfile> fetchUserProfile() async {
+    final data = await _request('/app/user');
+    return UserProfile.fromJson(data);
+  }
+
   /// 搜索页：热搜词 + 猜你想去（猜你想去复用首页景点）。
   Future<SearchFeed> fetchSearch() async {
     final data = await _request('/app/search');
