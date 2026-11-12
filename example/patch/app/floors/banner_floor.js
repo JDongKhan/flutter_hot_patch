@@ -75,7 +75,7 @@ export class BannerFloorView extends StatelessWidget {
   }
   build(context) {
     const vm = context.watch({ typeArguments: {"T": "BannerFloorVm"} });
-    let height = 250;
+    let height = 300;
     let body = null;
     if (vm.loading) {
       body = new FloorLoadingView({

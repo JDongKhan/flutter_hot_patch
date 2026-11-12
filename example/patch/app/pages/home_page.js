@@ -204,7 +204,7 @@ export class HomeHeader extends StatelessWidget {
         "bottom": 16,
         "left": 16,
         "right": 16,
-        "top": 14
+        "top": 0
       }))),
       "decoration": new BoxDecoration({
         "gradient": new LinearGradient({
