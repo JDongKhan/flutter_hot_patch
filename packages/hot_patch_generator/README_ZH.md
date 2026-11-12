@@ -34,6 +34,7 @@ dart run build_runner build --delete-conflicting-outputs
 | `js/<package>.js`（宿主维护的三方 JS） | `patch/packages/<package>.js` | 三方库 JS 由宿主放在工程根 `js/` 下（文件名 = Dart 包名），`ui_third_party_js` 按文件系统扫描原样拷贝（无需改 `build.yaml`）；业务产物按 `../packages/<package>.js` import |
 | （包根伪资产 `$package$`） | `patch/runtime.js` | 整个 JS 运行时（mini-react / 句柄表 / 各能力片段）**一个文件**，分区用 `// ===== 【n】… =====` 注释隔开。随补丁发布，JS 修复无需发版；内容哈希写进 `G.__jsuiVersion`，哈希变化即原地重建运行时 |
 | （包根伪资产 `$package$`） | `patch/manifest.json` | patch 清单：基本信息 + **产物协议版本**（`protocol`，当前 `0.13.0`）+ 打包时间 + 各 JS 资源的内容 hash。运行时拒绝载荷**主版本**与应用不匹配的包 |
+| （包根伪资产 `$package$`） | `patch/patch.zip` | 补丁归档：`patch/` 下全部文件（生成的 JS + `manifest.json` + 手工放置的静态资源，如 `patch/assets/...`）；排在 `ui_patch_manifest` 之后打包，zip 里始终是最新清单 |
 
 - 按**文件内容 + 引用可达性**分流（与目录无关）：含 `@PatchEntry` 的文件是根文件，产出这些组件；
   否则只有**真的被可达类引用到**的类才产出（模型 / 单例产物，`export class` / `export const`）；
@@ -55,7 +56,8 @@ dart run build_runner build --delete-conflicting-outputs
 
 ## 配置
 
-`ui_widget`（package 模块）与 `patch_entry`（组件/模型产物）**不读任何 options**。
+`ui_widget`（package 模块）、`ui_runtime`（JS 运行时）、`patch_entry`（组件/模型产物）与
+`ui_patch_archive`（`patch/patch.zip` 归档）**不读任何 options**。
 其余两个 builder 的选项均为可选，缺省即开箱可用：
 
 ```yaml
@@ -135,7 +137,7 @@ separatorBuilder: …}`、`Image.network` → `{factory: 'network', src: …}`�
 
 | 目录 / 文件 | 作用 |
 | --- | --- |
-| `lib/builder.dart` | **对外入口**：`build.yaml` 的七个 builder 工厂函数 |
+| `lib/builder.dart` | **对外入口**：`build.yaml` 的八个 builder 工厂函数 |
 | `lib/src/builders/shared/` | 多 builder 共用的基础 |
 | `lib/src/builders/patch_entry/` | `componentBuilder` 全链路：收集（`analysis/`）+ 翻译（`translator/`）+ 产物组装 |
 | `lib/src/builders/ui_widget/`、`ui_host_register/`、`ui_patch_manifest/` | 每个 builder 一个目录 |
@@ -169,6 +171,9 @@ shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
 - `ui_patch_manifest/`：`patch_manifest_builder`（产出 `patch/manifest.json`；靠
   `required_inputs: [".js"]` 排到 `patch_entry` / `ui_widget` 之后的阶段，用
   `findAssets('patch/**.js')` 列出全部 JS 产物逐个算 hash）
+- `ui_patch_archive/`：`patch_archive_builder`（产出 `patch/patch.zip`；靠
+  `required_inputs: [".json"]` 排到 `ui_patch_manifest` 之后，把 `patch/` 下的生成产物与静态资源
+  一起打成归档）
 
 框架的其它包：
 

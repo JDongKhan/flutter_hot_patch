@@ -35,6 +35,7 @@ source file names:
 | `js/<package>.js` (host-maintained third-party JS) | `patch/packages/<package>.js` | Third-party library JS lives in the host project's `js/` directory (file name = Dart package name) and is copied verbatim by `ui_third_party_js` (filesystem scan, no `build.yaml` changes needed). Business outputs import it as `../packages/<package>.js` |
 | (package-root pseudo asset `$package$`) | `patch/runtime.js` | The whole JS runtime (mini-react, handle registry, capability fragments) as one file, sections separated by `// ===== 【n】… =====`. Shipped with the patch, so JS fixes never need an app release. Its content hash is baked into `G.__jsuiVersion`; a new hash rebuilds the runtime in place |
 | (package-root pseudo asset `$package$`) | `patch/manifest.json` | Patch manifest: basic info + **artifact protocol version** (`protocol`, currently `0.13.0`) + build time + content hash of every JS asset. The runtime refuses bundles whose protocol **major** differs from what the app supports |
+| (package-root pseudo asset `$package$`) | `patch/patch.zip` | Patch bundle: everything under `patch/` (generated JS + `manifest.json` + hand-placed static assets such as `patch/assets/...`); repacked after `ui_patch_manifest`, so the zip always carries the latest manifest |
 
 - Splitting is driven by **file content + reference reachability** (not by directory): a file containing
   `@PatchEntry` classes is a root file and emits those components; otherwise only classes actually referenced
@@ -58,8 +59,9 @@ Browse the JS actually generated for the example app online:
 
 ### Configuration
 
-`ui_widget` (package modules), `ui_runtime` (the JS runtime) and `patch_entry` (component/model outputs)
-**read no options**. The options of the remaining two builders are all optional and work out of the box:
+`ui_widget` (package modules), `ui_runtime` (the JS runtime), `patch_entry` (component/model outputs) and
+`ui_patch_archive` (the `patch/patch.zip` archive) **read no options**. The options of the remaining two
+builders are all optional and work out of the box:
 
 ```yaml
 targets:
@@ -159,7 +161,7 @@ This package is organised by function (under `lib/src/`), with acyclic one-way d
 
 | Directory / file | Role |
 | --- | --- |
-| `lib/builder.dart` | **Public entry**: the seven builder factory functions for `build.yaml` |
+| `lib/builder.dart` | **Public entry**: the eight builder factory functions for `build.yaml` |
 | `lib/src/builders/shared/` | Foundations shared by more than one builder |
 | `lib/src/builders/patch_entry/` | The complete `componentBuilder` chain: collection (`analysis/`) + translation (`translator/`) + output assembly |
 | `lib/src/builders/ui_widget/`, `ui_host_register/`, `ui_patch_manifest/` | One directory per builder |
@@ -198,6 +200,9 @@ The other builders are self-contained:
 - `ui_patch_manifest/`: `patch_manifest_builder` (produces `patch/manifest.json`; thanks to
   `required_inputs: [".js"]` it is scheduled after `patch_entry` / `ui_widget` / `ui_runtime`, and uses
   `findAssets('patch/**.js')` to list every JS output and hash each one)
+- `ui_patch_archive/`: `patch_archive_builder` (produces `patch/patch.zip`; thanks to
+  `required_inputs: [".json"]` it is scheduled after `ui_patch_manifest`, and packs every generated output
+  plus the hand-placed static assets under `patch/` into one archive)
 
 Other packages of the framework:
 

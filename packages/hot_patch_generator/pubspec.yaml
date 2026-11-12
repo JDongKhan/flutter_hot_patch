@@ -11,6 +11,8 @@ environment:
 
 dependencies:
   analyzer: ^7.0.0
+  # patch 归档（patch/patch.zip）：ZipEncoder
+  archive: ^3.6.1
   build: ^2.4.1
   # patch 清单（patch/manifest.json）里资源的内容 hash：sha256
   crypto: ^3.0.0

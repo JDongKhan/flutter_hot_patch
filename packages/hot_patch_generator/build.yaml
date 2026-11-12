@@ -129,3 +129,19 @@ builders:
     required_inputs: [".js"]
     auto_apply: dependents
     build_to: source
+
+  # patch 归档 builder：每次 build 把 patch/ 下的全部文件打成 patch/patch.zip
+  # （生成的 JS + manifest.json + 手工放置的静态资源，如 patch/assets/）。
+  #
+  # `required_inputs: [".json"]` 让它排到 ui_patch_manifest **之后**（同阶段读不到
+  # 彼此产物、更早阶段可以），zip 里带的是最新清单；产物清单用
+  # findAssets('patch/**') 列全，新增产物 / 静态资源自动进包，无需维护列表。
+  ui_patch_archive:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["patchArchiveBuilder"]
+    build_extensions:
+      "$package$":
+        - "patch/patch.zip"
+    required_inputs: [".js", ".json"]
+    auto_apply: dependents
+    build_to: source

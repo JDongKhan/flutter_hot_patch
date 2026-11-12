@@ -1,6 +1,6 @@
 /// build_runner 工厂入口（build.yaml 的 builder_factories 指向这里）。
 ///
-/// 本文件是**对外入口**：只声明七个 builder 工厂与它们的默认选项；
+/// 本文件是**对外入口**：只声明八个 builder 工厂与它们的默认选项；
 /// 实现按功能分目录放在 `lib/src/` 下——`src/builders/shared/`（多 builder
 /// 共用基础）、`src/builders/patch_entry/`（componentBuilder 的收集 + 翻译 +
 /// 产物组装全链路）、`src/builders/core_js_builder/`（核心 JS 源码：runtime /
@@ -15,6 +15,7 @@ import 'src/builders/core_js_builder/core_js_builder.dart';
 import 'src/builders/patch_entry/component_builder.dart';
 import 'src/builders/patch_entry/project_module_builder.dart';
 import 'src/builders/ui_host_register/host_register_builder.dart';
+import 'src/builders/ui_patch_archive/patch_archive_builder.dart';
 import 'src/builders/ui_patch_manifest/patch_manifest_builder.dart';
 import 'src/builders/ui_third_party_js/third_party_js_builder.dart';
 import 'src/builders/ui_widget/widget_module_builder.dart';
@@ -108,3 +109,11 @@ Builder patchManifestBuilder(BuilderOptions options) {
     version: version is String && version.isNotEmpty ? version : null,
   );
 }
+
+/// patch 归档 builder 工厂：`ui_patch_archive`。
+///
+/// 把 `patch/` 下的全部文件（生成的 JS、`manifest.json` 与手工放置的静态资源）
+/// 打成 `patch/patch.zip`。它靠 `required_inputs: [".json"]` 被排到
+/// `ui_patch_manifest` **之后**的阶段，从而把最新清单一起打进包。
+/// 本 builder 不读任何 options。
+Builder patchArchiveBuilder(BuilderOptions _) => const PatchArchiveBuilder();

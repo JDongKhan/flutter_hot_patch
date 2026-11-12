@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# 一键启动 patch 静态服务：杀旧进程 → build_runner 重新生成产物 → 打包 zip → 启动 http 服务。
+# 一键启动 patch 静态服务：build_runner 重新生成产物（含 patch.zip 归档）→ 杀旧进程 → 启动 http 服务。
 # 用法：bash start_patch_server.sh
 #
 # 仓库已改为 pub workspace：示例 App 在 example/，其 build_runner 产物落在
 # example/patch/；本脚本仍在仓库根执行，服务端（tool/patch_server.dart）也按
 # 仓库根解析 example/patch/。
+#
+# patch.zip 由生成器的 ui_patch_archive builder 产出，与本脚本无关：直接跑
+# build_runner 就会得到新鲜归档。
 set -euo pipefail
 
 # 脚本在仓库根目录
@@ -16,6 +19,21 @@ PORT="8765"
 EX_DIR="example"
 PATCH_DIR="$EX_DIR/patch"
 
+echo "[start] build_runner 在 $EX_DIR/ 重新生成产物到 $PATCH_DIR/ ..."
+( cd "$EX_DIR" && dart run build_runner build --delete-conflicting-outputs )
+
+if [ ! -d "$PATCH_DIR" ]; then
+  echo "[start] $PATCH_DIR/ 不存在，build_runner 未产出？"
+  exit 1
+fi
+if [ ! -f "$PATCH_DIR/patch.zip" ]; then
+  echo "[start] $PATCH_DIR/patch.zip 不存在，归档 builder 未产出？"
+  exit 1
+fi
+echo "[start] patch.zip 大小：$(du -h "$PATCH_DIR/patch.zip" | cut -f1)"
+
+# 杀进程放在产物就绪之后：旧服务只在这段极短的窗口内不可用，避免构建期间
+# （数秒到数十秒）服务就已挂掉。
 echo "[start] 杀掉旧 patch_server 进程..."
 # pkill 匹配 dart run 父进程，但 dartvm 子进程命令行不含 patch_server.dart——
 # 用 lsof 直接按端口找 PID 杀，更可靠。
@@ -27,19 +45,6 @@ else
 fi
 # 等端口释放
 sleep 0.5
-
-echo "[start] build_runner 在 $EX_DIR/ 重新生成产物到 $PATCH_DIR/ ..."
-( cd "$EX_DIR" && dart run build_runner build --delete-conflicting-outputs )
-
-if [ ! -d "$PATCH_DIR" ]; then
-  echo "[start] $PATCH_DIR/ 不存在，build_runner 未产出？"
-  exit 1
-fi
-
-echo "[start] 重新打包 $PATCH_DIR/patch.zip ..."
-# -x 排除 zip 自身，避免递归打包
-( cd "$PATCH_DIR" && rm -f patch.zip && zip -r -q patch.zip . -x patch.zip )
-echo "[start] patch.zip 大小：$(du -h "$PATCH_DIR/patch.zip" | cut -f1)"
 
 echo "[start] 启动 http 服务 http://$HOST:$PORT/"
 nohup dart run tool/patch_server.dart > /tmp/patch_server.log 2>&1 &
