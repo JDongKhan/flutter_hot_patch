@@ -920,7 +920,7 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln(
         '  __handleOp, __registerHandle, __releaseHandle, __handleObjectOf,',
       )
-      ..writeln('  __createFnHandle, __objectToken, __inheritElement,')
+      ..writeln('  __createFnHandle, __objectToken, __inheritElement, __notifyClients,')
       ..writeln('  __contextOf, __isElement, __isElementList, __descriptorOf,')
       ..writeln(
         '  __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,',

@@ -11,7 +11,7 @@
   - `MediaQueryData` 解析由 `const MediaQueryData()` + 仅对存在的字段 `copyWith`（见上一条）。
   其余 `*_from_json` 助手逐项核对：`BorderSide` / `BoxShadow` / `Border` / `OutlinedBorder` / 渐变 / `BoxConstraints` 的兜底值与官方构造默认一致，可选项均返回 `null`。
 
-- **`MediaQuery` 子树数据变化后重读**：`MediaQuery(data: ...)` / `remove*` 的数据由 JS 声明，其变化不产生平台级事件（`_MediaQueryWatcher` 收不到），此前子树里的 JS 组件会一直停在旧值——典型表现是页面根第一次 build 读到的兜底值经 `MediaQuery(data: MediaQuery.of(context).copyWith(...))` 派发进子树后永不纠正。宿主 renderer 现在在 MediaQuery 内部挂一层 `_MediaQueryRepush`：数据变化（`didChangeDependencies`）后于帧末对已订阅位置执行一次 `_refreshAll`，JS 侧 `__setMediaQuery` 收到新值后标脏重建，第二次 build 即为真值。同时把「该位置上方没有 MediaQuery」从静默改为一次性告警（`_absentLogged`）。
+- **`MediaQuery` 子树数据变化后自动刷新（JS 侧继承）**：JS 的 `MediaQuery` 类在 `build` 里把自己登记为类型名 `'MediaQuery'` 的继承结点（与 provider 的 `ChangeNotifierProvider` 同一机制），`MediaQuery.of / sizeOf / ...` 优先经 `dependOnInheritedWidgetOfExactType` 同步读最近 JS 声明的值，上方没有 JS 声明的 MediaQuery 时才走宿主桥。数据变化时 `__notifyClients` 让依赖者重建——页面根首帧读到兜底值并经 `MediaQuery(data: MediaQuery.of(context).copyWith(...))` 派发进子树的情况，根回填重建后子树会自动拿到真值。`remove*` 在 JS 侧按 `MediaQueryData.remove*` 计算派生值供继承取值，原生渲染仍走宿主同名 API。宿主侧无新增组件，同时保留「该位置上方没有 MediaQuery」的一次性告警（`_absentLogged`）。
 
 - **`MediaQuery` 组件（含 `removePadding` / `removeViewPadding` / `removeViewInsets`）**：JS 类是宿主手写的 `Component` 子类（登记 `logicWidgetTypes`，生成器不再重复生成同名包装类），静态取值 API 与命名构造静态方法都写在类体内（后者与其它组件同构：写 `factory`）。宿主注册 `'MediaQuery'` 只负责渲染：无名构造用 `data` 还原 `MediaQueryData`（JS 侧 `MediaQueryData` 值类 + `copyWith`，`MediaQuery.of()` 返回它），`remove*` 用调用位置的 BuildContext 直接调 Flutter 同名 API。为此 `JsRenderContext` 新增 `context`（宿主构建期传入并沿子树透传）；`JsBuildContext` 补 `toJSON()`（代理含组件实例引用，不可直接跨桥序列化）。示例见 `example/lib/components/media_query_detail.dart`。
 

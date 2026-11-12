@@ -1,25 +1,22 @@
 // ===== 基础能力：MediaQuery（JS 侧片段）=====
 //
-// JS 里 `MediaQuery.of(context)` / `MediaQuery.sizeOf(context)` 等**全部实时代理到
-// Flutter 的 `MediaQuery.of` 系列**：
-//   - `context` 代理与宿主真值 BuildContext 本来就是 1:1 绑定（`__handle()` 返回
-//     ctx 句柄，宿主凭它反查**该组件自己位置**的 BuildContext）；
-//   - 每个静态方法按**自己的 aspect** 单独向宿主取一次值：
-//       `MediaQuery.of(context)`        → aspect = null（整份）
-//       `MediaQuery.sizeOf(context)`    → aspect = 'size'
-//       `MediaQuery.textScalerOf(...)`  → aspect = 'textScaler' ……
-//     宿主对应调 Flutter 的 `MediaQuery.of` / `sizeOf` / `textScalerOf` 等取值
-//     （见 hot_patch 的 media_query_bridge.dart）；
-//   - aspect 粒度同时决定**重建粒度**：宿主只在某个 aspect 的值变了才回推
-//     `__setMediaQuery(ctxId, aspect, value)`，JS 侧只标脏订阅了该 aspect 的
-//     组件——与 Flutter 的 `dependOnInheritedWidgetOfExactType(aspect:)` 一致
-//     （只用了 `sizeOf` 的组件不会因字号变化而重建）。
+// **取值优先级**：先查「最近一个 JS 侧 `MediaQuery(data:)` / `remove*` 结点」
+// （运行时【8】的继承机制，同步、真值），查不到才回落到宿主桥：
+//   - 页面根 / 上方没有 JS 声明 MediaQuery 的位置：`MediaQuery.of(context)` 按
+//     位置向宿主取一次值（每个 aspect 一次），回填后标脏调用方重建；
+//   - 上方有 JS 声明的 MediaQuery：本类在 build 里把自己登记为类型名
+//     `'MediaQuery'` 的继承结点，子孙 `dependOnInheritedWidgetOfExactType`
+//     直接读它的 `data`，数据变化时 `__notifyClients` 通知依赖者重建。
+//     这条链路完全在 JS 内，不再逐位置发桥消息，也不会出现「值变了但缓存
+//     不失效」。
 //
-// 缓存与读取逻辑收在 `MediaQuery` 类上（静态字段 = 缓存，静态方法 = 读取）。
-// **MediaQuery 的 JS 类是手写 Component 子类**（本文件）：宿主注册 `'MediaQuery'`
-// 只负责渲染，类登记在 `logicWidgetTypes`（生成器不再重复生成同名包装类）。
+// 缓存与读取逻辑收在 `MediaQuery` 类上（静态字段 = 桥路径缓存，静态方法 = 读取）。
+// **MediaQuery 的 JS 类是手写 Component 子类**（本文件）：build 产出宿主
+// `'MediaQuery'` 结点（宿主 renderer 负责渲染），类登记在 `logicWidgetTypes`
+// （生成器不再重复生成同名包装类）。
 // 命名构造 `removePadding / removeViewInsets / removeViewPadding` 与其它组件同构：
-// 静态方法把构造名写进 `props.factory`，宿主 renderer 按 factory 分派。
+// 静态方法把构造名写进 `props.factory`，宿主 renderer 按 factory 分派；同时在
+// 构造期按上层数据算出派生 `data`，供 JS 侧继承取值使用。
 const String mediaQueryJsSource = r'''
   // `MediaQueryData`：宿主回填的整份数据 / `MediaQuery(data: ...)` 的入参。
   // 字段名与宿主 media_query_bridge 的 `_readAspect(null)` 一一对应；缺省值同
@@ -59,6 +56,24 @@ const String mediaQueryJsSource = r'''
       var a = args || {};
       return new MediaQueryData(Object.assign({}, this, a));
     }
+    // 与 Flutter `MediaQueryData.removePadding / removeViewPadding /
+    // removeViewInsets` 同义：指定边归零。`remove*` 命名构造在 JS 侧用它算出
+    // 派生值（原生结点仍由宿主按自己的 context 调 Flutter 同名 API，两者同源）。
+    __removed(args, field) {
+      var a = args || {};
+      var cur = this[field] || new EdgeInsets({});
+      return this.copyWith({
+        [field]: new EdgeInsets({
+          left: a.removeLeft === true ? 0 : cur.left,
+          top: a.removeTop === true ? 0 : cur.top,
+          right: a.removeRight === true ? 0 : cur.right,
+          bottom: a.removeBottom === true ? 0 : cur.bottom,
+        }),
+      });
+    }
+    removePadding(args) { return this.__removed(args, 'padding'); }
+    removeViewPadding(args) { return this.__removed(args, 'viewPadding'); }
+    removeViewInsets(args) { return this.__removed(args, 'viewInsets'); }
   }
 
   // ===== MediaQuery =====
@@ -69,14 +84,43 @@ const String mediaQueryJsSource = r'''
   //   - 命名构造静态方法与其它组件同构：写 `factory` 交给宿主 renderer 分派。
   export class MediaQuery extends Component {
     // 命名构造：与宿主包装类生成的静态方法完全同形（`SizedBox.shrink` 同款）。
-    static removePadding(props) {
-      return new MediaQuery(Object.assign({}, props, { factory: 'removePadding' }));
+    // 宿主 renderer 仍按 `factory` 走原生 API；这里额外算出派生 `data`，让 JS 侧
+    // 的继承取值拿到与原生一致的「去掉指定边」的值。
+    static removePadding(props) { return MediaQuery.__removed('removePadding', props); }
+    static removeViewInsets(props) { return MediaQuery.__removed('removeViewInsets', props); }
+    static removeViewPadding(props) { return MediaQuery.__removed('removeViewPadding', props); }
+
+    static __removed(kind, props) {
+      var p = props || {};
+      var out = {};
+      for (var k in p) {
+        if (Object.prototype.hasOwnProperty.call(p, k)) { out[k] = p[k]; }
+      }
+      out.factory = kind;
+      var base = null;
+      try { base = p.context ? MediaQuery.of(p.context) : null; } catch (err) { base = null; }
+      if (base != null && typeof base[kind] === 'function') {
+        out.data = base[kind]({
+          removeLeft: p.removeLeft === true,
+          removeTop: p.removeTop === true,
+          removeRight: p.removeRight === true,
+          removeBottom: p.removeBottom === true,
+        });
+      }
+      return new MediaQuery(out);
     }
-    static removeViewInsets(props) {
-      return new MediaQuery(Object.assign({}, props, { factory: 'removeViewInsets' }));
-    }
-    static removeViewPadding(props) {
-      return new MediaQuery(Object.assign({}, props, { factory: 'removeViewPadding' }));
+
+    // 把自己登记为类型名 `'MediaQuery'` 的继承结点（与 provider 的
+    // ChangeNotifierProvider 同一机制），并产出宿主结点负责原生渲染。
+    build() {
+      __inheritElement(this, 'MediaQuery');
+      var key = MediaQuery.__dataKey(this.props.data);
+      if (this.__publishedKey !== undefined && this.__publishedKey !== key) {
+        // 数据变化 → 通知依赖者重建（子树里的 MediaQuery.of 拿到新值）。
+        __notifyClients(this);
+      }
+      this.__publishedKey = key;
+      return Component.host('MediaQuery', this.props);
     }
 
     // ctx 句柄 id -> {
@@ -195,8 +239,54 @@ const String mediaQueryJsSource = r'''
       }
     }
 
+    // 数据指纹：`copyWith` / 每次 build 都会产出新实例，按对象身份比较会永远
+    // 「有变化」；这里按字段值折算成字符串，只有真变化才通知依赖者重建。
+    static __dataKey(d) {
+      if (d == null) { return ''; }
+      function edge(v) {
+        return v == null ? null : [v.left, v.top, v.right, v.bottom];
+      }
+      function name(v) {
+        if (v == null) { return ''; }
+        return v.name != null ? v.name : String(v);
+      }
+      return JSON.stringify([
+        d.size == null ? null : [d.size.width, d.size.height],
+        edge(d.padding), edge(d.viewPadding), edge(d.viewInsets),
+        d.devicePixelRatio,
+        name(d.orientation),
+        (d.textScaler != null && typeof d.textScaler.scale === 'function')
+            ? d.textScaler.scale(1) : null,
+        name(d.platformBrightness), name(d.navigationMode),
+        d.alwaysUse24HourFormat === true, d.accessibleNavigation === true,
+        d.disableAnimations === true, d.invertColors === true,
+        d.highContrast === true, d.boldText === true,
+      ]);
+    }
+
+    // 最近的 JS 侧 MediaQuery 结点提供的值（同步）；没有则返回 null，
+    // 由调用方回落到宿主桥。查找同时把当前位置登记为该结点的依赖。
+    static __provided(context) {
+      if (context == null ||
+          typeof context.dependOnInheritedWidgetOfExactType !== 'function') {
+        return null;
+      }
+      var el = null;
+      try {
+        el = context.dependOnInheritedWidgetOfExactType({
+          typeArguments: { 0: 'MediaQuery' },
+        });
+      } catch (err) {
+        el = null;
+      }
+      if (el == null || el.props == null || el.props.data == null) { return null; }
+      return el.props.data;
+    }
+
     // `MediaQuery.of(context)`：整份数据（依赖全部 aspect）。
     static __of(context) {
+      var inherited = MediaQuery.__provided(context);
+      if (inherited != null) { return inherited; }
       var id = null;
       try { id = context.__handle(); } catch (err) { id = null; }
       if (id == null) { return MediaQuery.__lastFull || MediaQuery.__empty(); }
@@ -207,6 +297,8 @@ const String mediaQueryJsSource = r'''
 
     // `MediaQuery.<x>Of(context)`：只依赖该 aspect。
     static __aspect(context, aspect) {
+      var inherited = MediaQuery.__provided(context);
+      if (inherited != null) { return inherited[aspect]; }
       var id = null;
       try { id = context.__handle(); } catch (err) { id = null; }
       if (id == null) { return (MediaQuery.__lastFull || MediaQuery.__empty())[aspect]; }

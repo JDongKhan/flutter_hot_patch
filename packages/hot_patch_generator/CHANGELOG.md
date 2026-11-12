@@ -4,6 +4,7 @@
 
 **加法：顶层函数支持（与成员函数共用形参 / 函数体翻译）；无破坏性协议变更。**
 
+- **`MediaQuery` 改为 JS 侧继承取值**：`MediaQuery` JS 类补 `build()`——登记为类型名 `'MediaQuery'` 的继承结点（`__inheritElement`）、数据变化时 `__notifyClients` 通知依赖者，并产出宿主 `'MediaQuery'` 结点负责原生渲染；`of / sizeOf / ...` 优先同步读最近 JS 声明的值，取不到才走宿主桥；`removePadding / removeViewPadding / removeViewInsets` 在 JS 侧按 `MediaQueryData.remove*` 计算派生 `data`（宿主仍按 `factory` 调 Flutter 同名 API）。`flutter.js` 模块解构新增 `__notifyClients`。
 - **单段字符串插值补 `toString()`**：`'${x}'`（整串只有一段插值）此前直接译成 `x`，没有任何字符串参与 `+`，类型被原样透出（枚举 / bool / int）。产物里 `Text('${count}')` 之类拿到的是数字，`_enumText('${mq.orientation}')` 之类拿到的是枚举对象，在 JS 侧做 `indexOf / substring` 会直接 `TypeError`。`_stringInterpolationJs` 现在对单段产物补空串（`"" + x`），多段仍按 `"a" + x` 拼接；规则已写入手册第 02 章插值行。
 - **三方包枚举引用补 import**：`IndicatorResult.success` 这类枚举常量在值位置原样引用，但枚举不进类索引、也不经过类引用钩子，此前产物只有裸标识符（运行期 `ReferenceError`）。现在在**真实引用点**登记 import（`js_translator` 的 `symbolRefHook` → `element2js._symbolRefJs`），归属按新增的 `importedOwnerPackageOf` 判定：「符号声明所在包 ∩ 当前文件（库根，含 part）`import` 的包集合」唯一命中才采用（类 / 构造 / 静态调用 / 枚举 / 三方顶层值同一规则；此前只看全局名字索引，flutter.js 与三方模块同名时按命中顺序误选）。多个已 import 的包同名时出声回退、不猜；再通过 `thirdPartyJsExports`（扫描 `js/<package>.js` 的 `export`）确认模块**实际导出**了该符号，缺失时保留裸引用并告警（Dart 里有声明不代表 JS 模块导出，如 get 包的 `Transition`）。**不按产物文本扫描**：否则字符串 / 注释里的同名单词会误命中（如 `'*Transition · …'` 命中 get 包的 `Transition` 枚举），引入模块不存在的导出导致加载失败。JS 侧枚举值类由宿主模块以 SDK 同款形态导出（`.name/.index`、`toJSON()` 发成员名、`valueOf()` 返回成员名）。规则已写入手册「模块 / 导入」章节。
 
