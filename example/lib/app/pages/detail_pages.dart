@@ -953,7 +953,7 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           Container(
             color: Colors.white,
-            child: const _TopBar(title: '登录'),
+            child: SafeArea(bottom: false, child: const _TopBar(title: '登录')),
           ),
           Expanded(
             child: ListView(
@@ -1035,11 +1035,14 @@ class _LoginPageState extends State<LoginPage> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                       suffixIcon: GestureDetector(
                         onTap: () => AppRouter.toast('验证码已发送'),
-                        child: const Center(
-                          widthFactor: 1,
-                          child: Text(
-                            '获取验证码',
-                            style: TextStyle(fontSize: 13, color: kBrand, fontWeight: FontWeight.w600),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: const Center(
+                            widthFactor: 1,
+                            child: Text(
+                              '获取验证码',
+                              style: TextStyle(fontSize: 13, color: kBrand, fontWeight: FontWeight.w600),
+                            ),
                           ),
                         ),
                       ),
