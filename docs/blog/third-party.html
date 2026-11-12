@@ -243,6 +243,28 @@ export class MyCarousel extends Component {
       <li>如果类重写了 <code>build</code>（逻辑组件），自身不产生宿主元素；应在它创建宿主结点的位置（<code>Component.host(type, props, lazy)</code>）传入 lazy 规则。</li>
       <li><code>lazyChildHostTypes</code> / <code>builderFormTypes</code> 只作用于<strong>生成器产出的包装类</strong>（内建 SDK 组件、<code>@PatchIgnore(isComponent: true)</code> 的包装类），对 <code>js/&lt;package&gt;.js</code> 里手写的类不生效，也无需登记。</li>
     </ul>
+
+    <h4>自定义列表容器：宿主按槽位拉取</h4>
+    <pre><code>export class MyHorizontalList extends Component {
+  build(context) {
+    const p = this.props;
+    // 与懒槽位同一套协议：内部标记 + 统一 __builder
+    // 组件差异在这里折叠：数量字段叫什么、回调签名怎样，都由本类决定
+    return Component.host('MyHorizontalList', {
+      ...p,
+      __pullItems: true,
+      __builder: {
+        item: (ctx, slot) => p.itemBuilder(ctx, slot),
+        slots: p.itemCount ?? 0,
+        ctx: context,
+      },
+    }, false);
+  }
+}</code></pre>
+    <ul>
+      <li>runtime 只认 <code>__builder = {item(slotIndex), slots}</code> 与 <code>__pullItems</code> 标记，不认识类型名、数量字段名；宿主要为该类型注册 renderer，并在 <code>itemBuilder</code> 里用 <code>c.lazySlot(i)</code> 取子项。</li>
+      <li>这个类如果是「只继承 <code>Component</code> 空 build 的宿主元素类」，也可以在类上写 <code>static __lazy</code> 走懒槽位；两种路径按子项是否定高选择。</li>
+    </ul>
     <div class="callout warn">
       <span class="ico">!</span>
       <div><p>只有「子项尺寸由容器强制」的容器才能用 <code>__lazy</code> 懒槽位（如分页、网格）。按内容量尺寸的容器（<code>Column</code> 类、自定义自适应高度列表）不要设 <code>__lazy</code>：JS 侧用 0×0 占位结点替代真实子项，占位必须布局中性；按内容量尺寸时 0 高占位会让内容总高度塌陷、视口把所有项判为可见，懒加载反而失效。内建 <code>ListView.builder</code> / <code>.separated</code> 走的是另一条路——宿主按槽位拉取（<code>pullChildHostTypes</code>），不需要 <code>itemExtent</code>；业务代码直接照常写 <code>ListView.builder</code> 即可。</p></div>

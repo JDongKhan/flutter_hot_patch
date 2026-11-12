@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 69fc0ac6） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 ebfe96f6） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '69fc0ac6') { return; }
-  G.__jsuiVersion = '69fc0ac6';
+  if (G.__jsui && G.__jsuiVersion === 'ebfe96f6') { return; }
+  G.__jsuiVersion = 'ebfe96f6';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -1872,7 +1872,7 @@ __defineProtoMember(Map.prototype, {
   //
   // builder 只消费产物里的**显式形态协议**，不按类型名、不猜属性名——
   //   1) 命名构造（`.builder` / `.separated`）由生成的 JS 代理类下发
-  //      `children.__builder = {item, sep, count, ctx}`（内部键，由
+  //      `children.__builder = {item(slotIndex), slots, ctx}`（内部键，由
   //      `Component.__splitHost` 归入 `__children`）；
   //   2) `delegate: SliverChildBuilderDelegate(...)` 由生成器译成
   //      `{__delegate:'builder', builder, childCount}` 放进 `children.delegate`。
@@ -1887,8 +1887,8 @@ __defineProtoMember(Map.prototype, {
   function __builderSpec(el) {
     var slots = el.__children || {};
     var b = slots.__builder;
-    if (b && typeof b.item === 'function' && typeof b.count === 'number') {
-      return { item: b.item, sep: typeof b.sep === 'function' ? b.sep : null, count: b.count, ctx: b.ctx };
+    if (b && typeof b.item === 'function' && typeof b.slots === 'number') {
+      return { item: b.item, slots: b.slots, ctx: b.ctx };
     }
     var d = slots.delegate;
     if (!d || d.__delegate !== 'builder' || typeof d.builder !== 'function') {
@@ -1896,25 +1896,17 @@ __defineProtoMember(Map.prototype, {
     }
     var n = d.childCount;
     if (typeof n !== 'number' || n <= 0) { return null; }
-    return { item: d.builder, sep: null, count: n, ctx: null };
+    return { item: d.builder, slots: n, ctx: null };
   }
 
-  // 第 [slotIndex] 个子结点（`.separated` 按 item/separator 交替展开）。
-  // 传给 builder 的 `context` 形参：命名构造优先用代理 build 收到的那个
-  // （与原行为一致），delegate 形态用拥有者组件的代理。
+  // 第 [slotIndex] 个槽位：统一入口。`.separated` 的交替规则已在构建期产物里
+  // 折叠进 `spec.item`，运行时只认「槽位号」，不识别组件 / 数量字段名。
   function __buildItem(owner, spec, slotIndex) {
     var ctx = spec.ctx || __contextOf(owner);
     var out = null;
     // 委托调用期间 owner 锚点指向 builder 所属组件实例：builder 里创建的
     // 控制器 / Key 归属它（`__building` 在这里可能是宿主结点或已还原）。
-    __withOwner(owner, function () {
-      var sep = spec.sep;
-      if (sep && slotIndex % 2 === 1) {
-        out = sep(ctx, (slotIndex - 1) / 2);
-      } else {
-        out = spec.item(ctx, sep ? slotIndex / 2 : slotIndex);
-      }
-    });
+    __withOwner(owner, function () { out = spec.item(ctx, slotIndex); });
     return out;
   }
 
@@ -1931,8 +1923,7 @@ __defineProtoMember(Map.prototype, {
     if (!spec) { return out; }
     // 闭包自带接收者，展开时只需要锚点做句柄归属（parent 即拥有者实例）。
     var owner = parent || null;
-    var total = spec.sep ? Math.max(0, spec.count * 2 - 1) : spec.count;
-    for (i = 0; i < total; i++) {
+    for (i = 0; i < spec.slots; i++) {
       if (lazy) {
         out.push({ make: (function (idx, ow) {
           return function () { return __buildItem(ow, spec, idx); };
@@ -2296,7 +2287,7 @@ __defineProtoMember(Map.prototype, {
     if (__isHostElement(el)) {
       var hostType = __hostTypeName(el);
       // 宿主按槽位拉取（路径 2，见 pullChildHostTypes）：容器自身不展开 builder
-      // 子项，只下发 `props.__pullItems = {id, count, sep}`；子项由宿主
+      // 子项，只下发 `props.__pullItems = {id, slots}`；子项由宿主
       // `ListView.builder` 的 itemBuilder 在布局期同步调 `__jsui.pullSlot` 拉起。
       // 这样「按内容自适应高度」的列表也能懒，不需要 itemExtent。
       var pullSpec = null;
@@ -2485,10 +2476,10 @@ __defineProtoMember(Map.prototype, {
   }
 
   // 宿主按槽位拉取（见生成器 pullChildHostTypes）：容器结点 props 带
-  // `__pullItems = {id, count, sep}`，子项由宿主 `ListView.builder` /
+  // `__pullItems = {id, slots}`，子项由宿主 `ListView.builder` /
   // `.separated` 的 itemBuilder 在**布局期**同步索取。与懒槽位的区别只在触发方：
   // 这里由宿主知道「第 i 项进入了视口」，因此按内容自适应高度的列表也能懒。
-  //   - __withPullProps：注入 {id, count, sep}（id 只有挂载后才分配）；
+  //   - __withPullProps：注入 {id, slots}（id 只有挂载后才分配）；
   //   - __pullSlot：构造并挂载第 slotIndex 项，返回 {root, ops}；
   //   - __releaseSlot：宿主 item element dispose 时卸载对应槽位；
   //   - __prunePulled：容器 itemCount 缩小时卸载越界槽位。
@@ -2499,21 +2490,15 @@ __defineProtoMember(Map.prototype, {
     }
     out.__pullItems = {
       id: hi.__id,
-      count: hi.__pullSpec.count,
-      sep: !!hi.__pullSpec.sep
+      slots: hi.__pullSpec.slots
     };
     return out;
-  }
-
-  // 槽位总数：`.separated` 是 item / separator 交替（尾项后无分隔符）。
-  function __pullTotal(spec) {
-    return spec.sep ? Math.max(0, spec.count * 2 - 1) : spec.count;
   }
 
   function __prunePulled(hi, spec) {
     var pd = hi.__pulled;
     if (!pd) { return; }
-    var total = __pullTotal(spec);
+    var total = spec.slots;
     for (var k in pd) {
       if (!Object.prototype.hasOwnProperty.call(pd, k)) { continue; }
       if (+k >= total) {
@@ -2533,7 +2518,7 @@ __defineProtoMember(Map.prototype, {
       return { error: '槽位拉取失败：容器不存在或未声明 __pullItems（' + hostId + '）' };
     }
     var idx = slotIndex | 0;
-    var total = __pullTotal(hi.__pullSpec);
+    var total = hi.__pullSpec.slots;
     if (idx < 0 || idx >= total) {
       return { error: '槽位越界：' + idx + '（总数 ' + total + '）' };
     }
@@ -2611,7 +2596,7 @@ __defineProtoMember(Map.prototype, {
 
     if (oldIsHost) {
       var oldProps = oldInst.__props;
-      // 宿主按槽位拉取：builder 描述取新元素的（count / sep 可能变化）。
+      // 宿主按槽位拉取：builder 描述取新元素的（slots 可能变化）。
       var pullSpec = (el.props && el.props.__pullItems === true)
         ? __builderSpec(el) : null;
       oldInst.__pullSpec = pullSpec;

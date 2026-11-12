@@ -313,24 +313,13 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       // 宿主按槽位拉取（`props.__pullItems`，见生成器 pullChildHostTypes）：
       // 子项不在 JS 侧预先展开，itemBuilder 首次布局到该项时同步拉取。子项
       // 高度由宿主真实测量，因此没有 itemExtent 也能懒、且不抖动。
+      //
+      // `slots` 是**槽位总数**：`.separated` 的 [item, sep, …] 交替已在产物里
+      // 折叠进统一的 `item(slotIndex)`，这里只需平铺渲染每个槽位，不区分
+      // separator（组件差异不进入 runtime / 宿主通用路径）。
       final pull = c.map('__pullItems');
       if (pull != null) {
-        final count = (pull['count'] as num?)?.toInt() ?? 0;
-        if (pull['sep'] == true) {
-          // `.separated`：槽位按 [item, sep, item, sep, …] 交替（见 JS
-          // `__pullTotal`），itemBuilder 取偶数槽、separatorBuilder 取奇数槽。
-          return ListView.separated(
-            key: key,
-            controller: controller,
-            shrinkWrap: shrinkWrap,
-            scrollDirection: scrollDirection,
-            padding: padding,
-            physics: physics,
-            itemCount: count,
-            itemBuilder: (_, i) => c.lazySlot(i * 2),
-            separatorBuilder: (_, i) => c.lazySlot(i * 2 + 1),
-          );
-        }
+        final slots = (pull['slots'] as num?)?.toInt() ?? 0;
         return ListView.builder(
           key: key,
           controller: controller,
@@ -339,7 +328,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
           padding: padding,
           physics: physics,
           itemExtent: itemExtent,
-          itemCount: count,
+          itemCount: slots,
           itemBuilder: (_, i) => c.lazySlot(i),
         );
       }

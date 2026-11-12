@@ -55,6 +55,10 @@ const String componentJsSource = r'''
     // 按**宿主类型名**产出宿主元素（逻辑组件内部用：`ChangeNotifierProvider` /
     // `Stack` 这类宿主结点）。props 在构造期按统一协议拆好；懒标记由调用方给出
     // （builder 代理按构建期配置传入）。
+    //
+    // 业务自维护的列表组件（`js/<package>.js`）同样走这里：在 props 里写
+    // `__pullItems: true` 与统一的 `__builder = {item(slotIndex), slots, ctx}`
+    // 即可接入「宿主按槽位拉取」，无需修改生成器的任何配置表。
     static host(type, props, lazy) {
       var el = Component.__splitHost(
         { __type: type, props: props || {}, __element: true }, lazy);

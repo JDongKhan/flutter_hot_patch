@@ -4,8 +4,10 @@
 
 **加法：`ListView.builder` / `.separated` 改为宿主按槽位拉取；顶层函数支持（与成员函数共用形参 / 函数体翻译）；无破坏性协议变更。**
 
-- **`ListView` 不再要求 `itemExtent` 才能懒**：`shared/js_class_defs.dart` 移除 `lazyChildHostTypes` 里的 `'ListView': ['itemExtent']`，新增 `pullChildHostTypes = {'ListView'}`。builder / separated 形态的元素带 `p.__pullItems = true`，运行时把它折算成 `props.__pullItems = {id, count, sep}` 下发；容器自身不再展开子项。宿主 `ListView.builder` / `.separated` 的 `itemBuilder` 在布局到该槽位时同步调 `__jsui.pullSlot(pageKey, 容器id, 槽位号)`，子项 `initState` / `build` 只对可见项（含 `cacheExtent`）执行。子项高度由宿主真实测量，因此按内容自适应高度的列表也能懒、不需要 `itemExtent`。
-- **运行时新增 `__jsui.pullSlot` / `__jsui.releaseSlot`**：前者同步返回 `{root, ops}` 并把子树落进宿主 store；后者在宿主 item element dispose 时卸载该槽位。`__pulled` 子树随容器卸载递归释放；容器 `itemCount` 缩小时自动卸载越界槽位。
+- **`ListView` 不再要求 `itemExtent` 才能懒**：`shared/js_class_defs.dart` 移除 `lazyChildHostTypes` 里的 `'ListView': ['itemExtent']`，新增 `pullChildHostTypes = {'ListView'}`。builder / separated 形态的元素带 `p.__pullItems = true`，运行时把它折算成 `props.__pullItems = {id, slots}` 下发；容器自身不再展开子项。宿主 `ListView.builder` 的 `itemBuilder` 在布局到该槽位时同步调 `__jsui.pullSlot(pageKey, 容器id, 槽位号)`，子项 `initState` / `build` 只对可见项（含 `cacheExtent`）执行。子项高度由宿主真实测量，因此按内容自适应高度的列表也能懒、不需要 `itemExtent`。
+- **builder 产物统一为 `__builder = {item(slotIndex), slots, ctx}`**：`.separated` 的 `[item, sep, …]` 交替规则由构建期的代理模板折叠进 `item`，槽位总数直接给出 `slots`。运行时只按槽位号调用 `item`，不再认识 `sep`、`count` 或任何数量字段名；数量字段差异仍由 `builderCountPropKeys` 在构建期归一。宿主侧 pull 路径统一渲染槽位序列，不再按 separated 分叉。
+- **业务 / 三方 JS 列表组件接入**：在 `js/<package>.js` 的 `build` 里用 `Component.host('<类型名>', {...props, __pullItems: true, __builder: {item(slotIndex), slots, ctx}})` 产出宿主元素即可接入，数量字段与回调签名由该类自己折叠，无需修改生成器的 `builderCountPropKeys` / `pullChildHostTypes`。
+- **运行时新增 `__jsui.pullSlot` / `__jsui.releaseSlot`**：前者同步返回 `{root, ops}` 并把子树落进宿主 store；后者在宿主 item element dispose 时卸载该槽位，并校验根结点 id（避免快速滚动时旧的 post-frame 回调误删同 index 的新槽位）。`__pulled` 子树随容器卸载递归释放；容器 `slots` 缩小时自动卸载越界槽位。
 - **`ListView(children: …)` 行为不变**：静态子项不走 `__pullItems`，仍一次性构建。
 
 - **跨包源文件解析容忍新语法诊断**：`shared/source_index.dart` 的 `parseUnitFile` 改为 `parseString(..., throwIfDiagnostics: false)`。它只做声明级索引（类型参数名 / import 可见性），不翻译表达式；此前依赖包使用比 pin 的 analyzer 更新的语法（如 `win32` 的 `macros.dart` 用了 dot-shorthands）会让整个构建直接失败。

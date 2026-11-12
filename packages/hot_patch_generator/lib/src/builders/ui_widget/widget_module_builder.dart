@@ -356,11 +356,18 @@ export class $type extends Component {
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
-    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    // 槽位序列：`.separated` 展开成 [item, sep, item, sep, …]（尾项后无分隔符）。
+    // **组件差异在这里折叠**：runtime 只按「槽位号」取子项，不认识 sep / 数量
+    // 字段名；槽位总数由本产物算好（`slots`）。
+    var sep = this.props.separatorBuilder || null;
+    var n = this.props.$countKey || 0;
     p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.$countKey || 0,
+      item: sep
+        ? function (ctx, slot) {
+            return slot % 2 === 1 ? sep(ctx, (slot - 1) / 2) : item(ctx, slot / 2);
+          }
+        : item,
+      slots: sep ? Math.max(0, n * 2 - 1) : n,
       ctx: context
     };
 $pullLine    return Component.host('$type', p, $lazyJs);

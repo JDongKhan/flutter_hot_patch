@@ -57,6 +57,10 @@ export class Component {
   // 按**宿主类型名**产出宿主元素（逻辑组件内部用：`ChangeNotifierProvider` /
   // `Stack` 这类宿主结点）。props 在构造期按统一协议拆好；懒标记由调用方给出
   // （builder 代理按构建期配置传入）。
+  //
+  // 业务自维护的列表组件（`js/<package>.js`）同样走这里：在 props 里写
+  // `__pullItems: true` 与统一的 `__builder = {item(slotIndex), slots, ctx}`
+  // 即可接入「宿主按槽位拉取」，无需修改生成器的任何配置表。
   static host(type, props, lazy) {
     var el = Component.__splitHost(
     { __type: type, props: props || {}, __element: true }, lazy);
@@ -855,11 +859,18 @@ export class AnimatedList extends Component {
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
-    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    // 槽位序列：`.separated` 展开成 [item, sep, item, sep, …]（尾项后无分隔符）。
+    // **组件差异在这里折叠**：runtime 只按「槽位号」取子项，不认识 sep / 数量
+    // 字段名；槽位总数由本产物算好（`slots`）。
+    var sep = this.props.separatorBuilder || null;
+    var n = this.props.initialItemCount || 0;
     p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.initialItemCount || 0,
+      item: sep
+      ? function (ctx, slot) {
+        return slot % 2 === 1 ? sep(ctx, (slot - 1) / 2) : item(ctx, slot / 2);
+      }
+      : item,
+      slots: sep ? Math.max(0, n * 2 - 1) : n,
       ctx: context
     };
     return Component.host('AnimatedList', p, false);
@@ -904,11 +915,18 @@ export class CupertinoPicker extends Component {
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
-    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    // 槽位序列：`.separated` 展开成 [item, sep, item, sep, …]（尾项后无分隔符）。
+    // **组件差异在这里折叠**：runtime 只按「槽位号」取子项，不认识 sep / 数量
+    // 字段名；槽位总数由本产物算好（`slots`）。
+    var sep = this.props.separatorBuilder || null;
+    var n = this.props.childCount || 0;
     p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.childCount || 0,
+      item: sep
+      ? function (ctx, slot) {
+        return slot % 2 === 1 ? sep(ctx, (slot - 1) / 2) : item(ctx, slot / 2);
+      }
+      : item,
+      slots: sep ? Math.max(0, n * 2 - 1) : n,
       ctx: context
     };
     return Component.host('CupertinoPicker', p, false);
@@ -1032,11 +1050,18 @@ export class GridView extends Component {
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
-    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    // 槽位序列：`.separated` 展开成 [item, sep, item, sep, …]（尾项后无分隔符）。
+    // **组件差异在这里折叠**：runtime 只按「槽位号」取子项，不认识 sep / 数量
+    // 字段名；槽位总数由本产物算好（`slots`）。
+    var sep = this.props.separatorBuilder || null;
+    var n = this.props.itemCount || 0;
     p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
+      item: sep
+      ? function (ctx, slot) {
+        return slot % 2 === 1 ? sep(ctx, (slot - 1) / 2) : item(ctx, slot / 2);
+      }
+      : item,
+      slots: sep ? Math.max(0, n * 2 - 1) : n,
       ctx: context
     };
     return Component.host('GridView', p, true);
@@ -1114,11 +1139,18 @@ export class ListView extends Component {
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
-    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    // 槽位序列：`.separated` 展开成 [item, sep, item, sep, …]（尾项后无分隔符）。
+    // **组件差异在这里折叠**：runtime 只按「槽位号」取子项，不认识 sep / 数量
+    // 字段名；槽位总数由本产物算好（`slots`）。
+    var sep = this.props.separatorBuilder || null;
+    var n = this.props.itemCount || 0;
     p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
+      item: sep
+      ? function (ctx, slot) {
+        return slot % 2 === 1 ? sep(ctx, (slot - 1) / 2) : item(ctx, slot / 2);
+      }
+      : item,
+      slots: sep ? Math.max(0, n * 2 - 1) : n,
       ctx: context
     };
     p.__pullItems = true;
@@ -1341,11 +1373,18 @@ export class PageView extends Component {
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
-    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    // 槽位序列：`.separated` 展开成 [item, sep, item, sep, …]（尾项后无分隔符）。
+    // **组件差异在这里折叠**：runtime 只按「槽位号」取子项，不认识 sep / 数量
+    // 字段名；槽位总数由本产物算好（`slots`）。
+    var sep = this.props.separatorBuilder || null;
+    var n = this.props.itemCount || 0;
     p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
+      item: sep
+      ? function (ctx, slot) {
+        return slot % 2 === 1 ? sep(ctx, (slot - 1) / 2) : item(ctx, slot / 2);
+      }
+      : item,
+      slots: sep ? Math.max(0, n * 2 - 1) : n,
       ctx: context
     };
     return Component.host('PageView', p, true);
@@ -1379,11 +1418,18 @@ export class ReorderableListView extends Component {
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
-    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    // 槽位序列：`.separated` 展开成 [item, sep, item, sep, …]（尾项后无分隔符）。
+    // **组件差异在这里折叠**：runtime 只按「槽位号」取子项，不认识 sep / 数量
+    // 字段名；槽位总数由本产物算好（`slots`）。
+    var sep = this.props.separatorBuilder || null;
+    var n = this.props.itemCount || 0;
     p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
+      item: sep
+      ? function (ctx, slot) {
+        return slot % 2 === 1 ? sep(ctx, (slot - 1) / 2) : item(ctx, slot / 2);
+      }
+      : item,
+      slots: sep ? Math.max(0, n * 2 - 1) : n,
       ctx: context
     };
     return Component.host('ReorderableListView', p, false);
@@ -1416,11 +1462,18 @@ export class SliverGrid extends Component {
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
-    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    // 槽位序列：`.separated` 展开成 [item, sep, item, sep, …]（尾项后无分隔符）。
+    // **组件差异在这里折叠**：runtime 只按「槽位号」取子项，不认识 sep / 数量
+    // 字段名；槽位总数由本产物算好（`slots`）。
+    var sep = this.props.separatorBuilder || null;
+    var n = this.props.itemCount || 0;
     p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
+      item: sep
+      ? function (ctx, slot) {
+        return slot % 2 === 1 ? sep(ctx, (slot - 1) / 2) : item(ctx, slot / 2);
+      }
+      : item,
+      slots: sep ? Math.max(0, n * 2 - 1) : n,
       ctx: context
     };
     return Component.host('SliverGrid', p, true);
@@ -1456,11 +1509,18 @@ export class SliverList extends Component {
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
-    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
+    // 槽位序列：`.separated` 展开成 [item, sep, item, sep, …]（尾项后无分隔符）。
+    // **组件差异在这里折叠**：runtime 只按「槽位号」取子项，不认识 sep / 数量
+    // 字段名；槽位总数由本产物算好（`slots`）。
+    var sep = this.props.separatorBuilder || null;
+    var n = this.props.itemCount || 0;
     p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
+      item: sep
+      ? function (ctx, slot) {
+        return slot % 2 === 1 ? sep(ctx, (slot - 1) / 2) : item(ctx, slot / 2);
+      }
+      : item,
+      slots: sep ? Math.max(0, n * 2 - 1) : n,
       ctx: context
     };
     return Component.host('SliverList', p, false);

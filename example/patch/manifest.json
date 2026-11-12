@@ -1,15 +1,15 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.0",
-  "buildTime": "2026-11-12T15:51:06.553590",
+  "buildTime": "2026-11-12T16:14:45.801874",
   "resources": {
-    "flutter.js": "28c03b375fb09c751cd60c62651f94578b0e453e40f116d7a1933b124321d553",
+    "flutter.js": "a8d101880ff387dda747acccd17e4abcac672cd6b113f1335963d7cce7816e81",
     "packages/easy_refresh.js": "7606f91d791306289ebf4d47a37f6b30ac1fcdccbceeea53e6192818c9b09740",
     "packages/get.js": "f8aa6f3b477af33cdf3214a64e46d1a98f8d96aaa06dbeb2be5a1bf0a8aa7027",
     "packages/provider.js": "998f91ba6314dff5b811a88baacffdb07a6b35f0901eb5a04e5e8f1d65d93414",
     "packages/uuid.js": "315bfa1aecc89c4c253d5aded272e9fa7f072c7902878c68ebbb084a60ebf57b",
     "packages/visibility_detector.js": "5d72eb9a82628596cc50038e34f475ba1aeb4b531cf93d7353f6728319670d7a",
-    "runtime.js": "25a379794f1d1f403834e6b68acbc2f4e255864d66cf19e762bf6bb967a2ba04",
+    "runtime.js": "a823ee149c8922108810958a35cf5eadababd330814bfbbf44ee61fe2c35a349",
     "packages/hot_module_base/hot_module_base.js": "a6d50df16623b09b1de1ee795fac35c962350c12cc2468b00c06c59cc016ca7a",
     "packages/hot_module_base/src/account_center.js": "1e0b2389c45cf44f37d762ca12dcbbbc6b0d96f7ba1df7256f9481a251ef006e",
     "packages/hot_module_base/src/guide_bubble_widget.js": "8fc9270c7b523dc7d185a055456beab601232530b00377370114659814c4bb22",
@@ -72,6 +72,7 @@
     "app/pages/detail_pages.js": "45069c8d6658f4c9df0f01edb8723bf57d319ed690cd95c55c6f50b7fc859008",
     "app/app.js": "ba63460598bc5e11a12087321100d9b50a2fa0ea52ef71a07749e6c382cafead",
     "app/widgets/load_error_view.js": "bca8790fd318105b764b208c34d67b415433fc18283e8d81365f0081389b86af",
+    "app/widgets/countdown_text.js": "e4f5a8a78d3ec64d1fdf91011ba92cd96e651af666865d1ac12afae5203bebe7",
     "app/widgets/banner_carousel.js": "3116b8ceda0efaf633fd194474a591bc5c1ebcfd2bbebfb2bd7e6d984c9127ed",
     "components/layout_more_detail.js": "3a554c31edc30d94665629c5e18f24b0ba19341e23e4a2e8f6c71ecc7471f1b7",
     "components/safe_area_detail.js": "e65b127b17e7c8b489de1dc77076a4f3aa75f8522e676c937096afb2f896120e",
@@ -91,6 +92,7 @@
     "components/visibility_detail.js": "e81826fde34f076721a87c70e46291be4525e71bdb3bf6b0ead0f5feddef01ae",
     "components/phone_text.js": "d4d34dad8218f8c4a9cdbf4ebcc0242988465c9f964d365f232ec0710fad09fe",
     "components/sliver_fill_remaining_detail.js": "f04d16a61e0bddf78bbf16c5c5cb0fb434966cfa3d6424c00b5e92916a702ceb",
+    "components/perf_list_page.js": "0f55d264120dc7b3b915c6b6b0541a5c7bc863fcd23fc4622aa9b5a11a2d8ce2",
     "components/preferred_size_detail.js": "b88096e3680f187a546533010ff6b79bfd199c920ed3fed92abc93e4e053215a",
     "components/dismissible_detail.js": "140d038d5a1f9846ffc1bb150bc3999d6fe1ec0d51a675e6fe4257e7d2e655cc",
     "components/button_detail.js": "c05a7871994349beff4f96280954f0ea7e92e689b37a291331c047527d216ad0",
@@ -150,8 +152,6 @@
     "base/app_router.js": "49bddfad3670613d57985a623fc85af9f37930a09304b88289a23caca22d6efb",
     "base/tracker.js": "d4664b4ea74e6fae26b5facc2881b1d2e953b7754293ea5ad13a453e443e8a5d",
     "base/web_view.js": "ed4cfc2b46fd3928dbe87a84069b8403ba875aaafa657b1e4cdeae83e9aaaff7",
-    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e",
-    "components/perf_list_page.js": "0f55d264120dc7b3b915c6b6b0541a5c7bc863fcd23fc4622aa9b5a11a2d8ce2",
-    "app/widgets/countdown_text.js": "e4f5a8a78d3ec64d1fdf91011ba92cd96e651af666865d1ac12afae5203bebe7"
+    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e"
   }
 }
