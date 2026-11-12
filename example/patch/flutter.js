@@ -5,7 +5,7 @@
 const G = globalThis;
 const {
   __handleOp, __registerHandle, __releaseHandle, __handleObjectOf,
-  __createFnHandle, __objectToken, __inheritElement, __notifyClients,
+  __createFnHandle, __objectToken, __inheritElement,
   __contextOf, __isElement, __isElementList, __descriptorOf,
   __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,
   __captureAsyncOwner, __withAsyncOwner,
@@ -8822,14 +8822,18 @@ export class MediaQuery extends Component {
 
   // 把自己登记为类型名 `'MediaQuery'` 的继承结点（与 provider 的
   // ChangeNotifierProvider 同一机制），并产出宿主结点负责原生渲染。
+  //
+  // 重建粒度与 Flutter 的 `dependOnInheritedWidgetOfExactType(aspect:)` 对齐：
+  // 依赖者按自己用到的 aspect 登记（见 __recordDep），这里只按**变化的 aspect**
+  // 通知交集，`MediaQuery.sizeOf` 不会因字号等无关字段变化而重建。
   build() {
     __inheritElement(this, 'MediaQuery');
-    var key = MediaQuery.__dataKey(this.props.data);
-    if (this.__publishedKey !== undefined && this.__publishedKey !== key) {
-      // 数据变化 → 通知依赖者重建（子树里的 MediaQuery.of 拿到新值）。
-      __notifyClients(this);
+    var keys = MediaQuery.__aspectKeys(this.props.data);
+    if (this.__mqKeys) {
+      var changed = MediaQuery.__changedAspects(this.__mqKeys, keys);
+      if (changed) { MediaQuery.__notifyChanged(this, changed); }
     }
-    this.__publishedKey = key;
+    this.__mqKeys = keys;
     return Component.host('MediaQuery', this.props);
   }
 
@@ -8949,34 +8953,95 @@ export class MediaQuery extends Component {
     }
   }
 
-  // 数据指纹：`copyWith` / 每次 build 都会产出新实例，按对象身份比较会永远
-  // 「有变化」；这里按字段值折算成字符串，只有真变化才通知依赖者重建。
-  static __dataKey(d) {
-    if (d == null) { return ''; }
+  // 逐 aspect 的数据指纹：`copyWith` / 每次 build 都会产出新实例，按对象身份
+  // 比较会永远「有变化」；这里按字段值折算，只有真变化的 aspect 才通知。
+  static __aspectKeys(d) {
+    if (d == null) { return {}; }
     function edge(v) {
-      return v == null ? null : [v.left, v.top, v.right, v.bottom];
+      return v == null ? '' : [v.left, v.top, v.right, v.bottom].join(',');
     }
     function name(v) {
       if (v == null) { return ''; }
       return v.name != null ? v.name : String(v);
     }
-    return JSON.stringify([
-      d.size == null ? null : [d.size.width, d.size.height],
-      edge(d.padding), edge(d.viewPadding), edge(d.viewInsets),
-      d.devicePixelRatio,
-      name(d.orientation),
-      (d.textScaler != null && typeof d.textScaler.scale === 'function')
-      ? d.textScaler.scale(1) : null,
-      name(d.platformBrightness), name(d.navigationMode),
-      d.alwaysUse24HourFormat === true, d.accessibleNavigation === true,
-      d.disableAnimations === true, d.invertColors === true,
-      d.highContrast === true, d.boldText === true,
-    ]);
+    function scaler(v) {
+      return (v != null && typeof v.scale === 'function') ? String(v.scale(1)) : '';
+    }
+    function flag(v) { return v === true ? '1' : '0'; }
+    return {
+      size: d.size == null ? '' : d.size.width + ',' + d.size.height,
+      padding: edge(d.padding),
+      viewPadding: edge(d.viewPadding),
+      viewInsets: edge(d.viewInsets),
+      devicePixelRatio: String(d.devicePixelRatio),
+      textScaler: scaler(d.textScaler),
+      orientation: name(d.orientation),
+      platformBrightness: name(d.platformBrightness),
+      navigationMode: name(d.navigationMode),
+      alwaysUse24HourFormat: flag(d.alwaysUse24HourFormat),
+      accessibleNavigation: flag(d.accessibleNavigation),
+      boldText: flag(d.boldText),
+      disableAnimations: flag(d.disableAnimations),
+      invertColors: flag(d.invertColors),
+      highContrast: flag(d.highContrast),
+    };
+  }
+
+  // 变化了的 aspect 集合（null = 什么都没变）。
+  static __changedAspects(prev, cur) {
+    var changed = null;
+    for (var k in cur) {
+      if (!Object.prototype.hasOwnProperty.call(cur, k)) { continue; }
+      if (prev[k] !== cur[k]) {
+        if (changed == null) { changed = {}; }
+        changed[k] = true;
+      }
+    }
+    return changed;
+  }
+
+  // 登记消费位置用到了哪些 aspect（`'all'` = 整份数据）。
+  static __recordDep(el, context, aspect) {
+    var anchor = context ? context.__anchor : null;
+    if (anchor == null) { return; }
+    var deps = el.__mqDeps || (el.__mqDeps = new Map());
+    var set = deps.get(anchor);
+    if (set == null) { set = {}; deps.set(anchor, set); }
+    set[aspect == null ? 'all' : aspect] = true;
+  }
+
+  // 按「变化 aspect ∩ 消费位置登记的 aspect」通知，`'all'` 直接命中。
+  // 顺带修剪陈旧的消费位置（已卸载 / 不再依赖本结点），与 `__dependents` 同寿命。
+  static __notifyChanged(provider, changed) {
+    var deps = provider.__mqDeps;
+    if (deps == null) { return; }
+    var live = provider.__dependents || [];
+    var dead = [];
+    deps.forEach(function (aspects, anchor) {
+      if (anchor == null || anchor.__unmounted || live.indexOf(anchor) < 0) {
+        dead.push(anchor);
+        return;
+      }
+      var hit = aspects.all === true;
+      if (!hit) {
+        for (var k in changed) {
+          if (Object.prototype.hasOwnProperty.call(changed, k) &&
+          aspects[k] === true) {
+            hit = true;
+            break;
+          }
+        }
+      }
+      if (!hit) { return; }
+      anchor.__depDirty = true;
+      __cc.__markDirty(anchor);
+    });
+    for (var i = 0; i < dead.length; i++) { deps.delete(dead[i]); }
   }
 
   // 最近的 JS 侧 MediaQuery 结点提供的值（同步）；没有则返回 null，
-  // 由调用方回落到宿主桥。查找同时把当前位置登记为该结点的依赖。
-  static __provided(context) {
+  // 由调用方回落到宿主桥。查找同时把当前位置按 [aspect] 登记为该结点的依赖。
+  static __provided(context, aspect) {
     if (context == null ||
     typeof context.dependOnInheritedWidgetOfExactType !== 'function') {
       return null;
@@ -8990,12 +9055,13 @@ export class MediaQuery extends Component {
       el = null;
     }
     if (el == null || el.props == null || el.props.data == null) { return null; }
+    MediaQuery.__recordDep(el, context, aspect);
     return el.props.data;
   }
 
   // `MediaQuery.of(context)`：整份数据（依赖全部 aspect）。
   static __of(context) {
-    var inherited = MediaQuery.__provided(context);
+    var inherited = MediaQuery.__provided(context, 'all');
     if (inherited != null) { return inherited; }
     var id = null;
     try { id = context.__handle(); } catch (err) { id = null; }
@@ -9007,7 +9073,7 @@ export class MediaQuery extends Component {
 
   // `MediaQuery.<x>Of(context)`：只依赖该 aspect。
   static __aspect(context, aspect) {
-    var inherited = MediaQuery.__provided(context);
+    var inherited = MediaQuery.__provided(context, aspect);
     if (inherited != null) { return inherited[aspect]; }
     var id = null;
     try { id = context.__handle(); } catch (err) { id = null; }

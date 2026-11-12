@@ -60,7 +60,11 @@ CompilationUnit? parseUnitFile(String path) {
   final cached = _unitFileCache[path];
   if (cached != null && cached.$1 == mtime) return cached.$2;
   final content = f.readAsStringSync();
-  final parsed = parseString(content: content);
+  // 依赖包可能使用比生成器 pin 的 analyzer 更新的语法（如 dot-shorthands，
+  // `win32` 的 macros.dart 就有）。这里只做**声明级**索引（类型参数名 / import
+  // 可见性等），不翻译表达式，故容忍解析诊断，避免一个第三方文件的新语法让
+  // 整个构建失败。
+  final parsed = parseString(content: content, throwIfDiagnostics: false);
   // 登记行号信息：构建期告警 / 报错按 AST 结点换算成 `文件:行 | 源码行`。
   registerSource(path, content, parsed.lineInfo);
   // 重新解析过的文件可能改变 import / export 可见性（watch 模式）：让基于

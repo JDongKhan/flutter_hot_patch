@@ -6,8 +6,16 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 /// 同时展示方向 / 尺寸的常见直接读取、`MediaQuery.removePadding` 与
 /// `MediaQuery(data: ...)` 的覆盖效果。
 @PatchEntry('MediaQueryDetail')
-class MediaQueryDetail extends StatelessWidget {
+class MediaQueryDetail extends StatefulWidget {
   const MediaQueryDetail({super.key});
+
+  @override
+  State<MediaQueryDetail> createState() => _MediaQueryDetailState();
+}
+
+class _MediaQueryDetailState extends State<MediaQueryDetail> {
+  /// 控制 aspect 粒度验证demo 里被覆盖的 textScaler。
+  bool _scaled = false;
 
   Widget _line(String s) => Padding(
         padding: const EdgeInsets.only(bottom: 2),
@@ -82,7 +90,89 @@ class MediaQueryDetail extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 14),
+        const Text(
+          'aspect 粒度：无关字段变化不重建',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          '切换 textScaler 时，只读 size 的探针 build 次数不应增加，只读 textScaler 的探针应 +1；原生与 JS 两侧计数应一致。',
+          style: TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: () => setState(() => _scaled = !_scaled),
+          child: Text('切换 textScaler（当前 ${_scaled ? '1.60' : '1.00'}）'),
+        ),
+        const SizedBox(height: 8),
+        MediaQuery(
+          data: mq.copyWith(
+            textScaler: TextScaler.linear(_scaled ? 1.6 : 1.0),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SizeProbe(),
+              _TextScalerProbe(),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+}
+
+/// 探针（只读 size）：父级重建不重建它，只有 size 变化才重建。
+///
+/// 挂在 const 子树上，所以父级 setState 不会触发它；用来验证
+/// `MediaQuery.sizeOf` 的 aspect 粒度（textScaler 变化时 build 次数不变）。
+class _SizeProbe extends StatefulWidget {
+  const _SizeProbe();
+
+  @override
+  State<_SizeProbe> createState() => _SizeProbeState();
+}
+
+class _SizeProbeState extends State<_SizeProbe> {
+  int _builds = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    _builds += 1;
+    final size = MediaQuery.sizeOf(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(
+        '只读 size   值=${size.width.toStringAsFixed(0)} × '
+        '${size.height.toStringAsFixed(0)}   build=$_builds',
+        style: const TextStyle(fontSize: 12),
+      ),
+    );
+  }
+}
+
+/// 探针（只读 textScaler）：textScaler 变化时 build 次数应 +1。
+class _TextScalerProbe extends StatefulWidget {
+  const _TextScalerProbe();
+
+  @override
+  State<_TextScalerProbe> createState() => _TextScalerProbeState();
+}
+
+class _TextScalerProbeState extends State<_TextScalerProbe> {
+  int _builds = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    _builds += 1;
+    final scale = MediaQuery.textScalerOf(context).scale(1).toStringAsFixed(2);
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(
+        '只读 textScaler   值=$scale   build=$_builds',
+        style: const TextStyle(fontSize: 12),
+      ),
     );
   }
 }

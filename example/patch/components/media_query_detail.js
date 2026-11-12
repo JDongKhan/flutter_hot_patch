@@ -2,12 +2,13 @@
 // 由 hot_patch_generator 从 lib/components/media_query_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MediaQuery, Orientation, Padding, Radius, Row, SizedBox, StatelessWidget, Text, TextScaler, TextStyle, double } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MediaQuery, Orientation, OutlinedButton, Padding, Radius, Row, SizedBox, StatefulWidget, StatelessWidget, Text, TextScaler, TextStyle, double } from '../flutter.js';
 
 // 组件 MediaQueryDetail
-export class MediaQueryDetail extends StatelessWidget {
+export class MediaQueryDetail extends StatefulWidget {
   constructor(args) {
     super(args);
+    this._scaled = false;
   }
   _line(s) {
     return new Padding({
@@ -127,8 +128,97 @@ export class MediaQueryDetail extends StatelessWidget {
               })
             ]
           })
+        }),
+        (this.__k12 || (this.__k12 = new SizedBox({
+          "height": 14
+        }))),
+        (this.__k13 || (this.__k13 = new Text({
+          "data": "aspect 粒度：无关字段变化不重建",
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
+        }))),
+        (this.__k3 || (this.__k3 = new SizedBox({
+          "height": 4
+        }))),
+        (this.__k14 || (this.__k14 = new Text({
+          "data": "切换 textScaler 时，只读 size 的探针 build 次数不应增加，只读 textScaler 的探针应 +1；原生与 JS 两侧计数应一致。",
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
+        }))),
+        (this.__k5 || (this.__k5 = new SizedBox({
+          "height": 8
+        }))),
+        new OutlinedButton({
+          "onPressed": () => { this.setState(() => {
+              this._scaled = (!this._scaled);
+            }); },
+          "child": new Text({
+            "data": "切换 textScaler（当前 " + (this._scaled ? "1.60" : "1.00") + "）"
+          })
+        }),
+        (this.__k5 || (this.__k5 = new SizedBox({
+          "height": 8
+        }))),
+        new MediaQuery({
+          "data": mq.copyWith({ "textScaler": TextScaler.linear({textScaleFactor: (this._scaled ? 1.6 : 1.0)}) }),
+          "child": (this.__k15 || (this.__k15 = new Column({
+            "children": [
+              new _SizeProbe({}),
+              new _TextScalerProbe({})
+            ],
+            "crossAxisAlignment": CrossAxisAlignment.start
+          })))
         })
       ]
+    });
+  }
+}
+
+// 组件 _TextScalerProbe
+export class _TextScalerProbe extends StatefulWidget {
+  constructor(args) {
+    super(args);
+    this._builds = 0;
+  }
+  build(context) {
+    this._builds += 1;
+    const scale = MediaQuery.textScalerOf(context).scale(1).toStringAsFixed(2);
+    return new Padding({
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.only({
+        "top": 2
+      }))),
+      "child": new Text({
+        "style": (this.__k1 || (this.__k1 = new TextStyle({
+          "fontSize": 12
+        }))),
+        "data": "只读 textScaler   值=" + scale + "   build=" + this._builds
+      })
+    });
+  }
+}
+
+// 组件 _SizeProbe
+export class _SizeProbe extends StatefulWidget {
+  constructor(args) {
+    super(args);
+    this._builds = 0;
+  }
+  build(context) {
+    this._builds += 1;
+    const size = MediaQuery.sizeOf(context);
+    return new Padding({
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.only({
+        "top": 2
+      }))),
+      "child": new Text({
+        "style": (this.__k1 || (this.__k1 = new TextStyle({
+          "fontSize": 12
+        }))),
+        "data": "只读 size   值=" + size.width.toStringAsFixed(0) + " × " + size.height.toStringAsFixed(0) + "   build=" + this._builds
+      })
     });
   }
 }
