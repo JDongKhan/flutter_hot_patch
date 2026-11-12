@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-12T13:42:46.453224",
+  "buildTime": "2026-11-12T13:51:17.147465",
   "resources": {
-    "flutter.js": "45ec61ca1c59e1861d53c4b9f9b3ef6c235a3da78a11bdd52822a09889273c8d",
+    "flutter.js": "4a696142c25963889c42d5b23a2ce33223fb5a154ed8411ecc01ab1dd049de21",
     "packages/easy_refresh.js": "7606f91d791306289ebf4d47a37f6b30ac1fcdccbceeea53e6192818c9b09740",
     "packages/get.js": "f8aa6f3b477af33cdf3214a64e46d1a98f8d96aaa06dbeb2be5a1bf0a8aa7027",
     "packages/provider.js": "998f91ba6314dff5b811a88baacffdb07a6b35f0901eb5a04e5e8f1d65d93414",
@@ -106,7 +106,7 @@
     "components/tab_detail.js": "e9e514fdf0e7be9907b59ae7a4668dc289078ce5d806a2f31ac9b8dfafc703b0",
     "components/third_party_tools_card.js": "088726281724d38cb777cbb166dbf2b06c6c8bad19bd67ce196636b6c548b781",
     "components/sliver_fill_viewport_detail.js": "76f97e982461131845aca414ec7c1b1bc74c0f5c084c311f2c803203f77ccb09",
-    "components/composite_component.js": "8d13c6b4d43c7909a468761391cc04c9e54a187777a42637fccfd16ec9d01c84",
+    "components/composite_component.js": "e7e5d406535fbfd901bbd6628b9fe2d7a579b18c4441ef1f4eaa6e753d40e732",
     "components/phone_label.js": "06393f12b130fb9a3710db30a509e40adcc4a5b53beaf57de0ee5aaa6d708291",
     "components/input_detail.js": "a7209cef2c13e6c50c2b77b8f80562e1b300f60b886eabe1f714180a0ebf601f",
     "components/focus_detail.js": "e810b1b10f0eee3e20023d8bc1bb6e45842422261bd612543a0acba89dc98992",

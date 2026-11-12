@@ -285,6 +285,10 @@ String hostWrapperSource(String type, {bool exported = true}) {
   final lazyLine = rule == null
       ? ''
       : '  static __lazy = ${rule.isEmpty ? 'true' : '[${rule.map(jsonEncode).join(', ')}]'};\n';
+  // 懒规则只有存在时才写注释，避免所有包装类都带一行 `__lazy` 说明、干扰检索。
+  final lazyComment = rule == null
+      ? ''
+      : '  // 懒容器：props 由基类构造期统一拆分，懒规则通过覆盖 `__lazy` 声明。\n';
   // 函数形参名单（构建期源码事实）：runtime 只查这几个键，避免遍历全部 props。
   // 空名单不写（未声明 = undefined = 无回调）；null = 找不到源码签名 → runtime
   // 回退全量扫描（不静默漏回调）。
@@ -296,9 +300,8 @@ String hostWrapperSource(String type, {bool exported = true}) {
       : '  static __fnProps = [${(fnParams.toList()..sort()).map(jsonEncode).join(', ')}];\n';
   return '''
 ${exported ? 'export ' : ''}class $type extends Component {
-  // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
-$lazyLine$fnLine${namedCtorStatics(type)}}''';
+  // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`）。
+$lazyComment$lazyLine$fnLine${namedCtorStatics(type)}}''';
 }
 
 /// builder 命名构造（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类
