@@ -1287,7 +1287,7 @@ dart run build_runner build --delete-conflicting-outputs
 
       <h3>本地联调</h3>
       <div class="code-block" data-lang="bash">
-<pre><span class="c"># 仓库根：build_runner → 打包 patch.zip → 起本地服务（127.0.0.1:8765）</span>
+<pre><span class="c"># 仓库根：build_runner（产物 + patch.zip 归档）→ 杀旧服务 → 起本地服务（127.0.0.1:8765）</span>
 bash start_patch_server.sh
 
 <span class="c"># 运行示例 App</span>
@@ -1407,7 +1407,7 @@ bash start_patch_server.sh
         </table>
       </div>
 
-      <h3>生成器的 7 个 builder</h3>
+      <h3>生成器的 8 个 builder</h3>
       <p>所有产物由 build_runner 一次构建完成。组件与普通类走<strong>同一条</strong>翻译链路；其余 builder 各自独立，互不依赖实现细节。</p>
       <div class="table-wrap">
         <table>
@@ -1420,6 +1420,7 @@ bash start_patch_server.sh
             <tr><td><code>ui_runtime</code></td><td><code>patch/runtime.js</code></td><td>整个 JS 运行时，一个文件</td></tr>
             <tr><td><code>ui_host_register</code></td><td><code>lib/generated/host_methods.dart</code></td><td><code>@HostInjected</code> 注册清单（参与编译）</td></tr>
             <tr><td><code>ui_patch_manifest</code></td><td><code>patch/manifest.json</code></td><td>基本信息 + protocol + 每个 JS 资源的 hash</td></tr>
+            <tr><td><code>ui_patch_archive</code></td><td><code>patch/patch.zip</code></td><td>排在清单之后，把 <code>patch/</code> 下产物与静态资源打成归档</td></tr>
           </tbody>
         </table>
       </div>
