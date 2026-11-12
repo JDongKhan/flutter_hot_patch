@@ -18,6 +18,7 @@ import 'image_detail.dart';
 import 'input_detail.dart';
 import 'key_detail.dart';
 import 'layout_detail.dart';
+import 'list_view_detail.dart';
 import 'media_query_detail.dart';
 import 'method_channel_detail.dart';
 import 'notifier_card.dart';
@@ -153,7 +154,16 @@ class WidgetShowcase extends StatelessWidget {
       ),
     ]),
     _Group('列表滚动', [
-      _Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail'),
+      _Entry(
+        'ListView',
+        'children / builder / separated / itemExtent 懒加载（含 initState / dispose 日志）',
+        'ListViewDetail',
+      ),
+      _Entry(
+        'SingleChildScrollView',
+        '横向滚动 + ScrollController 监听 / 跳转',
+        'ScrollDetail',
+      ),
       _Entry(
         'AnimatedList',
         '增删补间：GlobalKey.currentState 的 insertItem / removeItem',
@@ -495,6 +505,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'KeyboardListenerDetail': 'components/keyboard_listener_detail.js',
     'LayoutDetail': 'components/layout_detail.js',
     'LayoutMoreDetail': 'components/layout_more_detail.js',
+    'ListViewDetail': 'components/list_view_detail.js',
     'MediaQueryDetail': 'components/media_query_detail.js',
     'MethodChannelDetail': 'components/method_channel_detail.js',
     'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
@@ -585,6 +596,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'ImageIconDetail' => const ImageIconDetail(),
       'KeyboardListenerDetail' => const KeyboardListenerDetail(),
       'LayoutMoreDetail' => const LayoutMoreDetail(),
+      'ListViewDetail' => const ListViewDetail(),
       'MediaQueryDetail' => const MediaQueryDetail(),
       'MethodChannelDetail' => const MethodChannelDetail(channelTag: '_native'),
       'NestedScrollViewDetail' => const NestedScrollViewDetail(),

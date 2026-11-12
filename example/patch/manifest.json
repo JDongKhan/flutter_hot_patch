@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-12T13:51:17.147465",
+  "buildTime": "2026-11-12T14:10:24.492769",
   "resources": {
     "flutter.js": "4a696142c25963889c42d5b23a2ce33223fb5a154ed8411ecc01ab1dd049de21",
     "packages/easy_refresh.js": "7606f91d791306289ebf4d47a37f6b30ac1fcdccbceeea53e6192818c9b09740",
@@ -101,7 +101,6 @@
     "components/custom_paint_detail.js": "32511afe9a50a986928f375163de5717b894d6e9fc60966cacc0452a6d6d2644",
     "components/image_filtered_detail.js": "56c02c16f4612e940192c86f674180d870b0bf98f11ddcbb1b4e7ba12f7c4a21",
     "components/scaffold_detail.js": "494e83398df665017e3ef6d9ecfccf0ea4cf305f74938748ef8758f684ae37d1",
-    "components/list_item.js": "ce7254d0615da75c5114d891d8234dfe87eb2f98dcc251a057bbbc33b15615db",
     "components/mount_fail_card.js": "3981ea15c008628ee72232e4c0d7276e3fac0fea07b255ab72767636b4665d88",
     "components/tab_detail.js": "e9e514fdf0e7be9907b59ae7a4668dc289078ce5d806a2f31ac9b8dfafc703b0",
     "components/third_party_tools_card.js": "088726281724d38cb777cbb166dbf2b06c6c8bad19bd67ce196636b6c548b781",
@@ -132,7 +131,7 @@
     "components/implicit_animation_detail.js": "c94876287cb70ad393fb3851c5720111b8047aa3105f97500e4188b5d10751eb",
     "components/progress_detail.js": "070662add851e61573e8e47a33c74effd53918945b1368c6a8687188f00dc78d",
     "components/key_tile.js": "41a708961318cbba61d730675a80b7268cfb9a6cec394de8888cb734aa9c1250",
-    "components/scroll_detail.js": "f85485f3ef4317dbc69a89eef6c1304f3f6438e126657446ae742e1980321a2f",
+    "components/scroll_detail.js": "a0dcd0ec7a13d01632a8f189bd6bd38487a040ce4d51777e06ce10c1940b5bb0",
     "components/hello_component.js": "ab0e27026d046d2316eb41df96eb83780d412877586714382940837f2310f4a0",
     "components/nested_scroll_view_detail.js": "75b9e5d2cc4d6b8ae24507dba81ba52aa99b29ed0fa305d5a5d2c5e48f17c394",
     "components/inherited_widget_demo.js": "1692e7d3c00e7867218cfeb7ab35b508abbf81f5cab8b40849b08da138a93e48",
@@ -150,6 +149,7 @@
     "base/app_router.js": "49bddfad3670613d57985a623fc85af9f37930a09304b88289a23caca22d6efb",
     "base/tracker.js": "d4664b4ea74e6fae26b5facc2881b1d2e953b7754293ea5ad13a453e443e8a5d",
     "base/web_view.js": "ed4cfc2b46fd3928dbe87a84069b8403ba875aaafa657b1e4cdeae83e9aaaff7",
-    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e"
+    "base/platform_tools.js": "7b8276ad2ca8ca23c2e50344b03df58cfb9eefba8cfe871f4fcc163319280a7e",
+    "components/list_view_detail.js": "89dece6e61f6fce045d199a53abfe9a1a529fef1773581c468dbf114cfdd0cc5"
   }
 }

@@ -233,17 +233,19 @@ import 'package:visibility_detector/visibility_detector.dart';</code></pre>
     <pre><code>import { Component } from '../flutter.js';
 
 export class MyCarousel extends Component {
-  static __lazy = true;              // 无条件懒
-  // static __lazy = ['itemExtent'];  // 只有带该 props 时才懒
+  // __lazy 是「懒规则」，类型为 boolean | string[]：
+  static __lazy = true;              // true = 无条件懒
+  // static __lazy = ['itemExtent'];  // 数组 = 仅当这些 props 任一存在时才懒
 }</code></pre>
     <ul>
+      <li><code>__lazy</code> 的取值：<code>true</code> 无条件懒；<code>string[]</code> 条件懒（如 <code>ListView</code> 只有带 <code>itemExtent</code> 才能安全懒）；不写或 <code>false</code> 表示不懒。</li>
       <li>声明必须落在<strong>宿主元素类</strong>上：继承 <code>Component</code> 且不重写 <code>build</code>，由基类在构造期读取并标记 <code>lazyChildren</code>。</li>
       <li>如果类重写了 <code>build</code>（逻辑组件），自身不产生宿主元素；应在它创建宿主结点的位置（<code>Component.host(type, props, lazy)</code>）传入 lazy 规则。</li>
       <li><code>lazyChildHostTypes</code> / <code>builderFormTypes</code> 只作用于<strong>生成器产出的包装类</strong>（内建 SDK 组件、<code>@PatchIgnore(isComponent: true)</code> 的包装类），对 <code>js/&lt;package&gt;.js</code> 里手写的类不生效，也无需登记。</li>
     </ul>
     <div class="callout warn">
       <span class="ico">!</span>
-      <div><p>只有「子项尺寸由容器强制」的容器才能懒（如分页、网格、带 <code>itemExtent</code> 的列表）。按内容量尺寸的容器（无 <code>itemExtent</code> 的 <code>ListView</code>、<code>Column</code> 类）不要设 <code>__lazy</code>：零尺寸占位会让视口把所有 item 判为可见，懒加载反而失效。</p></div>
+      <div><p>只有「子项尺寸由容器强制」的容器才能懒（如分页、网格、带 <code>itemExtent</code> 的列表）。按内容量尺寸的容器（无 <code>itemExtent</code> 的 <code>ListView</code>、<code>Column</code> 类）不要设 <code>__lazy</code>：JS 侧用 0×0 占位结点替代真实子项，占位必须布局中性；按内容量尺寸时 0 高占位会让内容总高度塌陷、视口把所有项判为可见，懒加载反而失效。原生 Flutter 的 builder 无论有没有 <code>itemExtent</code> 都是懒的，这里的差异只来自 JS↔宿主的占位协议。</p></div>
     </div>
 
     <h2 id="faq">常见问题</h2>

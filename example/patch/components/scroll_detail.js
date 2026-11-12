@@ -2,17 +2,14 @@
 // 由 hot_patch_generator 从 lib/components/scroll_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { CommonListItem } from 'list_item.js';
-import { Align, Alignment, Axis, BouncingScrollPhysics, Chip, ClampingScrollPhysics, Colors, Column, CrossAxisAlignment, Divider, EdgeInsets, FontWeight, Icon, Icons, ListTile, ListView, NotificationListener, Padding, Row, ScrollController, SingleChildScrollView, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
+import { Align, Alignment, Axis, Chip, ClampingScrollPhysics, Colors, Column, CrossAxisAlignment, EdgeInsets, FontWeight, Padding, Row, ScrollController, SingleChildScrollView, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 ScrollDetail
 export class ScrollDetail extends StatefulWidget {
   constructor(args) {
     super(args);
-    this._offset = 0;
     this._ctrlOffset = 0;
     this._scrollController = new ScrollController();
-    this._listSalt = 0;
   }
   initState() {
     super.initState();
@@ -23,12 +20,6 @@ export class ScrollDetail extends StatefulWidget {
   dispose() {
     this._scrollController.dispose();
     super.dispose();
-  }
-  _onListScroll(n) {
-    this.setState(() => {
-      this._offset = n.metrics.pixels;
-    });
-    return false;
   }
   _scrollToEnd() {
     this._scrollController.jumpTo(this._scrollController.position.maxScrollExtent);
@@ -42,93 +33,16 @@ export class ScrollDetail extends StatefulWidget {
             "fontSize": 16,
             "fontWeight": FontWeight.bold
           }))),
-          "data": "ListView.builder · 懒构建列表（offset: " + this._offset + "）"
-        }),
-        new NotificationListener({
-          "onNotification": (__a0) => this._onListScroll(__a0),
-          "child": new SizedBox({
-            "height": 160,
-            "child": ListView.builder({
-              "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
-                "value": 8
-              }))),
-              "itemExtent": 56,
-              "physics": (this.__k2 || (this.__k2 = new BouncingScrollPhysics({}))),
-              "itemCount": 20,
-              "itemBuilder": (context, index) => new ListTile({
-                "leading": (this.__k3 || (this.__k3 = new Icon({
-                  "icon": Icons.list
-                }))),
-                "title": new CommonListItem({
-                  "index": index,
-                  "salt": this._listSalt
-                })
-              })
-            })
-          }),
-          "typeArguments": {"T": "ScrollNotification"}
-        }),
-        new Align({
-          "alignment": Alignment.centerLeft,
-          "child": new TextButton({
-            "onPressed": () => { this.setState(() => {
-                this._listSalt += 1;
-              }); },
-            "child": (this.__k4 || (this.__k4 = new Text({
-              "data": "列表换色（真实更新）"
-            })))
-          })
-        }),
-        (this.__k5 || (this.__k5 = new SizedBox({
-          "height": 12
-        }))),
-        new Text({
-          "style": (this.__k0 || (this.__k0 = new TextStyle({
-            "fontSize": 16,
-            "fontWeight": FontWeight.bold
-          }))),
-          "data": "ListView.separated · 分隔列表"
-        }),
-        new SizedBox({
-          "height": 140,
-          "child": ListView.separated({
-            "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
-              "value": 8
-            }))),
-            "itemCount": 6,
-            "separatorBuilder": (context, index) => (this.__k6 || (this.__k6 = new Divider({
-              "height": 1
-            }))),
-            "itemBuilder": (context, index) => new ListTile({
-              "dense": true,
-              "leading": new Icon({
-                "color": Colors.teal.shade300,
-                "icon": Icons.arrow_right
-              }),
-              "title": new Text({
-                "data": "separated item " + index
-              })
-            })
-          })
-        }),
-        (this.__k5 || (this.__k5 = new SizedBox({
-          "height": 12
-        }))),
-        new Text({
-          "style": (this.__k0 || (this.__k0 = new TextStyle({
-            "fontSize": 16,
-            "fontWeight": FontWeight.bold
-          }))),
-          "data": "SingleChildScrollView · 长内容滚动（ctrl offset: " + this._ctrlOffset + "）"
+          "data": "SingleChildScrollView · 横向滚动（ctrl offset: " + this._ctrlOffset.toStringAsFixed(1) + "）"
         }),
         new SingleChildScrollView({
           "controller": this._scrollController,
           "scrollDirection": Axis.horizontal,
-          "physics": (this.__k7 || (this.__k7 = new ClampingScrollPhysics({}))),
+          "physics": (this.__k1 || (this.__k1 = new ClampingScrollPhysics({}))),
           "child": new Row({
             "children": [
-              ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [new Padding({
-                      "padding": (this.__k8 || (this.__k8 = EdgeInsets.all({
+              ...(() => { var out = []; for (let i = 1; (i <= 12); (i++)) { out.push.apply(out, [new Padding({
+                      "padding": (this.__k2 || (this.__k2 = EdgeInsets.all({
                         "value": 4
                       }))),
                       "child": new Chip({
@@ -144,11 +58,26 @@ export class ScrollDetail extends StatefulWidget {
           "alignment": Alignment.centerLeft,
           "child": new TextButton({
             "onPressed": () => this._scrollToEnd(),
-            "child": (this.__k9 || (this.__k9 = new Text({
+            "child": (this.__k3 || (this.__k3 = new Text({
               "data": "横向 · 跳到底"
             })))
           })
-        })
+        }),
+        (this.__k4 || (this.__k4 = new SizedBox({
+          "height": 16
+        }))),
+        (this.__k5 || (this.__k5 = new Padding({
+          "child": new Text({
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.grey
+            }),
+            "data": "ListView 的各种用法（children / builder / separated / itemExtent 懒加载）" + "已集中到「ListView」demo。"
+          }),
+          "padding": EdgeInsets.symmetric({
+            "horizontal": 12
+          })
+        })))
       ]
     });
   }
