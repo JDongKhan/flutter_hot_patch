@@ -91,11 +91,11 @@ void registerOverlayPortalWidgets(JsWidgetRegistry r) {
       key: c.key,
       link: link,
       showWhenUnlinked: c.bool_('showWhenUnlinked') ?? true,
-      offset: offsetFromJson(c.props['offset']) ?? Offset.zero,
+      offset: c.offset('offset') ?? Offset.zero,
       targetAnchor:
-          alignmentFromJson(c.props['targetAnchor']) ?? Alignment.topLeft,
+          c.alignment('targetAnchor') ?? Alignment.topLeft,
       followerAnchor:
-          alignmentFromJson(c.props['followerAnchor']) ?? Alignment.topLeft,
+          c.alignment('followerAnchor') ?? Alignment.topLeft,
       child: c.children['child'] as Widget?,
     );
   });

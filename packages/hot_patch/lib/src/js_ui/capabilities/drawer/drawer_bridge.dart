@@ -85,10 +85,10 @@ void registerDrawerWidgets(JsWidgetRegistry r) {
   r.register('Drawer', (c) => _JsDrawerScope(
         key: c.key,
         child: Drawer(
-          backgroundColor: colorFromJson(c.props['backgroundColor']),
-          elevation: c.num_('elevation'),
-          shape: shapeFromJson(c.props['shape']),
-          width: c.num_('width'),
+          backgroundColor: c.color('backgroundColor'),
+          elevation: c.double_('elevation'),
+          shape: c.shape('shape'),
+          width: c.double_('width'),
           child: (c.children['child'] as Widget?),
         ),
       ));
@@ -97,10 +97,10 @@ void registerDrawerWidgets(JsWidgetRegistry r) {
   // 与 Flutter 默认一致）。
   r.register('DrawerHeader', (c) => DrawerHeader(
         key: c.key,
-        decoration: boxDecorationFromJson(c.map('decoration')),
-        padding: nullableEdgeInsets(c.map('padding')) ??
+        decoration: c.boxDecoration('decoration'),
+        padding: c.edgeInsets('padding') ??
             const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        margin: nullableEdgeInsets(c.map('margin')) ??
+        margin: c.edgeInsets('margin') ??
             const EdgeInsets.only(bottom: 8),
         child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
       ));

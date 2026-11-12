@@ -9,6 +9,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../utils/hot_patch_log.dart';
+import '../../js_widget_registry.dart';
+
+/// 对外注册 API：动画语义值从 [JsRenderContext] 的 props 按键还原。
+extension JsRenderContextAnimation on JsRenderContext {
+  CrossFadeState crossFadeState(String key) =>
+      crossFadeStateFromJson(props[key]);
+  Curve curve(String key) => curveFromJson(props[key]);
+}
 
 /// JSON → CrossFadeState（'showFirst' / 'showSecond'，枚举成员名口径）。
 CrossFadeState crossFadeStateFromJson(Object? v) =>

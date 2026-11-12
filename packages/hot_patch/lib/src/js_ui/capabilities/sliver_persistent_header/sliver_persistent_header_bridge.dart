@@ -29,8 +29,8 @@ void registerSliverPersistentHeaderWidgets(JsWidgetRegistry r) {
       pinned: c.bool_('pinned') ?? false,
       floating: c.bool_('floating') ?? false,
       delegate: _JsSliverPersistentHeaderDelegate(
-        minExtent: c.num_('minExtent') ?? 0,
-        maxExtent: c.num_('maxExtent') ?? 0,
+        minExtent: c.double_('minExtent') ?? 0,
+        maxExtent: c.double_('maxExtent') ?? 0,
         builder: c.props['builder'],
         child: c.children['child'] as Widget?,
       ),

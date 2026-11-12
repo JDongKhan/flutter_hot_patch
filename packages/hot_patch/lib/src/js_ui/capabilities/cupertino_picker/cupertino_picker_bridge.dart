@@ -69,14 +69,14 @@ List<Widget> _itemsOf(JsRenderContext c) {
 Widget _cupertinoPicker(JsRenderContext c) {
   final items = _itemsOf(c);
   final overlay = c.children['selectionOverlay'] as Widget?;
-  final itemExtent = c.num_('itemExtent') ?? 32.0;
+  final itemExtent = c.double_('itemExtent') ?? 32.0;
   final onSelected = c.on1<int>('onSelectedItemChanged') ?? (_) {};
-  final magnification = c.num_('magnification') ?? 1.0;
-  final squeeze = c.num_('squeeze') ?? 1.45;
-  final diameterRatio = c.num_('diameterRatio') ?? 1.1;
-  final offAxisFraction = c.num_('offAxisFraction') ?? 0.0;
+  final magnification = c.double_('magnification') ?? 1.0;
+  final squeeze = c.double_('squeeze') ?? 1.45;
+  final diameterRatio = c.double_('diameterRatio') ?? 1.1;
+  final offAxisFraction = c.double_('offAxisFraction') ?? 0.0;
   final useMagnifier = c.bool_('useMagnifier') ?? false;
-  final backgroundColor = colorFromJson(c.props['backgroundColor']);
+  final backgroundColor = c.color('backgroundColor');
 
   Widget build(FixedExtentScrollController? controller, {Key? key}) =>
       CupertinoPicker.builder(

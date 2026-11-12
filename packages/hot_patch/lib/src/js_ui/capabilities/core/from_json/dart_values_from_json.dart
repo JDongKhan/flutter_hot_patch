@@ -4,6 +4,20 @@
 // 都用得到），故放在 core，与 `dart_values_js.dart`（JS 侧同名值类）对称。
 import 'package:flutter/material.dart';
 
+import '../../../js_widget_registry.dart';
+
+/// 对外注册 API：从 [JsRenderContext] 的 props 按键取值并还原成 Flutter 值。
+///
+/// 外部自定义组件的 renderer 只需拿到 `c`，不必再 import 各 `*_from_json`
+/// 文件。未传 / 类型不符时返回 null（与对应 `*FromJson` 同一口径）；嵌套结构
+/// 与无上下文路径（绘制指令、Controller 实参等）继续复用文件内原始解析函数。
+extension JsRenderContextDartValues on JsRenderContext {
+  Color? color(String key) => colorFromJson(props[key]);
+  Size? size(String key) => sizeFromJson(props[key]);
+  Offset? offset(String key) => offsetFromJson(props[key]);
+  Duration? duration(String key) => durationFromJson(props[key]);
+}
+
 /// JSON → Color（'#RRGGBB' / '#AARRGGBB'）。
 Color? colorFromJson(Object? v) {
   if (v is! String) return null;

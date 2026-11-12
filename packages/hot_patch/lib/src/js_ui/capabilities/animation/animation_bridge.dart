@@ -147,7 +147,7 @@ Animation<double>? jsDoubleAnimationOf(Object? prop) {
 
 /// 必填 duration 缺失时出声（Flutter 侧 duration 非空，零时长等于不动画）。
 Duration _animationDuration(JsRenderContext c, String type) {
-  final d = durationFromJson(c.props['duration']);
+  final d = c.duration('duration');
   if (d == null) {
     HotPatchLog.warn('$type: 缺少 duration，按 Duration.zero 处理（动画不会执行）');
     return Duration.zero;
@@ -170,23 +170,23 @@ void ensureAnimationChannels() => _animationBridge.ensure();
 void registerAnimationWidgets(JsWidgetRegistry r) {
   // ── 隐式动画：目标值进 props，插值全在宿主完成 ──
   r.register('AnimatedContainer', (c) {
-    final deco = boxDecorationFromJson(c.map('decoration'));
+    final deco = c.boxDecoration('decoration');
     return AnimatedContainer(
       key: c.key,
       duration: _animationDuration(c, 'AnimatedContainer'),
-      curve: curveFromJson(c.props['curve']),
-      width: c.num_('width'),
-      height: c.num_('height'),
+      curve: c.curve('curve'),
+      width: c.double_('width'),
+      height: c.double_('height'),
       // color 与 decoration 同传会断言：与 Container 同口径，decoration 优先。
-      color: deco == null ? colorFromJson(c.props['color']) : null,
+      color: deco == null ? c.color('color') : null,
       decoration: deco,
       // 与 Container 一致：padding / margin 可选，缺省走 Flutter 默认（null）。
-      padding: nullableEdgeInsets(c.map('padding')),
-      margin: nullableEdgeInsets(c.map('margin')),
-      alignment: alignmentFromJson(c.props['alignment']),
-      constraints: boxConstraintsFromJson(c.map('constraints')),
+      padding: c.edgeInsets('padding'),
+      margin: c.edgeInsets('margin'),
+      alignment: c.alignment('alignment'),
+      constraints: c.boxConstraints('constraints'),
       clipBehavior:
-          deco == null ? Clip.none : (clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.none),
+          deco == null ? Clip.none : (c.clipBehavior('clipBehavior') ?? Clip.none),
       child: (c.children['child'] as Widget?),
     );
   });
@@ -195,9 +195,9 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     'AnimatedOpacity',
     (c) => AnimatedOpacity(
       key: c.key,
-      opacity: c.num_('opacity') ?? 1,
+      opacity: c.double_('opacity') ?? 1,
       duration: _animationDuration(c, 'AnimatedOpacity'),
-      curve: curveFromJson(c.props['curve']),
+      curve: c.curve('curve'),
       onEnd: c.on('onEnd'),
       child: (c.children['child'] as Widget?),
     ),
@@ -207,9 +207,9 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     'AnimatedPadding',
     (c) => AnimatedPadding(
       key: c.key,
-      padding: edgeInsetsFromJson(c.map('padding')),
+      padding: c.edgeInsets('padding') ?? EdgeInsets.zero,
       duration: _animationDuration(c, 'AnimatedPadding'),
-      curve: curveFromJson(c.props['curve']),
+      curve: c.curve('curve'),
       child: (c.children['child'] as Widget?),
     ),
   );
@@ -218,9 +218,9 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     'AnimatedAlign',
     (c) => AnimatedAlign(
       key: c.key,
-      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
+      alignment: c.alignment('alignment') ?? Alignment.center,
       duration: _animationDuration(c, 'AnimatedAlign'),
-      curve: curveFromJson(c.props['curve']),
+      curve: c.curve('curve'),
       child: (c.children['child'] as Widget?),
     ),
   );
@@ -229,10 +229,10 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     'AnimatedScale',
     (c) => AnimatedScale(
       key: c.key,
-      scale: c.num_('scale') ?? 1,
+      scale: c.double_('scale') ?? 1,
       duration: _animationDuration(c, 'AnimatedScale'),
-      curve: curveFromJson(c.props['curve']),
-      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
+      curve: c.curve('curve'),
+      alignment: c.alignment('alignment') ?? Alignment.center,
       child: (c.children['child'] as Widget?),
     ),
   );
@@ -241,10 +241,10 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     'AnimatedRotation',
     (c) => AnimatedRotation(
       key: c.key,
-      turns: c.num_('turns') ?? 0,
+      turns: c.double_('turns') ?? 0,
       duration: _animationDuration(c, 'AnimatedRotation'),
-      curve: curveFromJson(c.props['curve']),
-      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
+      curve: c.curve('curve'),
+      alignment: c.alignment('alignment') ?? Alignment.center,
       child: (c.children['child'] as Widget?),
     ),
   );
@@ -253,9 +253,9 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     'AnimatedSlide',
     (c) => AnimatedSlide(
       key: c.key,
-      offset: offsetFromJson(c.props['offset']) ?? Offset.zero,
+      offset: c.offset('offset') ?? Offset.zero,
       duration: _animationDuration(c, 'AnimatedSlide'),
-      curve: curveFromJson(c.props['curve']),
+      curve: c.curve('curve'),
       child: (c.children['child'] as Widget?),
     ),
   );
@@ -265,9 +265,9 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     (c) => AnimatedSize(
       key: c.key,
       duration: _animationDuration(c, 'AnimatedSize'),
-      curve: curveFromJson(c.props['curve']),
-      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
-      clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.hardEdge,
+      curve: c.curve('curve'),
+      alignment: c.alignment('alignment') ?? Alignment.center,
+      clipBehavior: c.clipBehavior('clipBehavior') ?? Clip.hardEdge,
       child: (c.children['child'] as Widget?),
     ),
   );
@@ -279,9 +279,9 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     return AnimatedSwitcher(
       key: c.key,
       duration: _animationDuration(c, 'AnimatedSwitcher'),
-      reverseDuration: durationFromJson(c.props['reverseDuration']),
-      switchInCurve: curveFromJson(c.props['switchInCurve']),
-      switchOutCurve: curveFromJson(c.props['switchOutCurve']),
+      reverseDuration: c.duration('reverseDuration'),
+      switchInCurve: c.curve('switchInCurve'),
+      switchOutCurve: c.curve('switchOutCurve'),
       child: (c.children['child'] as Widget?),
     );
   });
@@ -293,26 +293,26 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
       key: c.key,
       firstChild: first,
       secondChild: second,
-      crossFadeState: crossFadeStateFromJson(c.props['crossFadeState']),
+      crossFadeState: c.crossFadeState('crossFadeState'),
       duration: _animationDuration(c, 'AnimatedCrossFade'),
-      firstCurve: curveFromJson(c.props['firstCurve']),
-      secondCurve: curveFromJson(c.props['secondCurve']),
-      sizeCurve: curveFromJson(c.props['sizeCurve']),
-      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.topCenter,
-      reverseDuration: durationFromJson(c.props['reverseDuration']),
+      firstCurve: c.curve('firstCurve'),
+      secondCurve: c.curve('secondCurve'),
+      sizeCurve: c.curve('sizeCurve'),
+      alignment: c.alignment('alignment') ?? Alignment.topCenter,
+      reverseDuration: c.duration('reverseDuration'),
     );
   });
 
   r.register('AnimatedDefaultTextStyle', (c) {
-    final style = textStyleFromJson(c.map('style'));
+    final style = c.textStyle('style');
     return AnimatedDefaultTextStyle(
       key: c.key,
       style: style ?? const TextStyle(),
       duration: _animationDuration(c, 'AnimatedDefaultTextStyle'),
-      curve: curveFromJson(c.props['curve']),
-      textAlign: textAlignFromJson(c.props['textAlign']),
+      curve: c.curve('curve'),
+      textAlign: c.textAlign('textAlign'),
       softWrap: c.bool_('softWrap') ?? true,
-      overflow: overflowFromJson(c.props['overflow']) ?? TextOverflow.clip,
+      overflow: c.overflow('overflow') ?? TextOverflow.clip,
       maxLines: c.int_('maxLines'),
       child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
     );
@@ -322,14 +322,14 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     'AnimatedPositioned',
     (c) => AnimatedPositioned(
       key: c.key,
-      left: c.num_('left'),
-      top: c.num_('top'),
-      right: c.num_('right'),
-      bottom: c.num_('bottom'),
-      width: c.num_('width'),
-      height: c.num_('height'),
+      left: c.double_('left'),
+      top: c.double_('top'),
+      right: c.double_('right'),
+      bottom: c.double_('bottom'),
+      width: c.double_('width'),
+      height: c.double_('height'),
       duration: _animationDuration(c, 'AnimatedPositioned'),
-      curve: curveFromJson(c.props['curve']),
+      curve: c.curve('curve'),
       child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
     ),
   );
@@ -360,7 +360,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     return ScaleTransition(
       key: c.key,
       scale: animation,
-      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
+      alignment: c.alignment('alignment') ?? Alignment.center,
       child: child,
     );
   });
@@ -375,7 +375,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     return RotationTransition(
       key: c.key,
       turns: animation,
-      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
+      alignment: c.alignment('alignment') ?? Alignment.center,
       child: child,
     );
   });
@@ -390,8 +390,8 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
     return SizeTransition(
       key: c.key,
       sizeFactor: animation,
-      axis: axisFromJson(c.props['axis']) ?? Axis.vertical,
-      axisAlignment: c.num_('axisAlignment') ?? 0,
+      axis: c.axis('axis') ?? Axis.vertical,
+      axisAlignment: c.double_('axisAlignment') ?? 0,
       child: child,
     );
   });

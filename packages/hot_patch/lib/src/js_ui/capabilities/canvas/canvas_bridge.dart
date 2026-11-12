@@ -32,7 +32,7 @@ void registerCanvasWidgets(JsWidgetRegistry r) {
         c.props['foregroundPainter'],
         'foregroundPainter',
       ),
-      size: sizeFromJson(c.props['size']) ?? Size.zero,
+      size: c.size('size') ?? Size.zero,
       isComplex: c.bool_('isComplex') ?? false,
       willChange: c.bool_('willChange') ?? false,
       child: c.children['child'] as Widget?,

@@ -4,6 +4,14 @@
 // 内建组件共用，故放在 core。
 import 'package:flutter/material.dart';
 
+import '../../../js_widget_registry.dart';
+
+/// 对外注册 API：杂项组件枚举从 [JsRenderContext] 的 props 按键还原。
+extension JsRenderContextWidgetEnums on JsRenderContext {
+  BlendMode? blendMode(String key) => blendModeFromJson(props[key]);
+  ScrollPhysics? scrollPhysics(String key) => scrollPhysicsFromJson(props[key]);
+}
+
 /// JSON → BlendMode（Image.colorBlendMode 用，覆盖常用混合模式）。
 BlendMode? blendModeFromJson(Object? v) {
   if (v is! String) return null;

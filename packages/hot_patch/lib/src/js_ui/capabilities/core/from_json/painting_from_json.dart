@@ -7,9 +7,27 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../../../../utils/hot_patch_assets.dart';
+import '../../../js_widget_registry.dart';
 import 'dart_values_from_json.dart';
 import 'layout_from_json.dart';
 import 'widget_enum_from_json.dart';
+
+/// 对外注册 API：绘制类值从 [JsRenderContext] 的 props 按键还原。
+extension JsRenderContextPainting on JsRenderContext {
+  ImageFilter? imageFilter(String key) => imageFilterFromJson(props[key]);
+  ColorFilter? colorFilter(String key) => colorFilterFromJson(props[key]);
+  BorderSide? borderSide(String key) => borderSideFromJson(props[key]);
+  BorderRadius? borderRadius(String key) => borderRadiusFromJson(map(key));
+  Border? border(String key) => borderFromJson(map(key));
+  BoxShadow? boxShadow(String key) => boxShadowFromJson(props[key]);
+  List<BoxShadow>? boxShadowList(String key) =>
+      boxShadowListFromJson(props[key]);
+  Gradient? gradient(String key) => gradientFromJson(map(key));
+  DecorationImage? decorationImage(String key) =>
+      decorationImageFromJson(map(key));
+  OutlinedBorder? shape(String key) => shapeFromJson(props[key]);
+  BoxDecoration? boxDecoration(String key) => boxDecorationFromJson(map(key));
+}
 
 /// JSON → ImageFilter（{kind:'blur', sigmaX, sigmaY, tileMode} /
 /// {kind:'dilate'|'erode', radiusX, radiusY} /
@@ -19,15 +37,15 @@ import 'widget_enum_from_json.dart';
 /// 矩阵长度必须为 16（4×4），不满足时返回 null；[compose] 递归还原内外两层。
 ImageFilter? imageFilterFromJson(Object? v) {
   if (v is! Map) return null;
-  double? num_(Object? x) {
+  double? double_(Object? x) {
     if (x is num) return x.toDouble();
     return double.tryParse('$x');
   }
 
   switch ('${v['kind']}') {
     case 'blur':
-      final sx = num_(v['sigmaX']);
-      final sy = num_(v['sigmaY']);
+      final sx = double_(v['sigmaX']);
+      final sy = double_(v['sigmaY']);
       if (sx == null || sy == null) return null;
       return ImageFilter.blur(
         sigmaX: sx,
@@ -35,13 +53,13 @@ ImageFilter? imageFilterFromJson(Object? v) {
         tileMode: _tileModeFromJson(v['tileMode']),
       );
     case 'dilate':
-      final rx = num_(v['radiusX']);
-      final ry = num_(v['radiusY']);
+      final rx = double_(v['radiusX']);
+      final ry = double_(v['radiusY']);
       if (rx == null || ry == null) return null;
       return ImageFilter.dilate(radiusX: rx, radiusY: ry);
     case 'erode':
-      final rx = num_(v['radiusX']);
-      final ry = num_(v['radiusY']);
+      final rx = double_(v['radiusX']);
+      final ry = double_(v['radiusY']);
       if (rx == null || ry == null) return null;
       return ImageFilter.erode(radiusX: rx, radiusY: ry);
     case 'matrix':
@@ -51,7 +69,7 @@ ImageFilter? imageFilterFromJson(Object? v) {
       if (raw is! List || raw.length != 16) return null;
       final matrix = <double>[];
       for (final e in raw) {
-        final n = num_(e);
+        final n = double_(e);
         if (n == null) return null;
         matrix.add(n);
       }

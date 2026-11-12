@@ -5,7 +5,25 @@
 import 'package:flutter/material.dart';
 
 import '../../../utils/hot_patch_log.dart';
+import '../../js_widget_registry.dart';
 import '../core/from_json/dart_values_from_json.dart';
+
+/// 对外注册 API：文本类值从 [JsRenderContext] 的 props 按键还原。
+extension JsRenderContextText on JsRenderContext {
+  TextStyle? textStyle(String key) => textStyleFromJson(map(key));
+  InlineSpan? textSpan(String key) => textSpanFromJson(props[key]);
+  TextDecoration? textDecoration(String key) =>
+      textDecorationFromJson(props[key]);
+  TextDecorationStyle? textDecorationStyle(String key) =>
+      textDecorationStyleFromJson(props[key]);
+  TextAlign? textAlign(String key) => textAlignFromJson(props[key]);
+  TextOverflow? overflow(String key) => overflowFromJson(props[key]);
+  TextDirection? textDirection(String key) => textDirectionFromJson(props[key]);
+  FontWeight? fontWeight(String key) => fontWeightFromJson(props[key]);
+  FontStyle? fontStyle(String key) => fontStyleFromJson(props[key]);
+  TextScaler? textScaler(String key) => textScalerFromJson(props[key]);
+  TextInputType? textInputType(String key) => textInputTypeFromJson(props[key]);
+}
 
 /// JSON → TextStyle；**缺省返回 null**（缺省 = 没传这个属性，不等于空样式）。
 ///

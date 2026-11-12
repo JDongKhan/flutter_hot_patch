@@ -3,9 +3,44 @@
 // 边距 / 对齐 / 轴向 / 尺寸约束 / 适配 / 裁剪等纯布局语义的还原。
 import 'package:flutter/material.dart';
 
-/// JSON → EdgeInsets（{left,top,right,bottom}；缺省 0）。
-EdgeInsets edgeInsetsFromJson(Map<String, dynamic>? json) {
-  if (json == null || json.isEmpty) return EdgeInsets.zero;
+import '../../../js_widget_registry.dart';
+
+/// 对外注册 API：布局类值从 [JsRenderContext] 的 props 按键还原。
+extension JsRenderContextLayout on JsRenderContext {
+  EdgeInsets? edgeInsets(String key) => edgeInsetsFromJson(map(key));
+  Alignment? alignment(String key) => alignmentFromJson(props[key]);
+  MainAxisAlignment? mainAxisAlignment(String key) =>
+      mainAxisAlignmentFromJson(props[key]);
+  CrossAxisAlignment? crossAxisAlignment(String key) =>
+      crossAxisAlignmentFromJson(props[key]);
+  TextBaseline? textBaseline(String key) => textBaselineFromJson(props[key]);
+  MainAxisSize? mainAxisSize(String key) => mainAxisSizeFromJson(props[key]);
+  Axis? axis(String key) => axisFromJson(props[key]);
+  BoxFit? boxFit(String key) => boxFitFromJson(props[key]);
+  StackFit? stackFit(String key) => stackFitFromJson(props[key]);
+  BoxConstraints? boxConstraints(String key) =>
+      boxConstraintsFromJson(map(key));
+  WrapAlignment? wrapAlignment(String key) =>
+      wrapAlignmentFromJson(props[key]);
+  WrapCrossAlignment? wrapCrossAlignment(String key) =>
+      wrapCrossAlignmentFromJson(props[key]);
+  VisualDensity? visualDensity(String key) =>
+      visualDensityFromJson(props[key]);
+  HitTestBehavior? hitTestBehavior(String key) =>
+      hitTestBehaviorFromJson(props[key]);
+  ImageRepeat? imageRepeat(String key) => imageRepeatFromJson(props[key]);
+  Clip? clipBehavior(String key) => clipBehaviorFromJson(props[key]);
+}
+
+/// JSON → EdgeInsets（{left,top,right,bottom}；缺省 → null）。
+///
+/// 缺省返回 null（保持 Flutter 组件默认语义）：Chip / ListView /
+/// SingleChildScrollView 等组件的 padding 是可选参数，null 时应走组件/主题
+/// 默认值（如 Chip 默认 `EdgeInsets.all(8.0)`）——若用 zero 覆盖，JS 侧渲染会
+/// 比原生窄。需要非空值的位置由调用方按官方默认自行兜底（如
+/// `c.edgeInsets('padding') ?? EdgeInsets.zero`）。
+EdgeInsets? edgeInsetsFromJson(Map<String, dynamic>? json) {
+  if (json == null || json.isEmpty) return null;
   double v(Object? x) {
     if (x is num) return x.toDouble();
     return double.tryParse('$x') ?? 0;
@@ -18,13 +53,6 @@ EdgeInsets edgeInsetsFromJson(Map<String, dynamic>? json) {
     bottom: v(json['bottom']),
   );
 }
-
-/// 缺省 → null（保持 Flutter 组件默认语义）：[edgeInsetsFromJson] 对 null 返回
-/// EdgeInsets.zero，但 Chip / ListView / SingleChildScrollView 等组件的
-/// padding 是可选参数，null 时应走组件/主题默认值（如 Chip 默认
-/// EdgeInsets.all(8.0)）——若用 zero 覆盖，JS 侧渲染会比原生窄。
-EdgeInsets? nullableEdgeInsets(Map<String, dynamic>? json) =>
-    json == null || json.isEmpty ? null : edgeInsetsFromJson(json);
 
 /// JSON → Alignment（'center'/'topLeft'/...）。
 Alignment? alignmentFromJson(Object? v) {

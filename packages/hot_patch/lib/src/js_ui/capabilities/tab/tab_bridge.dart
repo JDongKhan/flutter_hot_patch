@@ -131,21 +131,19 @@ void registerTabWidgets(JsWidgetRegistry r) {
   r.register('TabBar', (c) {
     final tabs = (c.children['tabs'] as List<Widget>?) ?? const <Widget>[];
     final isScrollable = c.bool_('isScrollable') ?? false;
-    final padding = nullableEdgeInsets(c.map('padding'));
-    final indicatorColor = colorFromJson(c.props['indicatorColor']);
-    final indicatorWeight = c.num_('indicatorWeight') ?? 2.0;
-    final indicatorSize = tabBarIndicatorSizeFromJson(c.props['indicatorSize']);
-    final dividerColor = colorFromJson(c.props['dividerColor']);
-    final dividerHeight = c.num_('dividerHeight');
-    final labelColor = colorFromJson(c.props['labelColor']);
-    final labelStyle = textStyleFromJson(c.map('labelStyle'));
-    final labelPadding = nullableEdgeInsets(c.map('labelPadding'));
-    final unselectedLabelColor = colorFromJson(c.props['unselectedLabelColor']);
-    final unselectedLabelStyle = textStyleFromJson(
-      c.map('unselectedLabelStyle'),
-    );
-    final tabAlignment = tabAlignmentFromJson(c.props['tabAlignment']);
-    final physics = scrollPhysicsFromJson(c.props['physics']);
+    final padding = c.edgeInsets('padding');
+    final indicatorColor = c.color('indicatorColor');
+    final indicatorWeight = c.double_('indicatorWeight') ?? 2.0;
+    final indicatorSize = c.tabBarIndicatorSize('indicatorSize');
+    final dividerColor = c.color('dividerColor');
+    final dividerHeight = c.double_('dividerHeight');
+    final labelColor = c.color('labelColor');
+    final labelStyle = c.textStyle('labelStyle');
+    final labelPadding = c.edgeInsets('labelPadding');
+    final unselectedLabelColor = c.color('unselectedLabelColor');
+    final unselectedLabelStyle = c.textStyle('unselectedLabelStyle');
+    final tabAlignment = c.tabAlignment('tabAlignment');
+    final physics = c.scrollPhysics('physics');
     final onTap = c.on1<int>('onTap');
 
     Widget build(TabController? controller, {Key? key}) {
@@ -215,8 +213,8 @@ void registerTabWidgets(JsWidgetRegistry r) {
     Widget build(TabController? controller, {Key? key}) => TabBarView(
       key: key,
       controller: controller,
-      physics: scrollPhysicsFromJson(c.props['physics']),
-      viewportFraction: c.num_('viewportFraction') ?? 1.0,
+      physics: c.scrollPhysics('physics'),
+      viewportFraction: c.double_('viewportFraction') ?? 1.0,
       children: ((c.children['children'] as List<Widget>?) ?? const []),
     );
     final handle = tabControllerHandleOf(c.props['controller']);

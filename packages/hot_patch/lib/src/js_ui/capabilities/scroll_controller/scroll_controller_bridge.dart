@@ -187,12 +187,12 @@ Widget _pageControllerHost(
 SliverGridDelegate _gridDelegateFromJson(JsRenderContext c) {
   final g = c.map('gridDelegate') ?? const <String, dynamic>{};
   double? numOf(String key) {
-    final v = c.num_(key) ?? (g[key] is num ? g[key] as num : null);
+    final v = c.double_(key) ?? (g[key] is num ? g[key] as num : null);
     return v?.toDouble();
   }
 
   int? intOf(String key) {
-    final v = c.num_(key) ?? (g[key] is num ? g[key] as num : null);
+    final v = c.double_(key) ?? (g[key] is num ? g[key] as num : null);
     return v?.toInt();
   }
 
@@ -306,10 +306,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     Widget build(ScrollController? controller, {Key? key}) {
       final shrinkWrap = c.bool_('shrinkWrap') ?? false;
       final scrollDirection =
-          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
-      final padding = nullableEdgeInsets(c.map('padding'));
-      final physics = scrollPhysicsFromJson(c.props['physics']);
-      final itemExtent = c.num_('itemExtent');
+          c.axis('scrollDirection') ?? Axis.vertical;
+      final padding = c.edgeInsets('padding');
+      final physics = c.scrollPhysics('physics');
+      final itemExtent = c.double_('itemExtent');
       if (!builder) {
         return ListView(
           key: key,
@@ -379,10 +379,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       // onReorder 非空：无句柄时给空实现，避免拖拽结束抛断言。
       final onReorder = c.on2<int, int>('onReorder') ?? (_, _) {};
       final scrollDirection =
-          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
-      final padding = nullableEdgeInsets(c.map('padding'));
+          c.axis('scrollDirection') ?? Axis.vertical;
+      final padding = c.edgeInsets('padding');
       final shrinkWrap = c.bool_('shrinkWrap') ?? false;
-      final physics = scrollPhysicsFromJson(c.props['physics']);
+      final physics = c.scrollPhysics('physics');
       if (isBuilder) {
         return ReorderableListView.builder(
           key: key,
@@ -424,10 +424,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register('GridView', (c) {
     final gridDelegate = _gridDelegateFromJson(c);
     final scrollDirection =
-        axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
-    final padding = nullableEdgeInsets(c.map('padding'));
+        c.axis('scrollDirection') ?? Axis.vertical;
+    final padding = c.edgeInsets('padding');
     final shrinkWrap = c.bool_('shrinkWrap') ?? false;
-    final physics = scrollPhysicsFromJson(c.props['physics']);
+    final physics = c.scrollPhysics('physics');
     final children = _flatChildren(c, 'children');
     final isBuilder = _isNamedBuilderForm(c);
     final itemCount = _builderCount(c, children.length);
@@ -469,8 +469,8 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final scId = JsControllerBridge.idOf(c.props['controller']);
     if (scId != null) {
       final scrollDirection =
-          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
-      final physics = scrollPhysicsFromJson(c.props['physics']);
+          c.axis('scrollDirection') ?? Axis.vertical;
+      final physics = c.scrollPhysics('physics');
       final reverse = c.bool_('reverse') ?? false;
       final shrinkWrap = c.bool_('shrinkWrap') ?? false;
       final slivers = _flatChildren(c, 'slivers');
@@ -491,8 +491,8 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     return CustomScrollView(
       key: c.key,
       scrollDirection:
-          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
-      physics: scrollPhysicsFromJson(c.props['physics']),
+          c.axis('scrollDirection') ?? Axis.vertical,
+      physics: c.scrollPhysics('physics'),
       reverse: c.bool_('reverse') ?? false,
       shrinkWrap: c.bool_('shrinkWrap') ?? false,
       slivers: _flatChildren(c, 'slivers'),
@@ -508,9 +508,9 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final reverse = c.bool_('reverse') ?? false;
     final floatHeaderSlivers = c.bool_('floatHeaderSlivers') ?? false;
     final scrollDirection =
-        axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
-    final physics = scrollPhysicsFromJson(c.props['physics']);
-    final clipBehavior = clipBehaviorFromJson(c.props['clipBehavior']);
+        c.axis('scrollDirection') ?? Axis.vertical;
+    final physics = c.scrollPhysics('physics');
+    final clipBehavior = c.clipBehavior('clipBehavior');
     Widget buildWith(ScrollController? controller, {Key? key}) =>
         NestedScrollView(
           key: key,
@@ -613,17 +613,17 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final leading = (c.children['leading'] as Widget?);
     final title = (c.children['title'] as Widget?);
     final flexibleSpace = (c.children['flexibleSpace'] as Widget?);
-    final backgroundColor = colorFromJson(c.props['backgroundColor']);
-    final foregroundColor = colorFromJson(c.props['foregroundColor']);
-    final elevation = c.num_('elevation');
+    final backgroundColor = c.color('backgroundColor');
+    final foregroundColor = c.color('foregroundColor');
+    final elevation = c.double_('elevation');
     // toolbarHeight 缺省为 Flutter 默认 kToolbarHeight（SDK 非空参数）。
-    final toolbarHeight = c.num_('toolbarHeight') ?? kToolbarHeight;
+    final toolbarHeight = c.double_('toolbarHeight') ?? kToolbarHeight;
     final centerTitle = c.bool_('centerTitle');
-    final titleTextStyle = textStyleFromJson(c.map('titleTextStyle'));
+    final titleTextStyle = c.textStyle('titleTextStyle');
     final pinned = c.bool_('pinned') ?? false;
     final floating = c.bool_('floating') ?? false;
     final snap = c.bool_('snap') ?? false;
-    final expandedHeight = c.num_('expandedHeight');
+    final expandedHeight = c.double_('expandedHeight');
     // `.large` / `.medium` 是命名构造：固定 expandedHeight 与 pinned/floating
     // 默认值，宿主按 factory 还原原生构造。
     switch (c.str('factory')) {
@@ -681,7 +681,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     'SliverPadding',
     (c) => SliverPadding(
       key: c.key,
-      padding: edgeInsetsFromJson(c.map('padding')),
+      padding: c.edgeInsets('padding') ?? EdgeInsets.zero,
       sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
@@ -711,7 +711,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // `.list` / 普通构造 → SliverChildListDelegate）+ itemExtent（必填，缺失按 0
   // 兜底暴露问题）。`.builder` 命名构造按 factory 还原，保留懒加载。
   r.register('SliverFixedExtentList', (c) {
-    final itemExtent = c.num_('itemExtent') ?? 0;
+    final itemExtent = c.double_('itemExtent') ?? 0;
     if (_isNamedBuilderForm(c)) {
       final children = _flatChildren(c, 'children');
       return SliverFixedExtentList.builder(
@@ -735,7 +735,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     (c) => SliverFillViewport(
       key: c.key,
       delegate: _sliverDelegate(c),
-      viewportFraction: c.num_('viewportFraction') ?? 1,
+      viewportFraction: c.double_('viewportFraction') ?? 1,
       padEnds: c.bool_('padEnds') ?? true,
     ),
   );
@@ -746,7 +746,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     'SliverOpacity',
     (c) => SliverOpacity(
       key: c.key,
-      opacity: c.num_('opacity') ?? 1,
+      opacity: c.double_('opacity') ?? 1,
       sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
@@ -818,8 +818,8 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final scId = JsControllerBridge.idOf(c.props['controller']);
     if (scId != null) {
       final scrollDirection =
-          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
-      final physics = scrollPhysicsFromJson(c.props['physics']);
+          c.axis('scrollDirection') ?? Axis.vertical;
+      final physics = c.scrollPhysics('physics');
       final reverse = c.bool_('reverse') ?? false;
       final child = (c.children['child'] as Widget?);
       return _scrollControllerHost(
@@ -838,9 +838,9 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     return SingleChildScrollView(
       key: c.key,
       scrollDirection:
-          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
-      padding: nullableEdgeInsets(c.map('padding')),
-      physics: scrollPhysicsFromJson(c.props['physics']),
+          c.axis('scrollDirection') ?? Axis.vertical,
+      padding: c.edgeInsets('padding'),
+      physics: c.scrollPhysics('physics'),
       reverse: c.bool_('reverse') ?? false,
       child: (c.children['child'] as Widget?),
     );
@@ -856,10 +856,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
 
     Widget build(PageController? controller, {Key? key}) {
       final direction =
-          axisFromJson(c.props['scrollDirection']) ?? Axis.horizontal;
+          c.axis('scrollDirection') ?? Axis.horizontal;
       final reverse = c.bool_('reverse') ?? false;
       final pageSnapping = c.bool_('pageSnapping') ?? true;
-      final physics = scrollPhysicsFromJson(c.props['physics']);
+      final physics = c.scrollPhysics('physics');
       final onPageChanged = c.on1<int>('onPageChanged');
       if (builder) {
         return PageView.builder(

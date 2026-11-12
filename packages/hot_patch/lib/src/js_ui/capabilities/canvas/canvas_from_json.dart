@@ -10,10 +10,27 @@ import 'dart:ui' show ClipOp;
 import 'package:flutter/material.dart';
 
 import '../../../utils/hot_patch_log.dart';
+import '../../js_widget_registry.dart';
 import '../base_widget/text_from_json.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/painting_from_json.dart';
 import '../core/from_json/widget_enum_from_json.dart';
+
+/// 对外注册 API：绘制录制值从 [JsRenderContext] 的 props 按键还原。
+///
+/// `textPainter` 的 span / options 来自绘制指令的两个独立负载，不属于单键
+/// props，故保留原始函数供重放路径直接调用。
+extension JsRenderContextCanvas on JsRenderContext {
+  Rect? rect(String key) => rectFromJson(props[key]);
+  RRect? rrect(String key) => rrectFromJson(props[key]);
+  ClipOp clipOp(String key) => clipOpFromJson(props[key]);
+  PaintingStyle paintingStyle(String key) => paintingStyleFromJson(props[key]);
+  StrokeCap strokeCap(String key) => strokeCapFromJson(props[key]);
+  StrokeJoin strokeJoin(String key) => strokeJoinFromJson(props[key]);
+  Shader? shader(String key) => shaderFromJson(props[key]);
+  Paint? paint(String key) => paintFromJson(props[key]);
+  Path? path(String key) => pathFromJson(props[key]);
+}
 
 /// JSON 数字（number / 数字字符串）→ double；无法解析返回 null。
 double? _d(Object? v) {

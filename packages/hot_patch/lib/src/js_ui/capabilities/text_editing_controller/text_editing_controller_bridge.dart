@@ -82,10 +82,10 @@ void registerTextWidgets(JsWidgetRegistry r) {
       suffixIcon: c.element(deco?['suffixIcon']),
       obscureText: c.bool_('obscureText') ?? false,
       enabled: c.bool_('enabled'),
-      keyboardType: textInputTypeFromJson(c.props['keyboardType']),
+      keyboardType: c.textInputType('keyboardType'),
       maxLines: c.int_('maxLines') ?? 1,
-      style: textStyleFromJson(c.map('style')),
-      textAlign: textAlignFromJson(c.props['textAlign']),
+      style: c.textStyle('style'),
+      textAlign: c.textAlign('textAlign'),
     );
   });
 }

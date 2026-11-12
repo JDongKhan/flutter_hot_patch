@@ -4,8 +4,12 @@
 
 **加法：`MethodChannel` 宿主通道；无破坏性协议变更。**
 
+- **宿主 JSON 还原统一为 `JsRenderContext` 扩展方法**：`capabilities/**/*_from_json.dart` 的还原入口改为按 props 键取值的短名扩展，例如 `c.color('color')`、`c.textStyle('style')`、`c.edgeInsets('padding')`、`c.boxDecoration('decoration')`。`hot_patch.dart` 统一导出这些扩展，外部自定义 register 只需 `import 'package:hot_patch/hot_patch.dart'`，不必再 import 具体实现文件。嵌套结构、绘制指令、弹层 options、Controller 实参等无渲染上下文的路径继续复用底层 `*FromJson` 函数（`curveFromJson` / `durationFromJson` 保持导出）。
+- **`edgeInsets` 统一为单一可空方法**：删除 `nullableEdgeInsets` / 非空 `edgeInsets` 两个入口，只保留返回 `EdgeInsets?` 的 `edgeInsetsFromJson` / `c.edgeInsets(key)`；缺省返回 null 以保留组件/主题默认值。需要非空的位置由调用方按 Flutter 官方默认兜底（如 `?? EdgeInsets.zero`）。
+- **`JsRenderContext.num_` 更名为 `double_`**：该方法返回 `double?`，原名与返回类型不一致；调用点统一改为 `c.double_(key)`。`int_` / `bool_` / `double_` 命名保持一致。
+
 - **宿主对象还原不再自带默认值**：JSON → Flutter 值/组件的解析统一以**官方构造器默认值**为准，缺省属性一律不传（`null` = 组件/主题默认），不再用自定义零值覆盖。
-  - `Container` / `AnimatedContainer` 的 `padding` / `margin` 改用 `nullableEdgeInsets`（此前缺省塞 `EdgeInsets.zero`）；
+  - `Container` / `AnimatedContainer` 的 `padding` / `margin` 改用可空的 `c.edgeInsets`（此前缺省塞 `EdgeInsets.zero`）；
   - `Tooltip` 的 `padding` / `margin` / `verticalOffset` / `excludeFromSemantics` 缺省不再填 0 / 24 / false（这些在 3.41 都是 `null` → `TooltipTheme`）；
   - `CustomPaint` 的 `TextPainter.textAlign` 缺省改为官方 `TextAlign.start`（此前误用 `left`）；
   - `MediaQueryData` 解析由 `const MediaQueryData()` + 仅对存在的字段 `copyWith`（见上一条）。
@@ -15,7 +19,7 @@
 
 - **`MediaQuery` 组件（含 `removePadding` / `removeViewPadding` / `removeViewInsets`）**：JS 类是宿主手写的 `Component` 子类（登记 `logicWidgetTypes`，生成器不再重复生成同名包装类），静态取值 API 与命名构造静态方法都写在类体内（后者与其它组件同构：写 `factory`）。宿主注册 `'MediaQuery'` 只负责渲染：无名构造用 `data` 还原 `MediaQueryData`（JS 侧 `MediaQueryData` 值类 + `copyWith`，`MediaQuery.of()` 返回它），`remove*` 用调用位置的 BuildContext 直接调 Flutter 同名 API。为此 `JsRenderContext` 新增 `context`（宿主构建期传入并沿子树透传）；`JsBuildContext` 补 `toJSON()`（代理含组件实例引用，不可直接跨桥序列化）。示例见 `example/lib/components/media_query_detail.dart`。
 
-- **`ClipRRect` 圆角修复**：宿主渲染只按数字读 `borderRadius`（`c.num_`），而 JS 侧 `BorderRadius.circular(14)` 的 `toJSON()` 是 `{radius: 14}` 对象 → 取不到值退回 `BorderRadius.zero`，补丁内所有圆角裁切（banner / 推广图等）变成直角。改为 `borderRadiusFromJson` 解析（`{radius}` / 四角），并兼容旧协议直接下发数字。
+- **`ClipRRect` 圆角修复**：宿主渲染只按数字读 `borderRadius`（`c.double_`），而 JS 侧 `BorderRadius.circular(14)` 的 `toJSON()` 是 `{radius: 14}` 对象 → 取不到值退回 `BorderRadius.zero`，补丁内所有圆角裁切（banner / 推广图等）变成直角。改为 `borderRadiusFromJson` 解析（`{radius}` / 四角），并兼容旧协议直接下发数字。
 
 - **宿主通道 `methodChannel`**：JS 侧 `MethodChannel.invokeMethod` 经唯一出口 `_app_host_.invoke('methodChannel', [name, codec, method, args])` 交给宿主，宿主再调真正的 Flutter `MethodChannel(name, codec).invokeMethod` → 原生（不绕过、不新开 JS↔原生通道）。
 - **实例绑定**：宿主按 `name#codec` 缓存 Dart 侧 `MethodChannel` 实例；channel 身份即该键，无运行时句柄、无 acquire / release（MethodChannel 无状态、无 dispose，同名实例共享 messenger 路由）。

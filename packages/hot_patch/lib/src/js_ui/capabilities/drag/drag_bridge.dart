@@ -43,7 +43,7 @@ Widget _draggableOf(JsRenderContext c, {Key? key, required bool longPress}) {
       uiFallback('${c.type} 缺少 feedback（拖拽时的浮动子树）');
   final childWhenDragging = c.children['childWhenDragging'] as Widget?;
   final data = c.props['data'];
-  final axis = axisFromJson(c.props['axis']);
+  final axis = c.axis('axis');
   final maxSimultaneousDrags = c.int_('maxSimultaneousDrags');
   final hitTestBehavior =
       _hitTestBehaviorOf(c.props['hitTestBehavior']) ??
@@ -65,7 +65,7 @@ Widget _draggableOf(JsRenderContext c, {Key? key, required bool longPress}) {
       hitTestBehavior: hitTestBehavior,
       rootOverlay: rootOverlay,
       ignoringFeedbackPointer: ignoringFeedbackPointer,
-      delay: durationFromJson(c.props['delay']) ?? kLongPressTimeout,
+      delay: c.duration('delay') ?? kLongPressTimeout,
       hapticFeedbackOnStart: c.bool_('hapticFeedbackOnStart') ?? true,
       feedback: feedback,
       childWhenDragging: childWhenDragging,

@@ -27,12 +27,12 @@ void registerCachedNetworkImageWidgets(JsWidgetRegistry r) {
       key: c.key,
       // 具名参数名原样下发（`CachedNetworkImage(imageUrl: …)` → props.imageUrl）。
       imageUrl: c.str('imageUrl') ?? c.str('source') ?? '',
-      width: c.num_('width'),
-      height: c.num_('height'),
-      fit: boxFitFromJson(c.props['fit']),
-      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
-      color: colorFromJson(c.props['color']),
-      colorBlendMode: blendModeFromJson(c.props['colorBlendMode']),
+      width: c.double_('width'),
+      height: c.double_('height'),
+      fit: c.boxFit('fit'),
+      alignment: c.alignment('alignment') ?? Alignment.center,
+      color: c.color('color'),
+      colorBlendMode: c.blendMode('colorBlendMode'),
     );
   });
 }

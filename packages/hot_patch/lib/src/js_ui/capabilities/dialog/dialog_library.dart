@@ -19,25 +19,25 @@ import 'dialog_bridge.dart';
 void registerDialogWidgets(JsWidgetRegistry r) {
   // AlertDialog：icon / title / content / actions（actions 是数组 slot）。
   // insetPadding 缺省走 Flutter 默认（null 时保留 Api 的 40/24），因此用
-  // nullableEdgeInsets 而不是 zero，否则对话框会贴满整屏。
+  // edgeInsets（可空）而不是 zero，否则对话框会贴满整屏。
   // `.adaptive` 是命名构造（按平台用 Material / Cupertino 实现），按 factory 还原。
   r.register('AlertDialog', (c) {
     final actions =
         (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
     final icon = (c.children['icon'] as Widget?);
     final title = (c.children['title'] as Widget?);
-    final titleTextStyle = textStyleFromJson(c.map('titleTextStyle'));
+    final titleTextStyle = c.textStyle('titleTextStyle');
     final content = (c.children['content'] as Widget?);
-    final contentTextStyle = textStyleFromJson(c.map('contentTextStyle'));
-    final actionsPadding = nullableEdgeInsets(c.map('actionsPadding'));
-    final backgroundColor = colorFromJson(c.props['backgroundColor']);
-    final elevation = c.num_('elevation');
-    final shadowColor = colorFromJson(c.props['shadowColor']);
-    final surfaceTintColor = colorFromJson(c.props['surfaceTintColor']);
-    final insetPadding = nullableEdgeInsets(c.map('insetPadding'));
-    final clipBehavior = clipBehaviorFromJson(c.props['clipBehavior']);
-    final shape = shapeFromJson(c.props['shape']);
-    final alignment = alignmentFromJson(c.props['alignment']);
+    final contentTextStyle = c.textStyle('contentTextStyle');
+    final actionsPadding = c.edgeInsets('actionsPadding');
+    final backgroundColor = c.color('backgroundColor');
+    final elevation = c.double_('elevation');
+    final shadowColor = c.color('shadowColor');
+    final surfaceTintColor = c.color('surfaceTintColor');
+    final insetPadding = c.edgeInsets('insetPadding');
+    final clipBehavior = c.clipBehavior('clipBehavior');
+    final shape = c.shape('shape');
+    final alignment = c.alignment('alignment');
     final scrollable = c.bool_('scrollable') ?? false;
     final semanticLabel = c.str('semanticLabel');
     if (c.str('factory') == 'adaptive') {
@@ -90,15 +90,15 @@ void registerDialogWidgets(JsWidgetRegistry r) {
   r.register('SimpleDialog', (c) {
     return SimpleDialog(
       key: c.key,
-      titleTextStyle: textStyleFromJson(c.map('titleTextStyle')),
-      backgroundColor: colorFromJson(c.props['backgroundColor']),
-      elevation: c.num_('elevation'),
-      shadowColor: colorFromJson(c.props['shadowColor']),
-      surfaceTintColor: colorFromJson(c.props['surfaceTintColor']),
-      insetPadding: nullableEdgeInsets(c.map('insetPadding')),
-      clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']),
-      shape: shapeFromJson(c.props['shape']),
-      alignment: alignmentFromJson(c.props['alignment']),
+      titleTextStyle: c.textStyle('titleTextStyle'),
+      backgroundColor: c.color('backgroundColor'),
+      elevation: c.double_('elevation'),
+      shadowColor: c.color('shadowColor'),
+      surfaceTintColor: c.color('surfaceTintColor'),
+      insetPadding: c.edgeInsets('insetPadding'),
+      clipBehavior: c.clipBehavior('clipBehavior'),
+      shape: c.shape('shape'),
+      alignment: c.alignment('alignment'),
       title: (c.children['title'] as Widget?),
       children: (c.children['children'] as List<Widget>?) ?? const <Widget>[],
     );
@@ -107,12 +107,12 @@ void registerDialogWidgets(JsWidgetRegistry r) {
   // Dialog：只有一个 child 的自定义弹层。`.fullscreen` 是命名构造（铺满屏幕、
   // 无 shape/alignment），按 factory 还原。
   r.register('Dialog', (c) {
-    final backgroundColor = colorFromJson(c.props['backgroundColor']);
-    final elevation = c.num_('elevation');
-    final shadowColor = colorFromJson(c.props['shadowColor']);
-    final surfaceTintColor = colorFromJson(c.props['surfaceTintColor']);
-    final insetPadding = nullableEdgeInsets(c.map('insetPadding'));
-    final clipBehavior = clipBehaviorFromJson(c.props['clipBehavior']);
+    final backgroundColor = c.color('backgroundColor');
+    final elevation = c.double_('elevation');
+    final shadowColor = c.color('shadowColor');
+    final surfaceTintColor = c.color('surfaceTintColor');
+    final insetPadding = c.edgeInsets('insetPadding');
+    final clipBehavior = c.clipBehavior('clipBehavior');
     final child = (c.children['child'] as Widget?);
     if (c.str('factory') == 'fullscreen') {
       return Dialog.fullscreen(
@@ -129,8 +129,8 @@ void registerDialogWidgets(JsWidgetRegistry r) {
       surfaceTintColor: surfaceTintColor,
       insetPadding: insetPadding,
       clipBehavior: clipBehavior,
-      shape: shapeFromJson(c.props['shape']),
-      alignment: alignmentFromJson(c.props['alignment']),
+      shape: c.shape('shape'),
+      alignment: c.alignment('alignment'),
       child: child,
     );
   });
@@ -157,7 +157,7 @@ void registerDialogWidgets(JsWidgetRegistry r) {
       onPressed: c.on('onPressed'),
       isDefaultAction: c.bool_('isDefaultAction') ?? false,
       isDestructiveAction: c.bool_('isDestructiveAction') ?? false,
-      textStyle: textStyleFromJson(c.map('textStyle')),
+      textStyle: c.textStyle('textStyle'),
       child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
     );
   });

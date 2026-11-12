@@ -54,7 +54,7 @@ void registerDismissibleWidgets(JsWidgetRegistry r) {
     // resizeDuration：显式 null = 不收缩（Flutter 语义），未提供时是 300ms；
     // 两者必须区分，不能一律 `?? 默认值`。
     final resizeDuration = c.props.containsKey('resizeDuration')
-        ? durationFromJson(c.props['resizeDuration'])
+        ? c.duration('resizeDuration')
         : const Duration(milliseconds: 300);
     final confirm = c.props['confirmDismiss'];
     final onDismissed = c.props['onDismissed'];
@@ -67,14 +67,14 @@ void registerDismissibleWidgets(JsWidgetRegistry r) {
           DismissDirection.horizontal,
       resizeDuration: resizeDuration,
       movementDuration:
-          durationFromJson(c.props['movementDuration']) ??
+          c.duration('movementDuration') ??
           const Duration(milliseconds: 200),
-      crossAxisEndOffset: c.num_('crossAxisEndOffset') ?? 0.0,
+      crossAxisEndOffset: c.double_('crossAxisEndOffset') ?? 0.0,
       dragStartBehavior: dragStartBehaviorFromJson(
         c.props['dragStartBehavior'],
       ),
       behavior:
-          hitTestBehaviorFromJson(c.props['behavior']) ??
+          c.hitTestBehavior('behavior') ??
           HitTestBehavior.opaque,
       confirmDismiss: confirm == null
           ? null

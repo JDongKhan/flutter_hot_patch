@@ -145,7 +145,7 @@ class JsRenderContext {
     return v == null ? null : '$v';
   }
 
-  double? num_(String key) {
+  double? double_(String key) {
     final v = props[key];
     if (v is num) return v.toDouble();
     return double.tryParse('$v');

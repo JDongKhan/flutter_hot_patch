@@ -1,6 +1,13 @@
 // ===== 基础组件：JSON → IconData =====
 import 'package:flutter/widgets.dart';
 
+import '../../js_widget_registry.dart';
+
+/// 对外注册 API：图标值从 [JsRenderContext] 的 props 按键还原。
+extension JsRenderContextIcon on JsRenderContext {
+  IconData? iconData(String key) => iconDataFromJson(props[key]);
+}
+
 /// JSON → IconData。
 ///
 /// 协议形态：JS 的 `Icons.xxx` / `IconData(...)` 都是真实对象，跨桥按

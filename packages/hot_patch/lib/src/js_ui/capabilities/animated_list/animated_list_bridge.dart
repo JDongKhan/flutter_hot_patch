@@ -66,9 +66,9 @@ void registerAnimatedListWidgets(JsWidgetRegistry r) {
       key: key,
       initialItemCount: items.length,
       scrollDirection:
-          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
+          c.axis('scrollDirection') ?? Axis.vertical,
       reverse: c.bool_('reverse') ?? false,
-      padding: nullableEdgeInsets(c.map('padding')),
+      padding: c.edgeInsets('padding'),
       // JS 侧 itemBuilder 已按 index 预展开成子结点；这里按下标取，越界给占位
       // （末项退场期间 Flutter 会以旧下标回调，越界不能崩）。
       //
