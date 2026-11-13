@@ -13,7 +13,7 @@
 // **双路**派发：本端 `_listeners`（JS 逻辑）+ 本通道（宿主边界）。
 import 'package:flutter/foundation.dart';
 
-import '../core/controller_bridge.dart';
+import '../core/object_bridge.dart';
 
 /// JS 侧 ChangeNotifier 实例在宿主侧的**通用**镜像。
 ///
@@ -36,15 +36,15 @@ class JsChangeNotifier extends ChangeNotifier {
   String toString() => 'JsChangeNotifier($jsType, $jsHandle)';
 }
 
-/// ChangeNotifier 镜像桥（通用层见 capabilities/core/controller_bridge.dart）：
+/// ChangeNotifier 镜像桥（通用层见 capabilities/core/object_bridge.dart）：
 /// 只用 controllers 一张表——无回传句柄 / Host（镜像被 Dart 侧订阅，方向与
 /// 控制器相反：JS notify → 宿主镜像 notifyListeners → Dart 子树刷新）。
 ///
 /// 句柄 kind 字符串 `notifier/ChangeNotifier` 是**双端协议**（JS 片段
 /// change_notifier_js.dart 里 `reg(this, 'notifier/ChangeNotifier', …)` 与之
 /// 配对），改动须两端同时改并重产 patch。
-final JsControllerBridge<JsChangeNotifier> _notifierBridge =
-    JsControllerBridge<JsChangeNotifier>(
+final JsObjectBridge<JsChangeNotifier> _notifierBridge =
+    JsObjectBridge<JsChangeNotifier>(
   kind: 'notifier/ChangeNotifier',
   create: (id, meta) {
     final type = meta is Map ? meta['type'] : null;

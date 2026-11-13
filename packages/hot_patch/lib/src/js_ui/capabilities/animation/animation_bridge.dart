@@ -9,7 +9,7 @@
 //      回传到 JS 镜像 → 触发 AnimatedBuilder 等 JS 逻辑组件只重建自己的子树。
 //      隐式/过渡动画的插值仍由宿主完成，不逐帧过桥。
 //
-// 句柄桥复用通用层（capabilities/core/controller_bridge.dart）：onCreate 建
+// 句柄桥复用通用层（capabilities/core/object_bridge.dart）：onCreate 建
 // 真实控制器、onOp 分派 forward/reverse/repeat/stop/reset、onRelease 释放。
 import 'dart:convert';
 
@@ -20,7 +20,7 @@ import '../../../services/js_runtime_manager.dart';
 import '../../../utils/hot_patch_log.dart';
 import '../../js_widget_registry.dart';
 import '../base_widget/text_from_json.dart';
-import '../core/controller_bridge.dart';
+import '../core/object_bridge.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/layout_from_json.dart';
 import '../core/from_json/painting_from_json.dart';
@@ -40,8 +40,8 @@ class _JsAnimationVsync implements TickerProvider {
 }
 
 /// AnimationController 句柄桥（kind `ctrl/Flash`）。
-final JsControllerBridge<AnimationController> _animationBridge =
-    JsControllerBridge<AnimationController>(
+final JsObjectBridge<AnimationController> _animationBridge =
+    JsObjectBridge<AnimationController>(
   kind: 'ctrl/Flash',
   create: (id, meta) => AnimationController(
     vsync: _JsAnimationVsync.instance,
@@ -124,7 +124,7 @@ final Expando<Map<String, Animation<double>>> _curvedAnimations =
 ///
 /// 返回 null 表示该 prop 不是可解析的动画（调用方按「无动画」出声兜底）。
 Animation<double>? jsDoubleAnimationOf(Object? prop) {
-  final id = JsControllerBridge.idOf(prop);
+  final id = JsObjectBridge.idOf(prop);
   if (id == null) return null;
   final controller = _animationBridge.controllerOf(
     id,

@@ -18,7 +18,7 @@
 // value 回传到 JS 镜像 → 触发 listeners（AnimatedBuilder 等 JS 逻辑组件据此
 // 只重建自己的子树）；同时隐式/过渡动画由宿主原生组件自行插值，无需逐帧过桥。
 // 三件套基座（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由 flutter.js 的
-// ControllerBase 提供（见 controller_base_js.dart），本片段只写差异。
+// JsHandleObject 提供（见 object_handle_js.dart），本片段只写差异。
 const String animationJsSource = r'''
   // 生成器对 `Curves.easeOut` 这类「类名.成员」有两种落点（props 位会翻成
   // 成员名字符串，其它位置原样引用），运行时提供同名对象后两边口径一致。
@@ -108,7 +108,7 @@ const String animationJsSource = r'''
   //   - forward/reverse/repeat/stop/reset → `__handleOp('call')`（载荷带 value 与
   //     时长，宿主据此对齐状态后再驱动）；
   //   - 宿主每帧回传 value → onHost 更新镜像 + __notify（JS listeners 据此重建）。
-  export class AnimationController extends ControllerBase {
+  export class AnimationController extends JsHandleObject {
     constructor(opts) {
       super();
       opts = opts || {};
