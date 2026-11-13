@@ -5,7 +5,7 @@
 // 走 [registerWidgets]；JS 代理类随 `patch/flutter.js` 发布。
 import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';
-import 'scroll_object_bridge.dart';
+import 'scroll_controller_bridge.dart';
 
 /// ScrollController 能力接入声明。
 class ScrollControllerLibrary extends JsUiLibrary {

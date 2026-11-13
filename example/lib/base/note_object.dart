@@ -1,6 +1,6 @@
 import 'package:hot_patch/hot_patch.dart';
 
-/// 宿主自定义类 → JS 同名类（`example/js/classes/NoteObject.js`）的绑定示例。
+/// 宿主自定义类 → JS 同名类（`example/js/NoteObject.js`）的绑定示例。
 ///
 /// 这是「实例对象绑定」的通用姿势：JS 侧 `new NoteObject({...})` 经句柄
 /// `obj/NoteObject` 在宿主创建**本类真实实例**，之后 JS 侧的每一次成员调用
