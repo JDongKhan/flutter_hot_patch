@@ -154,6 +154,12 @@ class ComponentBuilder implements Builder {
       // 其余的 @PatchIgnore（isComponent 非 true）整类不翻译 → null。
       if (isWholeIgnored(name)) return null;
       if (parsedNames.contains(name)) return ownName;
+      // 宿主 `js/<类名>.js`（`@PatchIgnore()` 的类）：类定义在包模块，不按源文件
+      // 产物 import（该文件没有产物）。判据同 [jsClassFileOf]。
+      if (thirdPartyJsPackages.contains(name) &&
+          thirdPartyJsExports(name).contains(name)) {
+        return relativeProduct(ownProduct, packageModulePath(name));
+      }
       final abs = importProducts[name];
       if (abs != null) return relativeProduct(ownProduct, abs);
       // 经由 mixin 带入的组件依赖：mixin 声明文件的 import 图不在本文件的
@@ -478,6 +484,12 @@ class ComponentBuilder implements Builder {
     final crossModels = <String, ClassInfo>{};
     void collectModelDeps(Iterable<String> deps) {
       for (final name in deps) {
+        // 宿主 `js/<类名>.js` 提供类定义（`@PatchIgnore()` 的类）：类定义走包模块，
+        // 不按源文件产物 import（该文件没有产物）。
+        if (thirdPartyJsPackages.contains(name) &&
+            thirdPartyJsExports(name).contains(name)) {
+          continue;
+        }
         final model = classTable[name];
         if (model == null || model.isComponent) continue;
         if (!sameLibrary(model.sourceFile, inputId.path)) {
@@ -862,6 +874,14 @@ String _renderJsProduct(
     for (final entry in importsByPackage.entries)
       "import { ${(entry.value.toList()..sort()).join(', ')} } from "
           "'${relativeProduct(ownProduct, packageModulePath(entry.key))}';",
+    // 宿主 `js/<类名>.js`（`@PatchIgnore()` 的类）：类定义在包模块，不是元素、
+    // 也不进 usedWidgetPackages，按正文实际出现的名字补 import（与 flutter
+    // 值类同一口径）。
+    for (final name in thirdPartyJsPackages)
+      if (thirdPartyJsExports(name).contains(name) &&
+          RegExp('\\b${RegExp.escape(name)}\\b').hasMatch(bodyText))
+        "import { $name } from "
+            "'${relativeProduct(ownProduct, packageModulePath(name))}';",
   ]..sort();
   for (final line in importLines) {
     head.writeln(line);

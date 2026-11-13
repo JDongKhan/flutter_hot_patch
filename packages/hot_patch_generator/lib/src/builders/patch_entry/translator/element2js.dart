@@ -1595,6 +1595,14 @@ class ElementTranslateContext implements ExprRenderer {
     }
     final product = importResolver?.call(type);
     if (product != null) return product;
+    // 宿主 `js/<类名>.js`：`@PatchIgnore()` 的项目内类不翻译（importResolver 为
+    // null），类定义由宿主手写的同名模块提供——文件名即**类名**（与
+    // `js/<包名>.js` 同形，只是归属键从包名换成类名，判据同样是「JS 侧确有该
+    // 导出」）。它自身没有翻译产物，因此必须先于下面的源文件产物判定。
+    if (thirdPartyJsPackages.contains(type) &&
+        thirdPartyJsExports(type).contains(type)) {
+      return packageModulePath(type);
+    }
     // 同名符号的归属以 **Dart 源码 import 的包**为准：flutter.js 与三方模块、
     // 或两个三方库都声明了同名类型时，不能按名字索引的命中顺序猜。
     // 顶层单例（`Get`）不参与：它不是类，由 [_thirdPartyValueRefJs] 承接。

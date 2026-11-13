@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.0",
-  "buildTime": "2026-11-13T18:02:02.846711",
+  "buildTime": "2026-11-13T18:04:46.139209",
   "resources": {
     "flutter.js": "72c8b4bbf59df58403fce42aab402387999691f5581d8bc80c65489e243cbf7a",
     "packages/NoteObject.js": "2c32d68a5e767060c383c5dd7afde137f528e6cc2728fa2e40e5083b71f1a723",
@@ -137,7 +137,7 @@
     "components/image_detail.js": "519e42521fa1c89f986f58a05a2a13a0f52e88857ddc0f4909ab1880ac6c07e3",
     "components/getx_component.js": "04859a36873d007c48fc6f865cf4fc7873ca7749a25257975fcb742488523a5d",
     "components/spacer_detail.js": "d4ea8437788eeca8d5d3f1d4871cab163a8919a9b31d045b1fb38a840cb2427e",
-    "components/note_object_card.js": "b5a5905226fcff3aacf6c3d0808d8c33d25559f1dc6c81f55b3e4ebcc346d6de",
+    "components/note_object_card.js": "b9b60ad7c23bb3cedf8fd6b13f0f6e0b4775744dd3c5c688f189f0afa8d8f69b",
     "components/implicit_animation_detail.js": "c94876287cb70ad393fb3851c5720111b8047aa3105f97500e4188b5d10751eb",
     "components/progress_detail.js": "070662add851e61573e8e47a33c74effd53918945b1368c6a8687188f00dc78d",
     "components/key_tile.js": "41a708961318cbba61d730675a80b7268cfb9a6cec394de8888cb734aa9c1250",

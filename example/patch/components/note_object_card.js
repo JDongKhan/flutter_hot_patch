@@ -52,7 +52,7 @@ export class NoteObjectCard extends StatefulWidget {
                   "value": 0xFF5E35B1
                 })
               }),
-              "data": "new NoteObject(...) → js/classes/NoteObject.js → obj/NoteObject"
+              "data": "new NoteObject(...) → js/NoteObject.js → obj/NoteObject"
             }),
             new SizedBox({
               "height": 8

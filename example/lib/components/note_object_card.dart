@@ -11,7 +11,7 @@ import '../base/note_object.dart';
 /// ```
 ///
 /// - 原生侧：`NoteObject` 就是 `lib/base/note_object.dart` 里的真实实例；
-/// - JS 侧：`NoteObject` 由 `example/js/classes/NoteObject.js` 承接，构造与成员
+/// - JS 侧：`NoteObject` 由 `example/js/NoteObject.js` 承接，构造与成员
 ///   调用都经句柄 `obj/NoteObject` 打到**宿主同一个实例**上（返回值由宿主回填）。
 @PatchEntry('NoteObjectCard')
 class NoteObjectCard extends StatefulWidget {
@@ -58,7 +58,7 @@ class _NoteObjectCardState extends State<NoteObjectCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'new NoteObject(...) → js/classes/NoteObject.js → obj/NoteObject',
+              'new NoteObject(...) → js/NoteObject.js → obj/NoteObject',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
