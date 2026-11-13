@@ -7,8 +7,9 @@ import { Spot } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
 import { FloorLoadingView } from 'floor_status.js';
 import { FloorErrorView } from 'floor_status.js';
-import { BorderRadius, BoxDecoration, BoxFit, ChangeNotifier, Clip, Color, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, GridView, Image, InkWell, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SizedBox, SliverGridDelegateWithMaxCrossAxisExtent, Spacer, Stack, StackFit, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
+import { BorderRadius, BoxDecoration, BoxFit, ChangeNotifier, Clip, Color, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, Image, InkWell, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SizedBox, Spacer, Stack, StackFit, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
 import { ChangeNotifierProvider } from '../../packages/provider.js';
+import { SliverWaterfallFlowDelegateWithMaxCrossAxisExtent, WaterfallFlow } from '../../packages/waterfall_flow.js';
 
 // 模型 SpotFloorVm
 export class SpotFloorVm extends ChangeNotifier {
@@ -19,6 +20,7 @@ export class SpotFloorVm extends ChangeNotifier {
     this.error = null;
     this._service = new AppService();
     this.spots = [];
+    this.heights = [];
   }
   __applyProps(args) {
     this.city = (args && args.city !== undefined) ? args.city : '';
@@ -29,6 +31,11 @@ export class SpotFloorVm extends ChangeNotifier {
     this.notifyListeners();
     try {
       this.spots = await this._service.fetchHomeSpots(this.city);
+      const list = [];
+      for (let i = 0; (i < this.spots.length); (i++)) {
+        list.add((96.0 + ((__mod(i, 4)) * 26.0)));
+      }
+      this.heights = list;
       this.error = null;
     } catch (__e) {
       const e = __e;
@@ -85,10 +92,9 @@ export class SpotFloorView extends StatelessWidget {
           "onRetry": (...__a) => vm.load(...__a)
         });
       } else {
-        body = new GridView({
-          "gridDelegate": (this.__k1 || (this.__k1 = new SliverGridDelegateWithMaxCrossAxisExtent({
+        body = new WaterfallFlow({
+          "gridDelegate": (this.__k1 || (this.__k1 = new SliverWaterfallFlowDelegateWithMaxCrossAxisExtent({
             "crossAxisSpacing": 10,
-            "mainAxisExtent": 190,
             "mainAxisSpacing": 10,
             "maxCrossAxisExtent": 300
           }))),
@@ -97,7 +103,8 @@ export class SpotFloorView extends StatelessWidget {
           "physics": (this.__k2 || (this.__k2 = new NeverScrollableScrollPhysics({}))),
           "children": [
             ...(() => { var out = []; for (let i = 0; (i < vm.spots.length); (i++)) { out.push.apply(out, [new SpotCard({
-                    "spot": vm.spots[i]
+                    "spot": vm.spots[i],
+                    "imageHeight": vm.heights[i]
                   })]); } return out; })()
           ]
         });
@@ -177,6 +184,7 @@ export class SpotCard extends StatelessWidget {
   }
   __applyProps(args) {
     this.spot = (args && args.spot !== undefined) ? args.spot : null;
+    this.imageHeight = (args && args.imageHeight !== undefined) ? args.imageHeight : 0;
   }
   open() {
     AppRouter.openSpot(this.spot.id);
@@ -205,7 +213,7 @@ export class SpotCard extends StatelessWidget {
           "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             new SizedBox({
-              "height": 96,
+              "height": this.imageHeight,
               "child": new Stack({
                 "fit": StackFit.expand,
                 "children": [

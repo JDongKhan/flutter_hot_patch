@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hot_example/base/app_router.dart';
 import 'package:provider/provider.dart';
+import 'package:waterfall_flow/waterfall_flow.dart';
 
 import '../model/app_models.dart';
 import '../service/app_service.dart';
@@ -19,12 +20,23 @@ class SpotFloorVm extends ChangeNotifier {
 
   List<Spot> spots = [];
 
+  /// 卡片主图高度（瀑布流要「同一列高度不齐」，按序号取 4 档轮转）。
+  ///
+  /// 高度随数据一起算好：翻译器对「构造实参里做取模/运算」容易整体丢 props，
+  /// 因此只在 VM 的普通语句里算，页面侧只读下标。
+  List<double> heights = [];
+
   Future<void> load() async {
     loading = true;
     error = null;
     notifyListeners();
     try {
       spots = await _service.fetchHomeSpots(city);
+      final list = <double>[];
+      for (var i = 0; i < spots.length; i++) {
+        list.add(96.0 + (i % 4) * 26.0);
+      }
+      heights = list;
       error = null;
     } catch (e) {
       print('SpotFloor 加载失败: $e');
@@ -73,19 +85,19 @@ class SpotFloorView extends StatelessWidget {
     } else if (vm.error != null) {
       body = FloorErrorView(message: vm.error!, onRetry: vm.load);
     } else {
-      body = GridView(
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+      // 瀑布流（三方包 waterfall_flow）：列宽自适应，单元高度随内容高低错落。
+      body = WaterfallFlow(
+        gridDelegate: const SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 300,
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
-          mainAxisExtent: 190,
         ),
         shrinkWrap: true,
         padding: EdgeInsets.zero,
         physics: const NeverScrollableScrollPhysics(),
         children: [
           for (var i = 0; i < vm.spots.length; i++)
-            SpotCard(spot: vm.spots[i]),
+            SpotCard(spot: vm.spots[i], imageHeight: vm.heights[i]),
         ],
       );
     }
@@ -132,9 +144,16 @@ class SpotFloorView extends StatelessWidget {
 
 /// 景点卡片（景点推荐楼层单元格）。
 class SpotCard extends StatelessWidget {
-  const SpotCard({super.key, required this.spot});
+  const SpotCard({
+    super.key,
+    required this.spot,
+    required this.imageHeight,
+  });
 
   final Spot spot;
+
+  /// 主图高度（瀑布流按条目错落，同一列的卡片因此不等高）。
+  final double imageHeight;
 
   void open() {
     AppRouter.openSpot(spot.id);
@@ -155,7 +174,7 @@ class SpotCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              height: 96,
+              height: imageHeight,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
