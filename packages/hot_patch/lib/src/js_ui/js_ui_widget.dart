@@ -133,11 +133,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
     super.initState();
     // 运行时是全局单例（所有实例共用一个 JS 引擎），不支持从外部注入。
     _manager = JsRuntimeManager.instance;
-    // UI 能力装配的唯一入口：内建宿主方法 + 各能力通道 + 宿主组件建表。
-    // 正常由 App 在 `main()` 里 `initJsUi(libraries: [...])` 完成；这里是
-    // **幂等兜底**——App 没调也能用（所有钩子自带一次性标记）。必须在任何
-    // JS 组件 mount（new XxxController → host 登记）之前就位。
-    initJsUi();
+    // 能力装配由 App 在 `main()` 里 `initJsUi(libraries: [...])` 完成（注册能力 /
+    // 通道就位 / 宿主组件建表 / 内建宿主方法）。这里**不代劳装配**，只校验契约：
+    // 漏调会在 debug 断言失败、release 记 error，而不是静默渲染成占位。
+    assertJsUiInitialized();
     _initStore();
     // jsuiCommit 补丁按页面 key 路由：登记本页 store（key 由 JS 补丁带下来）。
     jsUiPageStores[_pageKey] = _store;

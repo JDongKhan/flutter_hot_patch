@@ -6,20 +6,15 @@ import 'package:glob/glob.dart';
 import '../shared/host_injected.dart';
 import '../shared/source_index.dart';
 
-/// 注册目标的默认值：本生成器配套的运行时（hot_patch）自带的注册 API。
-/// 使用方**无需任何配置**即可零配置工作。
-///
-/// 默认值的装配（`hostRegisterBuilder` 工厂）在入口包 hot_patch_generator，
-/// 那里读 build.yaml 的 `register_import` / `register_call` 覆盖项后传入本类。
-const String defaultRegisterImport = 'package:hot_patch/hot_patch.dart';
-const String defaultRegisterCall = 'JsRuntimeManager.registerHostMethod';
-
-/// 宿主注入注册 builder：扫描全包的 `@HostInjected` static 方法，把它们对应的
-/// 注册调用集中生成到**一个 Dart 文件**里，业务方在 `main()` 里调用一次即可：
+/// 宿主注入清单 builder：扫描全包的 `@HostInjected` static 方法，把「通道名 →
+/// 宿主实现」集中生成到**一个 Dart 文件**里，业务方把它交给装配入口即可：
 ///
 /// ```dart
-/// registerHostMethods();
+/// initJsUi(libraries: [...], hostMethods: hostMethods);
 /// ```
+///
+/// 产物是**纯数据**（`List<Map<String, Object?>>`，每项 `{'name', 'handler'}`），
+/// 不持有注册 API、不 import 运行时包——注册策略归运行时，生成器只产出清单。
 ///
 /// # 与另外两个 builder 的区别
 ///
@@ -33,17 +28,7 @@ const String defaultRegisterCall = 'JsRuntimeManager.registerHostMethod';
 /// 即使一个注解都没有也照常产出（空方法体）——它被 `main()` import，缺文件会
 /// 直接断编译，与可跳过的 JS 资产不同。
 class HostRegisterBuilder implements Builder {
-  const HostRegisterBuilder({
-    required this.registerImport,
-    required this.registerCall,
-  });
-
-  /// 运行时包入口（如 `package:hot_patch/hot_patch.dart`）：产物会 import 它。
-  final String registerImport;
-
-  /// 运行时注册函数表达式（如 `JsRuntimeManager.registerHostMethod`）：
-  /// 产物按 `调用(通道名, impl)` 逐个调用。
-  final String registerCall;
+  const HostRegisterBuilder();
 
   /// 产物路径（相对包根）：被 main() import 的 Dart 源码。
   static const String outputPath = 'lib/generated/host_methods.dart';
@@ -122,7 +107,7 @@ class HostRegisterBuilder implements Builder {
     });
   }
 
-  /// 装配产物：import 运行时库 + 各声明文件，再逐个注册。
+  /// 装配产物：import 各声明文件 + 一张「通道名 → 宿主实现」清单。
   String _render(List<_HostEntry> entries) {
     final sorted = [...entries]..sort((a, b) => a.sortKey.compareTo(b.sortKey));
     final deduped = <String, _HostEntry>{
@@ -138,14 +123,11 @@ class HostRegisterBuilder implements Builder {
       ..writeln('// GENERATED CODE - DO NOT MODIFY BY HAND')
       ..writeln('//')
       ..writeln('// 由 hot_patch_generator 的 hostRegisterBuilder 扫描全包')
-      ..writeln('// `@HostInjected` 方法生成。用法（main() 里调用一次）：')
+      ..writeln('// `@HostInjected` 方法生成。用法（main() 里交给 initJsUi 统一装配）：')
       ..writeln('//')
-      ..writeln('//   registerHostMethods();')
+      ..writeln('//   initJsUi(libraries: [...], hostMethods: hostMethods);')
       ..writeln('//')
-      ..writeln('// 注册目标默认指向配套运行时（$registerImport），')
-      ..writeln('// 需要换运行时实现时用 build.yaml 的 register_import / register_call 覆盖。')
-      ..writeln()
-      ..writeln("import '$registerImport';");
+      ..writeln('// 每项形状固定：{name: 通道名, handler: 宿主实现}。');
     if (imports.isNotEmpty) {
       b.writeln();
       for (final i in imports) {
@@ -154,17 +136,21 @@ class HostRegisterBuilder implements Builder {
     }
     b
       ..writeln()
-      ..writeln('/// 注册本包全部 `@HostInjected` 宿主方法（无注解时为空实现）。')
-      ..writeln('void registerHostMethods() {');
+      ..writeln('/// 本包全部 `@HostInjected` 宿主方法：`{name: 通道名, handler: 实现}`。')
+      ..writeln('/// 交给 `initJsUi(hostMethods: hostMethods)` 一次注册。');
     if (deduped.isEmpty) {
-      b.writeln('  // 本包没有 @HostInjected 方法。');
+      b
+        ..writeln('/// 本包没有 `@HostInjected` 方法，清单为空。')
+        ..writeln('List<Map<String, Object?>> get hostMethods => const [];');
+      return b.toString();
     }
+    b.writeln('List<Map<String, Object?>> get hostMethods => [');
     for (final e in deduped) {
-      // 只登记「通道 → 函数引用」：参数绑定（位置/具名、个数、返回类型）由
-      // 运行时用 Function.apply 统一处理，注册点无需关心调用形态。
-      b.writeln("  $registerCall('${e.channel}', ${e.targetExpr});");
+      // 只登记「通道名 → 函数引用」：参数绑定（位置/具名、个数、返回类型）由
+      // 运行时用 Function.apply 统一处理，清单无需关心调用形态。
+      b.writeln("  {'name': '${e.channel}', 'handler': ${e.targetExpr}},");
     }
-    b.writeln('}');
+    b.writeln('];');
     return b.toString();
   }
 }

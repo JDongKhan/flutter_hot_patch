@@ -58,32 +58,13 @@ Builder projectModuleBuilder(BuilderOptions _) => const ProjectModuleBuilder();
 /// 本 builder 不读任何 options。
 Builder coreJsBuilder(BuilderOptions _) => const CoreJsBuilder();
 
-/// 宿主注入注册 builder 工厂：`ui_host_register`。
+/// 宿主注入清单 builder 工厂：`ui_host_register`（不读任何 options）。
 ///
-/// 扫描全包 `@HostInjected` static 方法，把注册调用集中生成到
-/// `lib/generated/host_methods.dart`。注册目标默认指向配套运行时
-/// （[defaultRegisterImport] / [defaultRegisterCall]），**开箱即用**；
-/// 换用别的运行时实现时用 build.yaml 覆盖：
-///
-/// ```yaml
-/// targets:
-///   $default:
-///     builders:
-///       hot_patch_generator:ui_host_register:
-///         options:
-///           register_import: "package:<runtime>/<runtime>.dart"
-///           register_call: "<Runtime>.registerHostMethod"
-/// ```
-Builder hostRegisterBuilder(BuilderOptions options) {
-  final import = options.config['register_import'];
-  final call = options.config['register_call'];
-  return HostRegisterBuilder(
-    registerImport:
-        import is String && import.isNotEmpty ? import : defaultRegisterImport,
-    registerCall:
-        call is String && call.isNotEmpty ? call : defaultRegisterCall,
-  );
-}
+/// 扫描全包 `@HostInjected` static 方法，把「通道名 → 宿主实现」清单生成到
+/// `lib/generated/host_methods.dart`（`List<Map<String, Object?>> get hostMethods`）。
+/// 产物只有数据、不含注册 API，业务方把它交给运行时装配入口：
+/// `initJsUi(hostMethods: hostMethods)`；换运行时也无需改生成器配置。
+Builder hostRegisterBuilder(BuilderOptions _) => const HostRegisterBuilder();
 
 /// patch 清单 builder 工厂：`ui_patch_manifest`。
 ///

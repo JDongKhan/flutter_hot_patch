@@ -16,10 +16,15 @@
 /// `main()` 里的 [initJsUi] `libraries` 清单（内建能力见
 /// capabilities/js_ui_library.dart 的 `_seedBuiltins`）——一次调用即完成
 /// 「注册 + 通道就位 + 宿主组件建表」，本包与 App 核心文件都零改动。
+/// [initJsUi] 是**必须由 App 调用**的启动前置：`JsUiWidget` 不再自动装配，
+/// 漏调会在 debug 断言失败 / release 记 error；`@HostInjected` 的生成清单
+/// （生成文件的 `hostMethods`）作为 `hostMethods` 参数一次交给它，无需再逐个
+/// `registerHostMethod`。
 ///
 /// JS→原生能力统一走「宿主方法」：JS 侧唯一出口 `_app_host_.invoke`，宿主侧唯一
-/// 入口 [JsRuntimeManager.registerHostMethod]（业务方法用 @HostInjected 注解
-/// 由生成器注册，框架内建通道由 JsUiWidget 启动时注册），核心类零改动。
+/// 入口 [JsRuntimeManager.registerHostMethod]（业务方法用 @HostInjected 注解生成
+/// `hostMethods` 清单、随 [initJsUi] 一起注册，框架内建通道由 [initJsUi] 注册），
+/// 核心类零改动。
 library;
 
 export 'src/services/js_runtime_manager.dart';
@@ -32,9 +37,12 @@ export 'src/js_ui/js_widget_registry.dart';
 // 全局宿主 widget 注册表：外部自定义组件（含保留具体类型名的纯原生结点）
 // 在 main() 里 `jsWidgetRegistry.register(type, build)` 即可，与内建能力同表。
 export 'src/js_ui/capabilities/js_ui_capabilities.dart' show jsWidgetRegistry;
-// UI 能力装配唯一入口：`initJsUi(libraries: [...])` 一次完成「注册能力 +
-// 通道就位 + 宿主组件建表 + 内建宿主方法」，建议在 main() 里 runApp 之前调用。
-export 'src/js_ui/capabilities/js_ui_bootstrap.dart' show initJsUi, jsUiInitialized;
+// UI 能力装配唯一入口：`initJsUi(libraries: [...], hostMethods: [...])` 一次完成
+// 「注册能力 + 通道就位 + 宿主组件建表 + 内建与业务宿主方法」。**必须**在 main() 里
+// runApp 之前调用（JsUiWidget 只校验、不代劳）；`assertJsUiInitialized()` 供自定义
+// 入口校验契约。
+export 'src/js_ui/capabilities/js_ui_bootstrap.dart'
+    show initJsUi, jsUiInitialized, assertJsUiInitialized;
 export 'src/js_ui/capabilities/js_ui_library.dart';
 // 自定义能力（App 侧实现，如三方包的 Controller 句柄桥）需要的通用构件：
 // 句柄桥基类。

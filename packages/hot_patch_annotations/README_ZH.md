@@ -127,21 +127,25 @@ class Network {
   `null` 收尾，不留悬空 Promise。
 - 依赖扫描会**跳过 `@HostInjected` 方法的方法体**，只在其中用到的类型不会被连带翻译。
 
-宿主侧注册由 `hot_patch_generator` 自动完成：它扫描全包的 `@HostInjected` 方法，把注册调用
-集中生成到一个 Dart 文件 `lib/generated/host_methods.dart`，业务在 `main()` 里调用一次即可：
+宿主侧注册由 `hot_patch_generator` 自动完成：它扫描全包的 `@HostInjected` 方法，把**纯数据**
+清单生成到一个 Dart 文件 `lib/generated/host_methods.dart`
+（`List<Map<String, Object?>> get hostMethods`，每项 `{name: 通道名, handler: 实现}`），
+业务把它交给运行时唯一装配入口即可：
 
 ```dart
 import 'package:my_app/generated/host_methods.dart';
 
 void main() {
-  registerHostMethods();          // 注册本包全部 @HostInjected 通道
+  initJsUi(
+    libraries: customJsUiLibraries,  // 自定义 / 三方能力清单
+    hostMethods: hostMethods,        // 注册本包全部 @HostInjected 通道
+  );
   runApp(const MyApp());
 }
 ```
 
-注册目标默认指向配套运行时 `package:hot_patch/hot_patch.dart` 的
-`JsRuntimeManager.registerHostMethod(channel, fn)`，**无需任何配置**；仅当换用别的运行时实现时
-才在自己的 `build.yaml` 里用 `register_import` / `register_call` 覆盖。也可以手动注册任意通道：
+产物只有数据、不含注册 API，因此**无需任何配置**，任何接受同形状清单的运行时都能直接用。
+也可以手动注册任意通道：
 
 ```dart
 JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);

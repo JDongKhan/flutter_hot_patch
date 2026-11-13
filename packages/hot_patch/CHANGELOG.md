@@ -4,11 +4,11 @@
 
 **加法：UI 能力装配入口 `initJsUi(...)`；无破坏性 API / 协议变更。**
 
-- **`initJsUi({List<JsUiLibrary> libraries = const []})`**：启动期唯一装配入口，一次完成「注册能力库 → 全部能力通道就位（`ensureJsUiCapabilities`）→ 宿主组件注册表建表（`ensureJsWidgetRegistry`）→ 注册内建宿主方法」。建议在 App `main()` 里 `runApp` 之前调用；`JsUiWidget.initState` 里也调用它，属**幂等兜底**（各 `ensure*` 自带一次性标记），App 忘了调也能用。
+- **`initJsUi({List<JsUiLibrary> libraries, List<Map<String, Object?>> hostMethods})`**：启动期唯一装配入口，一次完成「注册能力库 → 全部能力通道就位（`ensureJsUiCapabilities`）→ 宿主组件注册表建表（`ensureJsWidgetRegistry`）→ 注册内建宿主方法 → 注册业务宿主方法」。`hostMethods` 每项形状固定 `{'name': 通道名, 'handler': 实现}`，通常直接传 `@HostInjected` 的生成清单（`lib/generated/host_methods.dart` 的 `hostMethods` getter），无需再逐个调 `registerHostMethod`；形状不对启动即抛 `ArgumentError`，同一通道重复装配按通道名去重并告警。**必须**在 App `main()` 里 `runApp` 之前调用；`JsUiWidget` **不再自动装配**，启动时只做契约校验（`assertJsUiInitialized()`：debug 断言失败、release 记一条 error），避免漏调后页面静默渲染成未注册占位。
 - **`jsUiInitialized`**：是否已执行过装配。
 - **`ensureJsWidgetRegistry()`**：显式触发一次建表（幂等），让首帧不再承担注册工作。
 - **`jsWidgetRegistryBuilt` + 晚注册告警**：注册表建表之后才 `registerJsUiLibrary(...)` 的能力仍会就位通道，但拿不到 `registerWidgets` 回调——此时明确告警，不再静默丢映射。建表后单独 `jsWidgetRegistry.register(type, build)` 仍然有效（表可变、查表发生在渲染时刻）。
-- **示例收敛**：`example/lib/custom/custom_capabilities.dart` 由「逐个 `registerJsUiLibrary` 的函数」改为能力清单 `customJsUiLibraries`，`main()` 一次 `initJsUi(libraries: ...)` 装配。
+- **示例收敛**：`example/lib/custom/custom_capabilities.dart` 由「逐个 `registerJsUiLibrary` 的函数」改为能力清单 `customJsUiLibraries`；`main()` 一次 `initJsUi(libraries: customJsUiLibraries, hostMethods: hostMethods)` 装配，原来的 `registerHostMethods()` 调用删除。
 
 ## 0.5.0
 

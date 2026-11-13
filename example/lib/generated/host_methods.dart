@@ -1,14 +1,11 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 //
 // 由 hot_patch_generator 的 hostRegisterBuilder 扫描全包
-// `@HostInjected` 方法生成。用法（main() 里调用一次）：
+// `@HostInjected` 方法生成。用法（main() 里交给 initJsUi 统一装配）：
 //
-//   registerHostMethods();
+//   initJsUi(libraries: [...], hostMethods: hostMethods);
 //
-// 注册目标默认指向配套运行时（package:hot_patch/hot_patch.dart），
-// 需要换运行时实现时用 build.yaml 的 register_import / register_call 覆盖。
-
-import 'package:hot_patch/hot_patch.dart';
+// 每项形状固定：{name: 通道名, handler: 宿主实现}。
 
 import '../base/app_router.dart';
 import '../base/canvas_image.dart';
@@ -18,32 +15,33 @@ import '../base/web_view.dart';
 import 'package:hot_module_base/src/account_center.dart';
 import 'package:hot_module_base/src/network.dart';
 
-/// 注册本包全部 `@HostInjected` 宿主方法（无注解时为空实现）。
-void registerHostMethods() {
-  JsRuntimeManager.registerHostMethod('openChannel', AppRouter.openChannel);
-  JsRuntimeManager.registerHostMethod('openCityPicker', AppRouter.openCityPicker);
-  JsRuntimeManager.registerHostMethod('openDemoList', AppRouter.openDemoList);
-  JsRuntimeManager.registerHostMethod('openHeroTarget', AppRouter.openHeroTarget);
-  JsRuntimeManager.registerHostMethod('openLogin', AppRouter.openLogin);
-  JsRuntimeManager.registerHostMethod('openNotifications', AppRouter.openNotifications);
-  JsRuntimeManager.registerHostMethod('openOrder', AppRouter.openOrder);
-  JsRuntimeManager.registerHostMethod('openOrders', AppRouter.openOrders);
-  JsRuntimeManager.registerHostMethod('openPost', AppRouter.openPost);
-  JsRuntimeManager.registerHostMethod('openResource', AppRouter.openResource);
-  JsRuntimeManager.registerHostMethod('openSearch', AppRouter.openSearch);
-  JsRuntimeManager.registerHostMethod('openSpot', AppRouter.openSpot);
-  JsRuntimeManager.registerHostMethod('openUserCenter', AppRouter.openUserCenter);
-  JsRuntimeManager.registerHostMethod('openWidgetShowcase', AppRouter.openWidgetShowcase);
-  JsRuntimeManager.registerHostMethod('pop', AppRouter.pop);
-  JsRuntimeManager.registerHostMethod('toast', AppRouter.toast);
-  JsRuntimeManager.registerHostMethod('loadCanvasImage', CanvasImage.load);
-  JsRuntimeManager.registerHostMethod('httpGet', HostHttp.get);
-  JsRuntimeManager.registerHostMethod('appVersion', PlatformTools.appVersion);
-  JsRuntimeManager.registerHostMethod('documentsPath', PlatformTools.documentsPath);
-  JsRuntimeManager.registerHostMethod('photoPermissionStatus', PlatformTools.photoPermissionStatus);
-  JsRuntimeManager.registerHostMethod('requestPhotoPermission', PlatformTools.requestPhotoPermission);
-  JsRuntimeManager.registerHostMethod('tempPath', PlatformTools.tempPath);
-  JsRuntimeManager.registerHostMethod('open', WebView.open);
-  JsRuntimeManager.registerHostMethod('getUserName', AccountCenter.getUserName);
-  JsRuntimeManager.registerHostMethod('post', Network.post);
-}
+/// 本包全部 `@HostInjected` 宿主方法：`{name: 通道名, handler: 实现}`。
+/// 交给 `initJsUi(hostMethods: hostMethods)` 一次注册。
+List<Map<String, Object?>> get hostMethods => [
+  {'name': 'openChannel', 'handler': AppRouter.openChannel},
+  {'name': 'openCityPicker', 'handler': AppRouter.openCityPicker},
+  {'name': 'openDemoList', 'handler': AppRouter.openDemoList},
+  {'name': 'openHeroTarget', 'handler': AppRouter.openHeroTarget},
+  {'name': 'openLogin', 'handler': AppRouter.openLogin},
+  {'name': 'openNotifications', 'handler': AppRouter.openNotifications},
+  {'name': 'openOrder', 'handler': AppRouter.openOrder},
+  {'name': 'openOrders', 'handler': AppRouter.openOrders},
+  {'name': 'openPost', 'handler': AppRouter.openPost},
+  {'name': 'openResource', 'handler': AppRouter.openResource},
+  {'name': 'openSearch', 'handler': AppRouter.openSearch},
+  {'name': 'openSpot', 'handler': AppRouter.openSpot},
+  {'name': 'openUserCenter', 'handler': AppRouter.openUserCenter},
+  {'name': 'openWidgetShowcase', 'handler': AppRouter.openWidgetShowcase},
+  {'name': 'pop', 'handler': AppRouter.pop},
+  {'name': 'toast', 'handler': AppRouter.toast},
+  {'name': 'loadCanvasImage', 'handler': CanvasImage.load},
+  {'name': 'httpGet', 'handler': HostHttp.get},
+  {'name': 'appVersion', 'handler': PlatformTools.appVersion},
+  {'name': 'documentsPath', 'handler': PlatformTools.documentsPath},
+  {'name': 'photoPermissionStatus', 'handler': PlatformTools.photoPermissionStatus},
+  {'name': 'requestPhotoPermission', 'handler': PlatformTools.requestPhotoPermission},
+  {'name': 'tempPath', 'handler': PlatformTools.tempPath},
+  {'name': 'open', 'handler': WebView.open},
+  {'name': 'getUserName', 'handler': AccountCenter.getUserName},
+  {'name': 'post', 'handler': Network.post},
+];

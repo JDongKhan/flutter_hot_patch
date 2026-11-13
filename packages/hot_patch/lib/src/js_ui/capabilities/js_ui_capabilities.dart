@@ -26,8 +26,8 @@ import 'js_ui_library.dart';
 /// 且必须先于 `ensureJsUiRuntime`（runtime.js 里各能力片段的宿主侧登记依赖这里
 /// 已注册的 kind / context op）。
 ///
-/// 幂等靠各库自己的 `ensureChannels`（`_handleChannelsRegistered` 等内建标记），
-/// 因此 `JsUiWidget.initState` 的兜底再次调用安全。
+/// 只由装配入口 [initJsUi] 调用（App `main()` 里、`runApp` 之前）；幂等靠各库
+/// 自己的 `ensureChannels`（`_handleChannelsRegistered` 等内建标记）。
 void ensureJsUiCapabilities() {
   // 地基：句柄注册表本身，必须先于一切能力就绪。
   ensureHandleChannels();
@@ -39,9 +39,9 @@ void ensureJsUiCapabilities() {
 
 /// 触发宿主组件注册表建表（幂等：首次访问时一次性注册全部能力组件）。
 ///
-/// 需要「启动即注册完」的调用方（`initJsUi(...)`）显式触发它，让首帧渲染不再
-/// 承担建表工作；之后的 `registerJsUiLibrary(...)` 因 `jsWidgetRegistryBuilt`
-/// 已置位而告警（该库的 `registerWidgets` 不会再被回调）。
+/// 由装配入口 [initJsUi] 显式触发，让首帧渲染不再承担建表工作；之后新增的
+/// `registerJsUiLibrary(...)` 因 `jsWidgetRegistryBuilt` 已置位而告警（该库的
+/// `registerWidgets` 不会再被回调）。
 JsWidgetRegistry ensureJsWidgetRegistry() => jsWidgetRegistry;
 
 /// 全部组件注册 = Flutter 基础组件（核心本体）+ 各能力/三方库的自注册。
@@ -63,7 +63,7 @@ void registerAllJsWidgets(JsWidgetRegistry r) {
 /// **懒建**：首次访问时构建并**一次性**注册全部内建/能力/三方库组件；因此
 /// `registerJsUiLibrary(...)` 必须在建表前完成——由装配入口
 /// `initJsUi(libraries: [...])`（js_ui_bootstrap.dart）在 `main()` 里
-/// `runApp` 之前一次做完，`JsUiWidget.initState` 只作幂等兜底。
+/// `runApp` 之前一次做完（App 必须显式调用，`JsUiWidget` 不代劳）。
 /// 建表之后仍可用 `jsWidgetRegistry.register(type, build)` 补单个类型
 /// （表可变、查表在渲染时），但新库的 `registerWidgets` 不会再被回调。
 final JsWidgetRegistry _jsWidgetRegistry = _createWidgetRegistry();

@@ -59,6 +59,7 @@
 - **三方包值位置符号 import**：`referencedValueNames` 只收产物里确实以值出现的名字（构造 / 静态调用 / 顶层值前缀，带 import 前缀的构造除外），供 `usedWidgetPackages` 登记三方包 import（`RxInt(0)` → `import { RxInt } from '../packages/get.js'`）。
 - **示例 GetX**：新增 `example/lib/components/getx_component.dart` + `example/lib/model/getx_counter_vm.dart` 与宿主 `example/js/get.js`（`Get` 实例表、`GetxController.update`、`GetBuilder`、`Obx` + `Rx*` 读追踪），演示手动通知与自动追踪两条订阅路径。
 - **`patch.zip` 由 builder 产出**：新增 `ui_patch_archive`（`patch_archive_builder`），每次 build 把 `patch/` 下的全部文件（生成的 JS、`manifest.json` 与手工放置的静态资源，如 `patch/assets/**`）打成 `patch/patch.zip`，跑 build_runner 即得新鲜归档。它靠 `required_inputs: [".json"]` 排在 `ui_patch_manifest` 之后（同一阶段读不到彼此产物、更早阶段可以），zip 里始终是最新清单；生成产物的内容与依赖登记经 `findAssets(Glob('patch/**'))` + `BuildStep` 读取（产物本阶段尚未落盘），不在构建图内的静态资源按包根读磁盘补齐，zip 自身与 `.DS_Store` 不入包。`start_patch_server.sh` 随之删掉 `zip -r` 步骤，并把杀旧服务挪到产物就绪之后，构建期间旧服务持续可用。
+- **`ui_host_register` 产物改为纯数据清单**：`lib/generated/host_methods.dart` 由「`void registerHostMethods()` + 逐个 `JsRuntimeManager.registerHostMethod(...)` 调用」改为 `List<Map<String, Object?>> get hostMethods => [{'name': 通道名, 'handler': 实现}, ...]`；产物不再 import 运行时、不持有注册 API，`build.yaml` 的 `register_import` / `register_call` 配置项随之删除（builder 不再读 options）。注册时机与策略归运行时（`initJsUi(hostMethods: ...)`）。**patch/ 产物与 JS 协议不变**，不影响 `protocol` 版本。
 
 ## 0.13.0
 

@@ -25,21 +25,23 @@ void main() {
   runZoned(() {
     // binding 与 runApp 必须在同一个 zone 内初始化（否则触发 Zone mismatch）。
     WidgetsFlutterBinding.ensureInitialized();
-    // @HostInjected 宿主方法：JS 侧类与方法照常产出，只有方法体换成
-    // `_app_host_.invoke(...)`（调用点与 Dart 一比一）。
-    // 注册清单由 build_runner 扫描注解生成（lib/generated/host_methods.dart），
-    // 调一次即可，无需手写每条通道。
-    registerHostMethods();
-    // UI 能力装配唯一入口：注册自定义能力（lib/custom/**）、就位全部能力通道、
-    // 建宿主组件表、注册内建宿主方法——一次调用完成，hot_patch 包零改动。
-    // 能力清单见 lib/custom/custom_capabilities.dart（VisibilityDetector /
-    // EasyRefresh / WaterfallFlow）。必须在任何 JsUiWidget 渲染之前调用。
-    initJsUi(libraries: customJsUiLibraries);
+    // UI 能力装配唯一入口，一次完成四件事：
+    //   1. 注册自定义能力（lib/custom/**，清单见 custom_capabilities.dart：
+    //      VisibilityDetector / EasyRefresh / WaterfallFlow）；
+    //   2. 就位全部能力通道、建宿主组件表、注册内建宿主方法；
+    //   3. 注册 @HostInjected 宿主方法（JS 侧方法体换成 `_app_host_.invoke(...)`，
+    //      调用点与 Dart 一比一；清单由 build_runner 扫描注解生成到
+    //      lib/generated/host_methods.dart，`hostMethods` 直接传进来即可）。
+    // 必须在任何 JsUiWidget 渲染之前调用（JsUiWidget 只校验、不代劳）。
+    initJsUi(
+      libraries: customJsUiLibraries,
+      hostMethods: hostMethods,
+    );
     // 生命周期验证期间临时打开双端句柄进出日志（验证后恢复注释）。
     // JsRuntimeManager.setVerboseCacheTrace(true);
     // 无 JS 产物的组件（产物里的 `Component` 占位结点）的原生实现：**全局一次注册**
-    // （进程内共用一张表，不随 JsUiWidget 实例透传），位置与 registerHostMethods
-    // 一致——runApp 之前。重复注册同名会覆盖（覆盖时告警），故不要放进 build()。
+    // （进程内共用一张表，不随 JsUiWidget 实例透传），位置与 initJsUi 同段——
+    // runApp 之前。重复注册同名会覆盖（覆盖时告警），故不要放进 build()。
     //   DashboardCard 产物里 `_LabeledDivider` 私有类跨库不可见，注册公开的同名实现。
     //   回调收到完整 JsRenderContext：props + children slot + invoke。
     registerAllNativeComponent();

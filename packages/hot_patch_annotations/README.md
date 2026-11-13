@@ -141,22 +141,25 @@ Key points:
   transitively translated.
 
 Host-side registration is handled by `hot_patch_generator` automatically: it scans every `@HostInjected`
-method in the package and generates all registration calls into a single Dart file
-`lib/generated/host_methods.dart`, which the app calls once in `main()`:
+method in the package and generates a **data-only list** into a single Dart file
+`lib/generated/host_methods.dart` (`List<Map<String, Object?>> get hostMethods`, each entry
+`{'name': channel, 'handler': impl}`), which the app hands to the runtime's single bootstrap entry:
 
 ```dart
 import 'package:my_app/generated/host_methods.dart';
 
 void main() {
-  registerHostMethods();          // registers every @HostInjected channel of this package
+  initJsUi(
+    libraries: customJsUiLibraries,  // custom / third-party capabilities
+    hostMethods: hostMethods,        // every @HostInjected channel of this package
+  );
   runApp(const MyApp());
 }
 ```
 
-By default registration targets `JsRuntimeManager.registerHostMethod(channel, fn)` from the companion
-runtime `package:hot_patch/hot_patch.dart`, with **no configuration required**; only when swapping in a
-different runtime implementation do you override `register_import` / `register_call` in your own
-`build.yaml`. Arbitrary channels can also be registered manually:
+Because the generated file only carries data (no registration API), it needs **no configuration**
+and works with any runtime that accepts the same list shape. Arbitrary channels can also be
+registered manually with `JsRuntimeManager.registerHostMethod`:
 
 ```dart
 JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);
