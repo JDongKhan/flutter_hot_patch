@@ -1,4 +1,5 @@
 import 'package:hot_patch/hot_patch.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// 宿主自定义类 → JS 同名类（`example/js/NoteObject.js`）的绑定示例。
 ///
@@ -10,6 +11,9 @@ import 'package:hot_patch/hot_patch.dart';
 ///   1. 本类实现 [JsHandleMembers]：`jsMember` 里一行一个成员（Dart 无反射，
 ///      字符串成员名只能由类自己声明映射）；
 ///   2. 一个 5 行的 `JsObjectBridge` 注册（见 `custom/note_object/`）。
+/// `@PatchIgnore()`：本类不翻译（Dart 无反射，成员分派只能在这里声明），
+/// JS 侧同名实现由宿主 `js/<类名>.js` 提供（产物 `patch/packages/NoteObject.js`）。
+@PatchIgnore()
 class NoteObject implements JsHandleMembers {
   NoteObject({String title = '未命名'}) : _title = title;
 
