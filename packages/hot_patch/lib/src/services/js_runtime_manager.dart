@@ -736,7 +736,16 @@ class JsRuntimeManager {
   /// 解析模块源码里的 import 语句：`import { A, B } from 'rel';` 与
   /// 副作用形态 `import 'rel';` -> [(名字列表, 'rel')]（副作用形态名字为空）。
   /// 只匹配生成器产物的单行 import 形态。
+  ///
+  /// **注释行先剔除**：宿主维护的模块（`js/<pkg>.js`）头注释里常有
+  /// `//   import { X } from '../packages/<pkg>.js';` 这种用法示例，它不是依赖；
+  /// 当成依赖会以本模块目录为基准再叠一层（`packages/packages/...`）导致
+  /// 「模块不存在」而整页 boot 失败。
   static List<(List<String>, String)> _parseImports(String source) {
+    final code = source
+        .split('\n')
+        .where((l) => !l.trimLeft().startsWith('//'))
+        .join('\n');
     final re = RegExp(
       r"import\s*\{([^}]+)\}\s*from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
     );
@@ -761,7 +770,7 @@ class JsRuntimeManager {
       multiLine: true,
     );
     return [
-      for (final m in re.allMatches(source))
+      for (final m in re.allMatches(code))
         (
           m
               .group(1)!
@@ -771,11 +780,11 @@ class JsRuntimeManager {
               .toList(),
           m.group(2)!,
         ),
-      for (final m in sideEffectRe.allMatches(source))
+      for (final m in sideEffectRe.allMatches(code))
         (const <String>[], m.group(1)!),
-      for (final m in namespaceRe.allMatches(source))
+      for (final m in namespaceRe.allMatches(code))
         (const <String>[], _namespaceSource(m.group(0)!)),
-      for (final m in reExportRe.allMatches(source))
+      for (final m in reExportRe.allMatches(code))
         (const <String>[], m.group(1)!),
     ];
   }
