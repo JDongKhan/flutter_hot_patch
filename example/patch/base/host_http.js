@@ -2,6 +2,7 @@
 // 由 hot_patch_generator 从 lib/base/host_http.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import '../packages/dio.js';
 
 // 模型 HostHttp
 export class HostHttp {

@@ -9,6 +9,7 @@
 
 import '../base/app_router.dart';
 import '../base/canvas_image.dart';
+import '../base/dio_bridge.dart';
 import '../base/host_http.dart';
 import '../base/platform_tools.dart';
 import '../base/web_view.dart';
@@ -35,6 +36,7 @@ List<Map<String, Object?>> get hostMethods => [
   {'name': 'pop', 'handler': AppRouter.pop},
   {'name': 'toast', 'handler': AppRouter.toast},
   {'name': 'loadCanvasImage', 'handler': CanvasImage.load},
+  {'name': 'dioRequest', 'handler': DioBridge.request},
   {'name': 'httpGet', 'handler': HostHttp.get},
   {'name': 'appVersion', 'handler': PlatformTools.appVersion},
   {'name': 'documentsPath', 'handler': PlatformTools.documentsPath},

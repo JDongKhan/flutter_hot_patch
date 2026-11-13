@@ -3,6 +3,7 @@ import 'package:hot_patch/hot_patch.dart';
 
 import '../components/compare_test.dart';
 import '../components/construct_only_card.dart';
+import '../components/dio_card.dart';
 import '../components/getx_component.dart';
 import '../components/provider_component.dart';
 import '../components/third_party_tools_card.dart';
@@ -11,9 +12,11 @@ import '../components/third_party_tools_card.dart';
 /// 按「能不能封装成工具类」分三组，点击条目进入原生 vs JS 热更对比页。
 ///
 /// - 状态管理：provider / GetX —— 语义在 JS 侧整套实现（js/provider.js、js/get.js）；
-/// - 工具类：path_provider / package_info_plus / permission_handler / dio —— 收口到
-///   [PlatformTools] / [HostHttp] 的 `@HostInjected` 静态方法，JS 侧不翻译这些库；
-/// - 必须构造的类：uuid —— JS 侧提供同名类（js/uuid.js）。
+/// - 工具类：path_provider / package_info_plus / permission_handler —— 收口到
+///   [PlatformTools] 的 `@HostInjected` 静态方法，JS 侧不翻译这些库；
+/// - 必须构造的类：uuid / dio —— JS 侧提供同名类（js/uuid.js、js/dio.js）。
+///   dio 的 API 面可构造、可读字段，`Dio()` / `dio.get(…, queryParameters: …)` /
+///   `res.statusCode` 与 Dart 一比一，底层请求由宿主用真实 dio 执行。
 class ThirdPartyShowcase extends StatelessWidget {
   const ThirdPartyShowcase({super.key});
 
@@ -38,14 +41,22 @@ class ThirdPartyShowcase extends StatelessWidget {
     ]),
     _Group('常用库 · 工具类封装（@HostInjected）', [
       _Entry(
-        'path_provider / package_info_plus / permission_handler / dio',
-        'PlatformTools / HostHttp：宿主执行真实调用，JS 侧只走通道，不翻译三方库',
+        'path_provider / package_info_plus / permission_handler',
+        'PlatformTools：宿主执行真实调用，JS 侧只走通道，不翻译这些库',
         ThirdPartyToolsCard(),
         'ThirdPartyToolsCard',
         'components/third_party_tools_card.js',
       ),
     ]),
     _Group('必须构造的类 · JS 同名实现', [
+      _Entry(
+        'dio',
+        'final Dio _dio = Dio(); await _dio.get(url, queryParameters: …)：'
+            'API 与 Dart 一致，底层由宿主真实 dio 执行',
+        DioCard(),
+        'DioCard',
+        'components/dio_card.js',
+      ),
       _Entry(
         'uuid',
         'final id = Uuid(); id.v4()：构造与方法调用和 Dart 一比一',
