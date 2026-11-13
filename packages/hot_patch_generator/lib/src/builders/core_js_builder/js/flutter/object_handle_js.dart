@@ -1,5 +1,6 @@
-// 控制器基类：Dart Controller（ScrollController / TabController / …）的 JS 镜像
-// 共用的一层句柄封装（随 flutter.js 发布）。
+// 实例对象句柄基类：JS 侧实例与宿主侧真实对象按句柄绑定的统一底座（随 flutter.js
+// 发布）。Dart 的 Controller（ScrollController / TabController / …）只是其中一类，
+// App 自定义类同样可以继承它（kind 用 `obj/<类名>`）。
 //
 // 职责（与能力无关）：
 //   - `__listeners` + addListener / removeListener / `__notify`（Dart Listenable 语义）；
@@ -14,8 +15,8 @@
 //
 // 依赖方向：本类用 runtime 的句柄机制（`G.__core`：__registerHandle / __handleOp /
 // __releaseHandle / createFnHandle），runtime 不需要认识任何控制器。
-const String controllerBaseJsSource = r'''
-  export class ControllerBase {
+const String objectHandleJsSource = r'''
+  export class JsHandleObject {
     constructor() {
       this.__listeners = [];
       this.__id = null;
@@ -93,6 +94,23 @@ const String controllerBaseJsSource = r'''
       }
       if (typeof curveArg === 'string') { curve = curveArg; }
       return { ms: ms, curve: curve };
+    }
+
+    // 通用成员分派（宿主侧实现 JsHandleMembers 时直接吃这三个 op，无需再写一层）。
+    // 返回宿主回填的值（异步：JS 侧 `await`）；句柄未建/已释放时返回 undefined。
+    __memberCall(method, args) {
+      if (this.__id == null) { return undefined; }
+      return __handleOp(this.__id, 'call', { method: method, args: args || [] });
+    }
+
+    __memberGet(name) {
+      if (this.__id == null) { return undefined; }
+      return __handleOp(this.__id, 'get', { name: name });
+    }
+
+    __memberSet(name, value) {
+      if (this.__id == null) { return undefined; }
+      return __handleOp(this.__id, 'set', { name: name, value: value });
     }
 
     dispose() {

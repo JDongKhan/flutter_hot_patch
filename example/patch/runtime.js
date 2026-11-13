@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 ebfe96f6） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 608f32ed） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'ebfe96f6') { return; }
-  G.__jsuiVersion = 'ebfe96f6';
+  if (G.__jsui && G.__jsuiVersion === '608f32ed') { return; }
+  G.__jsuiVersion = '608f32ed';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -1046,8 +1046,8 @@ __defineProtoMember(Map.prototype, {
   }
 
   // 控制器（ScrollController / AnimationController / …）的 JS 基类不在这里：
-  // 它们是 Flutter 侧语义，随 flutter.js 发布（`ControllerBase`，见
-  // js/controller_base_js.dart）。本片段只提供与能力无关的句柄机制
+  // 它们是 Flutter 侧语义，随 flutter.js 发布（`JsHandleObject`，见
+  // js/object_handle_js.dart）。本片段只提供与能力无关的句柄机制
   // （__registerHandle / __handleOp / __releaseHandle）。
 
   // ── 内建归属实现（按注册顺序执行）────────────────────────────────────

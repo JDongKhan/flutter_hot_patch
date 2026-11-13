@@ -6,17 +6,17 @@
 // ScrollController 按**句柄 id** 绑定。
 //
 // 句柄层（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由 flutter.js 的
-// `ControllerBase` 提供（见 controller_base_js.dart）；本类只写差异：
+// `JsHandleObject` 提供（见 object_handle_js.dart）；本类只写差异：
 //   - offset / position / hasClients：本地镜像（宿主回传 metrics 更新）；
 //   - jumpTo/animateTo：实例级 host 通道（载荷带 id，多实例互不干扰）；
 //   - addListener/removeListener：JS 闭包直接登记——**匿名闭包天然支持**，
 //     无需生成器合成方法名，不存在重名问题。
 // 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`，宿主据此取/建
-// 真实 controller（见 scroll_controller_bridge.dart）。
+// 真实 controller（见 scroll_object_bridge.dart）。
 //
-// 动画实参归一由 `ControllerBase.__animateArgs` 提供（Scroll / Page 共用）。
+// 动画实参归一由 `JsHandleObject.__animateArgs` 提供（Scroll / Page 共用）。
 const String scrollControllerJsSource = r'''
-  export class ScrollController extends ControllerBase {
+  export class ScrollController extends JsHandleObject {
     constructor() {
       super();
       this.offset = 0;
@@ -61,7 +61,7 @@ const String scrollControllerJsSource = r'''
   // 与 ScrollController 同一套句柄层；镜像字段只有 page / initialPage。
   // 构造参数（initialPage / viewportFraction）随 toJSON 的 extraJSON 下发，
   // 宿主 PageView renderer 据此创建真实 PageController。
-  export class PageController extends ControllerBase {
+  export class PageController extends JsHandleObject {
     constructor(opts) {
       super();
       var o = opts || {};
@@ -110,7 +110,7 @@ const String scrollControllerJsSource = r'''
   //     选中项 → 本实例更新并通知 listeners），业务侧只读；
   //   - jumpToItem：走通用 op（call），宿主按 `itemIndex` 计算偏移并跳转；
   //   - initialItem / itemExtent 随 toJSON 下发，宿主据此创建真实 controller。
-  export class FixedExtentScrollController extends ControllerBase {
+  export class FixedExtentScrollController extends JsHandleObject {
     constructor(opts) {
       super();
       var o = opts || {};

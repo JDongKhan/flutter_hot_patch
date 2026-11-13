@@ -1,7 +1,7 @@
 // GlobalKey.currentState 的 JS 侧承载（随 flutter.js 发布，属 Dart 值类区的最前置）。
 //
 // 为什么在 flutter.js 而不是 runtime：它是「Dart / Flutter 对象在 JS 侧的代表」，
-// 与 ControllerBase / GlobalKey 同一层；runtime.js 只做运行环境与 mini-react 核心，
+// 与 JsHandleObject / GlobalKey 同一层；runtime.js 只做运行环境与 mini-react 核心，
 // 不认识任何 Dart 对象。依赖方向仍单向（flutter.js → runtime.js，用 `G.__core`）。
 //
 // 必须排在**同文件靠后**的 State 代理类之前（`export class AnimatedListState

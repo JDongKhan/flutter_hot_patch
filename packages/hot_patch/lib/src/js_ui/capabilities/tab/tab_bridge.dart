@@ -21,14 +21,14 @@ import 'package:flutter/scheduler.dart'
 
 import '../../js_widget_registry.dart';
 import '../base_widget/text_from_json.dart';
-import '../core/controller_bridge.dart';
+import '../core/object_bridge.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/layout_from_json.dart';
 import '../core/from_json/widget_enum_from_json.dart';
 import 'tab_from_json.dart';
 
 // ---------------------------------------------------------------------------
-// TabController 句柄桥（通用层见 capabilities/core/controller_bridge.dart；
+// TabController 句柄桥（通用层见 capabilities/core/object_bridge.dart；
 // JS 侧代理类见 capabilities/tab/tab_controller_js.dart，与 ScrollController 同构）
 // ---------------------------------------------------------------------------
 
@@ -49,8 +49,8 @@ const TickerProvider _detachedTickerProvider = _DetachedTickerProvider();
 /// TabController 句柄桥：onCreate 阶段拿不到构造参数（length/initialIndex
 /// 随 `__handle` 下发而非 meta），真实 controller 由 Host 带参创建，onCreate
 /// 只登记 index 回传句柄；这里只留 index setter / animateTo 的 op 分派。
-final JsControllerBridge<TabController> _tabBridge =
-    JsControllerBridge<TabController>(
+final JsObjectBridge<TabController> _tabBridge =
+    JsObjectBridge<TabController>(
       kind: 'ctrl/Tab',
       onOp: (c, op, payload) {
         if (op == 'set' && payload['name'] == 'index') {

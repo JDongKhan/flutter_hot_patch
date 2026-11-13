@@ -44,10 +44,11 @@ export 'src/js_ui/capabilities/js_ui_capabilities.dart' show jsWidgetRegistry;
 export 'src/js_ui/capabilities/js_ui_bootstrap.dart'
     show initJsUi, jsUiInitialized, assertJsUiInitialized;
 export 'src/js_ui/capabilities/js_ui_library.dart';
-// 自定义能力（App 侧实现，如三方包的 Controller 句柄桥）需要的通用构件：
-// 句柄桥基类。
-export 'src/js_ui/capabilities/core/controller_bridge.dart'
-    show JsControllerBridge;
+// 自定义能力（App 侧实现，如三方包的 Controller 句柄桥、自定义实例对象绑定）
+// 需要的通用构件：句柄桥基类 + 「按成员名分派」契约（类实现 JsHandleMembers 后，
+// 桥的 onOp 直接传 dispatchJsMember，不必为每个类再写 switch）。
+export 'src/js_ui/capabilities/core/object_bridge.dart'
+    show JsObjectBridge, JsHandleMembers, dispatchJsMember;
 // 宿主 JSON 还原：外部自定义 register 时直接按键从 `JsRenderContext` 取值，
 // 例如 `c.color('color')` / `c.textStyle('style')` / `c.edgeInsets('padding')`，
 // 不必再 import 各 from_json 实现文件。

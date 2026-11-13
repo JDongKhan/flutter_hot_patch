@@ -1,7 +1,8 @@
-// 控制器句柄桥通用层（宿主侧）：ScrollController / TabController /
-// TextEditingController / ChangeNotifier 镜像四个能力的同构样板收敛于此。
+// 实例对象句柄桥通用层（宿主侧）：**任意**「JS 侧有实例、宿主侧有对应真实对象」
+// 的场景共用这一层——ScrollController / TabController / TextEditingController /
+// ChangeNotifier 只是其中几类 kind，App 自定义类同样走它（kind 用 `obj/<类名>`）。
 //
-// 一个控制器桥 = kind 描述符组装（onCreate putIfAbsent、onOp 分派、onRelease
+// 一个句柄桥 = kind 描述符组装（onCreate putIfAbsent、onOp 分派、onRelease
 // 释放）+ `__handle` 解析；**对象本体与它的绑定信息全部寄存在绑定缓存里**
 // （桶名 = 本桥的 kind，见 binding_cache.dart）——不再各占「controller / 回传
 // 句柄 / attach 去重」三张全局表。各能力只留差异：create（真实对象构造，可拿
@@ -15,8 +16,11 @@ import '../../../utils/hot_patch_log.dart';
 import 'binding_cache.dart';
 import 'handle_registry.dart';
 
-/// 控制器句柄桥（[T] 为宿主侧真实对象）。由能力文件的 `ensureXxxChannels()`
-/// 调 [ensure] 幂等完成 kind 注册。
+/// 实例对象句柄桥（[T] 为宿主侧真实对象）。由能力文件的 `ensureXxxChannels()`
+/// 或 App 自定义 `JsUiLibrary.ensureChannels()` 调 [ensure] 幂等完成 kind 注册。
+///
+/// 通用分派：目标对象实现 [JsHandleMembers] 时，`onOp` 直接传
+/// [dispatchJsMember]，**不需要**为每个类再写一遍 switch。
 ///
 /// **引用强度：强引用**（见 binding_cache.dart 的判定 2）——JS 侧句柄才是这些
 /// 对象的寿命驱动者，未收到 release 前 Dart 侧唯一持有者就是本缓存，弱化会让
@@ -26,8 +30,8 @@ import 'handle_registry.dart';
 /// 是纯控制类，既非 ChangeNotifier 也非 Listenable）。默认释放语义是
 /// ChangeNotifier / AnimationController 调 dispose；类型不同、需要自己的释放
 /// 逻辑时用 [onRelease] 覆盖。
-class JsControllerBridge<T extends Object> {
-  JsControllerBridge({
+class JsObjectBridge<T extends Object> {
+  JsObjectBridge({
     required String kind,
 
     /// onCreate 阶段创建真实对象（putIfAbsent——与 Host 的兜底创建配合，
@@ -50,8 +54,8 @@ class JsControllerBridge<T extends Object> {
         _onRelease = onRelease;
 
   /// 本桥的存储桶名 = 句柄 kind（`ctrl/Scroll` / `ctrl/Tab` / `ctrl/Text` /
-  /// `notifier/ChangeNotifier`）：新增控制器能力照旧只注册一个 kind 即自动获得
-  /// 统一缓存、统一日志与页面兜底回收。
+  /// `notifier/ChangeNotifier` / `obj/<类名>`）：新增一类对象只注册一个 kind 即
+  /// 自动获得统一缓存、统一日志与页面兜底回收。
   final String _kind;
   final T Function(String id, Object? meta)? _create;
   final Object? Function(T controller, String op, Map payload) _onOp;
@@ -177,7 +181,7 @@ class JsControllerHost<T extends ChangeNotifier> extends StatefulWidget {
     required this.buildChild,
   });
 
-  final JsControllerBridge<T> bridge;
+  final JsObjectBridge<T> bridge;
 
   /// JS 侧控制器实例的句柄 id（如 'js:ctrl/Scroll#5'）。
   final String id;
@@ -218,3 +222,25 @@ class _JsControllerHostState<T extends ChangeNotifier>
   @override
   Widget build(BuildContext context) => widget.buildChild(_controller);
 }
+
+/// 「JS 侧按成员名调用宿主对象」的最小契约。
+///
+/// 为什么需要类自己分派：Dart 没有运行时反射，框架拿不到「字符串成员名 → 方法」
+/// 的映射；而每个类把自己对外暴露的成员写清楚，本身就是它的职责。接入成本是
+/// **一行一个成员**（`switch` 里一条 `case`），框架侧零改动。
+///
+/// [op] 取值与 JS 侧调用一一对应：
+///   - `call`：`payload['method']` + `payload['args']`（数组）→ 调方法；
+///   - `get` ：`payload['name']` → 读字段；
+///   - `set` ：`payload['name']` + `payload['value']` → 写字段。
+/// 返回非 JSON 值没有意义：JS 侧拿到的就是宿主回填的原样值（可 JSON 化即可）。
+abstract interface class JsHandleMembers {
+  Object? jsMember(String op, Map payload);
+}
+
+/// [JsObjectBridge] 的通用 onOp：目标对象实现 [JsHandleMembers] 就转给它。
+///
+/// 直接把 `dispatchJsMember` 传给 `onOp:` 即可——
+/// `JsObjectBridge<NoteObject>(onOp: dispatchJsMember)`（形参逆变，无需包装闭包）。
+Object? dispatchJsMember(Object target, String op, Map payload) =>
+    target is JsHandleMembers ? target.jsMember(op, payload) : null;

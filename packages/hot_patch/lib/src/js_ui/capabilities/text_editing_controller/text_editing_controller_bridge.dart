@@ -2,7 +2,7 @@
 //
 // 一个能力 = 描述符 + 通道 + 桥接组件 + 组件注册，全部内聚在本文件。
 //
-// 句柄桥（通用层，见 capabilities/core/controller_bridge.dart）：
+// 句柄桥（通用层，见 capabilities/core/object_bridge.dart）：
 //   JS 侧 `new TextEditingController()` 经 `reg(obj, 'ctrl/Text', {meta:{fn}})`
 //   登记，通用通道 `jsHandle` 的 create 落到本桥的 `ctrl/Text` 描述符 →
 //   创建宿主真实 controller 并登记输入回传句柄；TextField(controller:
@@ -14,12 +14,12 @@ import 'package:flutter/material.dart';
 
 import '../../js_widget_registry.dart';
 import '../base_widget/text_from_json.dart';
-import '../core/controller_bridge.dart';
+import '../core/object_bridge.dart';
 
 /// TextEditingController 句柄桥：创建/回传句柄登记/释放全走通用层，这里
 /// 只留 set text / clear / setSelection 的 op 分派。
-final JsControllerBridge<TextEditingController> _textBridge =
-    JsControllerBridge<TextEditingController>(
+final JsObjectBridge<TextEditingController> _textBridge =
+    JsObjectBridge<TextEditingController>(
       kind: 'ctrl/Text',
       create: (_, _) => TextEditingController(),
       onOp: (c, op, payload) {
@@ -57,7 +57,7 @@ void registerTextWidgets(JsWidgetRegistry r) {
     // controller 是 JS TextEditingController 句柄 → 受控模式：用桥接表中
     // 的真实 controller，用户输入经 textFn 回传 JS 实例镜像（更新 text +
     // 触发其 listeners），同时照常触发 onChanged 事件。
-    final tecId = JsControllerBridge.idOf(c.props['controller']);
+    final tecId = JsObjectBridge.idOf(c.props['controller']);
     final external = tecId != null ? _textBridge.controllerAt(tecId) : null;
     // decoration 是值对象（InputDecoration，JS 侧是普通值类）：它的字段 JSON
     // 直接读；携带的 Widget（icon / label / prefixIcon / suffixIcon）是元素描述，

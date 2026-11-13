@@ -5,6 +5,7 @@ import '../components/compare_test.dart';
 import '../components/construct_only_card.dart';
 import '../components/dio_card.dart';
 import '../components/getx_component.dart';
+import '../components/note_object_card.dart';
 import '../components/provider_component.dart';
 import '../components/third_party_tools_card.dart';
 
@@ -46,6 +47,16 @@ class ThirdPartyShowcase extends StatelessWidget {
         ThirdPartyToolsCard(),
         'ThirdPartyToolsCard',
         'components/third_party_tools_card.js',
+      ),
+    ]),
+    _Group('自定义类 · JS 同名类（实例对象绑定）', [
+      _Entry(
+        'NoteObject',
+        'new NoteObject({title: …}) → js/classes/NoteObject.js → obj/NoteObject：'
+            '方法 / 读字段 / 写字段全部打到宿主真实实例',
+        NoteObjectCard(),
+        'NoteObjectCard',
+        'components/note_object_card.js',
       ),
     ]),
     _Group('必须构造的类 · JS 同名实现', [

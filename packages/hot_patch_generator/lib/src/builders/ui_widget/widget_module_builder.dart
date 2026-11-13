@@ -19,7 +19,7 @@ import '../core_js_builder/js/flutter/canvas_js.dart';
 import '../core_js_builder/js/flutter/change_notifier_js.dart';
 import '../core_js_builder/js/flutter/color_js.dart';
 import '../core_js_builder/js/flutter/component_js.dart';
-import '../core_js_builder/js/flutter/controller_base_js.dart';
+import '../core_js_builder/js/flutter/object_handle_js.dart';
 import '../core_js_builder/js/flutter/dart_core_js.dart';
 import '../core_js_builder/js/flutter/dart_errors_js.dart';
 import '../core_js_builder/js/flutter/dart_values_js.dart';
@@ -56,7 +56,7 @@ import '../core_js_builder/js/flutter/widgets_binding_js.dart';
 ///
 /// **拼接顺序有意义**：值类与语言镜像在前（`__positionalArgs` / `__durationMs`
 /// 等工具、Dart 异常、基础值类），控制器在后（依赖 dart 值工具与 `G.__core` 的
-/// 句柄机制、`ControllerBase`）。片段内的 `function` 声明会提升，故同区内可以
+/// 句柄机制、`JsHandleObject`）。片段内的 `function` 声明会提升，故同区内可以
 /// 前后互引。依赖方向单向：flutter.js → runtime.js，反方向禁止。
 String flutterValueClassesSource() => [
   dartValuesJsSource,
@@ -92,7 +92,7 @@ String flutterValueClassesSource() => [
   // 依赖 StreamController / 页面句柄（release 钩子取消宿主订阅）。
   eventChannelJsSource,
   // 控制器基类（句柄层）：各 Controller 继承它，必须排在它们之前。
-  controllerBaseJsSource,
+  objectHandleJsSource,
   // SDK 枚举值类（按源码 `enum` 声明自动生成）：翻译层已改为对
   // `Owner.member` 原样引用，这些类就是那些引用的落点。
   enumValuesJsSource(),

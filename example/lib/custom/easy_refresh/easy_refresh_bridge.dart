@@ -35,13 +35,13 @@ void ensureEasyRefreshChannels() {
 }
 
 /// EasyRefreshController 句柄桥（与 ScrollController 同一套通用层，见
-/// capabilities/core/controller_bridge.dart）：
+/// capabilities/core/object_bridge.dart）：
 ///   JS 侧 `new EasyRefreshController({controlFinish*: …})` 经通用句柄通道同步到
 ///   宿主，按 meta 里的构造参数创建真实 controller；EasyRefresh(controller:
 ///   {__handle: id}) 渲染时按 id 取同一实例挂上。控制方法走通用 op（call），
 ///   释放走通用 release → 本桥 onRelease 调包内 dispose（解绑 EasyRefresh）。
-final JsControllerBridge<EasyRefreshController> _easyRefreshBridge =
-    JsControllerBridge<EasyRefreshController>(
+final JsObjectBridge<EasyRefreshController> _easyRefreshBridge =
+    JsObjectBridge<EasyRefreshController>(
   kind: 'ctrl/EasyRefresh',
   // 真实 controller 由宿主带 controlFinish* 创建（同 PageController /
   // TabController 模式：构造参数随句柄下发，不能预建默认实例）。
@@ -261,7 +261,7 @@ void registerEasyRefreshWidgets(JsWidgetRegistry r) {
     // handle 缺失时（旧调用）不挂控制器；渲染期兜底创建（创建消息与首帧渲染
     // 谁先到都复用同一实例）。
     final handle = c.props['controller'];
-    final id = JsControllerBridge.idOf(handle);
+    final id = JsObjectBridge.idOf(handle);
     final controller = id == null
         ? null
         : _easyRefreshBridge.controllerOf(

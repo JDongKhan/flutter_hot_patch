@@ -361,8 +361,8 @@ const String handleRegistryJsSource = r'''
   }
 
   // 控制器（ScrollController / AnimationController / …）的 JS 基类不在这里：
-  // 它们是 Flutter 侧语义，随 flutter.js 发布（`ControllerBase`，见
-  // js/controller_base_js.dart）。本片段只提供与能力无关的句柄机制
+  // 它们是 Flutter 侧语义，随 flutter.js 发布（`JsHandleObject`，见
+  // js/object_handle_js.dart）。本片段只提供与能力无关的句柄机制
   // （__registerHandle / __handleOp / __releaseHandle）。
 
   // ── 内建归属实现（按注册顺序执行）────────────────────────────────────

@@ -17,20 +17,20 @@ import 'package:flutter/widgets.dart';
 
 import '../../js_widget_registry.dart';
 import '../../ui_fallback.dart';
-import '../core/controller_bridge.dart';
+import '../core/object_bridge.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/layout_from_json.dart';
 
 /// LayerLink 句柄桥：JS 的 `LayerLink` 实例 ↔ 宿主真实 `LayerLink()`。
-final JsControllerBridge<LayerLink> _linkBridge = JsControllerBridge<LayerLink>(
+final JsObjectBridge<LayerLink> _linkBridge = JsObjectBridge<LayerLink>(
   kind: 'layer/Link',
   create: (id, meta) => LayerLink(),
   onOp: (link, op, payload) => null,
 );
 
 /// OverlayPortalController 句柄桥：show/hide 由 JS 命令驱动。
-final JsControllerBridge<OverlayPortalController> _portalBridge =
-    JsControllerBridge<OverlayPortalController>(
+final JsObjectBridge<OverlayPortalController> _portalBridge =
+    JsObjectBridge<OverlayPortalController>(
       kind: 'overlay/Portal',
       create: (id, meta) => OverlayPortalController(
         debugLabel: meta is Map && meta['debugLabel'] is String
@@ -107,13 +107,13 @@ void registerOverlayPortalWidgets(JsWidgetRegistry r) {
 /// 用 `controllerOf`（putIfAbsent 兜底创建）而不是 `controllerAt`：句柄 create
 /// 消息与首帧渲染到达顺序不定，两端必须落到**同一个实例**（锚点是身份语义）。
 LayerLink? _linkOf(Object? prop) {
-  final id = JsControllerBridge.idOf(prop);
+  final id = JsObjectBridge.idOf(prop);
   if (id == null) return null;
   return _linkBridge.controllerOf(id, LayerLink.new);
 }
 
 OverlayPortalController? _controllerOf(Object? prop) {
-  final id = JsControllerBridge.idOf(prop);
+  final id = JsObjectBridge.idOf(prop);
   if (id == null) return null;
   return _portalBridge.controllerOf(id, OverlayPortalController.new);
 }

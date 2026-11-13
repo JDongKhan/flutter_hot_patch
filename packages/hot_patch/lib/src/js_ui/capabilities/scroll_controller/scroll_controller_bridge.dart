@@ -2,7 +2,7 @@
 //
 // 一个能力 = 描述符 + 通道 + 桥接组件 + 组件注册，全部内聚在本文件。
 //
-// 句柄桥（通用层，见 capabilities/core/controller_bridge.dart）：
+// 句柄桥（通用层，见 capabilities/core/object_bridge.dart）：
 //   JS 侧 `new ScrollController()` 经 `reg(obj, 'ctrl/Scroll', {meta:{fn}})` 登记，
 //   通用通道 `jsHandle` 的 create 落到本桥的 `ctrl/Scroll` 描述符 → 创建宿主
 //   真实 ScrollController 并登记 metrics 转发句柄；渲染 SingleChildScrollView /
@@ -14,15 +14,15 @@ import 'package:flutter/material.dart';
 import '../../js_widget_registry.dart';
 import '../../ui_fallback.dart';
 import '../base_widget/text_from_json.dart';
-import '../core/controller_bridge.dart';
+import '../core/object_bridge.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/layout_from_json.dart';
 import '../core/from_json/widget_enum_from_json.dart';
 
 /// ScrollController 句柄桥：创建/回传句柄登记/释放全走通用层（见
-/// controller_bridge.dart），这里只留 jumpTo/animateTo 的 op 分派。
-final JsControllerBridge<ScrollController>
-_scrollBridge = JsControllerBridge<ScrollController>(
+/// object_bridge.dart），这里只留 jumpTo/animateTo 的 op 分派。
+final JsObjectBridge<ScrollController>
+_scrollBridge = JsObjectBridge<ScrollController>(
   kind: 'ctrl/Scroll',
   create: (_, _) => ScrollController(),
   onOp: (c, op, payload) {
@@ -60,8 +60,8 @@ _scrollBridge = JsControllerBridge<ScrollController>(
 
 /// PageController 句柄桥：与 ScrollController 同一套通用层，只多
 /// jumpToPage / animateToPage / nextPage / previousPage 的方法分派。
-final JsControllerBridge<PageController>
-_pageBridge = JsControllerBridge<PageController>(
+final JsObjectBridge<PageController>
+_pageBridge = JsObjectBridge<PageController>(
   kind: 'ctrl/Page',
   // 真实 PageController 由 Host 带 initialPage / viewportFraction 创建
   // （与 TabController 同模式）；此处不能预创建默认实例，否则 Host 的
@@ -375,7 +375,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       );
     }
 
-    final scId = JsControllerBridge.idOf(c.props['controller']);
+    final scId = JsObjectBridge.idOf(c.props['controller']);
     if (scId != null) {
       return _scrollControllerHost(c, scId, build, key: c.key);
     }
@@ -430,7 +430,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       );
     }
 
-    final scId = JsControllerBridge.idOf(c.props['scrollController']);
+    final scId = JsObjectBridge.idOf(c.props['scrollController']);
     if (scId != null) {
       return _scrollControllerHost(c, scId, build, key: c.key);
     }
@@ -477,7 +477,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
             children: children,
           );
 
-    final scId = JsControllerBridge.idOf(c.props['controller']);
+    final scId = JsObjectBridge.idOf(c.props['controller']);
     if (scId != null) {
       return _scrollControllerHost(c, scId, build, key: c.key);
     }
@@ -488,7 +488,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // （宿主侧 SliverList/SliverAppBar 等已注册为 widget）；controller 与
   // ListView 同款分流 _scrollControllerHost 桥接。
   r.register('CustomScrollView', (c) {
-    final scId = JsControllerBridge.idOf(c.props['controller']);
+    final scId = JsObjectBridge.idOf(c.props['controller']);
     if (scId != null) {
       final scrollDirection =
           c.axis('scrollDirection') ?? Axis.vertical;
@@ -545,7 +545,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
           physics: physics,
           clipBehavior: clipBehavior ?? Clip.hardEdge,
         );
-    final scId = JsControllerBridge.idOf(c.props['controller']);
+    final scId = JsObjectBridge.idOf(c.props['controller']);
     if (scId == null) return buildWith(null, key: c.key);
     return _scrollControllerHost(c, scId, buildWith, key: c.key);
   });
@@ -837,7 +837,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // 绑定真实 controller，滚动经 invoke 回传 metrics 镜像到 JS 实例）；
   // 无 controller → 原样 SingleChildScrollView。
   r.register('SingleChildScrollView', (c) {
-    final scId = JsControllerBridge.idOf(c.props['controller']);
+    final scId = JsObjectBridge.idOf(c.props['controller']);
     if (scId != null) {
       final scrollDirection =
           c.axis('scrollDirection') ?? Axis.vertical;
@@ -908,7 +908,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       );
     }
 
-    final pcId = JsControllerBridge.idOf(c.props['controller']);
+    final pcId = JsObjectBridge.idOf(c.props['controller']);
     if (pcId != null) {
       final raw = c.props['controller'];
       final initial = raw is Map && raw['initialPage'] is num

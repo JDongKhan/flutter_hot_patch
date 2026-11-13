@@ -4,13 +4,13 @@
 // 翻译成 `this._c = new TabController({length: 3, vsync: this})`（vsync 由本代理
 // 类忽略），实例与宿主侧真实 TabController 按**句柄 id** 绑定。
 // 句柄层（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由 flutter.js 的
-// `ControllerBase` 提供（见 controller_base_js.dart）；本类只写差异：
+// `JsHandleObject` 提供（见 object_handle_js.dart）；本类只写差异：
 //   - length/__index：本地镜像（宿主回传 index 更新）；真实实例由宿主在渲染
 //     TabBar / TabBarView 时按 id 取/建（length 随句柄下发，见 extraJSON）；
 //   - index setter：立即设置宿主 index 并通知监听者；
 //   - animateTo(i)：宿主 controller.animateTo（带动画）。
 const String tabControllerJsSource = r'''
-  export class TabController extends ControllerBase {
+  export class TabController extends JsHandleObject {
     constructor(opts) {
       super();
       opts = opts || {};

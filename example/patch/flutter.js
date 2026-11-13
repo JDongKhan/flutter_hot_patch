@@ -4019,7 +4019,7 @@ export class EventChannel {
   }
 }
 
-export class ControllerBase {
+export class JsHandleObject {
   constructor() {
     this.__listeners = [];
     this.__id = null;
@@ -4097,6 +4097,23 @@ export class ControllerBase {
     }
     if (typeof curveArg === 'string') { curve = curveArg; }
     return { ms: ms, curve: curve };
+  }
+
+  // 通用成员分派（宿主侧实现 JsHandleMembers 时直接吃这三个 op，无需再写一层）。
+  // 返回宿主回填的值（异步：JS 侧 `await`）；句柄未建/已释放时返回 undefined。
+  __memberCall(method, args) {
+    if (this.__id == null) { return undefined; }
+    return __handleOp(this.__id, 'call', { method: method, args: args || [] });
+  }
+
+  __memberGet(name) {
+    if (this.__id == null) { return undefined; }
+    return __handleOp(this.__id, 'get', { name: name });
+  }
+
+  __memberSet(name, value) {
+    if (this.__id == null) { return undefined; }
+    return __handleOp(this.__id, 'set', { name: name, value: value });
   }
 
   dispose() {
@@ -8253,7 +8270,7 @@ export class CurvedAnimation {
 //   - forward/reverse/repeat/stop/reset → `__handleOp('call')`（载荷带 value 与
 //     时长，宿主据此对齐状态后再驱动）；
 //   - 宿主每帧回传 value → onHost 更新镜像 + __notify（JS listeners 据此重建）。
-export class AnimationController extends ControllerBase {
+export class AnimationController extends JsHandleObject {
   constructor(opts) {
     super();
     opts = opts || {};
@@ -8309,7 +8326,7 @@ export class AnimationController extends ControllerBase {
   reset() { this.__play('reset', null); }
 }
 
-export class ScrollController extends ControllerBase {
+export class ScrollController extends JsHandleObject {
   constructor() {
     super();
     this.offset = 0;
@@ -8354,7 +8371,7 @@ export class ScrollController extends ControllerBase {
 // 与 ScrollController 同一套句柄层；镜像字段只有 page / initialPage。
 // 构造参数（initialPage / viewportFraction）随 toJSON 的 extraJSON 下发，
 // 宿主 PageView renderer 据此创建真实 PageController。
-export class PageController extends ControllerBase {
+export class PageController extends JsHandleObject {
   constructor(opts) {
     super();
     var o = opts || {};
@@ -8403,7 +8420,7 @@ export class PageController extends ControllerBase {
 //     选中项 → 本实例更新并通知 listeners），业务侧只读；
 //   - jumpToItem：走通用 op（call），宿主按 `itemIndex` 计算偏移并跳转；
 //   - initialItem / itemExtent 随 toJSON 下发，宿主据此创建真实 controller。
-export class FixedExtentScrollController extends ControllerBase {
+export class FixedExtentScrollController extends JsHandleObject {
   constructor(opts) {
     super();
     var o = opts || {};
@@ -8434,14 +8451,14 @@ export class FixedExtentScrollController extends ControllerBase {
 // TextEditingController：JS 侧代理类，与宿主真实 TextEditingController 按
 // **句柄 id** 绑定（通用层，同 ScrollController 模式）。
 // 句柄层（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由 flutter.js 的
-// `ControllerBase` 提供（见 controller_base_js.dart）；本类只写差异：
+// `JsHandleObject` 提供（见 object_handle_js.dart）；本类只写差异：
 //   - text：本地镜像（宿主经 textFn 回传更新），setter 发 host set 同步宿主；
 //   - selection：本地镜像，setter 发 host setSelection；
 //   - clear()：发 host clear + 清镜像；
 //   - TextField(controller: 句柄) 渲染时宿主按 id 取真实实例，用户输入经
 //     textFn 回传 JS 镜像并触发 listeners。
 // 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`。
-export class TextEditingController extends ControllerBase {
+export class TextEditingController extends JsHandleObject {
   constructor(initial) {
     super();
     this.__text =
@@ -8479,7 +8496,7 @@ export class TextEditingController extends ControllerBase {
   }
 }
 
-export class FocusNode extends ControllerBase {
+export class FocusNode extends JsHandleObject {
   constructor(opts) {
     super();
     var o = opts || {};
@@ -9484,7 +9501,7 @@ export class OverlayPortalController {
   get isShowing() { return this.__showing; }
 }
 
-export class TabController extends ControllerBase {
+export class TabController extends JsHandleObject {
   constructor(opts) {
     super();
     opts = opts || {};

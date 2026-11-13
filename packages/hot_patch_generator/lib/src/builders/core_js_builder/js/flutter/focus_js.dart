@@ -1,6 +1,6 @@
 // Focus 能力的 JS 片段：FocusNode 代理类（随 flutter.js 发布）。
 //
-// 与 ScrollController 同一套句柄层（基类见 controller_base_js.dart）：JS 实例与
+// 与 ScrollController 同一套句柄层（基类见 object_handle_js.dart）：JS 实例与
 // 宿主真实 FocusNode 按**句柄 id** 绑定；本类只写差异——
 //   - 构造：镜像字段（hasFocus / 构造参数）；
 //   - onHost：宿主 Focus 回传 hasFocus → 更新镜像并通知 listeners；
@@ -10,7 +10,7 @@
 // capabilities/focus/focus_bridge.dart。hasFocus 读**镜像**（不是同步往返），
 // 因此 addListener 回调里读到的值始终与刚触发的变化一致。
 const String focusJsSource = r'''
-  export class FocusNode extends ControllerBase {
+  export class FocusNode extends JsHandleObject {
     constructor(opts) {
       super();
       var o = opts || {};

@@ -19,7 +19,7 @@ import 'package:flutter/services.dart' show KeyDownEvent, KeyRepeatEvent;
 
 import '../../../services/js_runtime_manager.dart';
 import '../../js_widget_registry.dart';
-import '../core/controller_bridge.dart';
+import '../core/object_bridge.dart';
 import '../focus/focus_bridge.dart';
 
 /// 原生 KeyEvent → JSON（JS 侧 `__keyEvent` 还原成 KeyEvent 实例）。
@@ -74,7 +74,7 @@ void registerKeyboardListenerWidgets(JsWidgetRegistry r) {
       child: child,
     );
 
-    final id = JsControllerBridge.idOf(c.props['focusNode']);
+    final id = JsObjectBridge.idOf(c.props['focusNode']);
     if (id == null) return build(_fallbackNode, key: c.key);
     return JsControllerHost<FocusNode>(
       key: c.key,

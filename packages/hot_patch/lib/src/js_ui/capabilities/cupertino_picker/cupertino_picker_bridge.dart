@@ -2,7 +2,7 @@
 //
 // 一个能力 = 描述符 + 通道 + 桥接组件 + 组件注册，全部内聚在本文件。
 //
-// 句柄桥（通用层，见 capabilities/core/controller_bridge.dart）：
+// 句柄桥（通用层，见 capabilities/core/object_bridge.dart）：
 //   JS 侧 `new FixedExtentScrollController({initialItem})` 经
 //   `__bindHandle('ctrl/FixedExtent', …)` 登记，通用通道 `jsHandle` 的 create 落到
 //   本桥描述符 → 创建宿主真实 FixedExtentScrollController；渲染 CupertinoPicker
@@ -17,14 +17,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../js_widget_registry.dart';
-import '../core/controller_bridge.dart';
+import '../core/object_bridge.dart';
 import '../core/from_json/dart_values_from_json.dart';
 
 /// FixedExtentScrollController 句柄桥：真实 controller 由 onCreate 按 JS 侧下发
 /// 的 `initialItem` 创建；Host 兜底创建时沿用 props 里的同名值（两边 putIfAbsent
 /// 复用同一实例，先到者生效）。
-final JsControllerBridge<FixedExtentScrollController> _fixedExtentBridge =
-    JsControllerBridge<FixedExtentScrollController>(
+final JsObjectBridge<FixedExtentScrollController> _fixedExtentBridge =
+    JsObjectBridge<FixedExtentScrollController>(
       kind: 'ctrl/FixedExtent',
       create: (_, meta) => FixedExtentScrollController(
         initialItem: _initialItemOf(meta is Map ? meta : null),
@@ -96,7 +96,7 @@ Widget _cupertinoPicker(JsRenderContext c) {
         itemBuilder: (_, index) => items[index],
       );
 
-  final id = JsControllerBridge.idOf(c.props['scrollController']);
+  final id = JsObjectBridge.idOf(c.props['scrollController']);
   if (id == null) return build(null, key: c.key);
   return JsControllerHost<FixedExtentScrollController>(
     key: c.key,

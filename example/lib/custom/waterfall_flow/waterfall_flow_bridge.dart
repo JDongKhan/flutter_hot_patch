@@ -62,7 +62,7 @@ void registerWaterfallFlowWidgets(JsWidgetRegistry r) {
   r.register('WaterfallFlow', (c) {
     // controller 句柄桥暂不接（业务只做「可滚动的瀑布流列表」时用不到）：
     // 传了就明确告警，避免控制器静默失效。
-    if (JsControllerBridge.idOf(c.props['controller']) != null) {
+    if (JsObjectBridge.idOf(c.props['controller']) != null) {
       JsLog.warn('[WaterfallFlow] controller 实参未支持（已忽略）');
     }
     return WaterfallFlow(

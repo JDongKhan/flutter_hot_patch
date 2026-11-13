@@ -8,6 +8,7 @@
 import 'package:hot_patch/hot_patch.dart';
 
 import 'easy_refresh/easy_refresh_library.dart';
+import 'note_object/note_object_library.dart';
 import 'visibility_detector/custom_visibility_detector_library.dart';
 import 'waterfall_flow/waterfall_flow_library.dart';
 
@@ -19,4 +20,6 @@ const List<JsUiLibrary> customJsUiLibraries = [
   CustomEasyRefreshLibrary(),
   // WaterfallFlow（三方包 waterfall_flow）：瀑布流容器 + 布局 delegate 还原。
   CustomWaterfallFlowLibrary(),
+  // NoteObject（自定义实例对象绑定）：JS 同名类 ↔ 宿主真实实例。
+  NoteObjectLibrary(),
 ];

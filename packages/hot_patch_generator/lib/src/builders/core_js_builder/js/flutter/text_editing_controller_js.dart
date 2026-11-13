@@ -3,14 +3,14 @@ const String textEditingControllerJsSource = r'''
   // TextEditingController：JS 侧代理类，与宿主真实 TextEditingController 按
   // **句柄 id** 绑定（通用层，同 ScrollController 模式）。
   // 句柄层（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由 flutter.js 的
-  // `ControllerBase` 提供（见 controller_base_js.dart）；本类只写差异：
+  // `JsHandleObject` 提供（见 object_handle_js.dart）；本类只写差异：
   //   - text：本地镜像（宿主经 textFn 回传更新），setter 发 host set 同步宿主；
   //   - selection：本地镜像，setter 发 host setSelection；
   //   - clear()：发 host clear + 清镜像；
   //   - TextField(controller: 句柄) 渲染时宿主按 id 取真实实例，用户输入经
   //     textFn 回传 JS 镜像并触发 listeners。
   // 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`。
-  export class TextEditingController extends ControllerBase {
+  export class TextEditingController extends JsHandleObject {
     constructor(initial) {
       super();
       this.__text =

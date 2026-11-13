@@ -17,7 +17,7 @@
 // child / onRefresh / onLoad / controller / refreshOnStart / triggerAxis），
 // 未传时沿用 easy_refresh 自己的默认值——桥接不补默认值，避免与原生不一致。
 // 需要横滑不触发刷新时，由业务显式传 `triggerAxis: Axis.vertical`。
-import { Component, ControllerBase } from '../flutter.js';
+import { Component, JsHandleObject } from '../flutter.js';
 
 var G = typeof globalThis !== 'undefined' ? globalThis : Function('return this')();
 var __handleOp = G.__core.__handleOp;
@@ -88,11 +88,11 @@ export class EasyRefresh extends Component {
 }
 
 // EasyRefreshController：与 ScrollController 同款句柄层（基类见
-// controller_base_js.dart，随 flutter.js 发布）。JS 实例与宿主真实 controller
+// object_handle_js.dart，随 flutter.js 发布）。JS 实例与宿主真实 controller
 // 按句柄 id 绑定；控制方法把**原始实参数组**原样下发（`__handleOp 'call'`），
 // 由宿主按 Dart 形参的类型/顺序还原：数值 → overOffset、Duration 值 → duration、
 // 曲线名 → curve、布尔 → force。
-export class EasyRefreshController extends ControllerBase {
+export class EasyRefreshController extends JsHandleObject {
   constructor(opts) {
     super();
     var o = opts || {};
