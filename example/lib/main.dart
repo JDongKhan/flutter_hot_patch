@@ -30,10 +30,11 @@ void main() {
     // 注册清单由 build_runner 扫描注解生成（lib/generated/host_methods.dart），
     // 调一次即可，无需手写每条通道。
     registerHostMethods();
-    // 开发者自定义能力（lib/custom/**）：与内建能力同一套 `JsUiLibrary` 扩展点，
-    // 在 runApp 之前注册即可，hot_patch 包本身零改动。当前示例是
-    // VisibilityDetector（曝光/可见性检测）。
-    registerCustomCapabilities();
+    // UI 能力装配唯一入口：注册自定义能力（lib/custom/**）、就位全部能力通道、
+    // 建宿主组件表、注册内建宿主方法——一次调用完成，hot_patch 包零改动。
+    // 能力清单见 lib/custom/custom_capabilities.dart（VisibilityDetector /
+    // EasyRefresh / WaterfallFlow）。必须在任何 JsUiWidget 渲染之前调用。
+    initJsUi(libraries: customJsUiLibraries);
     // 生命周期验证期间临时打开双端句柄进出日志（验证后恢复注释）。
     // JsRuntimeManager.setVerboseCacheTrace(true);
     // 无 JS 产物的组件（产物里的 `Component` 占位结点）的原生实现：**全局一次注册**

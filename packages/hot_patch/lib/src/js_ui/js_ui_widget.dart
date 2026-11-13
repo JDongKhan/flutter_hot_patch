@@ -3,13 +3,13 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../services/builtin_host_methods.dart';
 import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
 import 'capabilities/build_context/build_context_bridge.dart';
 import 'capabilities/core/binding_cache.dart';
 import 'capabilities/core/handle_registry.dart';
+import 'capabilities/js_ui_bootstrap.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'capabilities/key/key_bridge.dart';
 import 'leak/js_leak_snapshot.dart';
@@ -133,14 +133,12 @@ class JsUiWidgetState extends State<JsUiWidget> {
     super.initState();
     // 运行时是全局单例（所有实例共用一个 JS 引擎），不支持从外部注入。
     _manager = JsRuntimeManager.instance;
-    // 宿主 widget 注册表是**进程内单例**（懒建一次性注册全部内建/能力/三方库
-    // 组件，见 js_ui_capabilities 的 jsWidgetRegistry）——不需要、也不由外部传入。
-    registerBuiltinHostMethods();
+    // UI 能力装配的唯一入口：内建宿主方法 + 各能力通道 + 宿主组件建表。
+    // 正常由 App 在 `main()` 里 `initJsUi(libraries: [...])` 完成；这里是
+    // **幂等兜底**——App 没调也能用（所有钩子自带一次性标记）。必须在任何
+    // JS 组件 mount（new XxxController → host 登记）之前就位。
+    initJsUi();
     _initStore();
-    // 能力桥接通道（ScrollController / TextEditingController …）：必须在任何
-    // JS 组件 mount（new XxxController → host 登记）前就位。新增能力只改
-    // js_ui_capabilities.ensureJsUiCapabilities，本文件不再变动。
-    ensureJsUiCapabilities();
     // jsuiCommit 补丁按页面 key 路由：登记本页 store（key 由 JS 补丁带下来）。
     jsUiPageStores[_pageKey] = _store;
     // 页面名登记（仅日志显示）：让 `[binding] + …` 与 `leak-check …` 里的 jsui_N

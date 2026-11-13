@@ -22,8 +22,12 @@ import 'core/handle_registry.dart';
 import 'js_ui_library.dart';
 
 /// 全部能力通道（幂等）：在 JS 组件 mount（new XxxController → host 登记）
-/// 前调用。JsUiWidget 启动时调用一次，且必须先于 `ensureJsUiRuntime`
-/// （runtime.js 里各能力片段的宿主侧登记依赖这里已注册的 kind / context op）。
+/// 前调用。由 UI 能力装配入口 `initJsUi(...)`（见 js_ui_bootstrap.dart）调用，
+/// 且必须先于 `ensureJsUiRuntime`（runtime.js 里各能力片段的宿主侧登记依赖这里
+/// 已注册的 kind / context op）。
+///
+/// 幂等靠各库自己的 `ensureChannels`（`_handleChannelsRegistered` 等内建标记），
+/// 因此 `JsUiWidget.initState` 的兜底再次调用安全。
 void ensureJsUiCapabilities() {
   // 地基：句柄注册表本身，必须先于一切能力就绪。
   ensureHandleChannels();
@@ -32,6 +36,13 @@ void ensureJsUiCapabilities() {
     library.ensureChannels();
   }
 }
+
+/// 触发宿主组件注册表建表（幂等：首次访问时一次性注册全部能力组件）。
+///
+/// 需要「启动即注册完」的调用方（`initJsUi(...)`）显式触发它，让首帧渲染不再
+/// 承担建表工作；之后的 `registerJsUiLibrary(...)` 因 `jsWidgetRegistryBuilt`
+/// 已置位而告警（该库的 `registerWidgets` 不会再被回调）。
+JsWidgetRegistry ensureJsWidgetRegistry() => jsWidgetRegistry;
 
 /// 全部组件注册 = Flutter 基础组件（核心本体）+ 各能力/三方库的自注册。
 void registerAllJsWidgets(JsWidgetRegistry r) {
@@ -50,14 +61,19 @@ void registerAllJsWidgets(JsWidgetRegistry r) {
 /// （只读传入的 `JsRenderContext`，不持有任何实例状态），故进程内共享完全等价。
 ///
 /// **懒建**：首次访问时构建并**一次性**注册全部内建/能力/三方库组件；因此
-/// `registerJsUiLibrary(...)` / 外部 `jsWidgetRegistry.register(...)` 必须在首个
-/// [JsUiWidget] 构造前调用（约定：App 的 `main()` 里、`runApp` 之前，与
-/// `registerHostMethods` 同一位置）。
+/// `registerJsUiLibrary(...)` 必须在建表前完成——由装配入口
+/// `initJsUi(libraries: [...])`（js_ui_bootstrap.dart）在 `main()` 里
+/// `runApp` 之前一次做完，`JsUiWidget.initState` 只作幂等兜底。
+/// 建表之后仍可用 `jsWidgetRegistry.register(type, build)` 补单个类型
+/// （表可变、查表在渲染时），但新库的 `registerWidgets` 不会再被回调。
 final JsWidgetRegistry _jsWidgetRegistry = _createWidgetRegistry();
 
 JsWidgetRegistry _createWidgetRegistry() {
   final registry = JsWidgetRegistry();
   registerAllJsWidgets(registry);
+  // 建表完成：此后新增的 JsUiLibrary 拿不到 registerWidgets 回调，注册入口
+  // 据此告警（见 js_widget_registry.dart 的 jsWidgetRegistryBuilt）。
+  jsWidgetRegistryBuilt = true;
   return registry;
 }
 

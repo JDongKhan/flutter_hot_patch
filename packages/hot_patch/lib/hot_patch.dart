@@ -12,10 +12,10 @@
 /// [JsUiLibrary] 子类接入；宿主只做「JS 结点 → Flutter widget」映射
 /// （[JsWidgetRegistry]）+ 增量补丁应用（[JsUiStore]）。
 ///
-/// **接入一个新能力**：继承 [JsUiLibrary] 重写需要的钩子，再
-/// `registerJsUiLibrary(...)`（内建能力见 capabilities/js_ui_library.dart 的
-/// `_seedBuiltins`；也可在 App 的 `main()` 里注册，从而完全不改本包）。
-/// 宿主核心文件零改动。
+/// **接入一个新能力**：继承 [JsUiLibrary] 重写需要的钩子，把实例放进 App
+/// `main()` 里的 [initJsUi] `libraries` 清单（内建能力见
+/// capabilities/js_ui_library.dart 的 `_seedBuiltins`）——一次调用即完成
+/// 「注册 + 通道就位 + 宿主组件建表」，本包与 App 核心文件都零改动。
 ///
 /// JS→原生能力统一走「宿主方法」：JS 侧唯一出口 `_app_host_.invoke`，宿主侧唯一
 /// 入口 [JsRuntimeManager.registerHostMethod]（业务方法用 @HostInjected 注解
@@ -32,6 +32,9 @@ export 'src/js_ui/js_widget_registry.dart';
 // 全局宿主 widget 注册表：外部自定义组件（含保留具体类型名的纯原生结点）
 // 在 main() 里 `jsWidgetRegistry.register(type, build)` 即可，与内建能力同表。
 export 'src/js_ui/capabilities/js_ui_capabilities.dart' show jsWidgetRegistry;
+// UI 能力装配唯一入口：`initJsUi(libraries: [...])` 一次完成「注册能力 +
+// 通道就位 + 宿主组件建表 + 内建宿主方法」，建议在 main() 里 runApp 之前调用。
+export 'src/js_ui/capabilities/js_ui_bootstrap.dart' show initJsUi, jsUiInitialized;
 export 'src/js_ui/capabilities/js_ui_library.dart';
 // 自定义能力（App 侧实现，如三方包的 Controller 句柄桥）需要的通用构件：
 // 句柄桥基类。

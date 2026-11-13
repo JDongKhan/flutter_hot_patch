@@ -20,10 +20,11 @@
 // `js/provider.js`（构建拷贝到 `patch/packages/provider.js`）。
 // 核心不认识具体 op 名；provider 的取值与订阅都在 JS 内闭环，宿主不再注册 op。
 //
-// 接入方式（二选一）：
+// 接入方式：
 //   - 内建：在下面的 [_seedBuiltins] 里 `registerJsUiLibrary(...)` 一行；
-//   - 完全不动 hot_patch：在 App 自己的 `main()`（`runApp` 之前）调
-//     `registerJsUiLibrary(GetxLibrary())` 即可。
+//   - 业务 / 三方库：写一个本类子类，放进 App `main()` 的
+//     `initJsUi(libraries: [...])`（js_ui_bootstrap.dart）——一次调用完成
+//     「注册 + 通道就位 + 宿主组件建表」，hot_patch 包零改动。
 //
 // **不进模板的地基**（核心本体，不属于任何可插拔能力）：
 //   - `ensureHandleChannels()`：句柄注册表本身，必须先于一切能力就绪；
@@ -34,6 +35,7 @@
 // 组件类型，其**编译期**翻译（hot_patch_generator 的统一翻译入口
 // element_json.dart / value_forms.dart 与 `patch/<pkg>.js` 里的 JS 组件类）
 // 属于另一条缝，不在本文件范围内。
+import '../../utils/hot_patch_log.dart';
 import '../js_widget_registry.dart';
 import 'animated_list/animated_list_library.dart';
 import 'animation/animation_library.dart';
@@ -86,14 +88,23 @@ bool _seeded = false;
 
 /// 注册一个能力（幂等：同 [JsUiLibrary.id] 只保留首个）。
 ///
-/// 可在 App 的 `main()` 里调用（`runApp` 之前），从而**完全不改 hot_patch**。
-/// 会先注入内建能力，保证内建能力永远排在外部库之前。
+/// 正常姿势是把能力放进装配入口 `initJsUi(libraries: [...])` 的清单里（见
+/// js_ui_bootstrap.dart），它在 `main()` 里一次完成「注册 + 通道就位 + 建表」。
+/// 单独调用本函数也有效，但必须在宿主组件注册表建表之前（即任何 `JsUiWidget`
+/// 渲染之前）；建表之后再注册的库拿不到 [JsUiLibrary.registerWidgets] 回调，
+/// 这里会告警而不是静默丢映射。
 void registerJsUiLibrary(JsUiLibrary library) {
   _seedBuiltins();
   for (final l in _libraries) {
     if (l.id == library.id) return;
   }
   _libraries.add(library);
+  if (jsWidgetRegistryBuilt) {
+    JsLog.warn('JsUiLibrary「${library.id}」在宿主组件注册表建表之后注册：'
+        'ensureChannels 仍生效，但 registerWidgets 不会被回调（该库的宿主组件'
+        '会渲染成未注册占位）。放进 initJsUi(libraries: [...]) 或任何 JsUiWidget '
+        '渲染之前。');
+  }
 }
 
 /// 全部已注册能力。首次访问时注入内建能力——惰性求值，避免能力表在

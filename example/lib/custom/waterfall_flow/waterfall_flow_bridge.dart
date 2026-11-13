@@ -1,7 +1,7 @@
 // ===== 自定义能力：WaterfallFlow 瀑布流（三方包 waterfall_flow）=====
 //
 // 三方包不是运行时内建能力：宿主桥接放在本工程 `lib/custom/` 下，由
-// `registerCustomCapabilities()` 在 `runApp` 之前注册，hot_patch 包零改动。
+// `main()` 里的 `initJsUi(libraries: customJsUiLibraries)` 统一装配，hot_patch 包零改动。
 // JS 侧类（WaterfallFlow / 两个布局 delegate）见工程根
 // `js/waterfall_flow.js`，构建时拷贝为 `patch/packages/waterfall_flow.js`。
 //

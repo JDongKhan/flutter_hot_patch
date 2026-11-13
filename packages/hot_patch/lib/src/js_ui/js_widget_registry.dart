@@ -362,6 +362,14 @@ Widget _unknownWidgetBuilder(JsRenderContext c) => buildMissingJsWidget(
   (c.children['__items'] as List<Widget>?) ?? const [],
 );
 
+/// 宿主组件注册表是否已完成一次性建表（`registerAllJsWidgets` 只跑一次）。
+///
+/// 建表之后再 `registerJsUiLibrary(...)` 的库拿不到 `JsUiLibrary.registerWidgets`
+/// 回调，注册入口据此告警（禁止「注册了却没生效」静默）。
+/// 建表之后直接 `jsWidgetRegistry.register(type, build)` 仍然有效——那只是往同一张
+/// **可变**表里补条目，查表发生在渲染时刻。
+bool jsWidgetRegistryBuilt = false;
+
 /// `type -> Flutter widget` 注册表（宿主唯一扩展点）。
 class JsWidgetRegistry {
   final Map<String, JsWidgetBuilder> _builders = {};
