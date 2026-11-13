@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { Card, Color, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, Padding, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
-import { NoteObject } from '../packages/classes/NoteObject.js';
+import { NoteObject } from '../packages/NoteObject.js';
 
 // 组件 NoteObjectCard
 export class NoteObjectCard extends StatefulWidget {

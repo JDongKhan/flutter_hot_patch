@@ -12,7 +12,7 @@
 //
 // import 路径按**产物**位置写（本文件随拷贝落在 `patch/packages/classes/`，
 // 上两级才是 `patch/flutter.js`）。
-import { JsHandleObject } from '../../flutter.js';
+import { JsHandleObject } from '../flutter.js';
 
 export class NoteObject extends JsHandleObject {
   constructor(opts) {
