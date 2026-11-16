@@ -46,12 +46,32 @@ class _DetachedTickerProvider implements TickerProvider {
 
 const TickerProvider _detachedTickerProvider = _DetachedTickerProvider();
 
-/// TabController 句柄桥：onCreate 阶段拿不到构造参数（length/initialIndex
-/// 随 `__handle` 下发而非 meta），真实 controller 由 Host 带参创建，onCreate
-/// 只登记 index 回传句柄；这里只留 index setter / animateTo 的 op 分派。
+/// TabController 句柄桥：真实 controller 在 **onCreate 阶段**创建（length /
+/// initialIndex 由 JS 侧随 meta 下发，与 AnimationController 同一形态），因此
+/// JS 构造后立即 `index =` / `animateTo()` 也能落到真实实例；渲染 TabBar /
+/// TabBarView 时按 id 取同一个实例（见 [_tabControllerHost] 的 controllerOf）。
 final JsObjectBridge<TabController> _tabBridge =
     JsObjectBridge<TabController>(
       kind: 'ctrl/Tab',
+      create: (id, meta) {
+        final m = meta is Map ? meta : const {};
+        final rawLength = m['length'];
+        final rawInitial = m['initialIndex'];
+        // length 缺省 / 非正时兜底 1：TabController 的 `initialIndex < length`
+        // 断言在 length=0 时会直接失败，宁可退化成单页也不要让页面 boot 失败。
+        final length = (rawLength is num && rawLength.toInt() > 0)
+            ? rawLength.toInt()
+            : 1;
+        final initialIndex =
+            (rawInitial is num && rawInitial.toInt() >= 0 && rawInitial.toInt() < length)
+                ? rawInitial.toInt()
+                : 0;
+        return TabController(
+          length: length,
+          initialIndex: initialIndex,
+          vsync: _detachedTickerProvider,
+        );
+      },
       onOp: (c, op, payload) {
         if (op == 'set' && payload['name'] == 'index') {
           final v = payload['value'];

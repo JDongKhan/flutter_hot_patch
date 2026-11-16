@@ -9508,6 +9508,12 @@ export class TabController extends JsHandleObject {
     this.length = (typeof opts.length === 'number') ? opts.length : 0;
     this.__index = (typeof opts.initialIndex === 'number') ? opts.initialIndex : 0;
     this.__bindHandle('ctrl/Tab', {
+      // 构造参数随句柄 create 下发：宿主在 onCreate 阶段就能建出真实
+      // TabController（length/initialIndex 此时已确定），构造后立即
+      // `index =` / `animateTo()` 不会再因「controller 尚未创建」被丢弃。
+      meta: function (self) {
+        return { length: self.length, initialIndex: self.__index };
+      },
       // 宿主回传（用户点 tab / animateTo 动画结束）→ 更新镜像 + 触发 listeners。
       // 值没变就不是状态变化，不能通知：宿主 attach 时会回传一次初始 index，
       // 若照常 notify，会让监听者（如外壳的 setState）做一次“原地刷新”，
