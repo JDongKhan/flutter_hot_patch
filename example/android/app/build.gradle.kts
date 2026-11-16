@@ -5,6 +5,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// 发布包只打 arm64（去掉 x86_64 / armeabi-v7a 的插件 so，这些 so 来自 AAR 的
+// jniLibs，光靠 --target-platform 与 ndk.abiFilters 过滤不掉）：
+//   ONLY_ARM64=true fvm flutter build apk --release \
+//     --target-platform android-arm64 --no-tree-shake-icons
+// 不设该变量时保持原样，x86_64 模拟器调试不受影响。
+val onlyArm64: Boolean = System.getenv("ONLY_ARM64") == "true" ||
+    (project.findProperty("onlyArm64") as String?)?.toBoolean() == true
+
 android {
     namespace = "com.example.flutter_hot"
     compileSdk = flutter.compileSdkVersion
@@ -33,12 +41,18 @@ android {
         //   ORG_GRADLE_PROJECT_onlyArm64=true fvm flutter build apk --release \
         //     --target-platform android-arm64 --no-tree-shake-icons
         // 不传该属性时保持原样，x86_64 模拟器调试不受影响。
-        val onlyArm64 = (project.findProperty("onlyArm64") as String?)?.toBoolean() ?: false
+        println("[flutter_hot] onlyArm64 = $onlyArm64")
         if (onlyArm64) {
             ndk {
                 abiFilters.clear()
                 abiFilters.add("arm64-v8a")
             }
+        }
+    }
+
+    if (onlyArm64) {
+        packaging {
+            jniLibs.excludes += listOf("lib/x86_64/**", "lib/armeabi-v7a/**")
         }
     }
 
