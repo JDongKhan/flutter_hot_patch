@@ -43,11 +43,13 @@ class _NotifierCardState extends State<NotifierCard> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            // Wrap：窄屏自动折行，避免按钮行溢出。
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
               children: [
                 ElevatedButton(onPressed: _inc, child: const Text('+1')),
-                const SizedBox(width: 12),
                 ElevatedButton(onPressed: _reset, child: const Text('Reset')),
               ],
             ),

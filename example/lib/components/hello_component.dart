@@ -148,7 +148,10 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
         if (_user != null) Text('用户已加载（if + else 渲染）') else Text('用户未加载，点 Load User'),
         // collection-for：循环渲染（循环变量 i 直接参与插值）
         for (var i = 0; i < 3; i++) Text('循环第 $i 个'),
-        Row(
+        // Wrap：宽屏一行排开，窄屏自动折行（含 5 个按钮时不溢出）。
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
             ElevatedButton(
               onPressed: inc,
