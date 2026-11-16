@@ -5,6 +5,7 @@ import 'package:hot_patch/hot_patch.dart';
 
 import 'app/app.dart';
 import 'base/app_log_console.dart';
+import 'base/app_routes.dart';
 import 'base/patch_config.dart';
 import 'components/compare_pane.dart';
 import 'components/composite_component.dart';
@@ -70,6 +71,8 @@ class HotDemoApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       navigatorKey: JsRuntimeManager.navigatorKey = navKey,
       theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0E7AFB))),
+      // 全部二级页走命名路由：页面构造只维护在 base/app_routes.dart 一张表里。
+      onGenerateRoute: appOnGenerateRoute,
       // 宽屏（逻辑宽度 > 1200）时在右侧固定挂一条 300 宽的日志控制台；
       // 通过 builder 包在 Navigator 外层，所有页面（含 JS 热更外壳）都能看到。
       builder: (context, child) {

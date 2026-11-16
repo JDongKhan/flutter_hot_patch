@@ -26,20 +26,28 @@ import 'widgets/load_error_view.dart';
 /// initState / 请求会随首帧执行，与 Flutter 原生行为一致。
 @PatchEntry()
 class AppShell extends StatelessWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, this.jsMode = false});
+
+  /// 本壳是否由 **JS 补丁**渲染（`AppShellJsPage` 经 [JsUiWidget.params] 注入
+  /// `{'jsMode': true}`）。只影响页面内部的跳转选择：首页搜索入口据此把
+  /// `isJs` 路由参数传给 `/search`，从而进入 JS 版搜索页而不是原生版。
+  final bool jsMode;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AppShellVm>(
       create: (_) => AppShellVm()..load(),
-      child: const AppShellView(),
+      child: AppShellView(jsMode: jsMode),
     );
   }
 }
 
 /// 外壳视图：订阅 [AppShellVm]，按接口配置装配 tab 与页面。
 class AppShellView extends StatefulWidget {
-  const AppShellView({super.key});
+  const AppShellView({super.key, this.jsMode = false});
+
+  /// 同 [AppShell.jsMode]：透传给各 tab 页，决定内部跳转的 JS / 原生分流。
+  final bool jsMode;
 
   @override
   State<AppShellView> createState() => _AppShellViewState();
@@ -126,7 +134,8 @@ class _AppShellViewState extends State<AppShellView>
         controller: tab,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          for (final t in vm.tabs) TabPageSlot(screen: t.screen),
+          for (final t in vm.tabs)
+            TabPageSlot(screen: t.screen, jsMode: widget.jsMode),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -155,13 +164,16 @@ class _AppShellViewState extends State<AppShellView>
 /// 独立成组件（而不是外壳 build 里的方法）是为了让页面构造发生在自己的
 /// build 里：每个 tab 的真实页面只在自己的槽位被挂载时创建。
 class TabPageSlot extends StatelessWidget {
-  const TabPageSlot({super.key, required this.screen});
+  const TabPageSlot({super.key, required this.screen, this.jsMode = false});
 
   final String screen;
 
+  /// 同 [AppShell.jsMode]：只透传给需要按运行方式做跳转选择的页面。
+  final bool jsMode;
+
   @override
   Widget build(BuildContext context) {
-    if (screen == 'home') return const HomePage();
+    if (screen == 'home') return HomePage(jsMode: jsMode);
     if (screen == 'community') return const CommunityPage();
     if (screen == 'orders') return const OrdersPage();
     if (screen == 'mine') return const MinePage();
@@ -196,6 +208,8 @@ class AppShellJsPage extends StatelessWidget {
       jsAsset: jsAsset,
       // 右上角显示补丁打包时间（来自 patch/manifest.json，纯展示、不吃手势）。
       showBuildTime: true,
+      // JS 壳标记：JS 侧 `new AppShell({jsMode: true})`，内部跳转即走 JS 版页面。
+      params: const <String, dynamic>{'jsMode': true},
     );
   }
 }

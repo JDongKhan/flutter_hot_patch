@@ -12,8 +12,8 @@ export class AppRouter {
   static openHeroTarget(tag, label) {
     return _app_host_.invoke("openHeroTarget", Array.prototype.slice.call(arguments));
   }
-  static openSearch() {
-    return _app_host_.invoke("openSearch", Array.prototype.slice.call(arguments));
+  static openSearch(__o) {
+    return _app_host_.invoke("openSearch", arguments.length ? arguments[0] : {});
   }
   static openSpot(id) {
     return _app_host_.invoke("openSpot", Array.prototype.slice.call(arguments));

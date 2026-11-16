@@ -15,11 +15,17 @@ import { ChangeNotifierProvider } from '../packages/provider.js';
 export class AppShell extends StatelessWidget {
   constructor(args) {
     super(args);
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.jsMode = (args && args.jsMode !== undefined) ? args.jsMode : false;
   }
   build(context) {
     return new ChangeNotifierProvider({
       "create": (_) => { return (() => { const _t = new AppShellVm(); _t.load(); return _t; })(); },
-      "child": (this.__k0 || (this.__k0 = new AppShellView({}))),
+      "child": new AppShellView({
+        "jsMode": this.jsMode
+      }),
       "typeArguments": {"T": "AppShellVm"}
     });
   }
@@ -29,8 +35,12 @@ export class AppShell extends StatelessWidget {
 export class AppShellView extends StatefulWidget {
   constructor(args) {
     super(args);
+    this.__applyProps(args);
     this._tab = null;
     this._index = 0;
+  }
+  __applyProps(args) {
+    this.jsMode = (args && args.jsMode !== undefined) ? args.jsMode : false;
   }
   dispose() {
     const tab = this._tab;
@@ -107,7 +117,8 @@ export class AppShellView extends StatefulWidget {
         "physics": (this.__k2 || (this.__k2 = new NeverScrollableScrollPhysics({}))),
         "children": [
           ...(() => { var out = []; for (let t of vm.tabs) { out.push.apply(out, [new TabPageSlot({
-                  "screen": t.screen
+                  "screen": t.screen,
+                  "jsMode": this.jsMode
                 })]); } return out; })()
         ]
       }),
@@ -145,19 +156,22 @@ export class TabPageSlot extends StatelessWidget {
   }
   __applyProps(args) {
     this.screen = (args && args.screen !== undefined) ? args.screen : '';
+    this.jsMode = (args && args.jsMode !== undefined) ? args.jsMode : false;
   }
   build(context) {
     if ((this.screen === "home")) {
-      return (this.__k0 || (this.__k0 = new HomePage({})));
+      return new HomePage({
+        "jsMode": this.jsMode
+      });
     }
     if ((this.screen === "community")) {
-      return (this.__k1 || (this.__k1 = new CommunityPage({})));
+      return (this.__k0 || (this.__k0 = new CommunityPage({})));
     }
     if ((this.screen === "orders")) {
-      return (this.__k2 || (this.__k2 = new OrdersPage({})));
+      return (this.__k1 || (this.__k1 = new OrdersPage({})));
     }
     if ((this.screen === "mine")) {
-      return (this.__k3 || (this.__k3 = new MinePage({})));
+      return (this.__k2 || (this.__k2 = new MinePage({})));
     }
     print("TabPageSlot 未知 tab 页面：" + this.screen);
     return new Text({

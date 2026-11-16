@@ -25,20 +25,27 @@ import '../widgets/load_error_view.dart';
 /// （lib/app/app.dart），首页沿 import 链被连带翻译，产物
 /// `patch/app/pages/home_page.js`。
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.jsMode = false});
+
+  /// 是否由 JS 外壳渲染（`AppShell` 透传）：决定搜索入口走 JS 版还是原生版
+  /// 搜索页（路由参数 `isJs`）。
+  final bool jsMode;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<HomeVm>(
       create: (_) => HomeVm()..load(),
-      child: const HomeView(),
+      child: HomeView(jsMode: jsMode),
     );
   }
 }
 
 /// 首页视图：订阅 [HomeVm]，楼层本体各自订阅自己的楼层 VM。
 class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+  const HomeView({super.key, this.jsMode = false});
+
+  /// 同 [HomePage.jsMode]。
+  final bool jsMode;
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -139,6 +146,7 @@ class _HomeViewState extends State<HomeView> {
                 navOpacity: _navOpacity,
                 onRefresh: _refresh,
                 onPickCity: _pickCity,
+                jsMode: widget.jsMode,
               ),
             ),
           ),
@@ -160,7 +168,8 @@ class FloorSlot extends StatelessWidget {
   /// 包一层曝光埋点：事件名统一为 `home_floor_exposure`，参数带楼层类型。
   Widget _tracked(String type, Widget child) {
     return TrackerVisibilityWidget(
-      onExposure: () => Tracker.exposure('home_floor_exposure', {'floor': type}),
+      onExposure: () =>
+          Tracker.exposure('home_floor_exposure', {'floor': type}),
       child: child,
     );
   }
@@ -191,7 +200,11 @@ class HomeHeader extends StatelessWidget {
     required this.city,
     required this.navOpacity,
     required this.onPickCity,
+    this.jsMode = false,
   });
+
+  /// 同 [HomePage.jsMode]：搜索入口把 `isJs` 随路由参数传给 `/search`。
+  final bool jsMode;
 
   /// 程序化刷新：宿主真实 EasyRefreshController.callRefresh（JS 侧同款方法）。
   final VoidCallback onRefresh;
@@ -206,7 +219,7 @@ class HomeHeader extends StatelessWidget {
   final VoidCallback onPickCity;
 
   void openSearch() {
-    AppRouter.openSearch();
+    AppRouter.openSearch(isJs: jsMode);
   }
 
   void openMessages() {

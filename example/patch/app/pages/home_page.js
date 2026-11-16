@@ -20,11 +20,17 @@ import { EasyRefresh, EasyRefreshController, IndicatorResult } from '../../packa
 export class HomePage extends StatelessWidget {
   constructor(args) {
     super(args);
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.jsMode = (args && args.jsMode !== undefined) ? args.jsMode : false;
   }
   build(context) {
     return new ChangeNotifierProvider({
       "create": (_) => { return (() => { const _t = new HomeVm(); _t.load(); return _t; })(); },
-      "child": (this.__k0 || (this.__k0 = new HomeView({}))),
+      "child": new HomeView({
+        "jsMode": this.jsMode
+      }),
       "typeArguments": {"T": "HomeVm"}
     });
   }
@@ -35,8 +41,12 @@ export class HomeView extends StatefulWidget {
   static _navFadeDistance = 120;
   constructor(args) {
     super(args);
+    this.__applyProps(args);
     this._refreshController = new EasyRefreshController();
     this._scrollController = new ScrollController();
+  }
+  __applyProps(args) {
+    this.jsMode = (args && args.jsMode !== undefined) ? args.jsMode : false;
   }
   get _navOpacity() {
     let opacity = (this._scrollController.offset / HomeView._navFadeDistance);
@@ -120,7 +130,8 @@ export class HomeView extends StatefulWidget {
                 "city": vm.city,
                 "navOpacity": this._navOpacity,
                 "onRefresh": () => this._refresh(),
-                "onPickCity": () => this._pickCity()
+                "onPickCity": () => this._pickCity(),
+                "jsMode": this.jsMode
               })
             })
           })
@@ -187,13 +198,14 @@ export class HomeHeader extends StatelessWidget {
     this.__applyProps(args);
   }
   __applyProps(args) {
+    this.jsMode = (args && args.jsMode !== undefined) ? args.jsMode : false;
     this.onRefresh = (args && args.onRefresh !== undefined) ? args.onRefresh : null;
     this.city = (args && args.city !== undefined) ? args.city : '';
     this.navOpacity = (args && args.navOpacity !== undefined) ? args.navOpacity : 0;
     this.onPickCity = (args && args.onPickCity !== undefined) ? args.onPickCity : null;
   }
   openSearch() {
-    AppRouter.openSearch();
+    AppRouter.openSearch({ "isJs": this.jsMode });
   }
   openMessages() {
     AppRouter.openNotifications();
