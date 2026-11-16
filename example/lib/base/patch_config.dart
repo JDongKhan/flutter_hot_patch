@@ -2,6 +2,13 @@ import 'package:flutter/foundation.dart';
 
 /// 补丁包地址的唯一来源（demo 里所有 JsUiWidget 都从这里取）。
 ///
+/// ⚠ 只允许被**宿主侧**代码引用（main.dart 等没有 @PatchEntry 的文件）。
+/// 本文件只有顶层常量与函数、没有可翻译的类，生成器不会为它产出 JS；一旦
+/// @PatchEntry 源文件里调用这里的函数，产物会生成
+/// `import { patchUrl } from '../base/patch_config.js'`，运行时直接报
+/// "Unable to load asset: base/patch_config.js"。需要地址的 @PatchEntry 组件
+/// 请把 URL 作为构造参数由宿主传入（参考 AppShellJsPage）。
+///
 /// - debug：本地 patch 服务（`bash start_patch_server.sh` 启动的 127.0.0.1:8765）；
 /// - release：GitHub Pages 上的静态包（由 start_patch_server.sh 同步到
 ///   `docs/blog/patch.zip`，随仓库发布到

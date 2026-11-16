@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 
-import '../base/patch_config.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import 'package:provider/provider.dart';
 
@@ -180,16 +179,21 @@ class TabPageSlot extends StatelessWidget {
 /// `jsWidgetRegistry.register('XxxPage', (c) => ...)` 注册宿主实现即可。
 @PatchIgnore()
 class AppShellJsPage extends StatelessWidget {
-  const AppShellJsPage({super.key});
+  const AppShellJsPage({super.key, required this.jsAsset});
 
-  /// 补丁 URL：组件名 + 入口路径都走 query（与 DemoListPage 的写法一致）；
-  /// 地址由 [patchUrl] 按 debug / release 选择（release 走 GitHub Pages 静态包）。
-  static final String _jsAsset = patchUrl('AppShell', 'app/app.js');
+  /// 补丁 URL（含 `?component=AppShell&entry=app/app.js`），由宿主拼好后传入。
+  final String jsAsset;
+
+  /// 补丁 URL：由调用方（宿主 main.dart）传入 —— 本类所在的 app.dart 是
+  /// @PatchEntry 源文件，一旦在这里引用 base/patch_config.dart 里的宿主函数，
+  /// 生成器会把该函数当作 JS 模块依赖（`import ... from 'base/patch_config.js'`），
+  /// 而该文件没有可翻译的类、不会产出 JS，运行时就会报
+  /// "Unable to load asset: base/patch_config.js"。
 
   @override
   Widget build(BuildContext context) {
     return JsUiWidget(
-      jsAsset: _jsAsset,
+      jsAsset: jsAsset,
       // 右上角显示补丁打包时间（来自 patch/manifest.json，纯展示、不吃手势）。
       showBuildTime: true,
     );
