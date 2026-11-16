@@ -9523,11 +9523,6 @@ export class TabController extends JsHandleObject {
         self.__index = i;
         self.__notify();
       },
-      // 跨桥序列化：`{__handle: id, length, initialIndex}`——宿主据此取/建真实
-      // controller（见 capabilities/tab/tab_bridge.dart）。
-      extraJSON: function (self) {
-        return { length: self.length, initialIndex: self.__index };
-      }
     });
   }
   get index() { return this.__index; }

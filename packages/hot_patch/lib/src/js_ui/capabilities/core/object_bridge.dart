@@ -125,6 +125,9 @@ class JsObjectBridge<T extends Object> {
         ));
   }
 
+  /// 本桥的 kind（`ctrl/Tab` 等；诊断信息用）。
+  String get kind => _kind;
+
   /// 取真实 controller（未登记 / 已释放返回 null）。
   T? controllerAt(String id) => _cache.target<T>(_kind, id);
 
@@ -176,7 +179,7 @@ class JsControllerHost<T extends ChangeNotifier> extends StatefulWidget {
     super.key,
     required this.bridge,
     required this.id,
-    required this.create,
+    this.create,
     required this.forward,
     required this.buildChild,
   });
@@ -186,8 +189,9 @@ class JsControllerHost<T extends ChangeNotifier> extends StatefulWidget {
   /// JS 侧控制器实例的句柄 id（如 'js:ctrl/Scroll#5'）。
   final String id;
 
-  /// putIfAbsent 的兜底创建（可携带句柄下发的构造参数，如 TabController）。
-  final T Function() create;
+  /// 兜底创建（仅给「JS 侧 create 只登记、不建实例」的 kind 用）。能建实例的
+  /// kind（如 TabController / ScrollController）一律由 onCreate 建好，这里留 null。
+  final T Function()? create;
 
   /// controller 变化 → 回传 JS 实例镜像（闭包内自行 invoke）。
   final void Function(T controller, Object? handler) forward;
@@ -201,7 +205,20 @@ class JsControllerHost<T extends ChangeNotifier> extends StatefulWidget {
 
 class _JsControllerHostState<T extends ChangeNotifier>
     extends State<JsControllerHost<T>> {
-  late final T _controller = widget.bridge.controllerOf(widget.id, widget.create);
+  late final T _controller = _resolveController();
+
+  T _resolveController() {
+    final existing = widget.bridge.controllerAt(widget.id);
+    if (existing != null) return existing;
+    final create = widget.create;
+    if (create != null) return widget.bridge.controllerOf(widget.id, create);
+    // 真实对象只由 JS 侧 create 消息（onCreate）建立：走到这里说明宿主先渲染了
+    // 尚未 create 的句柄（协议违约），不能静默造一个假实例掩盖问题。
+    throw FlutterError(
+      '${widget.bridge.kind} 句柄 ${widget.id} 在渲染时尚未创建：'
+      'JS 侧 create 必须先于 props 下发。',
+    );
+  }
 
   @override
   void initState() {

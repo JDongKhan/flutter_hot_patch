@@ -11,8 +11,8 @@
 //          `DefaultTabController(length:n, child: Column([TabBar, Expanded(TabBarView)]))`）；
 //       2) 显式传 TabController → 走本文件的 TabController 句柄桥（与
 //          ScrollController 同款，通用层见 capabilities/core/handle_registry.dart）：
-//          JS 实例跨桥序列化为 `{__handle: id, length, initialIndex}`，宿主按 id
-//          取/建真实 TabController 并挂到 TabBar / TabBarView；用户点 tab 经
+//          JS 实例跨桥序列化为 `{__handle: id}`，宿主按 id 取 onCreate 阶段建好
+//          的真实 TabController 并挂到 TabBar / TabBarView；用户点 tab 经
 //          invoke 回传页码给 JS 实例，JS 侧 `index= / animateTo()` 走通用 op
 //          下发驱动宿主。
 import 'package:flutter/material.dart';
@@ -92,41 +92,18 @@ final JsObjectBridge<TabController> _tabBridge =
 /// 聚合调用）。
 void ensureTabControllerChannels() => _tabBridge.ensure();
 
-/// JS TabController 句柄：`{__handle: id, length, initialIndex}`。
-typedef TabControllerHandle = ({String id, int length, int initialIndex});
-
-/// 从 props 的 controller 取值里解析 JS TabController 句柄；非句柄（缺省/null）
-/// → null，即「由祖先 DefaultTabController 提供」。
-TabControllerHandle? tabControllerHandleOf(Object? prop) {
-  if (prop is! Map) return null;
-  final id = prop['__handle'];
-  if (id is! String) return null;
-  final length = prop['length'];
-  final initialIndex = prop['initialIndex'];
-  return (
-    id: id,
-    length: length is num ? length.toInt() : 1,
-    initialIndex: initialIndex is num ? initialIndex.toInt() : 0,
-  );
-}
-
-/// TabController 桥接 Host（TabBar / TabBarView 共用）：按句柄携带的
-/// length/initialIndex 取/建真实 controller（vsync 用常驻 provider），首次
-/// attach 挂 index 转发（宿主 index 变化 → invoke 回传 JS 实例镜像）。
+/// TabController 桥接 Host（TabBar / TabBarView 共用）：按句柄 id 取**已由
+/// onCreate 建好**的真实 controller（不再带参兜底创建），首次 attach 挂 index
+/// 转发（宿主 index 变化 → invoke 回传 JS 实例镜像）。
 Widget _tabControllerHost(
   JsRenderContext c,
-  TabControllerHandle handle,
+  String id,
   Widget Function(TabController controller) build, {
   Key? key,
 }) => JsControllerHost<TabController>(
   key: key,
   bridge: _tabBridge,
-  id: handle.id,
-  create: () => TabController(
-    length: handle.length,
-    initialIndex: handle.initialIndex,
-    vsync: _detachedTickerProvider,
-  ),
+  id: id,
   forward: (controller, handler) => c.invoke(handler, [controller.index]),
   buildChild: build,
 );
@@ -211,9 +188,9 @@ void registerTabWidgets(JsWidgetRegistry r) {
       );
     }
 
-    final handle = tabControllerHandleOf(c.props['controller']);
-    if (handle == null) return build(null, key: c.key);
-    return _tabControllerHost(c, handle, build, key: c.key);
+    final id = JsObjectBridge.idOf(c.props['controller']);
+    if (id == null) return build(null, key: c.key);
+    return _tabControllerHost(c, id, build, key: c.key);
   });
 
   // Tab：child 优先，其次 icon+text，最后 text（三者至少其一，生成器已保证）。
@@ -237,8 +214,8 @@ void registerTabWidgets(JsWidgetRegistry r) {
       viewportFraction: c.double_('viewportFraction') ?? 1.0,
       children: ((c.children['children'] as List<Widget>?) ?? const []),
     );
-    final handle = tabControllerHandleOf(c.props['controller']);
-    if (handle == null) return build(null, key: c.key);
-    return _tabControllerHost(c, handle, build, key: c.key);
+    final id = JsObjectBridge.idOf(c.props['controller']);
+    if (id == null) return build(null, key: c.key);
+    return _tabControllerHost(c, id, build, key: c.key);
   });
 }

@@ -17,6 +17,7 @@
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/widgets.dart';
 
+import '../../../utils/hot_patch_log.dart';
 import '../../js_widget_registry.dart';
 import '../../ui_fallback.dart';
 import '../core/from_json/dart_values_from_json.dart';
@@ -177,11 +178,19 @@ class _JsDragTargetState extends State<_JsDragTarget> {
   String? _lastSig;
 
   void _emitIfChanged(List<Object?> candidate, List<Object?> rejected) {
-    final sig = '${candidate.join('|')}#${rejected.join('|')}';
+    // 候选/被拒也只下发 JS 侧登记的 id：DragTarget 是**全局**接收者，同一页面
+    // 上的原生 Draggable 也能把它命中（如对比页左右分栏），那时 data 是 Dart
+    // 对象，直接塞进 jsonEncode 会抛 JsonUnsupportedObjectError。
+    // 过滤掉的（还原不出来的外来负载）不参与候选：它们进不了 JS 的 builder。
+    final cand =
+        candidate.map(_dragRefOf).whereType<String>().toList(growable: false);
+    final rej =
+        rejected.map(_dragRefOf).whereType<String>().toList(growable: false);
+    final sig = '${cand.join('|')}#${rej.join('|')}';
     if (sig == _lastSig) return;
     _lastSig = sig;
     invokeJsHandler(widget.builder, [
-      <String, dynamic>{'candidate': candidate, 'rejected': rejected},
+      <String, dynamic>{'candidate': cand, 'rejected': rej},
     ]);
   }
 
@@ -195,16 +204,42 @@ class _JsDragTargetState extends State<_JsDragTarget> {
         // 子树由 JS 侧执行 builder 后随 patch 回填。
         return widget.child ?? const SizedBox.shrink();
       },
-      onAcceptWithDetails: (d) =>
-          widget.onAcceptWithDetails?.call(_detailsJson(d)),
+      onAcceptWithDetails: (d) {
+        // 旧 API `onAccept` 只回 data：同样按 id 下发（此前从未接线，JS 侧
+        // props.onAccept 永远收不到调用）。
+        widget.onAccept?.call(_dragRefOf(d.data));
+        widget.onAcceptWithDetails?.call(_detailsJson(d));
+      },
       onMove: (d) => widget.onMove?.call(_detailsJson(d)),
-      onLeave: (d) => widget.onLeave?.call(d),
+      onLeave: (d) => widget.onLeave?.call(_dragRefOf(d)),
     );
   }
 }
 
 Map<String, dynamic> _detailsJson(DragTargetDetails<Object> d) =>
-    <String, dynamic>{'data': d.data, 'offset': _offsetJson(d.offset)};
+    <String, dynamic>{'data': _dragRefOf(d.data), 'offset': _offsetJson(d.offset)};
+
+/// 已告警过的宿主侧拖动数据类型（避免悬停期间逐帧刷屏）。
+final Set<String> _warnedForeignDragData = <String>{};
+
+/// 拖动负载跨桥只传 JS 侧登记的 id（`jsui_drag_N`，见生成器 drag_js.dart 的
+/// `DragData.ref`）；`null` 表示没有负载。
+///
+/// 其它类型（典型是同一页面上的**原生** Draggable 把 Dart 对象拖进 JS DragTarget，
+/// 或跨栏对比页左右同屏）在 JS 侧没有登记、无法换回原引用：统一按 null 下发并
+/// 告警一次。绝不把 Dart 对象交给 `jsonEncode`——那会抛
+/// `JsonUnsupportedObjectError` 并打断 DragTarget 的 build（整块 UI 变错误页）。
+Object? _dragRefOf(Object? data) {
+  if (data == null || data is String) return data;
+  final t = data.runtimeType.toString();
+  if (_warnedForeignDragData.length >= 32) _warnedForeignDragData.clear();
+  if (_warnedForeignDragData.add(t)) {
+    JsLog.warn('drag: 拖动数据是宿主侧对象（$t），不在 JS 侧登记范围内'
+        '（如同一页面上的原生 Draggable 拖入 JS DragTarget）；'
+        'JS 无法还原该引用，本次按 null 回传');
+  }
+  return null;
+}
 
 Map<String, double> _offsetJson(Offset o) => <String, double>{
   'dx': o.dx,

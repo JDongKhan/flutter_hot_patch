@@ -7,7 +7,7 @@
 // `JsHandleObject` 提供（见 object_handle_js.dart）；本类只写差异：
 //   - length/__index：本地镜像（宿主回传 index 更新）；真实实例在句柄 create
 //     阶段就由宿主创建（length/initialIndex 走 meta）；渲染 TabBar / TabBarView
-//     时按 id 取**同一个**实例（extraJSON 仍随 `{__handle}` 下发备查）；
+//     时按 id 取**同一个**实例；跨桥序列化只有 `{__handle: id}`。
 //   - index setter：立即设置宿主 index 并通知监听者；
 //   - animateTo(i)：宿主 controller.animateTo（带动画）。
 const String tabControllerJsSource = r'''
@@ -33,11 +33,6 @@ const String tabControllerJsSource = r'''
           self.__index = i;
           self.__notify();
         },
-        // 跨桥序列化：`{__handle: id, length, initialIndex}`——宿主据此取/建真实
-        // controller（见 capabilities/tab/tab_bridge.dart）。
-        extraJSON: function (self) {
-          return { length: self.length, initialIndex: self.__index };
-        }
       });
     }
     get index() { return this.__index; }

@@ -43,8 +43,21 @@ void invokeJsHandler(Object? handler, [List<Object?> args = const []]) {
   // args 双重编码：内层把数组变成 JSON 文本，外层再包成 JS 字符串字面量；
   // JS 侧 invoke 对字符串参数做一次 JSON.parse 还原为数组。单层编码会把
   // 字符串 payload 解析失败置 null。
+  //
+  // 编码失败（参数里有宿主侧对象、无 toJson 的类等）只丢这一次事件并记 error：
+  // 异常若继续上抛，会从 build / 手势链路里炸掉整棵子树（Flutter 报
+  // JsonUnsupportedObjectError + 错误页），比丢一次回调难定位得多。
+  String encodedArgs;
+  try {
+    encodedArgs = jsonEncode(jsonEncode(args));
+  } catch (e, st) {
+    JsLog.error('js_ui: 事件参数无法 JSON 序列化（handler=$id，'
+        '参数类型=${args.map((a) => a.runtimeType).join(', ')}），'
+        '本次回调已丢弃：$e\n$st');
+    return;
+  }
   JsRuntimeManager.instance.evaluate(
-    '__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(args))});',
+    '__jsui.invoke(${jsonEncode(id)}, $encodedArgs);',
   );
 }
 
