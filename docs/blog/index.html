@@ -49,6 +49,19 @@
   .card h2{font-size:19px;line-height:1.35;margin:2px 0 0}
   .card p{margin:0;color:var(--muted);font-size:14px;flex:1}
   .go{color:var(--accent);font-size:14px;font-weight:700}
+  /* 下载区：三个入口（APK / macOS / 源码） */
+  .downloads{margin:8px 0 36px;padding:28px;border:1px solid var(--line);border-radius:16px;
+    background:var(--surface);box-shadow:var(--shadow)}
+  .downloads h2{font-size:20px;margin:10px 0 6px}
+  .downloads p{margin:0 0 20px;color:var(--muted);font-size:14px}
+  .download-actions{display:flex;flex-wrap:wrap;gap:12px}
+  .btn{display:inline-flex;flex-direction:column;gap:2px;padding:12px 18px;border-radius:12px;
+    border:1px solid var(--line);background:var(--surface-2);color:var(--ink);text-decoration:none;
+    font-size:15px;font-weight:700;line-height:1.3;transition:transform .16s ease,border-color .16s ease}
+  .btn:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .btn span{font-size:12px;font-weight:500;color:var(--muted)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary span{color:rgba(255,255,255,.82)}
   footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
 </style>
 </head>
@@ -59,6 +72,23 @@
     <h1>文档中心</h1>
     <p>一份 Flutter 代码，两种执行形态：原生或运行时 JS。以下文档均可直接在线阅读。</p>
   </header>
+
+  <section class="downloads">
+    <span class="eyebrow">下载</span>
+    <h2>直接体验，或拿走源码</h2>
+    <p>三个包都已内置 mock 数据（release 读 assets，不依赖本地服务），装上即可浏览原生页面。</p>
+    <div class="download-actions">
+      <a class="btn primary" href="../downloads/flutter_hot_patch-android.apk" data-path="downloads/flutter_hot_patch-android.apk" download>
+        下载 APK <span>Android · release · 68.6 MB</span>
+      </a>
+      <a class="btn" href="../downloads/flutter_hot_patch-macos.zip" data-path="downloads/flutter_hot_patch-macos.zip" download>
+        下载 macOS 版 <span>app bundle · 24 MB · 未签名，右键打开</span>
+      </a>
+      <a class="btn" href="../downloads/flutter_hot_patch-source.zip" data-path="downloads/flutter_hot_patch-source.zip" download>
+        下载源码 <span>源码 + assets · 已剔除 .git / build / 文档 · 5.7 MB</span>
+      </a>
+    </div>
+  </section>
 
   <section class="cards">
     <a class="card" href="getting-started.html">
@@ -99,7 +129,20 @@
     </a>
   </section>
 
+
   <footer>MIT · protocol 0.13.0</footer>
 </main>
+<script>
+  // 线上预览（html-preview.github.io 等）里相对路径会解析到预览域名下 → 404；
+  // 本地 file:// 打开则直接读仓库里的 ../downloads/。这里按运行位置切换基址。
+  (function () {
+    var raw = 'https://github.com/JDongKhan/flutter_hot_patch/raw/main/docs/';
+    var isLocal = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (isLocal) return;
+    document.querySelectorAll('a[data-path]').forEach(function (a) {
+      a.href = raw + a.dataset.path;
+    });
+  })();
+</script>
 </body>
 </html>

@@ -1,0 +1,142 @@
+builders:
+  # 组件/模型 builder：lib/ 下的 .dart → 同名 .js。按内容分流（与目录无关）：
+  # 含 @PatchEntry 的出组件产物，否则出模型/单例产物；文件名与 dart 源文件一致。
+  patch_entry:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["componentBuilder"]
+    build_extensions:
+      "^lib/{{}}.dart":
+        # 直接镜像 lib 源码路径（lib/a/b.dart → patch/a/b.js）：
+        # 不预设目录名、不区分组件/模型，产物文件名与 dart 源文件一致。
+        - "patch/{{}}.js"
+    auto_apply: dependents
+    build_to: source
+
+  # package 模块 builder：**每个 package → 一个共享 JS 文件** patch/<package>.js
+  # （如 flutter.js 内含 Component 基类与全部宿主包装类、provider.js 内含 provider
+  # 逻辑组件）。这类产物是 package 级（与 lib 源码目录无关），故直接落在 patch 根下；
+  # 输出名无法按构建期发现的类型动态生成，故挂在包根伪资产 $package$ 下——
+  # 与 ui_host_register / ui_patch_manifest 同款输入（整包一个输入、输出路径静态，
+  # 无需任何种子文件）；包清单/类型清单由 builder 的 registeredWidgetPackages()
+  # 静态推导。
+  ui_widget:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["widgetModuleBuilder"]
+    # 注意：build_runner 计算产物时用的是**实例化 Builder 的 buildExtensions
+    # getter**（本 builder 由 _registeredWidgetPackages 推导出 patch/<package>.js
+    # 清单，如 flutter.js + provider.js），并不读取下面这段的输出列表；
+    # yaml 里的 build_extensions 只在 `build_runner doctor` 校验输入扩展名 key。
+    # 但 build_config 强制 BuilderDefinition 提供非空 build_extensions，故保留一条
+    # 占位输入键即可——输出列表填什么都不影响产物，勿在此维护清单。
+    build_extensions:
+      "$package$":
+        - "patch/flutter.js"
+    auto_apply: dependents
+    build_to: source
+
+  # 宿主三方 JS builder：宿主工程根下的 `js/**.js` → 原样拷贝到
+  # `patch/packages/**.js`。三方库的 JS 由宿主维护（不在生成器 / 运行时包内），
+  # 文件名即 Dart 包名（`js/<package>.js` ↔ `package:<package>`，例如
+  # `js/provider.js` ↔ `package:provider`）。业务产物按
+  # `import { X } from '../packages/<package>.js'` 消费；`patch_entry` 的依赖
+  # 归属按「类声明所在包 + 该包是否有 js/<package>.js」自动判定。
+  #
+  # 输入是包根伪资产 `$package$`、输出清单由 Builder 实例的 buildExtensions
+  # getter 按**文件系统扫描**推导（与 ui_project_module 同款），因此不要求宿主
+  # 把 `js/**` 加进 build.yaml 的 sources。这里的 build_extensions 只是
+  # build_config 要求的占位键（输出清单为空），**不列任何具体包**——新增三方
+  # 库只需往宿主 `js/` 放文件，生成器与配置都不用改。
+  ui_third_party_js:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["thirdPartyJsBuilder"]
+    build_extensions:
+      "$package$": []
+    auto_apply: dependents
+    build_to: source
+
+  # 跨包模块 builder：每个**本地依赖包**（path 依赖 / workspace 成员）→ 一个共享
+  # JS 文件 patch/<package>.js，内容是「被项目组件引用到」的该包类（跨包翻译）。
+  # 与 ui_widget 同款输入（包根伪资产 $package$）与同一套包模块路径约定；差别是
+  # 内容需要「被引用」判定 → 走 componentTranslationScope 扫描，输出清单由
+  # localTranslationPackages() 静态推导（无本地依赖包时零产物）。
+  ui_project_module:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["projectModuleBuilder"]
+    # 同 ui_widget：产物清单由 Builder 实例的 buildExtensions getter 推导，
+    # 这里只填一条占位输入键（build_config 要求非空）。
+    build_extensions:
+      "$package$":
+        - "patch/flutter.js"
+    auto_apply: dependents
+    build_to: source
+
+  # 核心 JS builder：把核心 JS 源码（`builders/core_js_builder/js/runtime/`
+  # 的运行时骨架 / mini-react / 句柄表 / 各能力片段）写成**一个**
+  # patch/runtime.js。`builders/core_js_builder/js/flutter/` 里的 Flutter SDK
+  # 面（值类 / Controller / 导航 / 弹层）由 ui_widget 拼成 patch/flutter.js。
+  # 产物是普通 JS 文件，随补丁包发布；运行时包只负责读取求值——JS 侧修复重出
+  # 产物即可，不需发版。
+  #
+  # 存量迁移说明：这些 JS 源码原本内嵌在 hot_patch 的 Dart 文件里（启动时
+  # evaluate），Bug 修复必须发版；迁到生成器后与其它产物同生命周期。
+  ui_runtime:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["coreJsBuilder"]
+    build_extensions:
+      "$package$":
+        - "patch/runtime.js"
+    auto_apply: dependents
+    build_to: source
+
+  # 宿主注入清单 builder：扫描全包 @HostInjected 方法，把「通道名 → 宿主实现」
+  # 清单生成到**一个 Dart 文件** lib/generated/host_methods.dart
+  # （List<Map<String, Object?>> get hostMethods），使用方把它交给运行时装配入口
+  # initJsUi(hostMethods: hostMethods) 即可。产物只有数据、不含注册 API，因此
+  # 换运行时也无需任何配置（本 builder 不读 options）。
+  #
+  # 与上面两个 builder 的区别：它们的产物是 patch/ 下的 **JS**（运行期被 JS
+  # 引擎加载），本 builder 的产物是**参与编译的 Dart 源码**，故单独一个 builder。
+  # 输入是包根伪资产 $package$（build_runner 支持的「整包」输入键，无需种子
+  # 文件）；产物路径固定，不随发现的注解动态变化。
+  ui_host_register:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["hostRegisterBuilder"]
+    build_extensions:
+      "$package$":
+        - "lib/generated/host_methods.dart"
+    auto_apply: dependents
+    build_to: source
+
+  # patch 清单 builder：每次 build 产出一份 patch/manifest.json（基本信息 +
+  # 打包时间 + 各 JS 资源的内容 hash）。挂在包根伪资产 $package$ 下，产物路径
+  # 静态、无需种子文件。
+  #
+  # `required_inputs: [".js"]` 是关键：它让 build_runner 把本 builder 排到
+  # **所有产出 .js 的 builder（patch_entry / ui_widget）之后**的阶段——同一阶段
+  # 读不到彼此产物，更早阶段可以。于是本 builder 能用 findAssets('patch/**.js')
+  # 列出全部已生成 JS 并逐个读取计算 hash；新增产物自动进清单，无需维护列表。
+  ui_patch_manifest:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["patchManifestBuilder"]
+    build_extensions:
+      "$package$":
+        - "patch/manifest.json"
+    required_inputs: [".js"]
+    auto_apply: dependents
+    build_to: source
+
+  # patch 归档 builder：每次 build 把 patch/ 下的全部文件打成 patch/patch.zip
+  # （生成的 JS + manifest.json + 手工放置的静态资源，如 patch/assets/）。
+  #
+  # `required_inputs: [".json"]` 让它排到 ui_patch_manifest **之后**（同阶段读不到
+  # 彼此产物、更早阶段可以），zip 里带的是最新清单；产物清单用
+  # findAssets('patch/**') 列全，新增产物 / 静态资源自动进包，无需维护列表。
+  ui_patch_archive:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["patchArchiveBuilder"]
+    build_extensions:
+      "$package$":
+        - "patch/patch.zip"
+    required_inputs: [".js", ".json"]
+    auto_apply: dependents
+    build_to: source

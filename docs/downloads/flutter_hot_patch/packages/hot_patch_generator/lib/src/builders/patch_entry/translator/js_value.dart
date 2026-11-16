@@ -1,0 +1,730 @@
+/// 共享值工具：字面量、字符串转义、颜色、全局标志、类型判断、作用域。
+///
+/// 与 widget、类结构无关，由收集层（analyze_dart_class）、渲染层（dart2js）
+/// 与 widget 层（element2js）共同使用，避免任何一方反向依赖另一方的实现文件。
+library;
+
+import 'package:analyzer/dart/ast/ast.dart';
+
+import '../../shared/js_class_defs.dart';
+import '../../shared/runtime_global_types.dart';
+import '../class_info.dart';
+
+/// JS 双引号字符串字面量（唯一实现）。
+///
+/// 反斜杠、双引号、换行 / 回车 / 制表符以及所有 C0 控制字符都必须转义：
+/// Dart 单引号字符串里可以自由出现 `"`（如 `Text('He said "hi"')`），
+/// 漏转义会直接产出非法 JS，导致整个模块求值失败。
+String jsString(String s) => jsStringLiteral(s);
+
+/// 字符串值 → JS 双引号字面量（供 [jsString] 与 element2js 共用，禁止再写第二份）。
+String jsStringLiteral(String s) {
+  final b = StringBuffer('"');
+  for (final code in s.runes) {
+    final escaped = switch (code) {
+      0x5C => r'\\',
+      0x22 => r'\"',
+      0x08 => r'\b',
+      0x0C => r'\f',
+      0x0A => r'\n',
+      0x0D => r'\r',
+      0x09 => r'\t',
+      _ => null,
+    };
+    if (escaped != null) {
+      b.write(escaped);
+    } else if (code < 0x20) {
+      b.write('\\u${code.toRadixString(16).padLeft(4, '0')}');
+    } else {
+      b.writeCharCode(code);
+    }
+  }
+  b.write('"');
+  return b.toString();
+}
+
+/// 字面量 → JS 字面量（字符串带双引号、数字/布尔原样）。不可翻译返回 null。
+///
+/// **唯一**的「编译期常量字面量」翻译实现：字段初始值（[renderClassDecl]）、
+/// 组件 stat/props 初值（builder 侧）、静态单例字段值都走这里——新增字面量
+/// 能力只改这一处。当前覆盖 string/int/double/bool、相邻字符串字面量拼接，
+/// 以及由它们构成的二元运算。
+String? literalToJs(Expression? e) {
+  if (e == null) return null;
+  // StringInterpolation / AdjacentStrings 都是 StringLiteral 的**子类**，而它们的
+  // stringValue 是 null：若被下面那行字面量分支接住，整串会被静默翻译成 `""`
+  // （插值表达式与拼接内容全丢）。本函数没有作用域、翻不了插值，故如实返回 null，
+  // 由带作用域的 rhsToJs / exprToJs 兜底。
+  if (e is StringInterpolation) return null;
+  // 相邻字符串字面量拼接（`'a' 'b'`）本身是编译期常量：逐段递归后 `+` 拼接；
+  // 任一段非常量（如含插值）则整体放弃，同样交给带作用域的调用方。
+  if (e is AdjacentStrings) {
+    final parts = <String>[];
+    for (final s in e.strings) {
+      final v = literalToJs(s);
+      if (v == null) return null;
+      parts.add(v);
+    }
+    return parts.join(' + ');
+  }
+  if (e is StringLiteral) return jsString(e.stringValue ?? '');
+  if (e is IntegerLiteral) return intLiteralJs(e);
+  if (e is DoubleLiteral) return e.value.toString();
+  if (e is BooleanLiteral) return e.value.toString();
+  // 一元前缀（`-1` / `+1` / `!done` / `~x`）：不是字面量节点，Dart 与 JS 语义
+  // 一致，一比一透传。不认这层会把 `int _picked = -1` 静默翻译成默认值 0。
+  if (e is PrefixExpression) {
+    final inner = literalToJs(e.operand);
+    if (inner != null) return '(${e.operator.lexeme}$inner)';
+  }
+  if (e is BinaryExpression) {
+    final l = literalToJs(e.leftOperand);
+    final r = literalToJs(e.rightOperand);
+    if (l != null && r != null) return '($l ${e.operator.lexeme} $r)';
+  }
+  return null;
+}
+
+/// 整数字面量 → JS 数字：**保留源码写法**（Dart 里写 `0xFF0E7AFB`，产物里
+/// 仍是 `0xFF0E7AFB`；写 `10` 仍是 `10`）。
+///
+/// 这是纯语法规则，与类型无关：颜色、掩码、标志位等常量在产物里一眼可读，
+/// 不必反算十进制；JS 的 `0x…` 与十进制数值完全等价。下划线分隔符去掉，
+/// 不依赖引擎对数值分隔符的支持。
+String? intLiteralJs(Expression e) {
+  if (e is! IntegerLiteral) return null;
+  final v = e.value;
+  if (v == null) return null;
+  final src = e.toSource().replaceAll('_', '');
+  return src.isEmpty ? v.toString() : src;
+}
+
+/// 数字字面量（int/double）→ JS 数字表达式（'12' / '1.5'）；非数字字面量返回 null。
+///
+/// 值域比 [literalToJs] 窄（只认数字），供「只接受数字」的属性/样式读取——
+/// 样式翻译与 widget 翻译共用这一处，不各自重复一份。
+String? numLiteralJs(Expression? e) {
+  if (e is IntegerLiteral) return intLiteralJs(e);
+  if (e is DoubleLiteral) return '${e.value}';
+  // 负数字面量（`-1`）：同样是一元前缀，不认会在样式/属性里静默丢值。
+  if (e is PrefixExpression) {
+    final inner = numLiteralJs(e.operand);
+    if (inner != null) return '(${e.operator.lexeme}$inner)';
+  }
+  return null;
+}
+
+/// bool 字面量 → 'true' / 'false'；非 bool 字面量返回 null（见 [numLiteralJs]）。
+String? boolLiteralJs(Expression? e) {
+  if (e is BooleanLiteral) return e.value.toString();
+  return null;
+}
+
+/// `kDebugMode` / `kReleaseMode` / `kInJsRuntime` → 运行时注入同名全局（见
+/// js_runtime_manager 模块表初始化），不命中返回 null。纯语言层映射，与 widget 无关。
+String? globalFlagJs(String dartName) {
+  const set = {'kDebugMode', 'kReleaseMode', 'kInJsRuntime'};
+  return set.contains(dartName) ? dartName : null;
+}
+
+/// `Platform.isXxx` → 原样 `Platform.isXxx`（运行时注入同名 Platform 对象，
+/// 含 isAndroid/isIOS/isMacOS/isWindows/isLinux/isFuchsia），不命中返回 null。
+String? platformFlagJs(String platformProp) {
+  const set = {
+    'isAndroid', 'isIOS', 'isMacOS',
+    'isWindows', 'isLinux', 'isFuchsia',
+  };
+  return set.contains(platformProp) ? 'Platform.$platformProp' : null;
+}
+
+/// 去掉可空 / 泛型后缀：`BuildContext?` → `BuildContext`、`List<T>` → `List`。
+String eraseType(String? type) {
+  var t = (type ?? '').trim();
+  if (t.endsWith('?')) t = t.substring(0, t.length - 1);
+  final lt = t.indexOf('<');
+  if (lt >= 0) t = t.substring(0, lt).trim();
+  return t;
+}
+
+/// 基础类型（可翻译为 JS 初始值）：int/double/num/String/bool/dynamic。
+/// 类发现与字段收集共用这一处——新增「基础类型」只改这里。
+bool isBasicType(String typeName) {
+  final t = typeName.trim();
+  if (t.endsWith('?')) return isBasicType(t.substring(0, t.length - 1));
+  return switch (t) {
+    'int' || 'double' || 'num' || 'String' || 'bool' || 'dynamic' => true,
+    _ => false,
+  };
+}
+
+/// Dart 运算符 → JS 成员名（`__op$…`）。
+///
+/// Dart 的运算符重载在 JS 里没有等价语法：声明侧统一改写成同名成员，调用点
+/// 在「操作数静态类型可判定」时按同一张表改写（见 js_translator 的
+/// `_operatorOwnerOf`）。返回 null = 该运算符暂不支持（声明侧出声告警）。
+String? operatorJsName(String symbol, {required bool unary}) {
+  if (unary) return symbol == '-' ? r'__op$neg' : null;
+  return switch (symbol) {
+    '+' => r'__op$add',
+    '-' => r'__op$sub',
+    '*' => r'__op$mul',
+    '/' => r'__op$div',
+    '%' => r'__op$mod',
+    '<' => r'__op$lt',
+    '<=' => r'__op$le',
+    '>' => r'__op$gt',
+    '>=' => r'__op$ge',
+    '==' => r'__op$eq',
+    '[]' => r'__op$indexGet',
+    '[]=' => r'__op$indexSet',
+    _ => null,
+  };
+}
+
+/// 可见 extension 运算符的 JS 成员名（目标类型 + 运算符 → `__op$…`）。
+///
+/// 只有接收者静态类型可判定、且与 extension 的 `on` 目标擦除后同名时命中；
+/// 类自身声明的实例运算符优先级更高（调用点在类分支之后才查这里）。
+String? extensionOperatorMember(
+  Map<String, Map<String, String>> operators,
+  String? receiverType,
+  String symbol,
+) {
+  if (receiverType == null) return null;
+  return operators[eraseType(receiverType)]?[symbol];
+}
+
+/// `x is T` → JS 类型判别表达式；T 在 JS 侧不可解析时返回 null。
+///
+/// Dart 的运行时类型在 JS 侧没有一一对应的构造（`int` / `double` 同是 number、
+/// List 是数组、Map 是普通对象），因此基础类型按 JS 语义映射，其余按
+/// `instanceof`——但**只对确实存在的类**生效：`instanceof` 遇到未定义的构造会
+/// 抛 ReferenceError，宁可整条表达式不翻译（与其它不可翻译表达式同一策略）。
+///
+/// [knownClasses] 是本次分析可见的项目类名（`ClassInfo` 表）；宿主包装类与
+/// 运行时注入的全局类（`G.X = …`）自动可见，无需登记。
+String? typeTestJs(String typeName, String valueJs, {Set<String> knownClasses = const {}}) {
+  final t = eraseType(typeName);
+  switch (t) {
+    case 'String':
+      return 'typeof $valueJs === "string"';
+    // web 上 int 与 double 都是 JS number，但 Dart 的 `is int` 仍要求整数值
+    // （`1.5 is int` 为 false）——按 `Number.isInteger` 判定。
+    case 'int':
+      return 'Number.isInteger($valueJs)';
+    case 'double':
+    case 'num':
+      return 'typeof $valueJs === "number"';
+    case 'bool':
+      return 'typeof $valueJs === "boolean"';
+    case 'List':
+    case 'Iterable':
+      return 'Array.isArray($valueJs)';
+    case 'Set':
+      return '$valueJs instanceof Set';
+    case 'Map':
+      return '($valueJs != null && typeof $valueJs === "object" '
+          '&& !Array.isArray($valueJs) && !($valueJs instanceof Set))';
+    case 'Function':
+      return 'typeof $valueJs === "function"';
+    // Dart 的顶层类型：`dynamic` 不做任何检查（恒真），`Object?` 只排除空。
+    case 'Object':
+      return '(__nn($valueJs) != null)';
+    case 'dynamic':
+      return 'true';
+    // `Never` 在运行时不可达：`is Never` 恒为 false（等价于删除该分支）。
+    case 'Never':
+      return 'false';
+  }
+  if (knownClasses.contains(t) ||
+      hostWrapperTypes.contains(t) ||
+      runtimeGlobalTypes().contains(t)) {
+    return '$valueJs instanceof $t';
+  }
+  return null;
+}
+
+// ===========================================================================
+// Flutter SDK → JS 基类 映射表（便于后续扩展）
+//
+// 具体要把哪些 Flutter SDK 类转成 JS 基类，由这张表按需登记即可，
+// 生成器逻辑零改动。
+//
+//   key = Dart 父类名（extends 命中的类名）
+//   value = 生成的 JS 基类名（运行时需注入同名类）
+//
+// 额外语义（针对登记在表的类）：
+//   - 渲染时自动 `extends <value>` + constructor 里 `super()`
+//   - 类方法体裸调白名单自动加上基类能力方法（如 ChangeNotifier 的
+//     notifyListeners）
+//
+// 后续新增 SDK 支持 = 往这张表加一行 +（如需要）在运行时注册对应基类。
+// widget 翻译不走 per-widget 实现：统一入口见 element_json.dart / value_forms.dart。
+// ===========================================================================
+
+/// 由 [ClassInfo.superType] 查 JS 基类名；未登记返回 null。
+///
+/// **必须剥泛型实参**：`class X extends ValueNotifier<int>` 的 superType 是
+/// `ValueNotifier<int>`（AST `toSource()` 原样），直接查表必然落空 → 基类不写、
+/// 继承来的方法全部译不出来。
+String? sdkBaseName(ClassInfo info) {
+  final t = info.superType;
+  if (t == null) return null;
+  return sdkSuperClassMap[t.split('<').first.trim()];
+}
+
+/// 沿 `extends` 链展开的实例字段：**根父类在前、自身在后**（去重，同名以靠前为准）。
+///
+/// 这是「对象上实际存在的字段视图」，供两处使用：
+///   - 字段可见性（子类方法里 `this.name` 指向父类字段）；
+///   - 构造位置参数映射（Dart 的 `super.name` 形参占据父类字段位置，与
+///     「父类字段先、子类字段后」同序）。
+List<ClassField> objectFieldsOf(
+  ClassInfo info,
+  Map<String, ClassInfo> classTable,
+) {
+  final out = <ClassField>[];
+  final seen = <String>{};
+  for (final c in _baseChainOf(info, classTable).reversed) {
+    for (final f in c.instanceFields) {
+      if (seen.add(f.name)) out.add(f);
+    }
+  }
+  for (final f in info.instanceFields) {
+    if (seen.add(f.name)) out.add(f);
+  }
+  return out;
+}
+
+/// 沿 `extends` 链展开的**实例方法**名（含 getter）：裸调用解析用。
+///
+/// 刻意排除 static 方法：Dart 的 static 成员**不随继承传递**，子类里裸调
+/// `foo()` 永远指实例方法；父类的 `static foo()` 只能写成 `Base.foo()`。
+Set<String> objectMethodNamesOf(
+  ClassInfo info,
+  Map<String, ClassInfo> classTable,
+) {
+  final out = <String>{};
+  for (final c in [info, ..._baseChainOf(info, classTable)]) {
+    for (final m in c.methods) {
+      if (!m.isStatic) out.add(m.name);
+    }
+  }
+  return out;
+}
+
+/// 沿 `extends` 链展开的**实例 getter** 名（与 [objectMethodNamesOf] 同一遍历）。
+///
+/// 值位置上的同名引用要区分：getter 是读取值（`this.x`），方法才是 tear-off
+/// （`this.m.bind(this)`）。只按名字判断会把 getter 误包成函数。
+Set<String> objectGetterNamesOf(
+  ClassInfo info,
+  Map<String, ClassInfo> classTable,
+) {
+  final out = <String>{};
+  for (final c in [info, ..._baseChainOf(info, classTable)]) {
+    for (final m in c.methods) {
+      if (!m.isStatic && m.isGetter) out.add(m.name);
+    }
+  }
+  return out;
+}
+
+/// `extends` 链上的项目类（父类在前、根父类在最后）。SDK 基类不在类表里，止于此处。
+List<ClassInfo> _baseChainOf(ClassInfo info, Map<String, ClassInfo> classTable) {
+  final chain = <ClassInfo>[];
+  final visited = <String>{info.name};
+  var cur = info;
+  while (true) {
+    final base = jsBaseClassOf(cur, classTable);
+    if (base == null || !visited.add(base)) break;
+    final b = classTable[base];
+    if (b == null) break;
+    chain.add(b);
+    cur = b;
+  }
+  return chain;
+}
+
+/// 类的 JS 基类名（null = 不写 `extends`）。
+///
+/// 两条来源，顺序固定：
+///   1. SDK 基类表（运行时注入同名 JS 类，如 ChangeNotifier）；
+///   2. 类表里的项目类 —— JS 类名与 Dart 类名相同，直接 `extends`。
+///
+/// 项目类走原生 `extends`（而不是运行时装配原型）：`class` 不能用 `apply`
+/// 调用，只有原生继承才能让 `super(...)` 驱动父类构造里的字段初始化。
+/// 基类在同产物内的**声明顺序**由渲染前的拓扑排序保证（class 有 TDZ）。
+String? jsBaseClassOf(ClassInfo info, Map<String, ClassInfo> classTable) {
+  final sdk = sdkBaseName(info);
+  if (sdk != null) return sdk;
+  if (info.isComponent) {
+    // 组件按 **widget 侧**的 extends 决定 JS 基类：`StatefulWidget` /
+    // `StatelessWidget` 在 flutter.js 里同名导出（都 `extends Component`）；
+    // 项目内组件基类照常 `extends`；都没有时落到 Component。
+    final w = info.widgetSuperType?.split('<').first.trim();
+    if (w == null || w.isEmpty) return 'Component';
+    final mapped = sdkSuperClassMap[w];
+    if (mapped != null) return mapped;
+    final base = classTable[w];
+    return (base != null && base.name != info.name) ? w : 'Component';
+  }
+  final t = info.superType;
+  if (t == null) return null;
+  final name = t.split('<').first.trim();
+  final base = classTable[name];
+  if (base != null && base.name != info.name) return name;
+  // 三方库基类（`extends GetxController`）：基类声明在某个三方包、且宿主
+  // `js/<package>.js` 提供了该包模块，则该模块里有同名导出 → 原样 extends。
+  // 判据只看「声明文件 → 包 → 是否有宿主模块」，不维护库 / 类型表。
+  if (thirdPartyPackageOf(name) != null) return name;
+  return null;
+}
+
+/// Dart 基类名 → JS 基类名（运行时注入同名类）。
+const Map<String, String> sdkSuperClassMap = {
+  'ChangeNotifier': 'ChangeNotifier',
+  'ValueNotifier': 'ValueNotifier',
+  // Widget 基类：flutter.js 里同名导出（都 `extends Component`），翻译产物原样
+  // `extends StatelessWidget / StatefulWidget`，生成器无需再为组件做特殊处理。
+  'StatelessWidget': 'StatelessWidget',
+  'StatefulWidget': 'StatefulWidget',
+  // InheritedWidget：JS 侧同名基类（flutter.js 的 component 片段），纯数据
+  // 共享结点、无宿主渲染语义；子类按常规组件翻译，`build` 由基类返回 child。
+  'InheritedWidget': 'InheritedWidget',
+  // CustomPainter：JS 侧值类（canvas_js.dart），子类 `paint` 被宿主录制重放。
+  'CustomPainter': 'CustomPainter',
+};
+
+// ---------------------------------------------------------------------------
+// FieldScope：把 Dart 标识符解析成 JS 引用的抽象
+// ---------------------------------------------------------------------------
+
+/// 字段作用域：决定一个 Identifier 怎么转 JS。
+///
+/// 组件动作：字段名 → propByField[name]（`_count`→`this._count`），形参 extraVars。
+/// 模型方法：字段名 → instanceFields（`_n`→`this._n`），形参、白名单方法。
+class FieldScope {
+  final Map<String, String> propByField; // 组件：字段→属性名
+  final Set<String> instanceFields; // 模型：自身实例字段名
+  final Set<String> params; // 形参名（原样引用）
+  final Set<String> methods; // 裸调白名单（this.method()）
+
+  /// 其中属于 **getter** 的名字（方法的补集才是 tear-off）。
+  ///
+  /// 同一个名字在值位置的语义不同：getter 是「读取值」，方法 tear-off 是
+  /// 「取函数并绑定当前实例」（Dart tear-off 自带 `this`，JS 的 `this.m` 不带）。
+  /// 继承链视图（含父类 getter），与 [methods] 同一来源。
+  final Set<String> getterNames;
+
+  /// 方法体内声明的局部变量（`var data = ...`），后续引用原样返回。
+  final Set<String> localVars;
+
+  /// 本文件可见的**顶层常量**名（同文件 + import 文件，如 `kBanners` / `kBrand`）。
+  /// 命中即原样作为 JS 模块级常量引用：同文件的写在同一产物顶部，跨文件的由
+  /// import 语句提供（与类引用同一套「同文件内联 / 跨文件 import」规则）。
+  final Set<String> globalConsts;
+
+  /// 顶层 `@HostInjected` 函数名（见 `host_injected.buildHostFunctions`）。
+  /// 顶层函数在 JS 侧没有类可承载，命中时调用点整体翻译成
+  /// `_app_host_.invoke("通道名", 参数载荷)`（载荷形态见 [hostArgsJs]）。
+  /// **类上的**宿主方法不在这里：它由 JS 类里的同名方法承接，调用点与 Dart
+  /// 一比一（见 [hostMethodBodyJs]）。
+  final Set<String> hostFunctions;
+
+  /// 本类的 JS 侧是否有基类（原生 `extends`）：`super.foo()` 在此为合法 JS，
+  /// 原样发射；无基类时 super 调用的目标是 SDK 类，JS 侧不存在 → 丢弃。
+  final bool hasJsBase;
+
+  /// 当前作用域可见的 extension 运算符：目标类型 → Dart 运算符 → JS 成员名
+  /// （`__op$add` …）。实例运算符（类自身）优先级更高，见 `_operatorOwnerOf`。
+  final Map<String, Map<String, String>> extensionOperators;
+
+  /// 本文件可见的**具名 extension**：显式调用 `E(x).m(...)` 的分派依据
+  /// （声明文件 + 成员表，来自源码声明，不按名字白名单判断）。
+  final Map<String, ExtensionScope> extensionNames;
+
+  /// 局部变量别名：`final list = _list;` → `list → this._list`。
+  /// 抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用被捕获的
+  /// 局部变量时必须落到真实字段引用，否则是未定义的自由变量。
+  final Map<String, String> localAliases;
+
+  /// 本类 JS 类名（静态成员引用的落点前缀）。null = 不在类方法体里
+  /// （如扩展成员、顶层常量求值），此时静态成员不参与解析。
+  final String? className;
+
+  /// Dart `this` 在 JS 侧的落点（默认 `'this'`）。
+  ///
+  /// 构造函数体被翻译成静态方法（`static b(args)`）时，Dart 的 `this` 指向
+  /// 「正在构造的实例」，JS 侧落点是局部实例变量 `__o`。这是语法级的唯一口径，
+  /// 不按构造名 / 类名判断。
+  final String thisRef;
+
+  /// 类型参数名 → 运行时类型名表达式（`T` → `this.__ta["T"]`）。
+  ///
+  /// Dart 方法体里的 `T` 是**类型值**（`T == String` / `as T`），JS 侧没有类型
+  /// 对象，统一由构造下发的 `typeArguments` 元信息（参数名 → 类型名）承载。
+  /// 只有类 / 方法的类型参数名会进这张表，普通标识符解析不受影响。
+  final Map<String, String> typeParams;
+
+  /// 局部泛型函数名 → 类型参数名列表（`T f<T>(…)`）。
+  /// 裸调用（`f<int>()`）据此把类型实参写成**参数名键**（`{"T": "int"}`），
+  /// 与定义侧读取 `T` 的口径一致；查不到声明时调用点退化为位置序号键。
+  final Map<String, List<String>> localTypeParams;
+
+  /// 本类 **static 字段**名：裸引用（`background`）→ `ClassName.background`。
+  /// Dart 的 static 与实例成员在同一名字空间，调用点看不出差别，靠这组集合区分。
+  final Set<String> staticFields;
+
+  /// 本类 **static 方法**名：裸调用（`fromJson(e)`）→ `ClassName.fromJson(e)`。
+  final Set<String> staticMethods;
+
+  /// 类型表：字段 / 形参 / 局部变量名 → 源码类型字符串。
+  ///
+  /// 只用于**运算符重载的调用点分派**：JS 没有运算符重载，只有明确了操作数的
+  /// 静态类型、且该类型（含继承链）声明了对应运算符时，才把 `a + b` 改写成
+  /// `a.__op$add(b)`；类型未知时保持 JS 原生运算（与既有产物一致）。
+  final Map<String, String> fieldTypes;
+  final Map<String, String> paramTypes;
+  final Map<String, String> localTypes;
+
+  /// 标识符的静态类型（已擦除可空 / 泛型）；未知返回 null。
+  String? typeOf(String name) {
+    String? raw;
+    if (localVars.contains(name)) {
+      raw = localTypes[name];
+    } else if (params.contains(name)) {
+      raw = paramTypes[name];
+    } else if (instanceFields.contains(name)) {
+      raw = fieldTypes[name];
+    }
+    return raw == null ? null : eraseType(raw);
+  }
+
+  /// 声明期登记的字段别名表（`final feed = _feed;` → `feed → this._feed`）。
+  ///
+  /// **只供后续「变量声明的初始化器」折算**（[forInitializer]）——这样才能闭合
+  /// 链式别名：`final spots = feed.spots;` 里的 `feed` 先折成 `this._feed`，
+  /// `spots` 于是也成了字段别名，被抽进懒加载 builder 方法后仍能落字段引用。
+  ///
+  /// 刻意不并进 [localAliases]：那会让方法体里**所有**语句中的引用都变成
+  /// 「按引用重求值」，副作用初始化器（`_items.removeAt(i)`、`GlobalKey
+  /// .currentContext`）会被每条语句重跑一遍，把既有产物改坏。
+  final Map<String, String> declAliases;
+
+  /// 变量声明的初始化器专用作用域：把 [declAliases] 当作别名表，其余照旧。
+  /// 只影响**这一次初始化器**的折算，方法体其余语句一律不受影响。
+  FieldScope forInitializer() => declAliases.isEmpty
+      ? this
+      : FieldScope(
+          sourcePath: sourcePath,
+          propByField: propByField,
+          instanceFields: instanceFields,
+          params: params,
+          methods: methods,
+          getterNames: getterNames,
+          localVars: localVars,
+          globalConsts: globalConsts,
+          hostFunctions: hostFunctions,
+          hasJsBase: hasJsBase,
+          extensionOperators: extensionOperators,
+          extensionNames: extensionNames,
+          className: className,
+          staticFields: staticFields,
+          staticMethods: staticMethods,
+          typeParams: typeParams,
+          localTypeParams: localTypeParams,
+          localAliases: declAliases,
+          thisRef: thisRef,
+          fieldTypes: fieldTypes,
+          paramTypes: paramTypes,
+          localTypes: localTypes,
+        );
+
+  /// 本作用域所属源文件身份（`lib/...` / `package:foo/...`）：仅用于构建期
+  /// 告警定位（`文件:行 | 源码行`，见 `source_location.dart`），不参与翻译判定。
+  final String sourcePath;
+
+  FieldScope({
+    this.sourcePath = '',
+    this.propByField = const {},
+    this.instanceFields = const {},
+    this.params = const {},
+    this.methods = const {},
+    this.getterNames = const {},
+    this.className,
+    this.staticFields = const {},
+    this.staticMethods = const {},
+    this.typeParams = const {},
+    Map<String, List<String>>? localTypeParams,
+    this.hostFunctions = const {},
+    this.hasJsBase = false,
+    this.extensionOperators = const {},
+    this.extensionNames = const {},
+    this.thisRef = 'this',
+    Map<String, String>? localAliases,
+    Map<String, String>? declAliases,
+    Set<String>? localVars,
+    Set<String>? globalConsts,
+    Map<String, String>? fieldTypes,
+    Map<String, String>? paramTypes,
+    Map<String, String>? localTypes,
+  })  : localVars = localVars ?? {},
+        localAliases = localAliases ?? const {},
+        declAliases = declAliases ?? {},
+        fieldTypes = fieldTypes ?? const {},
+        paramTypes = paramTypes ?? const {},
+        localTypes = localTypes ?? {},
+        localTypeParams = localTypeParams ?? {},
+        globalConsts = globalConsts ?? {};
+
+  /// 派生作用域：追加形参名（闭包形参 `(o) => o.status`）与类型参数
+  /// （泛型闭包 / 泛型局部函数的 `T`），其余照旧。
+  ///
+  /// 缺这一步，闭包体里的形参引用（`o`）解析不出来，谓词整条翻译失败，
+  /// 连带 `where(...)` / `map(...)` 与外层表达式一起被丢弃。
+  FieldScope withParams(
+    Iterable<String> names, {
+    Map<String, String> typeParamRefs = const {},
+  }) =>
+      FieldScope(
+        sourcePath: sourcePath,
+        propByField: propByField,
+        instanceFields: instanceFields,
+        params: {...params, ...names},
+        methods: methods,
+        getterNames: getterNames,
+        localVars: localVars,
+        globalConsts: globalConsts,
+        hostFunctions: hostFunctions,
+        hasJsBase: hasJsBase,
+        extensionOperators: extensionOperators,
+        extensionNames: extensionNames,
+        className: className,
+        staticFields: staticFields,
+        staticMethods: staticMethods,
+        typeParams: {...typeParams, ...typeParamRefs},
+        localTypeParams: localTypeParams,
+        localAliases: localAliases,
+        thisRef: thisRef,
+        fieldTypes: fieldTypes,
+        paramTypes: paramTypes,
+        localTypes: localTypes,
+        // 同一个别名表实例：派生作用域里登记的别名，母作用域后续声明同样可见
+        // （闭包体内的 `final x = _feed.spots;` 也算链式别名）。
+        declAliases: declAliases,
+      );
+
+  /// 该名字是否本 scope 可解析的字段。
+  bool hasField(String name) =>
+      propByField.containsKey(name) ||
+      instanceFields.contains(name) ||
+      localAliases.containsKey(name) ||
+      localVars.contains(name) ||
+      staticFields.contains(name);
+
+  /// 字段 Identifier → JS 引用（`this.x` / `ClassName.x`）；形参/局部变量原样返回；
+  /// 未知返回 null。
+  String? fieldRef(String name) {
+    if (params.contains(name)) return name;
+    final alias = localAliases[name];
+    if (alias != null) return alias;
+    if (localVars.contains(name)) return name;
+    // static 字段在 JS 侧挂在类上（`ClassName.background`），不是实例成员。
+    if (staticFields.contains(name) && className != null) return '$className.$name';
+    // static 方法 tear-off（`final f = fromJson;`）：静态成员挂在类上，无 this 可绑。
+    if (staticMethods.contains(name) && className != null) return '$className.$name';
+    final p = propByField[name];
+    if (p != null) return 'this.$p';
+    if (instanceFields.contains(name)) return 'this.$name';
+    // 实例方法 / getter 引用（`_toggleFilter`、`_visiblePosts` 这类）：
+    // JS 类里它们就是原型上的方法 / `get` 访问器。getter 是**值读取**；
+    // 方法在值位置是 **tear-off**——Dart 的 tear-off 自带 `this`，JS 的
+    // `this.m` 不带，故显式绑定当前实例（调用时 this 才与 Dart 一致）。
+    if (methods.contains(name)) {
+      return getterNames.contains(name) ? 'this.$name' : 'this.$name.bind(this)';
+    }
+    return null;
+  }
+
+  /// 方法引用 `m` → JS 成员引用（实例方法 `this.m`、static 方法 `ClassName.m`）；
+  /// 两侧都不命中返回 null。
+  String? methodRef(String name) {
+    if (staticMethods.contains(name) && className != null) return '$className.$name';
+    if (methods.contains(name)) return 'this.$name';
+    return null;
+  }
+
+  bool isMethod(String name) =>
+      methods.contains(name) || staticMethods.contains(name);
+}
+
+/// 「构造表达式 → JS 渲染」接口（由 element2js 层的
+/// `ElementTranslateContext` 实现）。
+///
+/// 放在公共翻译层是为了让「Dart 类 → JS」不反向依赖翻译树那一层：方法体里
+/// `return Container(...)` 这类构造表达式经此接口交给渲染层处理，
+/// 其余表达式仍走本文件的通用翻译。
+abstract class ExprRenderer {
+  /// 构造表达式在 JS 侧的类**来自哪个产物文件**（null = JS 侧没有这个类，
+  /// 走通用表达式翻译）。
+  ///
+  /// 只问「类定义在哪」，不问「是不是组件」——所有类一视同仁（widget 也是
+  /// 普通类）。判断放在 widget 层是因为只有它持有源文件 → 产物的解析结果。
+  /// 方法体里 `return ListView.builder(...)` 这类命名构造必须命中，否则会落到
+  /// 通用表达式翻译——虽然能产出 `ListView.builder({...})`，但**不会登记产物
+  /// import**，运行时是未定义引用。
+  String? ctorJsClassFile(Expression e);
+
+  /// 表达式是否是**构造**（`X(...)` / `X.namedCtor(...)`）。
+  ///
+  /// `X.member(...)` 的语法与命名构造完全一致，只有构造签名索引能区分
+  /// （`Spot.fromJson(e)` 是静态方法、`ListView.builder(...)` 才是构造）。
+  /// 值位置的翻译据此分流：不是构造就按普通表达式翻译，绝不走元素属性管线
+  /// （否则静态方法会被当成元素构造，实参被摊进 props）。
+  bool isConstruction(Expression e);
+
+  /// widget 构造表达式 → 中立描述（Map 节点 / String JS 表达式）。
+  Object? translate(Expression e);
+
+  /// 中立描述 → JS 源码（构造调用树）。
+  ///
+  /// 返回 null = 该结点翻译不出来（调用方必须**丢弃**它：children 里少一项、
+  /// 单子位置为 null）。绝不允许实现方伪造占位元素——那会把翻译失败伪装成
+  /// 「渲染成功的空盒子」（`where`/`sort` 的闭包体被换成空盒子后谓词恒假，
+  /// 产物里完全看不出来）。
+  String? renderJs(Object? node, int depth);
+
+  /// 中立描述 → 作为**值**的 JS 源码：同样是 `new X({...})`，但不做「元素 /
+  /// 宿主字符串结点」的形态切换。
+  ///
+  /// 值的分派只由**语法位置**决定（参数值是值、`children:` 元素是结点），
+  /// 翻译器不判断类型是组件还是普通类：构造一律 1:1 产出构造调用；组件实例
+  /// 本身就是元素（`__element=true`），不需要二次折算。
+  String renderValue(Object? node, int depth);
+
+  /// [renderValue] 的可失败版本：渲不出来返回 null，调用方据此**丢弃该值**
+  /// （列表里少一项、props 里没有这个键），不伪造任何对象。
+  String? renderValueOrNull(Object? node, int depth);
+
+  /// 方法体内声明的局部变量（`final isAdult = ...;`）→ 登记进 widget 层局部表。
+  /// 方法体翻译与 widget 渲染必须共用同一份标识符作用域，否则返回的 widget
+  /// 树里引用局部变量时会解析失败。
+  /// [type] 是局部变量的源码类型（含泛型 / `?`）：widget 层按接收者类型做
+  /// 成员映射（Map 的 `_keys` / `m[k]` 等）时要用它，缺省表示不可判定。
+  void registerLocal(String name, {String? type});
+
+  /// 把「字段/ getter 的局部别名」（`final list = _list;` → `this._list`）登记
+  /// 进 widget 层：抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用该
+  /// 名字时必须落成 `this._list`，否则方法体内是未定义的自由变量（ReferenceError）。
+  void registerLocalAlias(String name, String jsExpr);
+
+  /// 方法形参：翻译**该方法体期间**登记进 widget 层作用域（`_group(String title,
+  /// …)` 里 `Text(title)` 要能与局部变量同样解析），方法体翻译结束后恢复，
+  /// 避免形参名泄漏到同类的其它方法。成对调用。
+  T withMethodParams<T>(Iterable<String> params, T Function() body);
+
+  /// 本文件可见的顶层常量名（widget 树里 `kBrand` 这类引用要与方法体翻译
+  /// 共用同一份作用域）。
+  Set<String> get globalConsts;
+}

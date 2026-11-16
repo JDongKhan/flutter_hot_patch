@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// @author jd
@@ -16,8 +18,17 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 class Network {
   static const String _baseUrl = 'http://127.0.0.1:8765';
 
+  /// mock 接口的离线副本目录（`example/assets/mock/`，构建时打包进 assets）。
+  static const String _localMockRoot = 'assets/mock';
+
   @HostInjected()
   static Future<Map> post({required String url, dynamic params}) async {
+    // release 发给别人时连不到本机的 127.0.0.1 mock 服务：改读打包进
+    // assets 的同一份 json（路径规则与服务端一致：`<url>.json`）。
+    if (kReleaseMode) {
+      debugPrint("release 模式：读取本地 mock $url");
+      return _loadLocalMock(url);
+    }
     debugPrint("开始网络请求：$url");
     final path = url.startsWith('/') ? url : '/$url';
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
@@ -37,5 +48,31 @@ class Network {
     } finally {
       client.close(force: true);
     }
+  }
+
+  /// 读 `assets/mock/<路径>.json`（与服务端 [MockRoute] 的路径规则一致）：
+  /// `/app/home`、`app/home.json` 都映射到 `assets/mock/app/home.json`。
+  static Future<Map> _loadLocalMock(String url) async {
+    final segments = Uri.parse(url)
+        .pathSegments
+        .where((s) => s.isNotEmpty)
+        .toList();
+    for (final s in segments) {
+      if (s == '.' || s == '..' || s.contains('\\')) {
+        throw ArgumentError('非法的接口路径：$url');
+      }
+    }
+    var rel = segments.join('/');
+    if (rel.isEmpty) rel = 'index';
+    if (!rel.endsWith('.json')) rel = '$rel.json';
+    final asset = '$_localMockRoot/$rel';
+    late final String text;
+    try {
+      text = await rootBundle.loadString(asset);
+    } catch (e) {
+      // 不静默：release 读不到离线副本时必须让调用方看到是哪个 asset 缺了。
+      throw StateError('release 模式缺少本地 mock：$asset（$e）');
+    }
+    return jsonDecode(text) as Map;
   }
 }

@@ -1,0 +1,8 @@
+{
+  "floors": [
+    { "type": "banner" },
+    { "type": "grid" },
+    { "type": "promo" },
+    { "type": "spots" }
+  ]
+}

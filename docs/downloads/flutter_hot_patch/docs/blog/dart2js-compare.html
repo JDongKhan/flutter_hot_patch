@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dart → JS 语法对照 · flutter_hot_patch</title>
+<meta name="description" content="Dart 语法与 JS 产物的并排源码对照：变量、类型、空安全、控制流、集合、函数、类、异常、异步、Stream 与运行时补齐。">
+<meta name="theme-color" content="#f6f5f2">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e7490'/%3E%3Cpath d='M18 4 7 19h8l-1 9 11-15h-8l1-9z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f6f5f2;--surface:#fff;--surface-2:#efeee9;--surface-3:#e7e5df;
+  --ink:#15181e;--ink-2:#343a45;--muted:#6a7180;--line:#e2e0da;--line-strong:#cbc8bf;
+  --accent:#4f46e5;--accent-2:#0e7490;--accent-soft:rgba(79,70,229,.075);--accent-line:rgba(79,70,229,.22);
+  --green:#047857;--green-soft:#e7f6ef;--amber:#a16207;--amber-soft:#fdf4e3;
+  --red:#b42318;--red-soft:#fdeceb;
+  --code-bg:#151820;--code-ink:#e6e9f2;--code-muted:#8b93a7;
+  --sidebar-w:268px;--radius:14px;--shadow:0 1px 2px rgba(16,24,40,.04),0 10px 30px rgba(16,24,40,.055);
+  --mono:"SFMono-Regular","JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#0f1115;--surface:#161920;--surface-2:#1b1f28;--surface-3:#232834;
+  --ink:#e9ebf1;--ink-2:#c3c8d4;--muted:#98a1b2;--line:#282e3a;--line-strong:#3b4352;
+  --accent:#8f97ff;--accent-2:#38bdf8;--accent-soft:rgba(143,151,255,.11);--accent-line:rgba(143,151,255,.3);
+  --green:#34d399;--green-soft:rgba(52,211,153,.1);--amber:#fbbf24;--amber-soft:rgba(251,191,36,.1);
+  --red:#fb7185;--red-soft:rgba(251,113,133,.1);
+  --code-bg:#0b0d12;--code-ink:#e6e9f2;--code-muted:#8b93a7;
+  --shadow:0 1px 2px rgba(0,0,0,.25),0 18px 40px rgba(0,0,0,.28);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:hidden;overflow-x:clip;color-scheme:light}
+[data-theme="dark"]{color-scheme:dark}
+body{margin:0;overflow-x:hidden;overflow-x:clip;background:var(--bg);color:var(--ink);font:15px/1.7 var(--sans);-webkit-font-smoothing:antialiased}
+body.menu-open{overflow:hidden}
+::selection{background:var(--accent-soft);color:var(--ink)}
+a{color:var(--accent);text-decoration:none}a:hover{text-underline-offset:3px}
+code,pre{font-family:var(--mono)}
+h1,h2,h3,h4{line-height:1.22;letter-spacing:-.02em;margin:0}
+p{margin:0 0 1em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.progress{position:fixed;inset:0 0 auto 0;height:2px;z-index:120;pointer-events:none}
+.progress i{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:0 50%;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar-w);z-index:90;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;padding:20px 18px 14px;color:var(--ink)}
+.brand:hover{text-decoration:none}
+.brand-mark{width:32px;height:32px;border-radius:9px;flex:none;display:grid;place-items:center;background:linear-gradient(140deg,var(--accent),var(--accent-2));color:#fff;font:700 13px var(--mono);box-shadow:0 6px 16px rgba(79,70,229,.28)}
+.brand b{display:block;font-size:14px;line-height:1.2}.brand small{display:block;font:9.5px var(--mono);letter-spacing:.15em;color:var(--muted);margin-top:3px}
+#toc{flex:1;overflow-y:auto;padding:2px 10px 16px}
+.nav-group{margin:16px 0 4px}
+.nav-label{padding:0 9px;margin-bottom:5px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.nav-link{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:7px;color:var(--ink-2);font-size:12.8px;text-decoration:none;position:relative}
+.nav-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
+.nav-link.active{background:var(--accent-soft);color:var(--accent);font-weight:650}
+.nav-link.active::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--accent)}
+.nav-link .count{flex:none;width:18px;text-align:right;font:10px var(--mono);color:var(--muted)}
+.nav-link.active .count{color:var(--accent)}
+.back{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:7px;color:var(--muted);font-size:12px}
+.back:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
+.side-foot{border-top:1px solid var(--line);padding:12px 18px;font:10px var(--mono);color:var(--muted);display:flex;justify-content:space-between}
+.scrim{position:fixed;inset:0;z-index:80;background:rgba(10,12,18,.46);opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.show{opacity:1;pointer-events:auto}
+.main{margin-left:var(--sidebar-w);min-height:100vh}
+.topbar{position:sticky;top:0;z-index:70;height:58px;display:flex;align-items:center;gap:13px;padding:0 28px;background:var(--bg);background:color-mix(in srgb,var(--bg) 96%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.menu-btn{display:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);align-items:center;justify-content:center;cursor:pointer}
+.crumb{font:10.5px var(--mono);color:var(--muted)}
+.crumb b{color:var(--ink-2)}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.top-link{font-size:12px;color:var(--muted);padding:5px 9px;border-radius:7px}
+.top-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);display:grid;place-items:center;cursor:pointer}
+.icon-btn svg{width:15px;height:15px}
+[data-theme="light"] .icon-sun,[data-theme="dark"] .icon-moon{display:none}
+.wrap{max-width:1120px;margin:0 auto;padding:0 46px 100px}
+.hero{padding:54px 0 24px;position:relative;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:-90px -80px 0 -80px;z-index:-1;background:radial-gradient(560px 300px at 8% 8%,var(--accent-soft),transparent 70%),radial-gradient(460px 260px at 95% 22%,rgba(14,116,144,.08),transparent 72%);pointer-events:none}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font:600 10.5px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.hero h1{margin:16px 0 16px;font-size:clamp(34px,4.2vw,54px);font-weight:820;letter-spacing:-.045em;line-height:1.1}
+.hero h1 span{background:linear-gradient(100deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{max-width:760px;font-size:16px;line-height:1.8;color:var(--ink-2)}
+.hero-actions{display:flex;flex-wrap:wrap;gap:9px;margin:20px 0 18px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:8px;font-size:12.5px;font-weight:650;border:1px solid transparent;text-decoration:none}
+.btn:hover{text-decoration:none;transform:translateY(-1px)}
+.btn-primary{background:var(--ink);color:var(--bg)}
+.btn-ghost{background:var(--surface);color:var(--ink-2);border-color:var(--line)}
+.btn svg{width:13px;height:13px}
+.hero-stats{display:flex;flex-wrap:wrap;gap:10px 22px;margin:6px 0 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.hero-stats b{display:block;font:700 22px var(--sans);letter-spacing:-.03em;color:var(--ink);line-height:1.1}
+.hero-note{margin-top:13px;font-size:11.5px;color:var(--muted);line-height:1.7}
+.hero-note .tag{margin:0 2px}
+.filterbar{position:sticky;top:58px;z-index:60;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;margin-bottom:6px;background:var(--bg);background:color-mix(in srgb,var(--bg) 94%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.search{position:relative;flex:0 0 260px}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--muted)}
+.search input{width:100%;height:32px;padding:0 9px 0 28px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);color:var(--ink);font:12px var(--sans)}
+.search input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.filters{display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:6px;padding:3px 8px;font:11px var(--sans);cursor:pointer}
+.chip:hover{color:var(--ink);border-color:var(--line-strong)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent);font-weight:650}
+.filterbar .count{margin-left:auto;font:10.5px var(--mono);color:var(--muted)}
+.category{padding:40px 0 4px;border-top:1px solid var(--line);scroll-margin-top:112px}
+.sec-head{max-width:800px;margin-bottom:16px}
+.kicker{font:600 10px var(--mono);letter-spacing:.14em;color:var(--accent);margin-bottom:7px}
+.sec-head h2{font-size:clamp(22px,2.4vw,28px);font-weight:780;letter-spacing:-.03em;margin-bottom:7px}
+.sec-head p{margin:0;color:var(--muted);font-size:13.2px;line-height:1.7}
+.cmp{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:14px 0;overflow:hidden;box-shadow:var(--shadow)}
+.cmp[hidden]{display:none}
+.cmp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 6px}
+.cmp-title{display:flex;align-items:baseline;gap:10px;min-width:0}
+.cmp-no{font:10px var(--mono);color:var(--accent);letter-spacing:.04em}
+.cmp h3{font-size:15px;font-weight:700;letter-spacing:-.015em;margin:0}
+.cmp-note{margin:0;padding:0 16px 12px;color:var(--muted);font-size:12px;line-height:1.65}
+.code-pair{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);background:var(--code-bg)}
+.code-pane{min-width:0;background:var(--code-bg)}
+.code-pane + .code-pane{border-left:1px solid #2a303c}
+.pane-head{display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:#1b1f29;border-bottom:1px solid #262b36}
+.lang{font:9.5px var(--mono);letter-spacing:.1em;color:#8b93a7}
+.copy{border:1px solid #333947;background:transparent;color:#98a1b4;font:9.5px var(--mono);padding:2px 7px;border-radius:4px;cursor:pointer}
+.copy:hover{color:#e6e9f2;border-color:#4b5366}
+.code-pane pre{margin:0;padding:12px 13px 14px;overflow-x:auto;color:var(--code-ink);font-size:11.4px;line-height:1.62;tab-size:2}
+.code-pane pre::-webkit-scrollbar{height:7px}
+.code-pane pre::-webkit-scrollbar-thumb{background:#333947;border-radius:4px}
+.code-pane code{background:none;border:0;padding:0;font:inherit;color:inherit}
+.k{color:#c9a2ff}.s{color:#9ee6b8}.c{color:#727b90;font-style:italic}.n{color:#f0b37e}.a{color:#8fd8f2}
+.tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:999px;font:650 10px/1.7 var(--sans);white-space:nowrap;border:1px solid transparent}
+.tag.green{background:var(--green-soft);color:var(--green)}
+.tag.amber{background:var(--amber-soft);color:var(--amber)}
+.tag.violet{background:var(--accent-soft);color:var(--accent)}
+.tag.cyan{background:rgba(14,116,144,.09);color:var(--accent-2)}
+.tag.red{background:var(--red-soft);color:var(--red)}
+[data-theme="dark"] .tag.cyan{background:rgba(56,189,248,.1)}
+.empty{display:none;padding:40px 0;text-align:center;color:var(--muted);font-size:13px}
+.empty.show{display:block}
+.footer{margin-top:40px;padding:20px 0 0;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--muted)}
+.footer a{color:var(--muted)}.footer a:hover{color:var(--accent)}
+.back-top{position:fixed;right:20px;bottom:20px;z-index:60;width:36px;height:36px;border-radius:9px;background:var(--surface);border:1px solid var(--line);color:var(--ink-2);display:grid;place-items:center;box-shadow:var(--shadow);opacity:0;pointer-events:none;transform:translateY(6px);transition:.2s}
+.back-top.show{opacity:1;pointer-events:auto;transform:none}
+.back-top svg{width:14px;height:14px}
+@media (max-width:1180px){.wrap{padding-left:36px;padding-right:36px}}
+@media (max-width:1100px){.sidebar{transform:translateX(-102%);transition:transform .22s;box-shadow:0 0 40px rgba(0,0,0,.2)}.sidebar.open{transform:none}.main{margin-left:0}.menu-btn{display:flex}.wrap{padding:0 28px 80px}.topbar{padding:0 20px}}
+@media (max-width:760px){body{font-size:14.5px}.wrap{padding:0 16px 60px}.topbar{height:54px;padding:0 13px}.top-link{display:none}.hero{padding-top:36px}.hero h1{font-size:clamp(31px,8vw,42px)}.hero p{font-size:14.5px}.hero-stats{gap:10px 18px}.hero-stats b{font-size:20px}.filterbar{position:static;top:auto}.search{flex:1 1 100%}.filterbar .count{width:100%;margin-left:0}.code-pair{grid-template-columns:1fr}.code-pane + .code-pane{border-left:0;border-top:1px solid #2a303c}.cmp-head{padding:12px 13px 5px}.cmp-note{padding:0 13px 10px}.code-pane pre{font-size:11px}.category{scroll-margin-top:80px}}
+@media (max-width:430px){.hero-actions .btn{width:100%;justify-content:center}}
+@media print{.sidebar,.topbar,.filterbar,.progress,.back-top,.scrim,.copy{display:none!important}.main{margin:0}.wrap{max-width:none;padding:0}.cmp{box-shadow:none;break-inside:avoid}.code-pair{grid-template-columns:1fr 1fr}.category{break-inside:avoid}h1,h2{color:#000}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="progress" aria-hidden="true"><i></i></div>
+<aside class="sidebar" id="sidebar" aria-label="语法目录">
+  <a class="brand" href="tech-blog.html">
+    <span class="brand-mark" aria-hidden="true">{ }</span>
+    <span><b>dart2js</b><small>SYNTAX MAP · 61 CASES</small></span>
+  </a>
+  <nav id="toc" aria-label="语法分类">
+    <div class="nav-group">
+      <div class="nav-label">开始</div>
+      <a class="nav-link" href="#overview"><span class="count">00</span>概览与阅读方式</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">语法类型</div>
+      <a class="nav-link" href="#basics"><span class="count">5</span>基础语法</a>
+<a class="nav-link" href="#types"><span class="count">7</span>类型与空安全</a>
+<a class="nav-link" href="#flow"><span class="count">6</span>控制流</a>
+<a class="nav-link" href="#collections"><span class="count">7</span>集合与迭代</a>
+<a class="nav-link" href="#functions"><span class="count">7</span>函数与闭包</a>
+<a class="nav-link" href="#classes"><span class="count">11</span>类与对象</a>
+<a class="nav-link" href="#async"><span class="count">10</span>异常与异步</a>
+<a class="nav-link" href="#runtime"><span class="count">8</span>运行时补齐与不适用</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">相关</div>
+      <a class="back" href="tech-blog.html">← 返回技术博客</a>
+      <a class="back" href="tech-blog.html#lang">↗ 语言翻译能力总览</a>
+    </div>
+  </nav>
+  <div class="side-foot"><span>protocol 0.13.0</span><span>MIT</span></div>
+</aside>
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+
+<div class="main">
+  <header class="topbar">
+    <button class="menu-btn" id="menuBtn" aria-label="打开目录" aria-expanded="false" aria-controls="sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div class="crumb">docs / <b>dart2js 语法对照</b></div>
+    <div class="top-actions">
+      <a class="top-link" href="tech-blog.html">返回博客</a>
+      <button class="icon-btn" id="themeBtn" aria-label="切换深浅色主题" title="切换深浅色主题">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="overview" class="hero">
+      <span class="eyebrow">DART2JS · SYNTAX MAP</span>
+      <h1>同一条 Dart 语法，<br><span>左右对照。</span></h1>
+      <p>每一张卡片都是 Dart 源码与当前 JS 产物形态的并排对照。覆盖声明、类型、空安全、控制流、集合、函数、类、异常、异步、Stream 与运行时补齐；共 61 个场景，按语法类型分组。</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="tech-blog.html">← 返回技术博客</a>
+        <a class="btn btn-ghost" href="#basics">开始对照
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+        </a>
+      </div>
+      <div class="hero-stats">
+        <span><b>61</b>源码对照场景</span>
+        <span><b>8</b>语法类型</span>
+        <span><b>5</b>类判定标签</span>
+        <span><b>2</b>栏 Dart / JS</span>
+      </div>
+      <p class="hero-note">形态示意（节选，非逐字产物）：类名、字段名、方法名与 build 树保持 Dart 原貌；运行时细节可能被省略。判定沿用手册四级标签（直译 / 注意 / 扩展 / 必须改写）；明确不翻译的场景标记为「不适用」：
+        <span class="tag green">直译</span><span class="tag amber">注意</span><span class="tag violet">扩展</span><span class="tag cyan">必须改写</span><span class="tag red">不适用</span>
+      </p>
+    </section>
+
+    <div class="filterbar">
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="filterInput" type="search" placeholder="筛选场景 / 关键字…" autocomplete="off" aria-label="筛选场景">
+      </label>
+      <div class="filters" role="group" aria-label="按判定筛选">
+        <button class="chip on" data-status="全部">全部</button>
+        <button class="chip" data-status="直译">直译</button>
+        <button class="chip" data-status="注意">注意</button>
+        <button class="chip" data-status="扩展">扩展</button>
+        <button class="chip" data-status="必须改写">必须改写</button>
+        <button class="chip" data-status="不适用">不适用</button>
+      </div>
+      <span class="count" id="resultCount">61 / 61</span>
+    </div>
+    <div class="empty" id="empty">没有匹配的场景，清空筛选后重试。</div>
+
+    <section class="category" id="basics">
+  <div class="sec-head">
+    <div class="kicker">01 / BASICS</div>
+    <h2>基础语法</h2>
+    <p>声明、运算符、级联与表达式。多数与 JS 同形；级联和 `~/` 是例外。</p>
+  </div>
+  <article class="cmp" data-status="直译" data-search="变量与常量 final 是只读引用，const 是编译期常量；const 构造 / 集合按站点缓存。 基础语法">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">01</span><h3>变量与常量</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">final 是只读引用，const 是编译期常量；const 构造 / 集合按站点缓存。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> name = <span class="s">&#x27;Ada&#x27;</span>;
+<span class="k">const</span> limit = <span class="n">100</span>;
+<span class="k">var</span> count = <span class="n">0</span>;
+
+count = count + <span class="n">1</span>;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">let</span> name = <span class="s">&quot;Ada&quot;</span>;
+<span class="k">const</span> limit = <span class="n">100</span>;
+<span class="k">let</span> count = <span class="n">0</span>;
+
+count = count + <span class="n">1</span>;</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="直译" data-search="字符串插值 插值表达式按同一套表达式翻译；相邻字符串字面量会拼接。 基础语法">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">02</span><h3>字符串插值</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">插值表达式按同一套表达式翻译；相邻字符串字面量会拼接。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> user = <span class="s">&#x27;Ada&#x27;</span>;
+<span class="k">final</span> msg = <span class="s">&#x27;Hi, $user (${user.length})&#x27;</span>;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">let</span> user = <span class="s">&quot;Ada&quot;</span>;
+<span class="k">let</span> msg = <span class="s">&quot;Hi, &quot;</span> + user + <span class="s">&quot; (&quot;</span> + user.length + <span class="s">&quot;)&quot;</span>;</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="算术与整除 ~/ 展开为 math.trunc；% 在正数下同义，负数取模由运行时的 __mod 承接。 基础语法">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">03</span><h3>算术与整除</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">~/ 展开为 Math.trunc；% 在正数下同义，负数取模由运行时的 __mod 承接。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> q = <span class="n">7</span> ~/ <span class="n">2</span>;
+<span class="k">final</span> r = <span class="n">7</span> % <span class="n">2</span>;
+<span class="k">final</span> area = width * height;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">let</span> q = <span class="k">Math</span>.trunc(<span class="n">7</span> / <span class="n">2</span>);
+<span class="k">let</span> r = <span class="n">7</span> % <span class="n">2</span>;
+<span class="k">let</span> area = width * height;</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="级联 返回 target 的 iife；target 只求值一次，空安全级联在入口加非空守卫。 基础语法">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">04</span><h3>级联</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">返回 target 的 IIFE；target 只求值一次，空安全级联在入口加非空守卫。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> paint = Paint()
+  ..color = Colors.red
+  ..strokeWidth = <span class="n">2</span>;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> paint = ((_t) =&gt; {
+  _t.color = Colors.red;
+  _t.strokeWidth = <span class="n">2</span>;
+  <span class="k">return</span> _t;
+})(<span class="k">new</span> Paint());</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="三目、?? 与逻辑运算 同形；?? 与其它运算组合时重建括号；逻辑运算的返回值按 js 口径。 基础语法">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">05</span><h3>三目、?? 与逻辑运算</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">同形；?? 与其它运算组合时重建括号；逻辑运算的返回值按 JS 口径。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> label = isAdult ? <span class="s">&#x27;adult&#x27;</span> : <span class="s">&#x27;minor&#x27;</span>;
+<span class="k">final</span> name = user?.name ?? <span class="s">&#x27;guest&#x27;</span>;
+<span class="k">final</span> ok = a &gt; <span class="n">0</span> &amp;&amp; b &gt; <span class="n">0</span>;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">let</span> label = isAdult ? <span class="s">&quot;adult&quot;</span> : <span class="s">&quot;minor&quot;</span>;
+<span class="k">let</span> name = (user?.name) ?? <span class="s">&quot;guest&quot;</span>;
+<span class="k">let</span> ok = a &gt; <span class="n">0</span> &amp;&amp; b &gt; <span class="n">0</span>;</code></pre>
+    </div>
+  </div>
+</article>
+</section>
+<section class="category" id="types">
+  <div class="sec-head">
+    <div class="kicker">02 / TYPES & NULL SAFETY</div>
+    <h2>类型与空安全</h2>
+    <p>类型判定、可选链、空安全赋值、模式匹配与 Record。</p>
+  </div>
+  <article class="cmp" data-status="必须改写" data-search="is / is! 按 typetestjs 分派：string 用 typeof，list 用 array.isarray，自定义类用 instanceof。 类型与空安全">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">01</span><h3>is / is!</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">按 typeTestJs 分派：String 用 typeof，List 用 Array.isArray，自定义类用 instanceof。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">if</span> (value is <span class="k">String</span>) {
+  <span class="k">print</span>(value.length);
+}
+<span class="k">final</span> isList = value is <span class="k">List</span>&lt;<span class="k">int</span>&gt;;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">if</span> (<span class="k">typeof</span> value === <span class="s">&quot;string&quot;</span>) {
+  <span class="k">console</span>.log(value.length);
+}
+<span class="k">const</span> isList = <span class="k">Array</span>.isArray(value);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="直译" data-search="as 类型断言 as 在 js 侧擦除（含类型参数）；需要运行时校验请显式写 is。 类型与空安全">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">02</span><h3>as 类型断言</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">as 在 JS 侧擦除（含类型参数）；需要运行时校验请显式写 is。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> text = value <span class="k">as</span> <span class="k">String</span>;
+<span class="k">final</span> list = value <span class="k">as</span> <span class="k">List</span>&lt;<span class="k">int</span>&gt;;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> text = value;
+<span class="k">const</span> list = value;</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="直译" data-search="空安全读取 js 原生可选链；接收者只求值一次，null / undefined 时整链短路。 类型与空安全">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">03</span><h3>空安全读取</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">JS 原生可选链；接收者只求值一次，null / undefined 时整链短路。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> city = user?.address?.city;
+<span class="k">final</span> first = list?[<span class="n">0</span>];
+<span class="k">final</span> name = user?.getName();</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">let</span> city = user?.address?.city;
+<span class="k">let</span> first = list?.[<span class="n">0</span>];
+<span class="k">let</span> name = user?.getName();</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="空安全赋值 js 可选链不能作赋值目标；落成接收者单次求值的守卫 iife，为空时整条赋值跳过。 类型与空安全">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">04</span><h3>空安全赋值</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">JS 可选链不能作赋值目标；落成接收者单次求值的守卫 IIFE，为空时整条赋值跳过。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code>user?.name = <span class="s">&#x27;Ada&#x27;</span>;
+list?[<span class="n">0</span>] = item;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code>((_t) =&gt; { <span class="k">if</span> (_t != <span class="k">null</span>) _t.name = <span class="s">&quot;Ada&quot;</span>; })(user);
+((_t) =&gt; { <span class="k">if</span> (_t != <span class="k">null</span>) _t[<span class="n">0</span>] = item; })(list);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="??= 与链式赋值 ??= 原样发射；赋值作为表达式时，值语义为赋值结果。 类型与空安全">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">05</span><h3>??= 与链式赋值</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">??= 原样发射；赋值作为表达式时，值语义为赋值结果。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code>count ??= <span class="n">0</span>;
+name ??= <span class="s">&#x27;guest&#x27;</span>;
+<span class="k">final</span> next = count += <span class="n">1</span>;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code>count ??= <span class="n">0</span>;
+name ??= <span class="s">&quot;guest&quot;</span>;
+<span class="k">const</span> next = (count += <span class="n">1</span>);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="模式匹配 if-case / switch guard 单次求值；绑定只在命中分支可见。 类型与空安全">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">06</span><h3>模式匹配</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">if-case / switch guard 单次求值；绑定只在命中分支可见。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">if</span> (value <span class="k">case</span> User(:name) when name.isNotEmpty) {
+  <span class="k">print</span>(name);
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">if</span> (value <span class="k">instanceof</span> User &amp;&amp; value.name != <span class="k">null</span> &amp;&amp; value.name.length &gt; <span class="n">0</span>) {
+  <span class="k">const</span> name = value.name;
+  <span class="k">console</span>.log(name);
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="record 位置字段 $1..$n、命名字段原名；record 的结构相等不伪造。 类型与空安全">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">07</span><h3>Record</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">位置字段 $1..$N、命名字段原名；Record 的结构相等不伪造。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> point = (<span class="n">1</span>, <span class="s">&#x27;a&#x27;</span>);
+<span class="k">final</span> named = (x: <span class="n">1</span>, y: <span class="n">2</span>);
+
+<span class="k">print</span>(point.$1);
+<span class="k">print</span>(named.x);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> point = { <span class="s">&quot;$1&quot;</span>: <span class="n">1</span>, <span class="s">&quot;$2&quot;</span>: <span class="s">&quot;a&quot;</span> };
+<span class="k">const</span> named = { x: <span class="n">1</span>, y: <span class="n">2</span> };
+
+<span class="k">console</span>.log(point.$1);
+<span class="k">console</span>.log(named.x);</code></pre>
+    </div>
+  </div>
+</article>
+</section>
+<section class="category" id="flow">
+  <div class="sec-head">
+    <div class="kicker">03 / CONTROL FLOW</div>
+    <h2>控制流</h2>
+    <p>if / for / switch / label；差异集中在 switch 的隐式 break 与表达式形态。</p>
+  </div>
+  <article class="cmp" data-status="直译" data-search="if / while / for 基本结构同形；for 的三段式原样发射。 控制流">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">01</span><h3>if / while / for</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">基本结构同形；for 的三段式原样发射。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">for</span> (<span class="k">var</span> i = <span class="n">0</span>; i &lt; <span class="n">3</span>; i++) {
+  <span class="k">print</span>(i);
+}
+<span class="k">while</span> (ready) {
+  tick();
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i &lt; <span class="n">3</span>; i++) {
+  <span class="k">console</span>.log(i);
+}
+<span class="k">while</span> (ready) {
+  tick();
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="直译" data-search="for-in dart 的 in → js 的 of；遍历依赖 [symbol.iterator]。 控制流">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">02</span><h3>for-in</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">Dart 的 in → JS 的 of；遍历依赖 [Symbol.iterator]。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">for</span> (<span class="k">final</span> item <span class="k">in</span> items) {
+  <span class="k">print</span>(item.name);
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">for</span> (<span class="k">const</span> item <span class="k">of</span> items) {
+  <span class="k">console</span>.log(item.name);
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="switch 自动 break dart 3 隐式 break；翻译器在每个 case 末尾补 break，避免 js 穿透。 控制流">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">03</span><h3>switch 自动 break</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">Dart 3 隐式 break；翻译器在每个 case 末尾补 break，避免 JS 穿透。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">switch</span> (status) {
+  <span class="k">case</span> Status.ok:
+    <span class="k">print</span>(<span class="s">&#x27;ok&#x27;</span>);
+  <span class="k">case</span> Status.error:
+    <span class="k">print</span>(<span class="s">&#x27;error&#x27;</span>);
+  <span class="k">default</span>:
+    <span class="k">print</span>(<span class="s">&#x27;unknown&#x27;</span>);
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">switch</span> (status) {
+  <span class="k">case</span> Status.ok:
+    <span class="k">console</span>.log(<span class="s">&quot;ok&quot;</span>);
+    <span class="k">break</span>;
+  <span class="k">case</span> Status.error:
+    <span class="k">console</span>.log(<span class="s">&quot;error&quot;</span>);
+    <span class="k">break</span>;
+  <span class="k">default</span>:
+    <span class="k">console</span>.log(<span class="s">&quot;unknown&quot;</span>);
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="switch 表达式 落成 iife 内的原生 switch 或 if 链；模式条件写成 switch (true)。 控制流">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">04</span><h3>switch 表达式</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">落成 IIFE 内的原生 switch 或 if 链；模式条件写成 switch (true)。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> label = <span class="k">switch</span> (code) {
+  <span class="n">200</span> =&gt; <span class="s">&#x27;ok&#x27;</span>,
+  &gt;= <span class="n">400</span> &amp;&amp; &lt; <span class="n">500</span> =&gt; <span class="s">&#x27;client&#x27;</span>,
+  _ =&gt; <span class="s">&#x27;other&#x27;</span>,
+};</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> label = (() =&gt; {
+  <span class="k">switch</span> (<span class="k">true</span>) {
+    <span class="k">case</span> code === <span class="n">200</span>: <span class="k">return</span> <span class="s">&quot;ok&quot;</span>;
+    <span class="k">case</span> code &gt;= <span class="n">400</span> &amp;&amp; code &lt; <span class="n">500</span>: <span class="k">return</span> <span class="s">&quot;client&quot;</span>;
+    <span class="k">default</span>: <span class="k">return</span> <span class="s">&quot;other&quot;</span>;
+  }
+})();</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="直译" data-search="label 与 break / continue dart 标签在循环前，js 标签在语句前；一比一发射。 控制流">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">05</span><h3>label 与 break / continue</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">Dart 标签在循环前，JS 标签在语句前；一比一发射。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code>outer:
+<span class="k">for</span> (<span class="k">final</span> row <span class="k">in</span> rows) {
+  <span class="k">for</span> (<span class="k">final</span> cell <span class="k">in</span> row) {
+    <span class="k">if</span> (cell == <span class="k">null</span>) <span class="k">continue</span> outer;
+    <span class="k">print</span>(cell);
+  }
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code>outer:
+<span class="k">for</span> (<span class="k">const</span> row <span class="k">of</span> rows) {
+  <span class="k">for</span> (<span class="k">const</span> cell <span class="k">of</span> row) {
+    <span class="k">if</span> (cell == <span class="k">null</span>) <span class="k">continue</span> outer;
+    <span class="k">console</span>.log(cell);
+  }
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="switch 模式与 guard 控制流 条件 iife">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">06</span><h3>switch 模式与 guard</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">含非常量模式或 when 的 switch 落成 switch (true) + 条件 IIFE；保持源码顺序、空 case 贯穿与 break / continue 语义。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">switch</span> (value) {
+  <span class="k">case</span> User(:name) when name != <span class="s">&#x27;&#x27;</span>:
+    <span class="k">print</span>(name);
+  <span class="k">case</span> [<span class="k">int</span> a, <span class="k">int</span> b] when a &lt; b:
+    <span class="k">print</span>(a + b);
+  <span class="k">default</span>:
+    <span class="k">print</span>(<span class="s">&#x27;other&#x27;</span>);
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">switch</span> (<span class="k">true</span>) {
+  <span class="k">case</span> (() =&gt; {
+    <span class="k">if</span> (!(value <span class="k">instanceof</span> User)) <span class="k">return</span> <span class="k">false</span>;
+    <span class="k">const</span> name = value.name;
+    <span class="k">return</span> name != <span class="s">&quot;&quot;</span>;
+  })():
+    <span class="k">console</span>.log(value.name);
+    <span class="k">break</span>;
+  <span class="k">case</span> (() =&gt; {
+    <span class="k">if</span> (!<span class="k">Array</span>.isArray(value) || value.length !== <span class="n">2</span>) <span class="k">return</span> <span class="k">false</span>;
+    <span class="k">return</span> Number.isInteger(value[<span class="n">0</span>]) &amp;&amp; Number.isInteger(value[<span class="n">1</span>]) &amp;&amp; value[<span class="n">0</span>] &lt; value[<span class="n">1</span>];
+  })():
+    <span class="k">console</span>.log(value[<span class="n">0</span>] + value[<span class="n">1</span>]);
+    <span class="k">break</span>;
+  <span class="k">default</span>:
+    <span class="k">console</span>.log(<span class="s">&quot;other&quot;</span>);
+}</code></pre>
+    </div>
+  </div>
+</article>
+</section>
+<section class="category" id="collections">
+  <div class="sec-head">
+    <div class="kicker">04 / COLLECTIONS</div>
+    <h2>集合与迭代</h2>
+    <p>List / Map / Set / Iterable；名字映射只对可判定的内建接收者生效。</p>
+  </div>
+  <article class="cmp" data-status="注意" data-search="list 字面量与下标 list → array；add 等方法由 array.prototype 补齐；越界行为接受差异。 集合与迭代">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">01</span><h3>List 字面量与下标</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">List → Array；add 等方法由 Array.prototype 补齐；越界行为接受差异。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> list = &lt;<span class="k">int</span>&gt;[<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>];
+list.add(<span class="n">4</span>);
+<span class="k">final</span> first = list[<span class="n">0</span>];</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> list = [<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>];
+list.add(<span class="n">4</span>);
+<span class="k">const</span> first = list[<span class="n">0</span>];</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="list 高阶 api map → _map；sort / join / indexof 等按名字映射表改名；where 返回惰性 iterable。 集合与迭代">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">02</span><h3>List 高阶 API</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">map → _map；sort / join / indexOf 等按名字映射表改名；where 返回惰性 Iterable。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> names = users.map((u) =&gt; u.name).toList();
+<span class="k">final</span> adults = users.where((u) =&gt; u.age &gt;= <span class="n">18</span>);
+<span class="k">final</span> sorted = names..sort();
+<span class="k">final</span> joined = sorted.join(<span class="s">&#x27;,&#x27;</span>);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> names = users._map((u) =&gt; u.name).toList();
+<span class="k">const</span> adults = users.where((u) =&gt; u.age &gt;= <span class="n">18</span>); <span class="c">// LazyIterable</span>
+<span class="k">const</span> sorted = names._sort();
+<span class="k">const</span> joined = sorted._join(<span class="s">&quot;,&quot;</span>);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="iterable 惰性 where / expand / take / skip 返回 lazyiterable：调用时零副作用，消费时才迭代。 集合与迭代">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">03</span><h3>Iterable 惰性</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">where / expand / take / skip 返回 LazyIterable：调用时零副作用，消费时才迭代。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> result = items
+    .where((x) =&gt; x &gt; <span class="n">0</span>)
+    .map((x) =&gt; x * <span class="n">2</span>)
+    .take(<span class="n">3</span>)
+    .toList();</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> result = items
+    .where((x) =&gt; x &gt; <span class="n">0</span>)
+    ._map((x) =&gt; x * <span class="n">2</span>)
+    .take(<span class="n">3</span>)
+    .toList();</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="map 字面量与下标 map 字面量 → 原生 map；下标按接收者类型改写为 __idx / __idxset，未命中归一为 null。 集合与迭代">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">04</span><h3>Map 字面量与下标</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">Map 字面量 → 原生 Map；下标按接收者类型改写为 __idx / __idxSet，未命中归一为 null。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> scores = &lt;<span class="k">String</span>, <span class="k">int</span>&gt;{<span class="s">&#x27;math&#x27;</span>: <span class="n">100</span>};
+scores[<span class="s">&#x27;physics&#x27;</span>] = <span class="n">66</span>;
+<span class="k">final</span> math = scores[<span class="s">&#x27;math&#x27;</span>];
+<span class="k">final</span> keys = scores.keys;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> scores = <span class="k">new</span> <span class="k">Map</span>([[<span class="s">&quot;math&quot;</span>, <span class="n">100</span>]]);
+__idxSet(scores, <span class="s">&quot;physics&quot;</span>, <span class="n">66</span>);
+<span class="k">const</span> math = __nn(__idx(scores, <span class="s">&quot;math&quot;</span>));
+<span class="k">const</span> keys = scores._keys;</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="map 成员与 foreach keys / values / entries 改名为 _keys / _values / _entries；foreach 回调参数顺序在调用点交换。 集合与迭代">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">05</span><h3>Map 成员与 forEach</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">keys / values / entries 改名为 _keys / _values / _entries；forEach 回调参数顺序在调用点交换。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code>scores.forEach((k, v) =&gt; <span class="k">print</span>(<span class="s">&#x27;$k=$v&#x27;</span>));
+<span class="k">final</span> found = scores.containsKey(<span class="s">&#x27;math&#x27;</span>);
+scores.remove(<span class="s">&#x27;math&#x27;</span>);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code>scores.forEach((v, k) =&gt; <span class="k">console</span>.log(k + <span class="s">&quot;=&quot;</span> + v));
+<span class="k">const</span> found = scores.containsKey(<span class="s">&quot;math&quot;</span>);
+scores.remove(<span class="s">&quot;math&quot;</span>);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="set set 字面量 → 原生 set；dart 同名成员按需在 set.prototype 上补齐。 集合与迭代">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">06</span><h3>Set</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">Set 字面量 → 原生 Set；Dart 同名成员按需在 Set.prototype 上补齐。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> ids = &lt;<span class="k">int</span>&gt;{<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>};
+ids.add(<span class="n">4</span>);
+<span class="k">final</span> has = ids.contains(<span class="n">1</span>);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> ids = <span class="k">new</span> <span class="k">Set</span>([<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>]);
+ids.add(<span class="n">4</span>);
+<span class="k">const</span> has = ids.contains(<span class="n">1</span>);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="collection-if / for / spread 条件元素 → 条件数组展开；collection-for → map 或立即执行的循环；...? 空安全展开为 []。 集合与迭代">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">07</span><h3>collection-if / for / spread</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">条件元素 → 条件数组展开；collection-for → map 或立即执行的循环；...? 空安全展开为 []。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> widgets = [
+  <span class="k">const</span> Header(),
+  <span class="k">if</span> (showBody) <span class="k">const</span> Body(),
+  <span class="k">for</span> (<span class="k">final</span> item <span class="k">in</span> items) Tile(item),
+  ...extras,
+];</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> widgets = [
+  <span class="k">new</span> Header({}),
+  ...(showBody ? [<span class="k">new</span> Body({})] : []),
+  ...(() =&gt; {
+    <span class="k">const</span> out = [];
+    <span class="k">for</span> (<span class="k">const</span> item <span class="k">of</span> items) out.push(<span class="k">new</span> Tile({ item }));
+    <span class="k">return</span> out;
+  })(),
+  ...extras,
+];</code></pre>
+    </div>
+  </div>
+</article>
+</section>
+<section class="category" id="functions">
+  <div class="sec-head">
+    <div class="kicker">05 / FUNCTIONS</div>
+    <h2>函数与闭包</h2>
+    <p>参数形态、泛型方法、tear-off、闭包与函数值调用。</p>
+  </div>
+  <article class="cmp" data-status="注意" data-search="位置参数 / 可选位置参数 位置参数保留；可选位置缺省在函数体开头补默认值。 函数与闭包">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">01</span><h3>位置参数 / 可选位置参数</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">位置参数保留；可选位置缺省在函数体开头补默认值。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">int</span> add(<span class="k">int</span> a, [<span class="k">int</span> b = <span class="n">1</span>]) =&gt; a + b;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">function</span> add(a, b) {
+  <span class="k">if</span> (b === <span class="k">undefined</span>) b = <span class="n">1</span>;
+  <span class="k">return</span> a + b;
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="具名参数与默认值 调用点把具名实参合并成尾参对象；定义侧用 __o 接住并解构。 函数与闭包">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">02</span><h3>具名参数与默认值</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">调用点把具名实参合并成尾参对象；定义侧用 __o 接住并解构。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">void</span> greet({<span class="k">required</span> <span class="k">String</span> name, <span class="k">String</span> prefix = <span class="s">&#x27;Hi&#x27;</span>}) {
+  <span class="k">print</span>(<span class="s">&#x27;$prefix, $name&#x27;</span>);
+}
+
+greet(name: <span class="s">&#x27;Ada&#x27;</span>);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">function</span> greet(__o) {
+  <span class="k">const</span> { name, prefix = <span class="s">&quot;Hi&quot;</span> } = __o || {};
+  <span class="k">console</span>.log(prefix + <span class="s">&quot;, &quot;</span> + name);
+}
+
+greet({ name: <span class="s">&quot;Ada&quot;</span> });</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="泛型方法 类型参数擦除；类型实参与具名实参共用尾参对象 typearguments。 函数与闭包">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">03</span><h3>泛型方法</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">类型参数擦除；类型实参与具名实参共用尾参对象 typeArguments。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code>T first&lt;T&gt;(<span class="k">List</span>&lt;T&gt; items) =&gt; items.first;
+
+<span class="k">final</span> x = first&lt;<span class="k">int</span>&gt;([<span class="n">1</span>, <span class="n">2</span>]);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">function</span> first(items, __ta) {
+  <span class="k">const</span> T = ((__ta &amp;&amp; __ta.typeArguments) || {})[<span class="s">&quot;T&quot;</span>];
+  <span class="k">return</span> items.first;
+}
+
+<span class="k">const</span> x = first([<span class="n">1</span>, <span class="n">2</span>], { typeArguments: { T: <span class="s">&quot;int&quot;</span> } });</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="tear-off dart 的方法引用自带 this；js 需要 bind，且接收者只求值一次。 函数与闭包">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">04</span><h3>tear-off</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">Dart 的方法引用自带 this；JS 需要 bind，且接收者只求值一次。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> handler = _onTap;
+<span class="k">final</span> reset = controller.reset;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> handler = <span class="k">this</span>._onTap.bind(<span class="k">this</span>);
+<span class="k">const</span> reset = controller.reset.bind(controller);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="闭包与局部函数 闭包 / 局部函数落成箭头函数或 const f = ...；保留 this 捕获，可递归。 函数与闭包">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">05</span><h3>闭包与局部函数</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">闭包 / 局部函数落成箭头函数或 const f = ...；保留 this 捕获，可递归。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">int</span> factorial(<span class="k">int</span> n) {
+  <span class="k">int</span> f(<span class="k">int</span> x) =&gt; x &lt;= <span class="n">1</span> ? <span class="n">1</span> : x * f(x - <span class="n">1</span>);
+  <span class="k">return</span> f(n);
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">function</span> factorial(n) {
+  <span class="k">const</span> f = (x) =&gt; x &lt;= <span class="n">1</span> ? <span class="n">1</span> : x * f(x - <span class="n">1</span>);
+  <span class="k">return</span> f(n);
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="函数值调用 (f)(args) 支持；具名实参合并成尾参对象，闭包实参走同一条闭包翻译。 函数与闭包">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">06</span><h3>函数值调用</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">(f)(args) 支持；具名实参合并成尾参对象，闭包实参走同一条闭包翻译。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> result = (f)(<span class="n">1</span>, <span class="n">2</span>);
+<span class="k">final</span> pick = (x) =&gt; x;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> result = f(<span class="n">1</span>, <span class="n">2</span>);
+<span class="k">const</span> pick = (x) =&gt; x;</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="直译" data-search="typedef / 函数类型 类型层信息擦除，不生成运行时代码；参数与返回值都不进 js。 函数与闭包">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">07</span><h3>typedef / 函数类型</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">类型层信息擦除，不生成运行时代码；参数与返回值都不进 JS。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">typedef</span> Handler = <span class="k">void</span> Function(<span class="k">String</span>);
+
+Handler? onTap;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="c">// 类型擦除：不产出运行时代码</span>
+<span class="k">let</span> onTap = <span class="k">null</span>;</code></pre>
+    </div>
+  </div>
+</article>
+</section>
+<section class="category" id="classes">
+  <div class="sec-head">
+    <div class="kicker">06 / CLASSES</div>
+    <h2>类与对象</h2>
+    <p>构造、命名构造、初始化列表、super、运算符重载、extension / mixin、枚举与泛型。</p>
+  </div>
+  <article class="cmp" data-status="必须改写" data-search="class 与构造 所有构造统一收一个 args 对象；字段由 __applyprops 派生。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">01</span><h3>class 与构造</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">所有构造统一收一个 args 对象；字段由 __applyProps 派生。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">class</span> Point {
+  <span class="k">final</span> <span class="k">double</span> x;
+  <span class="k">final</span> <span class="k">double</span> y;
+
+  Point(<span class="k">this</span>.x, <span class="k">this</span>.y);
+
+  <span class="k">double</span> <span class="k">get</span> length =&gt; sqrt(x * x + y * y);
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">class</span> Point {
+  constructor(args) {
+    <span class="k">this</span>.__applyProps(args);
+  }
+
+  __applyProps(args) {
+    <span class="k">this</span>.x = args.x;
+    <span class="k">this</span>.y = args.y;
+  }
+
+  <span class="k">get</span> length() {
+    <span class="k">return</span> <span class="k">Math</span>.sqrt(<span class="k">this</span>.x * <span class="k">this</span>.x + <span class="k">this</span>.y * <span class="k">this</span>.y);
+  }
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="命名构造与 factory 命名构造 / factory 发射为同名静态方法；构造名只存在于调用形状。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">02</span><h3>命名构造与 factory</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">命名构造 / factory 发射为同名静态方法；构造名只存在于调用形状。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">class</span> Point {
+  <span class="k">final</span> <span class="k">double</span> x;
+  <span class="k">final</span> <span class="k">double</span> y;
+
+  Point(<span class="k">this</span>.x, <span class="k">this</span>.y);
+  Point.origin() : x = <span class="n">0</span>, y = <span class="n">0</span>;
+  <span class="k">factory</span> Point.fromJson(<span class="k">Map</span> j) =&gt; Point(j[<span class="s">&#x27;x&#x27;</span>], j[<span class="s">&#x27;y&#x27;</span>]);
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">class</span> Point {
+  constructor(args) { <span class="k">this</span>.__applyProps(args); }
+
+  <span class="k">static</span> origin() { <span class="k">return</span> <span class="k">new</span> Point({}); }
+
+  <span class="k">static</span> fromJson(j) {
+    <span class="k">return</span> <span class="k">new</span> Point({ x: __idx(j, <span class="s">&quot;x&quot;</span>), y: __idx(j, <span class="s">&quot;y&quot;</span>) });
+  }
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="初始化列表 初始化列表在 super 之后按序写入；super(...) 实参由基类 super(args) 承接。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">03</span><h3>初始化列表</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">初始化列表在 super 之后按序写入；super(...) 实参由基类 super(args) 承接。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">class</span> Rect {
+  <span class="k">final</span> <span class="k">double</span> w;
+  <span class="k">final</span> <span class="k">double</span> h;
+
+  Rect(<span class="k">double</span> size) : w = size, h = size;
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">class</span> Rect {
+  constructor(args) {
+    <span class="k">this</span>.w = args.size;
+    <span class="k">this</span>.h = args.size;
+  }
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="直译" data-search="getter / setter / static get / set 原样发射；static 成员挂类本身；私有字段保留下划线。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">04</span><h3>getter / setter / static</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">get / set 原样发射；static 成员挂类本身；私有字段保留下划线。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">class</span> Counter {
+  <span class="k">static</span> <span class="k">int</span> total = <span class="n">0</span>;
+  <span class="k">int</span> _value = <span class="n">0</span>;
+
+  <span class="k">int</span> <span class="k">get</span> value =&gt; _value;
+  <span class="k">set</span> value(<span class="k">int</span> v) =&gt; _value = v;
+
+  <span class="k">static</span> <span class="k">void</span> reset() =&gt; total = <span class="n">0</span>;
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">class</span> Counter {
+  <span class="k">static</span> total = <span class="n">0</span>;
+  constructor() { <span class="k">this</span>._value = <span class="n">0</span>; }
+
+  <span class="k">get</span> value() { <span class="k">return</span> <span class="k">this</span>._value; }
+  <span class="k">set</span> value(v) { <span class="k">this</span>._value = v; }
+
+  <span class="k">static</span> reset() { Counter.total = <span class="n">0</span>; }
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="super 成员 继承链字段落 this.x；父类 getter / 方法保持 super.x；基类无 js 实现时告警。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">05</span><h3>super 成员</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">继承链字段落 this.x；父类 getter / 方法保持 super.x；基类无 JS 实现时告警。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">class</span> Child <span class="k">extends</span> Base {
+  <span class="a">@override</span>
+  <span class="k">void</span> run() {
+    <span class="k">super</span>.run();
+    <span class="k">super</span>.count = <span class="n">1</span>;
+  }
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">class</span> Child <span class="k">extends</span> Base {
+  run() {
+    <span class="k">super</span>.run();
+    <span class="k">this</span>.count = <span class="n">1</span>;
+  }
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="运算符重载 按 __op$&lt;后缀&gt; 成员发射；只有操作数静态类型可判定时才改写调用点。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">06</span><h3>运算符重载</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">按 __op$&lt;后缀&gt; 成员发射；只有操作数静态类型可判定时才改写调用点。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">class</span> Vec {
+  <span class="k">final</span> <span class="k">int</span> x;
+  Vec(<span class="k">this</span>.x);
+
+  Vec <span class="k">operator</span> +(Vec o) =&gt; Vec(x + o.x);
+  Vec <span class="k">operator</span> -() =&gt; Vec(-x);
+  <span class="k">bool</span> <span class="k">operator</span> ==(<span class="k">Object</span> o) =&gt; o is Vec &amp;&amp; o.x == x;
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">class</span> Vec {
+  constructor(args) { <span class="k">this</span>.x = args.x; }
+
+  __op$add(o) { <span class="k">return</span> <span class="k">new</span> Vec({ x: <span class="k">this</span>.x + o.x }); }
+  __op$neg() { <span class="k">return</span> <span class="k">new</span> Vec({ x: -<span class="k">this</span>.x }); }
+  __op$eq(o) { <span class="k">return</span> o <span class="k">instanceof</span> Vec &amp;&amp; o.x === <span class="k">this</span>.x; }
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="extension extension 成员随声明文件产物注册到目标原型；显式 e(x).m() 始终可用。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">07</span><h3>extension</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">extension 成员随声明文件产物注册到目标原型；显式 E(x).m() 始终可用。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">extension</span> StringX <span class="k">on</span> <span class="k">String</span> {
+  <span class="k">String</span> <span class="k">get</span> shout =&gt; toUpperCase() + <span class="s">&#x27;!&#x27;</span>;
+}
+
+<span class="k">print</span>(<span class="s">&#x27;hi&#x27;</span>.shout);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">export</span> <span class="k">const</span> StringX = registerExtension(<span class="s">&quot;String&quot;</span>, (<span class="k">function</span> () {
+  <span class="k">return</span> {
+    <span class="k">get</span> shout() { <span class="k">return</span> <span class="k">this</span>.toUpperCase() + <span class="s">&quot;!&quot;</span>; },
+  };
+})(), { id: <span class="s">&quot;lib/string_x.dart#StringX&quot;</span> });
+
+<span class="k">console</span>.log(<span class="s">&quot;hi&quot;</span>.shout);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="mixin mixin 原型成员经 __mixinhard 复制到 application 类；目标已有同名自有成员时不覆盖。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">08</span><h3>mixin</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">mixin 原型成员经 __mixinHard 复制到 application 类；目标已有同名自有成员时不覆盖。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code>mixin Logging {
+  <span class="k">void</span> log(<span class="k">String</span> msg) =&gt; <span class="k">print</span>(<span class="s">&#x27;[log] $msg&#x27;</span>);
+}
+
+<span class="k">class</span> Service <span class="k">with</span> Logging {}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">class</span> Logging {
+  log(msg) { <span class="k">console</span>.log(<span class="s">&quot;[log] &quot;</span> + msg); }
+}
+
+<span class="k">class</span> Service {}
+__mixinHard(Service, Logging);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="简单枚举 简单枚举产出 js 常量对象；增强枚举（带成员 / 构造实参）构建期告警跳过。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">09</span><h3>简单枚举</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">简单枚举产出 JS 常量对象；增强枚举（带成员 / 构造实参）构建期告警跳过。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">enum</span> Status { idle, loading, done }
+
+<span class="k">final</span> s = Status.loading;
+<span class="k">print</span>(s.name);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> Status = {
+  idle: __makeEnumValue(<span class="s">&quot;idle&quot;</span>, <span class="n">0</span>),
+  loading: __makeEnumValue(<span class="s">&quot;loading&quot;</span>, <span class="n">1</span>),
+  done: __makeEnumValue(<span class="s">&quot;done&quot;</span>, <span class="n">2</span>),
+  values: [<span class="c">/* ... */</span>],
+};</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="直译" data-search="接口与抽象类 interface / abstract 只存在于类型层；js 侧不生成 implements / abstract 标记。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">10</span><h3>接口与抽象类</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">interface / abstract 只存在于类型层；JS 侧不生成 implements / abstract 标记。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">abstract</span> <span class="k">class</span> Shape {
+  <span class="k">double</span> area();
+}
+
+<span class="k">class</span> Circle <span class="k">implements</span> Shape {
+  <span class="k">final</span> <span class="k">double</span> r;
+  Circle(<span class="k">this</span>.r);
+
+  <span class="a">@override</span>
+  <span class="k">double</span> area() =&gt; <span class="n">3.14</span> * r * r;
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">class</span> Circle {
+  constructor(args) { <span class="k">this</span>.r = args.r; }
+
+  area() { <span class="k">return</span> <span class="n">3.14</span> * <span class="k">this</span>.r * <span class="k">this</span>.r; }
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="注意" data-search="泛型类 类型参数擦除；构造时把元信息存进 __ta，方法里的 t 读 this.__ta[&quot;t&quot;]。 类与对象">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">11</span><h3>泛型类</h3></div>
+    <span class="tag amber">注意</span>
+  </header>
+  <p class="cmp-note">类型参数擦除；构造时把元信息存进 __ta，方法里的 T 读 this.__ta[&quot;T&quot;]。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">class</span> Box&lt;T&gt; {
+  <span class="k">final</span> T value;
+  Box(<span class="k">this</span>.value);
+
+  T <span class="k">get</span>() =&gt; value;
+}
+
+<span class="k">final</span> b = Box&lt;<span class="k">int</span>&gt;(<span class="n">1</span>);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">class</span> Box {
+  constructor(args) {
+    <span class="k">this</span>.__ta = (args &amp;&amp; args.typeArguments) || {};
+    <span class="k">this</span>.value = args.value;
+  }
+
+  <span class="k">get</span>() { <span class="k">return</span> <span class="k">this</span>.value; }
+}
+
+<span class="k">const</span> b = <span class="k">new</span> Box({ value: <span class="n">1</span>, typeArguments: { T: <span class="s">&quot;int&quot;</span> } });</code></pre>
+    </div>
+  </div>
+</article>
+</section>
+<section class="category" id="async">
+  <div class="sec-head">
+    <div class="kicker">07 / ERRORS & ASYNC</div>
+    <h2>异常与异步</h2>
+    <p>try / catch、throw 表达式、Future、Completer、Stream、生成器与 Timer。</p>
+  </div>
+  <article class="cmp" data-status="必须改写" data-search="try / on / catch / finally js 只有单一 catch；dart 的 on type 落成 instanceof 链。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">01</span><h3>try / on / catch / finally</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">JS 只有单一 catch；Dart 的 on Type 落成 instanceof 链。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">try</span> {
+  risky();
+} <span class="k">on</span> StateError <span class="k">catch</span> (e) {
+  <span class="k">print</span>(<span class="s">&#x27;state: $e&#x27;</span>);
+} <span class="k">on</span> ArgumentError {
+  <span class="k">print</span>(<span class="s">&#x27;arg&#x27;</span>);
+} <span class="k">catch</span> (e) {
+  <span class="k">print</span>(e);
+} <span class="k">finally</span> {
+  cleanup();
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">try</span> {
+  risky();
+} <span class="k">catch</span> (__e) {
+  <span class="k">if</span> (__e <span class="k">instanceof</span> StateError) {
+    <span class="k">const</span> e = __e;
+    <span class="k">console</span>.log(<span class="s">&quot;state: &quot;</span> + e);
+  } <span class="k">else</span> <span class="k">if</span> (__e <span class="k">instanceof</span> ArgumentError) {
+    <span class="k">console</span>.log(<span class="s">&quot;arg&quot;</span>);
+  } <span class="k">else</span> {
+    <span class="k">const</span> e = __e;
+    <span class="k">console</span>.log(e);
+  }
+} <span class="k">finally</span> {
+  cleanup();
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="throw 表达式 js 没有 throw 表达式；落成立即抛出的 iife。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">02</span><h3>throw 表达式</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">JS 没有 throw 表达式；落成立即抛出的 IIFE。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> name = value ?? (<span class="k">throw</span> StateError(<span class="s">&#x27;missing&#x27;</span>));</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> name = value ?? (() =&gt; {
+  <span class="k">throw</span> <span class="k">new</span> StateError({ message: <span class="s">&quot;missing&quot;</span> });
+})();</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="assert assert 原样调用；函数本体由运行时注入，debug 门控。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">03</span><h3>assert</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">assert 原样调用；函数本体由运行时注入，debug 门控。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">assert</span>(count &gt;= <span class="n">0</span>, <span class="s">&#x27;count must be &gt;= 0&#x27;</span>);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code>assert(count &gt;= <span class="n">0</span>, <span class="s">&quot;count must be &gt;= 0&quot;</span>);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="直译" data-search="async / await 原生 async function / await；底层 promise。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">04</span><h3>async / await</h3></div>
+    <span class="tag green">直译</span>
+  </header>
+  <p class="cmp-note">原生 async function / await；底层 Promise。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">Future</span>&lt;<span class="k">String</span>&gt; load() <span class="k">async</span> {
+  <span class="k">final</span> data = <span class="k">await</span> fetch();
+  <span class="k">return</span> data.name;
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">async</span> <span class="k">function</span> load() {
+  <span class="k">const</span> data = <span class="k">await</span> fetch();
+  <span class="k">return</span> data.name;
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="future future 由运行时类承接：then / catcherror / delayed / wait 等。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">05</span><h3>Future</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">Future 由运行时类承接：then / catchError / delayed / wait 等。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">Future</span>.delayed(<span class="k">const</span> <span class="k">Duration</span>(seconds: <span class="n">1</span>))
+    .then((_) =&gt; <span class="k">print</span>(<span class="s">&#x27;done&#x27;</span>))
+    .catchError((e) =&gt; <span class="k">print</span>(e));</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code>Future.delayed({ duration: <span class="k">new</span> Duration({ seconds: <span class="n">1</span> }) })
+    .then((_) =&gt; <span class="k">console</span>.log(<span class="s">&quot;done&quot;</span>))
+    .catchError((e) =&gt; <span class="k">console</span>.log(e));</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="completer completer 由运行时类承接；重复完成抛 stateerror。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">06</span><h3>Completer</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">Completer 由运行时类承接；重复完成抛 StateError。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> c = <span class="k">Completer</span>&lt;<span class="k">int</span>&gt;();
+c.complete(<span class="n">1</span>);
+<span class="k">final</span> v = <span class="k">await</span> c.future;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> c = <span class="k">new</span> Completer();
+c.complete(<span class="n">1</span>);
+<span class="k">const</span> v = <span class="k">await</span> c.future;</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="stream 与 await for stream 没有 js 对应物；运行时自建推送 + 拉取双形态，await for → for await of。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">07</span><h3>Stream 与 await for</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">Stream 没有 JS 对应物；运行时自建推送 + 拉取双形态，await for → for await of。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> stream = <span class="k">Stream</span>.fromIterable([<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>]);
+<span class="k">await</span> <span class="k">for</span> (<span class="k">final</span> value <span class="k">in</span> stream) {
+  <span class="k">print</span>(value);
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> stream = Stream.fromIterable([<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>]);
+<span class="k">for</span> <span class="k">await</span> (<span class="k">const</span> value <span class="k">of</span> stream) {
+  <span class="k">console</span>.log(value);
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="async* / yield async* 包成 stream.fromasyncgenerator；不能返回裸 async generator。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">08</span><h3>async* / yield</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">async* 包成 Stream.fromAsyncGenerator；不能返回裸 async generator。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">Stream</span>&lt;<span class="k">int</span>&gt; count() <span class="k">async</span>* {
+  <span class="k">for</span> (<span class="k">var</span> i = <span class="n">0</span>; i &lt; <span class="n">3</span>; i++) {
+    <span class="k">yield</span> i;
+  }
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">function</span> count() {
+  <span class="k">return</span> Stream.fromAsyncGenerator((<span class="k">async</span> <span class="k">function</span>* () {
+    <span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i &lt; <span class="n">3</span>; i++) {
+      <span class="k">yield</span> i;
+    }
+  }).bind(this)());
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="必须改写" data-search="sync* / yield sync* 落成 js generator function；iterable 同名成员由生成器原型承接。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">09</span><h3>sync* / yield</h3></div>
+    <span class="tag cyan">必须改写</span>
+  </header>
+  <p class="cmp-note">sync* 落成 JS generator function；Iterable 同名成员由生成器原型承接。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">Iterable</span>&lt;<span class="k">int</span>&gt; nums() <span class="k">sync</span>* {
+  <span class="k">yield</span> <span class="n">1</span>;
+  <span class="k">yield</span> <span class="n">2</span>;
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">function</span>* nums() {
+  <span class="k">yield</span> <span class="n">1</span>;
+  <span class="k">yield</span> <span class="n">2</span>;
+}</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="timer timer / timer.periodic 是句柄；cancel() 走通用释放。 异常与异步">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">10</span><h3>Timer</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">Timer / Timer.periodic 是句柄；cancel() 走通用释放。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> t = <span class="k">Timer</span>(<span class="k">const</span> <span class="k">Duration</span>(seconds: <span class="n">1</span>), () =&gt; <span class="k">print</span>(<span class="s">&#x27;tick&#x27;</span>));
+t.cancel();</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> t = <span class="k">new</span> Timer({
+  duration: <span class="k">new</span> Duration({ seconds: <span class="n">1</span> }),
+  callback: () =&gt; <span class="k">console</span>.log(<span class="s">&quot;tick&quot;</span>),
+});
+t.cancel();</code></pre>
+    </div>
+  </div>
+</article>
+</section>
+<section class="category" id="runtime">
+  <div class="sec-head">
+    <div class="kicker">08 / RUNTIME & NOT APPLICABLE</div>
+    <h2>运行时补齐与不适用</h2>
+    <p>dart:core 值类、内建原型补齐、数字解析，以及 Isolate / Symbol 等明确不翻译的场景。</p>
+  </div>
+  <article class="cmp" data-status="扩展" data-search="datetime js 侧同名类，内部以微秒为唯一状态；跨桥 tojson 为 {__datetime, __utc}。 运行时补齐与不适用">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">01</span><h3>DateTime</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">JS 侧同名类，内部以微秒为唯一状态；跨桥 toJSON 为 {__dateTime, __utc}。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> now = <span class="k">DateTime</span>.now();
+<span class="k">final</span> iso = now.toIso8601String();</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> now = DateTime.now();
+<span class="k">const</span> iso = now.toIso8601String();</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="regexp regexp 类名遮蔽全局构造；内部统一用 globalthis.regexp。 运行时补齐与不适用">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">02</span><h3>RegExp</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">RegExp 类名遮蔽全局构造；内部统一用 globalThis.RegExp。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> re = <span class="k">RegExp</span>(r<span class="s">&#x27;^a+$&#x27;</span>, caseSensitive: <span class="k">false</span>);
+<span class="k">final</span> ok = re.hasMatch(<span class="s">&#x27;AAA&#x27;</span>);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> re = <span class="k">new</span> RegExp({ source: <span class="s">&quot;^a+$&quot;</span>, caseSensitive: <span class="k">false</span> });
+<span class="k">const</span> ok = re.hasMatch(<span class="s">&quot;AAA&quot;</span>);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="stringbuffer 同名类：write / writeln / tostring / clear / length。 运行时补齐与不适用">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">03</span><h3>StringBuffer</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">同名类：write / writeln / toString / clear / length。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> b = <span class="k">StringBuffer</span>();
+b.write(<span class="s">&#x27;a&#x27;</span>);
+b.writeln(<span class="s">&#x27;b&#x27;</span>);
+<span class="k">print</span>(b.toString());</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> b = <span class="k">new</span> StringBuffer();
+b.write(<span class="s">&quot;a&quot;</span>);
+b.writeln(<span class="s">&quot;b&quot;</span>);
+<span class="k">console</span>.log(b.toString());</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="内建原型补齐 array / string / number 缺失的 dart 同名成员在原型上补齐：不可枚举 + 存在性守卫。 运行时补齐与不适用">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">04</span><h3>内建原型补齐</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">Array / String / Number 缺失的 Dart 同名成员在原型上补齐：不可枚举 + 存在性守卫。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> first = list.first;
+list.clear();
+<span class="k">final</span> rounded = <span class="n">1.7</span>.round();</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> first = list.first;
+list.clear();
+<span class="k">const</span> rounded = <span class="n">1.7</span>.round();</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="扩展" data-search="int.parse / double.tryparse 静态成员以模块级小写命名空间导出；值本身仍是 js number。 运行时补齐与不适用">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">05</span><h3>int.parse / double.tryParse</h3></div>
+    <span class="tag violet">扩展</span>
+  </header>
+  <p class="cmp-note">静态成员以模块级小写命名空间导出；值本身仍是 JS number。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> a = <span class="k">int</span>.parse(<span class="s">&#x27;42&#x27;</span>);
+<span class="k">final</span> b = <span class="k">double</span>.tryParse(<span class="s">&#x27;1.5&#x27;</span>);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="k">const</span> a = int.parse(<span class="s">&quot;42&quot;</span>);
+<span class="k">const</span> b = double.tryParse(<span class="s">&quot;1.5&quot;</span>);</code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="不适用" data-search="isolate 产物运行在单 js 引擎；isolate / receiveport / sendport 不翻译。 运行时补齐与不适用">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">06</span><h3>Isolate</h3></div>
+    <span class="tag red">不适用</span>
+  </header>
+  <p class="cmp-note">产物运行在单 JS 引擎；Isolate / ReceivePort / SendPort 不翻译。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> isolate = <span class="k">await</span> <span class="k">Isolate</span>.spawn(worker, <span class="k">null</span>);</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="c">// 单 JS 引擎；Isolate / ReceivePort / SendPort 不翻译</span></code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="不适用" data-search="symbol / mirrors 无 js 承载；构建期告警并丢弃，改用字符串常量。 运行时补齐与不适用">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">07</span><h3>Symbol / mirrors</h3></div>
+    <span class="tag red">不适用</span>
+  </header>
+  <p class="cmp-note">无 JS 承载；构建期告警并丢弃，改用字符串常量。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">final</span> sym = #name;</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="c">// 无 Symbol / mirrors 承载；构建期告警并丢弃</span></code></pre>
+    </div>
+  </div>
+</article>
+<article class="cmp" data-status="不适用" data-search="增强枚举 带成员或构造实参的枚举暂不翻译；构建期告警跳过。 运行时补齐与不适用">
+  <header class="cmp-head">
+    <div class="cmp-title"><span class="cmp-no">08</span><h3>增强枚举</h3></div>
+    <span class="tag red">不适用</span>
+  </header>
+  <p class="cmp-note">带成员或构造实参的枚举暂不翻译；构建期告警跳过。</p>
+  <div class="code-pair">
+    <div class="code-pane">
+      <div class="pane-head"><span class="lang">DART</span></div>
+      <pre><code><span class="k">enum</span> Planet {
+  earth(<span class="n">5</span>.97e24);
+
+  <span class="k">const</span> Planet(<span class="k">this</span>.mass);
+  <span class="k">final</span> <span class="k">double</span> mass;
+}</code></pre>
+    </div>
+    <div class="code-pane js">
+      <div class="pane-head"><span class="lang">JAVASCRIPT</span></div>
+      <pre><code><span class="c">// 增强枚举暂不翻译（构建期告警跳过）</span></code></pre>
+    </div>
+  </div>
+</article>
+</section>
+
+    <footer class="footer">
+      <span>flutter_hot_patch · Dart → JS 语法对照 · protocol 0.13.0</span>
+      <span><a href="tech-blog.html">技术博客</a> · <a href="tech-blog.html#limits">已知限制</a> · MIT</span>
+    </footer>
+  </main>
+</div>
+<button class="back-top" id="backTop" aria-label="回到顶部"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  root.classList.add('js');
+  var themeBtn=document.getElementById('themeBtn');
+  var stored=null; try{stored=localStorage.getItem('hp-theme')}catch(e){}
+  if(stored==='dark'||stored==='light') root.setAttribute('data-theme',stored);
+  else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  var meta=document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content',root.getAttribute('data-theme')==='dark'?'#0f1115':'#f6f5f2');
+  function setTheme(next){root.setAttribute('data-theme',next);if(meta)meta.setAttribute('content',next==='dark'?'#0f1115':'#f6f5f2');try{localStorage.setItem('hp-theme',next)}catch(e){}}
+  if(themeBtn) themeBtn.addEventListener('click',function(){setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark')});
+
+  var sidebar=document.getElementById('sidebar'),scrim=document.getElementById('scrim'),menuBtn=document.getElementById('menuBtn');
+  function closeMenu(){if(!sidebar)return;sidebar.classList.remove('open');if(scrim)scrim.classList.remove('show');if(menuBtn)menuBtn.setAttribute('aria-expanded','false');document.body.classList.remove('menu-open')}
+  if(menuBtn) menuBtn.addEventListener('click',function(){var open=sidebar.classList.toggle('open');if(scrim)scrim.classList.toggle('show',open);menuBtn.setAttribute('aria-expanded',open?'true':'false');document.body.classList.toggle('menu-open',open)});
+  if(scrim) scrim.addEventListener('click',closeMenu);
+  document.querySelectorAll('#toc a').forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=1100)closeMenu()})});
+
+  var progress=document.querySelector('.progress i');
+  var backTop=document.getElementById('backTop');
+  var ticking=false;
+  function onScroll(){if(ticking)return;ticking=true;requestAnimationFrame(function(){var d=document.documentElement,max=d.scrollHeight-window.innerHeight,p=max>0?Math.min(1,Math.max(0,window.pageYOffset/max)):0;if(progress)progress.style.transform='scaleX('+p+')';if(backTop)backTop.classList.toggle('show',window.pageYOffset>700);ticking=false})}
+  window.addEventListener('scroll',onScroll,{passive:true});
+  if(backTop) backTop.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'})});
+
+  var links=[].slice.call(document.querySelectorAll('#toc a.nav-link'));
+  var map={}; links.forEach(function(a){var h=a.getAttribute('href');if(!h||h.charAt(0)!=='#')return;var id=h.slice(1);(map[id]||(map[id]=[])).push(a)});
+  var sections=[].slice.call(document.querySelectorAll('section[id]'));
+  var positions=[];
+  function measure(){positions=sections.map(function(s){return{id:s.id,top:s.getBoundingClientRect().top+window.pageYOffset}})}
+  var current='';
+  function setActive(id){if(id===current)return;current=id;links.forEach(function(a){a.classList.remove('active');a.removeAttribute('aria-current')});var ts=map[id];if(ts){ts.forEach(function(a){a.classList.add('active');a.setAttribute('aria-current','true')});var t=ts[0],toc=document.getElementById('toc');if(toc){var tr=toc.getBoundingClientRect(),ar=t.getBoundingClientRect();if(ar.top<tr.top+12||ar.bottom>tr.bottom-12){toc.scrollTop=(ar.top-tr.top+toc.scrollTop)-toc.clientHeight/2+t.offsetHeight/2}}}}
+  function updateActive(){var pos=window.pageYOffset+120,id=sections.length?sections[0].id:'';for(var i=0;i<positions.length;i++){if(positions[i].top<=pos)id=positions[i].id}if((window.innerHeight+window.pageYOffset)>=document.documentElement.scrollHeight-4&&sections.length)id=sections[sections.length-1].id;setActive(id)}
+  measure();window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMenu();measure();onScroll()});setTimeout(function(){measure();onScroll()},150);
+
+  // copy buttons
+  document.querySelectorAll('.code-pane').forEach(function(pane){var pre=pane.querySelector('pre');if(!pre)return;var btn=document.createElement('button');btn.type='button';btn.className='copy';btn.textContent='复制';btn.setAttribute('aria-label','复制代码');pane.querySelector('.pane-head').appendChild(btn);btn.addEventListener('click',function(){var text=pre.innerText;function done(){btn.textContent='已复制';setTimeout(function(){btn.textContent='复制'},1400)}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,fallback)}else fallback();function fallback(){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done()}catch(e){}document.body.removeChild(ta)}})});
+
+  // filter
+  var search=document.getElementById('filterInput'),chips=[].slice.call(document.querySelectorAll('.filters .chip')),countEl=document.getElementById('resultCount'),empty=document.getElementById('empty');
+  var activeStatus='全部';
+  function applyFilter(){var q=(search&&search.value||'').trim().toLowerCase();var shown=0;document.querySelectorAll('.cmp').forEach(function(card){var okStatus=activeStatus==='全部'||card.getAttribute('data-status')===activeStatus;var okQuery=!q||card.getAttribute('data-search').indexOf(q)!==-1;var ok=okStatus&&okQuery;card.hidden=!ok;if(ok)shown++});document.querySelectorAll('section.category').forEach(function(sec){var any=sec.querySelector('.cmp:not([hidden])');sec.hidden=!any});if(countEl)countEl.textContent=shown+' / '+total;if(empty)empty.classList.toggle('show',shown===0);if(shown===0){var first=document.querySelector('.category');if(first)first.hidden=false}}
+  var total=document.querySelectorAll('.cmp').length;
+  if(search){search.addEventListener('input',applyFilter);search.addEventListener('keydown',function(e){if(e.key==='Escape'){search.value='';applyFilter();search.blur()}})}
+  chips.forEach(function(c){c.addEventListener('click',function(){chips.forEach(function(x){x.classList.remove('on')});c.classList.add('on');activeStatus=c.getAttribute('data-status');applyFilter()})});
+  document.addEventListener('keydown',function(e){if(e.key==='/'&&document.activeElement!==search&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)){e.preventDefault();if(search)search.focus()}if(e.key==='Escape')closeMenu()});
+  applyFilter();
+})();
+</script>
+</body>
+</html>

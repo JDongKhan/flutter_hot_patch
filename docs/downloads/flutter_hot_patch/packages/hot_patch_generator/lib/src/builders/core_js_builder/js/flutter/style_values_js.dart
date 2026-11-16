@@ -1,0 +1,524 @@
+// ===== 样式 / 布局 / 文字 / 形状值类镜像（JS 侧片段，flutter.js 值类区）=====
+//
+// 与 dart_values_js 同一条规则：Dart 构造**一比一**发射，运行时必须有同名类。
+// 产物形态：
+//   `EdgeInsets.all(12)`                 → `EdgeInsets.all({value: 12})`
+//   `EdgeInsets.symmetric(vertical: 4)`  → `EdgeInsets.symmetric({vertical: 4})`
+//   `BorderRadius.circular(8)`           → `BorderRadius.circular({radius: 8})`
+//   `TextStyle(fontSize: 16)`            → `new TextStyle({fontSize: 16})`
+//
+// 每个类只做两件事：镜像 Dart 字段 + `toJSON` 直出宿主 `from_json` 已认的协议
+// （值是类实例时由 JSON.stringify 递归调用各自的 toJSON）。
+//
+// 具名构造 / 静态工厂由类上的同名 `static` 承接——翻译层不认类名、不认构造名，
+// 只是把 `A.b(...)` 原样发成 `A.b({...})`。
+const String styleValuesJsSource = r'''
+  // 单值构造的取值：位置实参的形参名因类而异（`value` / `radius` / `index` /
+  // `textScaleFactor` …），值都是「唯一那个数」；裸数字也接受。
+  function __singleValue(props) {
+    if (props == null) { return 0; }
+    if (typeof props === 'number' || typeof props === 'string') { return props; }
+    for (var k in props) {
+      if (k !== '__pos' && props[k] != null) { return props[k]; }
+    }
+    return 0;
+  }
+
+  // ----- 边距 ---------------------------------------------------------------
+  // 宿主协议：{left, top, right, bottom}（layout_from_json.edgeInsetsFromJson）。
+  export class EdgeInsets {
+    constructor(props) {
+      props = __positionalArgs(props, ['left', 'top', 'right', 'bottom']);
+      this.left = props.left != null ? props.left : 0;
+      this.top = props.top != null ? props.top : 0;
+      this.right = props.right != null ? props.right : 0;
+      this.bottom = props.bottom != null ? props.bottom : 0;
+    }
+    get horizontal() { return this.left + this.right; }
+    get vertical() { return this.top + this.bottom; }
+    get isEmpty() {
+      return this.left === 0 && this.top === 0 && this.right === 0 && this.bottom === 0;
+    }
+    toJSON() {
+      return { left: this.left, top: this.top, right: this.right, bottom: this.bottom };
+    }
+    static zero = new EdgeInsets({});
+    static all(props) {
+      var v = __singleValue(props);
+      return new EdgeInsets({ left: v, top: v, right: v, bottom: v });
+    }
+    static only(props) { return new EdgeInsets(props); }
+    static symmetric(props) {
+      var h = props.horizontal != null ? props.horizontal : 0;
+      var v = props.vertical != null ? props.vertical : 0;
+      return new EdgeInsets({ left: h, top: v, right: h, bottom: v });
+    }
+    static fromLTRB(props) {
+      props = __positionalArgs(props, ['left', 'top', 'right', 'bottom']);
+      return new EdgeInsets(props);
+    }
+    static fromSTEB(props) {
+      props = __positionalArgs(props, ['start', 'top', 'end', 'bottom']);
+      return new EdgeInsets({
+        left: props.start != null ? props.start : 0,
+        top: props.top != null ? props.top : 0,
+        right: props.end != null ? props.end : 0,
+        bottom: props.bottom != null ? props.bottom : 0,
+      });
+    }
+  }
+
+  // ----- 圆角 / 边框 -----------------------------------------------------------
+  // 宿主协议：BorderRadius → {radius} 或四角数字；Border → {all} 或四边 side。
+  export class BorderRadius {
+    constructor(props) {
+      props = __positionalArgs(props, ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']);
+      this.topLeft = BorderRadius.__radius(props.topLeft);
+      this.topRight = BorderRadius.__radius(props.topRight);
+      this.bottomLeft = BorderRadius.__radius(props.bottomLeft);
+      this.bottomRight = BorderRadius.__radius(props.bottomRight);
+    }
+    // 入参可能是 Radius / 数字 / 单值 props；只有本类用到，故收在本类。
+    static __radius(v) {
+      if (v instanceof Radius) { return v; }
+      return new Radius({ radius: typeof v === 'number' ? v : __singleValue(v) });
+    }
+    toJSON() {
+      var tl = this.topLeft.x, tr = this.topRight.x;
+      var bl = this.bottomLeft.x, br = this.bottomRight.x;
+      if (tl === tr && tr === bl && bl === br) { return { radius: tl }; }
+      return { topLeft: tl, topRight: tr, bottomLeft: bl, bottomRight: br };
+    }
+    get horizontal() { return this.topLeft.x + this.bottomLeft.x; }
+    get vertical() { return this.topLeft.x + this.bottomLeft.x; }
+    static zero = new BorderRadius({});
+    static all(props) {
+      var r = BorderRadius.__radius(props.radius);
+      return new BorderRadius({ topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
+    }
+    static circular(props) { return BorderRadius.all({ radius: __singleValue(props) }); }
+    static only(props) { return new BorderRadius(props); }
+    static vertical(props) {
+      var r = BorderRadius.__radius(__singleValue(props));
+      return new BorderRadius({ topLeft: r, topRight: r });
+    }
+    static horizontal(props) {
+      var r = BorderRadius.__radius(__singleValue(props));
+      return new BorderRadius({ topLeft: r, bottomLeft: r });
+    }
+  }
+
+  export class BorderSide {
+    constructor(props) {
+      props = __positionalArgs(props, ['color', 'width', 'style', 'strokeAlign']);
+      this.color = props.color != null ? props.color : null;
+      this.width = props.width != null ? props.width : 1;
+      this.style = props.style != null ? props.style : 'solid';
+      if (props.strokeAlign != null) { this.strokeAlign = props.strokeAlign; }
+    }
+    toJSON() {
+      return { color: this.color, width: this.width, style: this.style };
+    }
+    static none = new BorderSide({ width: 0, style: 'none' });
+  }
+
+  export class Border {
+    constructor(props) {
+      props = __positionalArgs(props, ['top', 'right', 'bottom', 'left']);
+      if (props.all != null) { this.all = props.all; }
+      if (props.top != null) { this.top = props.top; }
+      if (props.right != null) { this.right = props.right; }
+      if (props.bottom != null) { this.bottom = props.bottom; }
+      if (props.left != null) { this.left = props.left; }
+    }
+    // `Border.all(color:.., width:..)` 的实参与 BorderSide 同形。
+    static all(props) { return new Border({ all: new BorderSide(props) }); }
+    static fromBorderSide(props) {
+      props = __positionalArgs(props, ['side']);
+      return new Border({ all: props.side });
+    }
+    toJSON() {
+      if (this.all != null) { return { all: this.all }; }
+      return { top: this.top, right: this.right, bottom: this.bottom, left: this.left };
+    }
+  }
+
+  export class BoxShadow {
+    constructor(props) {
+      props = __positionalArgs(props, ['color', 'offset', 'blurRadius', 'spreadRadius', 'blurStyle']);
+      this.color = props.color != null ? props.color : null;
+      this.offset = props.offset != null ? props.offset : new Offset({ dx: 0, dy: 0 });
+      this.blurRadius = props.blurRadius != null ? props.blurRadius : 0;
+      this.spreadRadius = props.spreadRadius != null ? props.spreadRadius : 0;
+      this.blurStyle = props.blurStyle != null ? props.blurStyle : 'normal';
+    }
+    toJSON() {
+      return {
+        color: this.color,
+        dx: this.offset.dx,
+        dy: this.offset.dy,
+        blur: this.blurRadius,
+        spread: this.spreadRadius,
+        blurStyle: this.blurStyle,
+      };
+    }
+  }
+
+  // ----- 文字 ---------------------------------------------------------------
+  // 宿主协议：TextStyle 直取同名字段；FontWeight → 'bold'/'w600'；
+  // TextDecoration → 成员名；TextScaler → {linear} / 'noScaling'。
+  export class TextDecoration {
+    constructor(props) { this.name = __singleValue(props); }
+    toJSON() { return this.name; }
+    // 同枚举：跨桥值是成员名，`==` 直译为 JS `==`，靠 valueOf 归一成同一比较基准。
+    valueOf() { return this.name; }
+    static none = new TextDecoration('none');
+    static underline = new TextDecoration('underline');
+    static overline = new TextDecoration('overline');
+    static lineThrough = new TextDecoration('lineThrough');
+  }
+
+  export class FontWeight {
+    constructor(props) { this.value = __singleValue(__positionalArgs(props, ['index'])); }
+    toJSON() {
+      if (this.value === 400) { return 'normal'; }
+      if (this.value === 700) { return 'bold'; }
+      return 'w' + this.value;
+    }
+    static w100 = new FontWeight(100);
+    static w200 = new FontWeight(200);
+    static w300 = new FontWeight(300);
+    static w400 = new FontWeight(400);
+    static w500 = new FontWeight(500);
+    static w600 = new FontWeight(600);
+    static w700 = new FontWeight(700);
+    static w800 = new FontWeight(800);
+    static w900 = new FontWeight(900);
+    static normal = FontWeight.w400;
+    static bold = FontWeight.w700;
+  }
+
+  export class TextScaler {
+    constructor(props) {
+      this.__none = props === null;
+      if (!this.__none) { this.factor = __singleValue(props); }
+    }
+    toJSON() { return this.__none ? 'noScaling' : { linear: this.factor }; }
+    scale(x) {
+      return this.__none ? x : this.factor * x;
+    }
+    static noScaling = new TextScaler(null);
+    static linear(props) {
+      props = __positionalArgs(props, ['textScaleFactor']);
+      return new TextScaler(
+        props.textScaleFactor != null ? props.textScaleFactor : __singleValue(props));
+    }
+  }
+
+  export class TextStyle {
+    constructor(props) {
+      props = props || {};
+      // TextStyle 的构造参数全是具名参（源码里没有位置参、也没有命名构造），
+      // 产物只可能下发 Dart 实参本身，不存在 `__pos` / `factory` 这类协议键，
+      // 因此按原名直接拷贝，不做协议键过滤。
+      for (var k in props) {
+        if (props[k] != null) { this[k] = props[k]; }
+      }
+    }
+    toJSON() {
+      var j = {};
+      for (var k in this) {
+        if (this[k] != null) { j[k] = this[k]; }
+      }
+      return j;
+    }
+  }
+
+  // ----- 形状 ---------------------------------------------------------------
+  // 宿主协议：shapeFromJson → {kind:'rounded'|'stadium'|'circle'|'beveled'|
+  // 'continuous', borderRadius, side}。
+  class __OutlinedBorder {
+    constructor(kind, props) {
+      props = __positionalArgs(props, ['borderRadius', 'side']);
+      this.__kind = kind;
+      if (props.borderRadius != null) { this.borderRadius = props.borderRadius; }
+      if (props.side != null) { this.side = props.side; }
+    }
+    toJSON() {
+      var j = { kind: this.__kind };
+      if (this.borderRadius != null) { j.borderRadius = this.borderRadius; }
+      if (this.side != null) { j.side = this.side; }
+      return j;
+    }
+  }
+  export class RoundedRectangleBorder extends __OutlinedBorder {
+    constructor(props) { super('rounded', props); }
+  }
+  export class CircleBorder extends __OutlinedBorder {
+    constructor(props) { super('circle', props); }
+  }
+  export class StadiumBorder extends __OutlinedBorder {
+    constructor(props) { super('stadium', props); }
+  }
+  export class BeveledRectangleBorder extends __OutlinedBorder {
+    constructor(props) { super('beveled', props); }
+  }
+  export class ContinuousRectangleBorder extends __OutlinedBorder {
+    constructor(props) { super('continuous', props); }
+  }
+
+  // ----- 图片 ---------------------------------------------------------------
+  // AssetImage / NetworkImage 的跨桥形态就是**源字符串**（构造名由静态方法写进
+  // `props.factory` 只在元素层起作用，值对象本身不带 factory）；宿主
+  // `_imageProvider` 按 'http' 前缀区分网络图与资源图。DecorationImage →
+  // {source, fit}。
+  export class AssetImage {
+    constructor(props) {
+      props = __positionalArgs(props, ['assetName']);
+      this.assetName = props.assetName != null ? props.assetName : __singleValue(props);
+    }
+    toJSON() { return this.assetName; }
+  }
+
+  export class NetworkImage {
+    constructor(props) {
+      props = __positionalArgs(props, ['url', 'scale', 'headers']);
+      this.url = props.url != null ? props.url : __singleValue(props);
+      if (props.scale != null) { this.scale = props.scale; }
+      if (props.headers != null) { this.headers = props.headers; }
+    }
+    toJSON() { return this.url; }
+  }
+
+  export class DecorationImage {
+    constructor(props) {
+      props = props || {};
+      for (var k in props) {
+        if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+      }
+    }
+    toJSON() {
+      var j = { source: this.image };
+      if (this.fit != null) { j.fit = this.fit; }
+      return j;
+    }
+  }
+
+  // ----- 滤镜 ---------------------------------------------------------------
+  // 宿主协议：ImageFilter → {kind:'blur'|'dilate'|'erode'|'matrix'|'compose',…}；
+  // ColorFilter → {kind:'mode'|'matrix'|'linearToSrgbGamma'|'srgbToLinearGamma',…}。
+  class __KindValue {
+    constructor(kind, props) {
+      this.__kind = kind;
+      props = props || {};
+      for (var k in props) {
+        if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+      }
+    }
+    toJSON() {
+      var j = { kind: this.__kind };
+      for (var k in this) {
+        if (k !== '__kind' && this[k] != null) { j[k] = this[k]; }
+      }
+      return j;
+    }
+  }
+
+  export class ImageFilter extends __KindValue {
+    constructor(props) { super('blur', props); }
+    static blur(props) {
+      props = __positionalArgs(props, ['sigmaX', 'sigmaY', 'tileMode']);
+      return new __KindValue('blur', props);
+    }
+    static dilate(props) {
+      props = __positionalArgs(props, ['radiusX', 'radiusY']);
+      return new __KindValue('dilate', props);
+    }
+    static erode(props) {
+      props = __positionalArgs(props, ['radiusX', 'radiusY']);
+      return new __KindValue('erode', props);
+    }
+    static matrix(props) {
+      props = __positionalArgs(props, ['matrix']);
+      return new __KindValue('matrix', props);
+    }
+    static compose(props) {
+      props = __positionalArgs(props, ['outer', 'inner']);
+      return new __KindValue('compose', props);
+    }
+  }
+
+  export class ColorFilter extends __KindValue {
+    constructor(props) { super('mode', props); }
+    static mode(props) {
+      props = __positionalArgs(props, ['color', 'blendMode']);
+      return new __KindValue('mode', props);
+    }
+    static matrix(props) {
+      props = __positionalArgs(props, ['matrix']);
+      return new __KindValue('matrix', props);
+    }
+    static linearToSrgbGamma = new __KindValue('linearToSrgbGamma', {});
+    static srgbToLinearGamma = new __KindValue('srgbToLinearGamma', {});
+  }
+
+  // ----- 数值列表 -----------------------------------------------------------
+  // `Float64List.fromList([...])`：ImageFilter.matrix 的入参（宿主只校验 16 个）。
+  export class Float64List {
+    constructor(props) {
+      props = __positionalArgs(props, ['elements']);
+      this.elements = props.elements != null ? props.elements : (props.__pos || []);
+    }
+    get length() { return this.elements.length; }
+    toJSON() { return this.elements; }
+    static fromList(props) {
+      props = __positionalArgs(props, ['elements']);
+      var list = props.elements != null ? props.elements : props;
+      return new Float64List({ elements: list });
+    }
+  }
+
+  // ----- 栅格代理 -----------------------------------------------------------
+  // 宿主协议：键名与 Dart 构造具名实参同名（scroll_controller_bridge 直接读）。
+  class __GridDelegate {
+    constructor(props) {
+      props = props || {};
+      for (var k in props) {
+        if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+      }
+    }
+    toJSON() {
+      var j = {};
+      for (var k in this) {
+        if (this[k] != null) { j[k] = this[k]; }
+      }
+      return j;
+    }
+  }
+  export class SliverGridDelegateWithFixedCrossAxisCount extends __GridDelegate {
+    constructor(props) {
+      super(__positionalArgs(props, ['crossAxisCount', 'mainAxisSpacing',
+        'crossAxisSpacing', 'childAspectRatio', 'mainAxisExtent']));
+    }
+  }
+  export class SliverGridDelegateWithMaxCrossAxisExtent extends __GridDelegate {
+    constructor(props) {
+      super(__positionalArgs(props, ['maxCrossAxisExtent', 'mainAxisSpacing',
+        'crossAxisSpacing', 'childAspectRatio', 'mainAxisExtent']));
+    }
+  }
+
+  // ----- 滚动物理 -----------------------------------------------------------
+  // 宿主协议：scrollPhysicsFromJson 认**类名字符串**——每个物理类 toJSON 即自身
+  // 类名，与 Dart 里「同一类实例同一个物理」语义一致。
+  class __ScrollPhysics {
+    constructor(name, props) {
+      this.__name = name;
+      if (props && props.parent != null) { this.parent = props.parent; }
+    }
+    toJSON() { return this.__name; }
+  }
+  export class BouncingScrollPhysics extends __ScrollPhysics {
+    constructor(props) { super('BouncingScrollPhysics', props); }
+  }
+  export class ClampingScrollPhysics extends __ScrollPhysics {
+    constructor(props) { super('ClampingScrollPhysics', props); }
+  }
+  export class NeverScrollableScrollPhysics extends __ScrollPhysics {
+    constructor(props) { super('NeverScrollableScrollPhysics', props); }
+  }
+  export class AlwaysScrollableScrollPhysics extends __ScrollPhysics {
+    constructor(props) { super('AlwaysScrollableScrollPhysics', props); }
+  }
+
+  // ----- 按钮样式 -----------------------------------------------------------
+  // 宿主协议：buttonStyleFromJson 直取同名字段（padding / minimumSize / side /
+  // shape / textStyle 等由各自类 toJSON 递归）。
+  export class ButtonStyle {
+    constructor(props) {
+      props = props || {};
+      // 与 TextStyle 同理：构造参数全是具名参，直接按原名拷贝。
+      for (var k in props) {
+        if (props[k] != null) { this[k] = props[k]; }
+      }
+    }
+    toJSON() {
+      var j = {};
+      for (var k in this) {
+        if (this[k] != null) { j[k] = this[k]; }
+      }
+      return j;
+    }
+  }
+
+  // ----- 状态属性对象（ButtonStyle 等字段的 WidgetStateProperty）-------------
+  // Dart 侧 `WidgetStatePropertyAll<T>` = 所有状态同一个值；`WidgetStateProperty<T>`
+  // 是它的静态入口（`WidgetStateProperty.all(v)`）。
+  //
+  // 宿主协议：`buttonStyleFromJson` 等对 ButtonStyle 字段统一按**裸值**接收并自行
+  // 包成 `WidgetStatePropertyAll`，所以这里 toJSON 直接透传内部值（透明包装），
+  // `ButtonStyle(padding: WidgetStatePropertyAll(x))` 与 `ButtonStyle(padding: x)`
+  // 的产物完全一致。
+  //
+  // `WidgetStateProperty.resolveWith(...)` 依赖闭包按状态求值，跨桥不可表达，
+  // 因此不提供该静态方法（调用会落空，手册登记为「不适用」）。
+  export class WidgetStateProperty {
+    static all(value) { return new WidgetStatePropertyAll({ value: value }); }
+  }
+  export class WidgetStatePropertyAll {
+    constructor(props) {
+      // 只认形参名 `value`（位置实参已由 `__positionalArgs` 归一）；
+      // `typeArguments` 等尾参不进实例字段。
+      props = __positionalArgs(props, ['value']);
+      this.value = props.value !== undefined ? props.value : null;
+    }
+    toJSON() { return this.value; }
+  }
+
+  // ----- 组件配置值对象（可携带嵌套 Widget）----------------------------------
+  // 这类类型在 Dart 里是普通值对象（`@immutable` 模型），**不是 Widget**：
+  // 构造实参原样成为字段，toJSON 直出宿主协议；字段值是 Widget 时经
+  // `__descriptorOf` 摊成元素描述，父 renderer 取用时**就地**还原成 Flutter
+  // widget（不进 reconciler 树，没有 diff/patch，与 Flutter 每次 build 重建
+  // items 一致）。因此它们不能做成宿主包装类（那样会被当子树挂载）。
+  class __ConfigValue {
+    constructor(props, names) {
+      props = __positionalArgs(props, names || []);
+      for (var k in props) {
+        if (props[k] != null) { this[k] = props[k]; }
+      }
+    }
+    toJSON() {
+      var j = {};
+      for (var k in this) {
+        if (this[k] != null) { j[k] = __descriptorOf(this[k]); }
+      }
+      return j;
+    }
+  }
+
+  // 宿主协议：bottom_navigation_bar renderer 直接读同名字段，`icon` /
+  // `activeIcon` 是元素描述（就地还原成 Widget）。
+  export class BottomNavigationBarItem extends __ConfigValue {
+    constructor(props) {
+      super(props, ['icon', 'label', 'activeIcon', 'tooltip', 'backgroundColor']);
+    }
+  }
+
+  // 宿主协议：text_field renderer 读 `decoration` 字段（hintText / labelText …）；
+  // `icon` / `prefixIcon` / `suffixIcon` 等 Widget 字段同样是元素描述。
+  export class InputDecoration extends __ConfigValue {
+    constructor(props) {
+      super(props);
+    }
+  }
+
+  // 宿主协议：dropdown_button renderer 读 `value` 与 `child`（`child` 是元素描述，
+  // 就地还原成 Widget）。`onTap` 是回调：值对象不进结点树、没有句柄归属，
+  // 因此跨桥时由 `__descriptorOf` 明确告警并丢弃（DropdownButton 也不消费它）。
+  export class DropdownMenuItem extends __ConfigValue {
+    constructor(props) {
+      super(props, ['value', 'enabled', 'alignment', 'child', 'onTap']);
+    }
+  }
+''';

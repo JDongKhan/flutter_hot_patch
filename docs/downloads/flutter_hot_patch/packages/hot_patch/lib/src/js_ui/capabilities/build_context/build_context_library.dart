@@ -1,0 +1,22 @@
+// ===== 能力：BuildContext 代理（JS `this.context`）=====
+//
+// 片段提供 JS 侧代理类（机制本体），通道登记 `ctx/BuildContext` 句柄（句柄 id →
+// 宿主结点 id → 真值 BuildContext）。宿主侧无专属组件。
+//
+// **本能力不含任何库的 API 语义**：`context.watch<T>()` / `read<T>()` 是 provider
+// 那类 `extension BuildContextX on BuildContext`，其 JS 方法补丁在各库自己的模块里
+// （patch/packages/provider.js ← 宿主 js/provider.js），取值与订阅都在 JS 内闭环。
+// 核心只把宿主侧 op 分发给注册者（showOnScreen / measure 等通用渲染操作）。
+import '../js_ui_library.dart';
+import 'build_context_bridge.dart';
+
+/// BuildContext 代理能力接入声明。
+class BuildContextLibrary extends JsUiLibrary {
+  const BuildContextLibrary();
+
+  @override
+  String get id => 'build-context';
+
+  @override
+  void ensureChannels() => ensureBuildContextChannels();
+}

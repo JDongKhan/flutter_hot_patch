@@ -37,7 +37,7 @@ dependencies:
   hot_patch_annotations:
     path: ../packages/hot_patch_annotations
   path_provider: ^2.1.6
-  permission_handler: ^13.0.2
+  permission_handler: ^12.0.1
   dio: ^5.11.1
   package_info_plus: ^10.2.2
   uuid: ^4.6.0
@@ -60,3 +60,9 @@ flutter:
     - assets/images/
     # assets 覆盖 demo 的 JSON（补丁包同名文件优先，见 AssetOverrideDetail）。
     - assets/data/
+    # mock 接口的离线副本：release 读不到 127.0.0.1 的 mock 服务，改读这里的
+    # json（内容与 tool/mock/ 同构，新增接口时两边同步）。
+    - assets/mock/
+    - assets/mock/app/
+    - assets/mock/app/home/
+    - assets/mock/app/orders/

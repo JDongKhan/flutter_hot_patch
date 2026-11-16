@@ -1,0 +1,46 @@
+// ===== 能力：Listenable 响应式组件的宿主映射 =====
+//
+// `ListenableBuilder` / `ValueListenableBuilder` 都是 Flutter SDK 的**通用**
+// Listenable 消费者（与 provider 无关），故归本能力（change_notifier）：
+//   - JS 侧组件类订阅模型、notify 时只重建本结点子树（UI 更新源）；
+//   - 宿主侧把这段子树包成 Dart 的监听边界——notify 只重建该子树（P2 粒度）。
+//
+// **为什么不用 Flutter 原生的 ValueListenableBuilder**：宿主侧的 [JsChangeNotifier]
+// 是 ChangeNotifier 镜像（不是 ValueListenable），故两类组件共用同一个
+// `ListenableBuilder` 边界即可——两者对宿主的要求完全相同（订阅 + 重建子树），
+// 与 `value` 是否参与宿主 builder 无关（builder 由 JS 侧持有并已展开子树）。
+import 'package:flutter/widgets.dart';
+
+import '../../js_widget_registry.dart';
+import 'change_notifier_bridge.dart';
+
+/// 注册 Listenable 响应式组件的宿主映射。
+void registerListenableWidgets(JsWidgetRegistry r) {
+  r.register('ListenableBuilder', (c) => listenableBoundary(c, key: c.key));
+  r.register('ValueListenableBuilder', (c) => listenableBoundary(c, key: c.key));
+}
+
+/// 把一段 JS 子树包成 Dart 的监听边界：结点 props 的 `notifier`
+/// （`{__handle:id}`）取到通用镜像就订阅它，notify 只重建 `(c.children['child'] as Widget?)` 那段子树。
+///
+/// **共用实现**：ListenableBuilder / ValueListenableBuilder 对宿主的要求相同
+/// （订阅 + 重建子树），故公开一份；JS 侧的 provider 消费者不再经过宿主。
+Widget listenableBoundary(JsRenderContext c, {Key? key}) {
+  final subtree = (c.children['child'] as Widget?) ?? const SizedBox.shrink();
+  final notifier = jsChangeNotifierOfProp(c.props['notifier']);
+  if (notifier == null) return subtree;
+  return ListenableBuilder(
+    key: key,
+    listenable: notifier,
+    builder: (context, child) => child ?? const SizedBox.shrink(),
+    child: subtree,
+  );
+}
+
+/// 结点 props 里的 ChangeNotifier（JS 侧 `toJSON` 成 `{__handle:id}`）→ Dart
+/// 侧的通用镜像。
+JsChangeNotifier? jsChangeNotifierOfProp(Object? prop) {
+  if (prop is! Map) return null;
+  final id = prop['__handle'];
+  return id is String ? jsChangeNotifierOf(id) : null;
+}
