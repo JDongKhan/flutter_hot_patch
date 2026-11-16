@@ -40,7 +40,7 @@ echo "[start] patch.zip 大小：$(du -h "$PATCH_DIR/patch.zip" | cut -f1)"
 DOC_ZIP="docs/blog/patch.zip"
 mkdir -p "$(dirname "$DOC_ZIP")"
 cp "$PATCH_DIR/patch.zip" "$DOC_ZIP"
-echo "[start] 已同步到 $DOC_ZIP（$(du -h "$DOC_ZIP" | cut -f1)）；push 后线上可用"
+echo "[start] 已同步到 ${DOC_ZIP}（$(du -h "$DOC_ZIP" | cut -f1)）；push 后线上可用"
 
 # 杀进程放在产物就绪之后：旧服务只在这段极短的窗口内不可用，避免构建期间
 # （数秒到数十秒）服务就已挂掉。

@@ -8,6 +8,7 @@ import { HomePage } from 'pages/home_page.js';
 import { CommunityPage } from 'pages/community_page.js';
 import { OrdersPage } from 'pages/orders_page.js';
 import { MinePage } from 'pages/mine_page.js';
+import { patchUrl } from '../base/patch_config.js';
 import { BottomNavigationBar, BottomNavigationBarItem, BottomNavigationBarType, Center, CircularProgressIndicator, Color, Colors, Icon, Icons, NeverScrollableScrollPhysics, Scaffold, StatefulWidget, StatelessWidget, TabBarView, TabController, Text } from '../flutter.js';
 import { ChangeNotifierProvider } from '../packages/provider.js';
 
