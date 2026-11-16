@@ -615,7 +615,20 @@ class JsRuntimeManager {
 
   /// 模块加载：递归加载 import 依赖（先依赖后自身），再把自身预处理后
   /// evaluate 进 JS 全局（__modules 注册）。幂等：同 jsAsset 只执行一次。
-  Future<void> loadModule(String jsAsset, {String? localRoot}) async {
+  Future<void> loadModule(String jsAsset, {String? localRoot}) =>
+      _loadModule(jsAsset, localRoot: localRoot, chain: const <String>[]);
+
+  /// [loadModule] 的实现：`chain` 是「正在加载的祖先链」（不含自身）。
+  ///
+  /// 环检测放在 inflight 复用**之前**：环上的两个模块会各自 await 对方的
+  /// inflight completer、永远不结算，表现为**页面一直停在进度条，日志停在
+  /// `remote bundle loaded`，没有任何报错**。这里直接抛出带环路径的异常，
+  /// 由 [JsUiWidget] 的错误兜底视图显示出来（连同 JsLog.error 一起留痕）。
+  Future<void> _loadModule(
+    String jsAsset, {
+    required String? localRoot,
+    required List<String> chain,
+  }) async {
     if (jsAsset.isEmpty) {
       JsLog.warn('loadModule: jsAsset 为空，已跳过');
       return;
@@ -624,6 +637,13 @@ class JsRuntimeManager {
     // 失败（asset 缺失 / evaluate 出错）可再次重试。
     if (_loadedModules.contains(jsAsset)) {
       return;
+    }
+    // 循环 import：本模块已在自己的依赖链上 → 两边互等，永远不会完成。
+    if (chain.contains(jsAsset)) {
+      final from = chain.indexOf(jsAsset);
+      final cycle = <String>[...chain.sublist(from), jsAsset].join(' -> ');
+      JsLog.error('模块循环 import（互相等待会永久挂起，已中止）：$cycle');
+      throw StateError('模块循环 import：$cycle');
     }
     // 加载中（防依赖环 + 防并发竞争）→ 复用首个加载的 completer，等它完成
     // 后再继续。同屏多个 JsUiWidget 用同一 manager 时，会并发调用 loadModule，
@@ -654,7 +674,11 @@ class JsRuntimeManager {
       // 1) 递归加载 import 依赖（相对路径，以当前模块目录为基准）
       for (final (_, rel) in _parseImports(source)) {
         final dep = JsAssetResolver.resolve(base, rel);
-        await loadModule(dep, localRoot: localRoot);
+        await _loadModule(
+          dep,
+          localRoot: localRoot,
+          chain: <String>[...chain, jsAsset],
+        );
       }
 
       // 2) 模块产物求值前确保运行时骨架（runtime.js：环境全局 __modules /

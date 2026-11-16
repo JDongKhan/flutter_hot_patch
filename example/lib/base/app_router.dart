@@ -3,9 +3,7 @@ import 'package:hot_patch/hot_patch.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../app/model/app_models.dart';
-// 只为了 appToast（宿主侧的轻提示实现）；页面本体统一由路由表
-// （base/app_routes.dart）构造。
-import '../app/pages/detail_pages.dart';
+import '../app/pages/city_picker_sheet.dart';
 import '../app/service/app_service.dart';
 
 /// 全部页面路由名（`MaterialApp.onGenerateRoute` 的路由表见
@@ -209,4 +207,24 @@ class AppRouter {
     final ctx = JsRuntimeManager.navigatorKey?.currentContext;
     if (ctx != null) appToast(ctx, msg);
   }
+}
+
+/// 统一轻提示（宿主实现）。
+///
+/// 定义在这里而不是页面文件里，是为了让路由能力的产物 `base/app_router.js`
+/// **不依赖页面产物**：页面本来就要 import `AppRouter`，若本类反过来 import
+/// `detail_pages.js` 就会形成模块环 —— 例子的模块加载是「先依赖后自身」，
+/// 环上的两个模块会各自等对方的 inflight completer，页面永远拿不到首帧
+/// （症状：JS 页面一直转圈、日志停在 `remote bundle loaded`）。
+void appToast(BuildContext context, String msg) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(milliseconds: 1600),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(40, 0, 40, 110),
+      ),
+    );
 }
