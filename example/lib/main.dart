@@ -357,24 +357,26 @@ class _PropsUpdateDemoState extends State<_PropsUpdateDemo> {
             ],
           ),
         ),
+        // 两侧用同一层约束：都放进 SingleChildScrollView，卡片按内容高度收缩，
+        // 避免 JS 侧被 Expanded 铺满、原生侧缩成小卡片导致左右不一致。
         Expanded(
-          child: widget.nativeSide
-              ? SingleChildScrollView(
-                  padding: const EdgeInsets.all(12),
-                  child: StatelessCard(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: widget.nativeSide
+                ? StatelessCard(
                     title: title,
                     subtitle: subtitle,
                     badge: badge,
+                  )
+                : JsUiWidget(
+                    jsAsset: patchUrl('StatelessCard', 'components/stateless_card.js'),
+                    params: {
+                      'title': title,
+                      'subtitle': subtitle,
+                      'badge': badge,
+                    },
                   ),
-                )
-              : JsUiWidget(
-                  jsAsset: patchUrl('StatelessCard', 'components/stateless_card.js'),
-                  params: {
-                    'title': title,
-                    'subtitle': subtitle,
-                    'badge': badge,
-                  },
-                ),
+          ),
         ),
       ],
     );
