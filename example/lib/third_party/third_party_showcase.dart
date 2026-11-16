@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 
+import '../base/patch_config.dart';
 import '../components/compare_pane.dart';
 import '../components/construct_only_card.dart';
 import '../components/dio_card.dart';
@@ -20,8 +21,6 @@ import '../components/third_party_tools_card.dart';
 ///   `res.statusCode` 与 Dart 一比一，底层请求由宿主用真实 dio 执行。
 class ThirdPartyShowcase extends StatelessWidget {
   const ThirdPartyShowcase({super.key});
-
-  static const String _zip = 'http://127.0.0.1:8765/patch/patch.zip';
 
   static final List<_Group> _groups = [
     _Group('状态管理（JS 侧整套实现）', [
@@ -142,9 +141,7 @@ class _ComparePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final jsAsset = '${ThirdPartyShowcase._zip}'
-        '?component=${entry.component}'
-        '&entry=${Uri.encodeComponent(entry.jsEntry)}';
+    final jsAsset = patchUrl(entry.component, entry.jsEntry);
     // 统一对比外壳：宽屏左右分栏，窄屏单栏 + 标题栏切换（与列表页入口一致）。
     return ComparePane(
       title: entry.title,

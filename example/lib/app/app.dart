@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
+
+import '../base/patch_config.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import 'package:provider/provider.dart';
 
@@ -180,11 +182,9 @@ class TabPageSlot extends StatelessWidget {
 class AppShellJsPage extends StatelessWidget {
   const AppShellJsPage({super.key});
 
-  /// 本地 patch 服务（start_patch_server.sh）暴露的 zip 包。
-  static const String _zip = 'http://127.0.0.1:8765/patch/patch.zip';
-
-  /// 补丁 URL：组件名 + 入口路径都走 query（与 DemoListPage 的写法一致）。
-  static final String _jsAsset = '$_zip?component=AppShell&entry=${Uri.encodeComponent('app/app.js')}';
+  /// 补丁 URL：组件名 + 入口路径都走 query（与 DemoListPage 的写法一致）；
+  /// 地址由 [patchUrl] 按 debug / release 选择（release 走 GitHub Pages 静态包）。
+  static final String _jsAsset = patchUrl('AppShell', 'app/app.js');
 
   @override
   Widget build(BuildContext context) {

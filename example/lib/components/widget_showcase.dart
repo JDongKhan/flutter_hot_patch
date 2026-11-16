@@ -5,6 +5,7 @@ import 'asset_override_detail.dart';
 import 'automatic_keep_alive_detail.dart';
 import 'button_detail.dart';
 import 'color_filtered_detail.dart';
+import '../base/patch_config.dart';
 import 'compare_pane.dart';
 import 'container_detail.dart';
 import 'custom_paint_detail.dart';
@@ -473,8 +474,6 @@ class WidgetDetailPage extends StatefulWidget {
 }
 
 class _WidgetDetailPageState extends State<WidgetDetailPage> {
-  static const String _jsZip = 'http://127.0.0.1:8765/patch/patch.zip';
-
   /// 组件名 → 产物入口（`patch/<源文件镜像路径>.js`）。
   ///
   /// 每个组件各自一个源文件，产物路径由 build_runner 镜像源码路径生成
@@ -565,9 +564,8 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
 
   String get _jsEntry => _jsEntries[widget.component]!;
 
-  /// 拼接补丁 URL：component 动态、entry 按源文件，走 query 参数。
-  String get _jsAsset =>
-      '$_jsZip?component=${widget.component}&entry=${Uri.encodeComponent(_jsEntry)}';
+  /// 拼接补丁 URL（地址由 patch_config 按 debug / release 选择）。
+  String get _jsAsset => patchUrl(widget.component, _jsEntry);
 
   Widget _native() {
     return switch (widget.component) {

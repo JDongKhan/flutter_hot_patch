@@ -32,6 +32,16 @@ if [ ! -f "$PATCH_DIR/patch.zip" ]; then
 fi
 echo "[start] patch.zip 大小：$(du -h "$PATCH_DIR/patch.zip" | cut -f1)"
 
+# 同步一份归档到 docs/blog/patch.zip：docs/ 是 GitHub Pages 的发布目录，
+# push 之后 release 包就能从
+#   https://jdongkhan.github.io/flutter_hot_patch/blog/patch.zip
+# 加载补丁（见 example/lib/base/patch_config.dart 的 release 分支），
+# 别人装包后不需要再自己起本地服务。
+DOC_ZIP="docs/blog/patch.zip"
+mkdir -p "$(dirname "$DOC_ZIP")"
+cp "$PATCH_DIR/patch.zip" "$DOC_ZIP"
+echo "[start] 已同步到 $DOC_ZIP（$(du -h "$DOC_ZIP" | cut -f1)）；push 后线上可用"
+
 # 杀进程放在产物就绪之后：旧服务只在这段极短的窗口内不可用，避免构建期间
 # （数秒到数十秒）服务就已挂掉。
 echo "[start] 杀掉旧 patch_server 进程..."

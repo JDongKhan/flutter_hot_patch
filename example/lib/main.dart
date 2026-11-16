@@ -5,6 +5,7 @@ import 'package:hot_patch/hot_patch.dart';
 
 import 'app/app.dart';
 import 'base/app_log_console.dart';
+import 'base/patch_config.dart';
 import 'components/compare_pane.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
@@ -90,18 +91,6 @@ class HotDemoApp extends StatelessWidget {
   }
 }
 
-/// 本地 patch 服务（start_patch_server.sh 启动）暴露的 zip 包。
-/// demo 全部从这里加载：散 .js 与 zip 同目录，改完产物重启服务即可。
-const String _patchZipUrl = 'http://127.0.0.1:8765/patch/patch.zip';
-
-/// 拼接补丁 URL：组件名与入口路径都走 query 参数（运营可直接改 URL 配置）。
-///   ?component=HelloCard&entry=components/hello_component.js
-String _patchUrl(String component, [String? entry]) {
-  final q = StringBuffer('component=$component');
-  if (entry != null) q.write('&entry=${Uri.encodeComponent(entry)}');
-  return '$_patchZipUrl?$q';
-}
-
 /// 一个 Demo 场景条目。
 ///
 /// [right] 为 null 表示该入口只有一页实现（导航列表页等），按单页打开；
@@ -167,7 +156,7 @@ class DemoListPage extends StatelessWidget {
       'HelloCard · 原生 vs JS 热更',
       '同屏对比：正常组件与 JS 补丁的渲染与逻辑',
       left: HelloCard(),
-      right: JsUiWidget(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js')),
+      right: JsUiWidget(jsAsset: patchUrl('HelloCard', 'components/hello_component.js')),
     ),
     _DemoEntry(
       'DashboardCard · 原生 vs JS 热更',
@@ -177,7 +166,7 @@ class DemoListPage extends StatelessWidget {
       // 翻译进同一产物（JS 类引用），运行时直接 new，使用方无需声明依赖。
       // 只有标了 @PatchIgnore 的私有组件走宿主注册（私有类跨库不可见），
       // 其等价实现见 main() 里的 jsWidgetRegistry.register。
-      right: JsUiWidget(jsAsset: _patchUrl('DashboardCard', 'components/composite_component.js')),
+      right: JsUiWidget(jsAsset: patchUrl('DashboardCard', 'components/composite_component.js')),
     ),
     _DemoEntry(
       '三方库 · 列表',
@@ -188,13 +177,13 @@ class DemoListPage extends StatelessWidget {
       'InheritedCard · 原生 vs JS 热更',
       'InheritedWidget：祖先数据共享，updateShouldNotify 精确重建依赖者',
       left: InheritedCard(),
-      right: JsUiWidget(jsAsset: _patchUrl('InheritedCard', 'components/inherited_widget_demo.js')),
+      right: JsUiWidget(jsAsset: patchUrl('InheritedCard', 'components/inherited_widget_demo.js')),
     ),
     _DemoEntry(
       'HelloCard · JS 双实例隔离',
       '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
-      left: JsUiWidget(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js')),
-      right: JsUiWidget(jsAsset: _patchUrl('RichTextDetail', 'components/rich_text_detail.js')),
+      left: JsUiWidget(jsAsset: patchUrl('HelloCard', 'components/hello_component.js')),
+      right: JsUiWidget(jsAsset: patchUrl('RichTextDetail', 'components/rich_text_detail.js')),
       leftLabel: 'JS 实例 #1（HelloCard）',
       rightLabel: 'JS 实例 #2（RichTextDetail）',
       initialShowRight: false,
@@ -212,13 +201,13 @@ class DemoListPage extends StatelessWidget {
       'TestWidget · 局部 widget 变量',
       'Text text = Text(); final items = [Text(), Text()]; 局部变量与列表按元素翻译',
       left: const TestWidget(),
-      right: JsUiWidget(jsAsset: _patchUrl('TestWidget', 'components/test_widget.js')),
+      right: JsUiWidget(jsAsset: patchUrl('TestWidget', 'components/test_widget.js')),
     ),
     _DemoEntry(
       '异步归属 · JS 热更',
       'Timer 回调里创建 GlobalKey：验证随组件释放，退出后 leak-check 应为 clean',
       left: const LeakDemoCard(),
-      right: JsUiWidget(jsAsset: _patchUrl('LeakDemoCard', 'components/leak_demo_card.js')),
+      right: JsUiWidget(jsAsset: patchUrl('LeakDemoCard', 'components/leak_demo_card.js')),
     ),
     _DemoEntry(
       '生命周期 · 挂载失败回滚',
@@ -234,7 +223,7 @@ class DemoListPage extends StatelessWidget {
       '性能 · 大图长列表',
       '单个 ListView.builder：200 项通栏大图 + 每项隐式动画，宽屏左右同时跑原生与 JS',
       left: const PerfListPage(),
-      right: JsUiWidget(jsAsset: _patchUrl('PerfListPage', 'components/perf_list_page.js')),
+      right: JsUiWidget(jsAsset: patchUrl('PerfListPage', 'components/perf_list_page.js')),
       fillPane: true,
     ),
     _DemoEntry(
@@ -379,7 +368,7 @@ class _PropsUpdateDemoState extends State<_PropsUpdateDemo> {
                   ),
                 )
               : JsUiWidget(
-                  jsAsset: _patchUrl('StatelessCard', 'components/stateless_card.js'),
+                  jsAsset: patchUrl('StatelessCard', 'components/stateless_card.js'),
                   params: {
                     'title': title,
                     'subtitle': subtitle,
@@ -400,6 +389,6 @@ class _MountFailDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => JsUiWidget(
-        jsAsset: _patchUrl('MountFailCard', 'components/mount_fail_card.js'),
+        jsAsset: patchUrl('MountFailCard', 'components/mount_fail_card.js'),
       );
 }
