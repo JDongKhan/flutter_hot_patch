@@ -77,10 +77,11 @@ class _NullSafetyDetailState extends State<NullSafetyDetail> {
         Text('多层空安全赋值：_task?.scores?[1] = 9 → ${_cell ?? 'null'}'),
         Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
           children: [
             ElevatedButton(onPressed: _run, child: const Text('生成')),
-            const SizedBox(width: 12),
             OutlinedButton(onPressed: _clear, child: const Text('置空')),
           ],
         ),

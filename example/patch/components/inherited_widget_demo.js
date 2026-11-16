@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/inherited_widget_demo.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Builder, Card, Column, EdgeInsets, ElevatedButton, InheritedWidget, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, StatelessWidget, Text } from '../flutter.js';
+import { Builder, Card, Column, EdgeInsets, ElevatedButton, InheritedWidget, MainAxisSize, Padding, SizedBox, StatefulWidget, StatelessWidget, Text, Wrap, WrapAlignment } from '../flutter.js';
 
 // 组件 InheritedCard
 export class InheritedCard extends StatefulWidget {
@@ -35,8 +35,10 @@ export class InheritedCard extends StatefulWidget {
               (this.__k2 || (this.__k2 = new SizedBox({
                 "height": 8
               }))),
-              new Row({
-                "mainAxisAlignment": MainAxisAlignment.center,
+              new Wrap({
+                "spacing": 12,
+                "runSpacing": 8,
+                "alignment": WrapAlignment.center,
                 "children": [
                   new ElevatedButton({
                     "onPressed": () => { this.setState(() => {
@@ -46,26 +48,20 @@ export class InheritedCard extends StatefulWidget {
                       "data": "count +1"
                     })))
                   }),
-                  (this.__k4 || (this.__k4 = new SizedBox({
-                    "width": 12
-                  }))),
                   new ElevatedButton({
                     "onPressed": () => { this.setState(() => {
                         this._mode = ((this._mode === "A") ? "B" : "A");
                       }); },
-                    "child": (this.__k5 || (this.__k5 = new Text({
+                    "child": (this.__k4 || (this.__k4 = new Text({
                       "data": "切换 mode"
                     })))
                   }),
-                  (this.__k4 || (this.__k4 = new SizedBox({
-                    "width": 12
-                  }))),
                   new Builder({
                     "builder": (context) => new ElevatedButton({
                       "onPressed": () => { this.setState(() => {
                           this._lastRead = (_DemoScope.read(context)?.count ?? (-1));
                         }); },
-                      "child": (this.__k6 || (this.__k6 = new Text({
+                      "child": (this.__k5 || (this.__k5 = new Text({
                         "data": "read"
                       })))
                     })

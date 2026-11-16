@@ -45,7 +45,10 @@ class _SpacerDetailState extends State<SpacerDetail> {
                     height: 40,
                     color: Colors.indigo,
                     alignment: Alignment.center,
-                    child: const Text('A', style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      'A',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                   Spacer(flex: _flex),
                   Container(
@@ -53,7 +56,10 @@ class _SpacerDetailState extends State<SpacerDetail> {
                     height: 40,
                     color: Colors.teal,
                     alignment: Alignment.center,
-                    child: const Text('B', style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      'B',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                   const Spacer(),
                   Container(
@@ -61,23 +67,26 @@ class _SpacerDetailState extends State<SpacerDetail> {
                     height: 40,
                     color: Colors.orange,
                     alignment: Alignment.center,
-                    child: const Text('C', style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      'C',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   OutlinedButton(
                     onPressed: () => setState(() => _flex = 1),
                     child: const Text('flex 1'),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton(
                     onPressed: () => setState(() => _flex = 2),
                     child: const Text('flex 2'),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton(
                     onPressed: () => setState(() => _flex = 3),
                     child: const Text('flex 3'),

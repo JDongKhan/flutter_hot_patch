@@ -59,18 +59,18 @@ class _SliverFillViewportDetailState extends State<SliverFillViewportDetail> {
                   style: TextStyle(fontSize: 12, color: Colors.black54),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
                     OutlinedButton(
                       onPressed: () => _setFraction(1.0),
                       child: const Text('1.0 整屏'),
                     ),
-                    const SizedBox(width: 8),
                     OutlinedButton(
                       onPressed: () => _setFraction(0.8),
                       child: const Text('0.8'),
                     ),
-                    const SizedBox(width: 8),
                     OutlinedButton(
                       onPressed: () => _setFraction(0.5),
                       child: const Text('0.5'),

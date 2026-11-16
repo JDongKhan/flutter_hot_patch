@@ -5,7 +5,7 @@
 import { User } from '../packages/hot_module_base/src/model/user.js';
 import { AccountCenter } from '../packages/hot_module_base/src/account_center.js';
 import { Network } from '../packages/hot_module_base/src/network.js';
-import { Color, Colors, Column, Duration, ElevatedButton, FontWeight, Future, Row, StateError, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Color, Colors, Column, Duration, ElevatedButton, FontWeight, Future, StateError, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
 
 // 模型 PanelColors
 export class PanelColors {
@@ -155,7 +155,9 @@ export class HelloCard extends _HelloCard_StatefulWidget_TestMixin_TestMixin2 {
         ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [new Text({
                 "data": "循环第 " + i + " 个"
               })]); } return out; })(),
-        new Row({
+        new Wrap({
+          "spacing": 8,
+          "runSpacing": 8,
           "children": [
             new ElevatedButton({
               "onPressed": () => this.inc(),

@@ -244,13 +244,14 @@ class _KeyDetailState extends State<KeyDetail> {
           const SizedBox(height: 8),
           _valueKeyRows(),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
             children: [
               TextButton(
                 onPressed: _rotateNames,
                 child: const Text('轮换顺序（A→末尾）'),
               ),
-              const SizedBox(width: 8),
               TextButton(onPressed: _resetNames, child: const Text('重置')),
             ],
           ),
@@ -441,13 +442,14 @@ class _KeyDetailState extends State<KeyDetail> {
             style: const TextStyle(fontSize: 13, color: Colors.teal),
           ),
           const SizedBox(height: 4),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
             children: [
               TextButton(
                 onPressed: _measureTarget,
                 child: const Text('测量位置与尺寸'),
               ),
-              const SizedBox(width: 8),
               TextButton(
                 onPressed: _scrollToTarget,
                 child: const Text('定位（showOnScreen）'),

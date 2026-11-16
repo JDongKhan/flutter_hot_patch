@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { Card, Column, EdgeInsets, ElevatedButton, FontWeight, ListenableBuilder, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Card, Column, EdgeInsets, ElevatedButton, FontWeight, ListenableBuilder, MainAxisSize, Padding, SizedBox, StatefulWidget, Text, TextStyle, Wrap, WrapAlignment } from '../flutter.js';
 
 // 组件 NotifierCard
 export class NotifierCard extends StatefulWidget {
@@ -39,8 +39,10 @@ export class NotifierCard extends StatefulWidget {
             (this.__k2 || (this.__k2 = new SizedBox({
               "height": 12
             }))),
-            new Row({
-              "mainAxisAlignment": MainAxisAlignment.center,
+            new Wrap({
+              "alignment": WrapAlignment.center,
+              "spacing": 12,
+              "runSpacing": 8,
               "children": [
                 new ElevatedButton({
                   "onPressed": () => this._inc(),
@@ -48,12 +50,9 @@ export class NotifierCard extends StatefulWidget {
                     "data": "+1"
                   })))
                 }),
-                (this.__k4 || (this.__k4 = new SizedBox({
-                  "width": 12
-                }))),
                 new ElevatedButton({
                   "onPressed": () => this._reset(),
-                  "child": (this.__k5 || (this.__k5 = new Text({
+                  "child": (this.__k4 || (this.__k4 = new Text({
                     "data": "Reset"
                   })))
                 })

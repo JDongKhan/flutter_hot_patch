@@ -90,18 +90,18 @@ class _TweenAnimationBuilderDetailState
                 },
               ),
               const SizedBox(height: 10),
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   OutlinedButton(
                     onPressed: () => setState(() => _target = 0),
                     child: const Text('→ 0'),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton(
                     onPressed: () => setState(() => _target = 0.4),
                     child: const Text('→ 0.4'),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton(
                     onPressed: () => setState(() => _target = 1),
                     child: const Text('→ 1'),
@@ -109,18 +109,18 @@ class _TweenAnimationBuilderDetailState
                 ],
               ),
               const SizedBox(height: 4),
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   OutlinedButton(
                     onPressed: () => setState(() => _ms = 300),
                     child: const Text('300ms'),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton(
                     onPressed: () => setState(() => _ms = 1500),
                     child: const Text('1500ms'),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton(
                     onPressed: () => setState(() => _ease = !_ease),
                     child: Text(_ease ? '曲线：easeInOut' : '曲线：linear'),

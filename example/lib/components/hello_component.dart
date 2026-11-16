@@ -29,7 +29,7 @@ class HelloCard extends StatefulWidget {
   State<HelloCard> createState() => _HelloCardState();
 }
 
-class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
+class _HelloCardState extends State<HelloCard> with TestMixin, TestMixin2 {
   // 无注解：自动成为 JS 属性 `_count`
   int _count = 0;
 
@@ -115,7 +115,9 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
 
   // 无注解：方法体是 SnackBar 形式 → 自动 native 通道 `nativeToast`
   void showNative() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hello from native (JS-driven)')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Hello from native (JS-driven)')),
+    );
   }
 
   @override
@@ -124,7 +126,9 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
     final isAdult = _user != null && _user!.age >= 18;
     final debugActive = kDebugMode; // 标志转换：kDebugMode → __isDebug
     final android = Platform.isAndroid; // 标志转换：Platform.isAndroid → __isAndroid
-    debugPrint('build: count=$_count debug=$debugActive android=$android'); // 日志 → console.debug
+    debugPrint(
+      'build: count=$_count debug=$debugActive android=$android',
+    ); // 日志 → console.debug
     // switch 表达式：按计数值选阶段文案（生成器翻译为 IIFE + JS switch）
     final stage = switch (_count) {
       0 => '起步',
@@ -134,7 +138,11 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
       children: [
         Text(
           'Hello from JS logic 4',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue),
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+          ),
         ),
         Text('count = $_count'),
         Text('阶段：$stage'),
@@ -145,7 +153,10 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
         // collection-if：按状态条件插入节点（无 else）
         if (_count > 0) Text('当前 count 是正数（if 条件渲染）'),
         // collection-if + else：用户加载与否显示不同节点
-        if (_user != null) Text('用户已加载（if + else 渲染）') else Text('用户未加载，点 Load User'),
+        if (_user != null)
+          Text('用户已加载（if + else 渲染）')
+        else
+          Text('用户未加载，点 Load User'),
         // collection-for：循环渲染（循环变量 i 直接参与插值）
         for (var i = 0; i < 3; i++) Text('循环第 $i 个'),
         // Wrap：宽屏一行排开，窄屏自动折行（含 5 个按钮时不溢出）。
@@ -157,15 +168,23 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
               onPressed: inc,
               style: ElevatedButton.styleFrom(
                 // 局部变量驱动的样式：isAdult 时按钮变色
-                backgroundColor: isAdult ? PanelColors.adult : PanelColors.background,
+                backgroundColor: isAdult
+                    ? PanelColors.adult
+                    : PanelColors.background,
                 foregroundColor: Colors.white,
               ),
               child: const Text('+1'),
             ),
-            ElevatedButton(onPressed: () => reset(), child: const Text('Reset')),
+            ElevatedButton(
+              onPressed: () => reset(),
+              child: const Text('Reset'),
+            ),
             ElevatedButton(onPressed: showNative, child: const Text('Native')),
             ElevatedButton(onPressed: loadUser, child: const Text('Load User')),
-            ElevatedButton(onPressed: demoTryCatchAssert, child: const Text('Try/Catch')),
+            ElevatedButton(
+              onPressed: demoTryCatchAssert,
+              child: const Text('Try/Catch'),
+            ),
           ],
         ),
       ],

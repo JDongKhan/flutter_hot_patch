@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/page_view_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BoxDecoration, BoxShape, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisAlignment, PageController, PageView, Row, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
+import { Alignment, BoxDecoration, BoxShape, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisAlignment, PageController, PageView, Row, SizedBox, StatefulWidget, Text, TextButton, TextStyle, Wrap, WrapAlignment } from '../flutter.js';
 
 // 组件 PageViewDetail
 export class PageViewDetail extends StatefulWidget {
@@ -101,8 +101,10 @@ export class PageViewDetail extends StatefulWidget {
         (this.__k8 || (this.__k8 = new SizedBox({
           "height": 8
         }))),
-        new Row({
-          "mainAxisAlignment": MainAxisAlignment.center,
+        new Wrap({
+          "spacing": 12,
+          "runSpacing": 8,
+          "alignment": WrapAlignment.center,
           "children": [
             new TextButton({
               "onPressed": () => this._prevPage(),

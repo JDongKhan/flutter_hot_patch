@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/spacer_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, Spacer, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, Spacer, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
 
 // 组件 SpacerDetail
 export class SpacerDetail extends StatefulWidget {
@@ -80,7 +80,9 @@ export class SpacerDetail extends StatefulWidget {
               (this.__k2 || (this.__k2 = new SizedBox({
                 "height": 8
               }))),
-              new Row({
+              new Wrap({
+                "spacing": 12,
+                "runSpacing": 8,
                 "children": [
                   new OutlinedButton({
                     "onPressed": () => { this.setState(() => {
@@ -90,25 +92,19 @@ export class SpacerDetail extends StatefulWidget {
                       "data": "flex 1"
                     })))
                   }),
-                  (this.__k8 || (this.__k8 = new SizedBox({
-                    "width": 8
-                  }))),
                   new OutlinedButton({
                     "onPressed": () => { this.setState(() => {
                         this._flex = 2;
                       }); },
-                    "child": (this.__k9 || (this.__k9 = new Text({
+                    "child": (this.__k8 || (this.__k8 = new Text({
                       "data": "flex 2"
                     })))
                   }),
-                  (this.__k8 || (this.__k8 = new SizedBox({
-                    "width": 8
-                  }))),
                   new OutlinedButton({
                     "onPressed": () => { this.setState(() => {
                         this._flex = 3;
                       }); },
-                    "child": (this.__k10 || (this.__k10 = new Text({
+                    "child": (this.__k9 || (this.__k9 = new Text({
                       "data": "flex 3"
                     })))
                   })
@@ -117,7 +113,7 @@ export class SpacerDetail extends StatefulWidget {
             ]
           })
         }),
-        (this.__k11 || (this.__k11 = new SizedBox({
+        (this.__k10 || (this.__k10 = new SizedBox({
           "height": 12
         }))),
         new SizedBox({
@@ -137,7 +133,7 @@ export class SpacerDetail extends StatefulWidget {
             "child": new Column({
               "crossAxisAlignment": CrossAxisAlignment.stretch,
               "children": [
-                (this.__k12 || (this.__k12 = new Text({
+                (this.__k11 || (this.__k11 = new Text({
                   "data": "Column：中间一个 Spacer()，底部按钮被顶到底",
                   "style": new TextStyle({
                     "fontSize": 13,
@@ -147,7 +143,7 @@ export class SpacerDetail extends StatefulWidget {
                 (this.__k5 || (this.__k5 = new Spacer({}))),
                 new ElevatedButton({
                   "onPressed": () => {},
-                  "child": (this.__k13 || (this.__k13 = new Text({
+                  "child": (this.__k12 || (this.__k12 = new Text({
                     "data": "贴底按钮（由 Spacer 顶下来）"
                   })))
                 })

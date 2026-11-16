@@ -126,10 +126,11 @@ class _PatternDetailState extends State<PatternDetail> {
         Text(_switchExprText()),
         Text(_switchStmtText()),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
           children: [
             ElevatedButton(onPressed: _run, child: const Text('生成')),
-            const SizedBox(width: 12),
             OutlinedButton(onPressed: _clear, child: const Text('置空')),
           ],
         ),

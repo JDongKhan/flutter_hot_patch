@@ -97,7 +97,10 @@ class _VisibilityDetailState extends State<VisibilityDetail> {
             children: [
               Text(
                 'Visibility（visible=$_visible，maintainSize=$_maintainSize）',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Visibility(
@@ -108,7 +111,10 @@ class _VisibilityDetailState extends State<VisibilityDetail> {
                 maintainSemantics: _maintainSemantics,
                 maintainInteractivity: _maintainInteractivity,
                 replacement: const Center(
-                  child: Text('replacement 顶替显示', style: TextStyle(fontSize: 12)),
+                  child: Text(
+                    'replacement 顶替显示',
+                    style: TextStyle(fontSize: 12),
+                  ),
                 ),
                 child: Container(
                   height: 64,
@@ -126,15 +132,23 @@ class _VisibilityDetailState extends State<VisibilityDetail> {
                 style: TextStyle(fontSize: 12, color: Colors.black54),
               ),
               const SizedBox(height: 8),
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   OutlinedButton(onPressed: _show, child: const Text('显示')),
-                  const SizedBox(width: 6),
-                  OutlinedButton(onPressed: _hideTight, child: const Text('隐藏·不占位')),
-                  const SizedBox(width: 6),
-                  OutlinedButton(onPressed: _hideKeepSpace, child: const Text('隐藏·占位')),
-                  const SizedBox(width: 6),
-                  OutlinedButton(onPressed: _hideKeepTap, child: const Text('隐藏·仍可点')),
+                  OutlinedButton(
+                    onPressed: _hideTight,
+                    child: const Text('隐藏·不占位'),
+                  ),
+                  OutlinedButton(
+                    onPressed: _hideKeepSpace,
+                    child: const Text('隐藏·占位'),
+                  ),
+                  OutlinedButton(
+                    onPressed: _hideKeepTap,
+                    child: const Text('隐藏·仍可点'),
+                  ),
                 ],
               ),
             ],
@@ -151,7 +165,10 @@ class _VisibilityDetailState extends State<VisibilityDetail> {
             children: [
               Text(
                 'Offstage（offstage=$_offstage）',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Offstage(

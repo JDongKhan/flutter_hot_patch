@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/value_listenable_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle, ValueListenableBuilder, ValueNotifier, int } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle, ValueListenableBuilder, ValueNotifier, Wrap, int } from '../flutter.js';
 
 // 组件 ValueListenableBuilderDetail
 export class ValueListenableBuilderDetail extends StatefulWidget {
@@ -117,7 +117,9 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
           (this.__k2 || (this.__k2 = new SizedBox({
             "height": 10
           }))),
-          new Row({
+          new Wrap({
+            "spacing": 12,
+            "runSpacing": 8,
             "children": [
               new OutlinedButton({
                 "onPressed": () => this._dec(),
@@ -125,34 +127,28 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
                   "data": "-1"
                 })))
               }),
-              (this.__k9 || (this.__k9 = new SizedBox({
-                "width": 8
-              }))),
               new OutlinedButton({
                 "onPressed": () => this._inc(),
-                "child": (this.__k10 || (this.__k10 = new Text({
+                "child": (this.__k9 || (this.__k9 = new Text({
                   "data": "+1"
                 })))
               }),
-              (this.__k9 || (this.__k9 = new SizedBox({
-                "width": 8
-              }))),
               new OutlinedButton({
                 "onPressed": () => this._same(),
-                "child": (this.__k11 || (this.__k11 = new Text({
+                "child": (this.__k10 || (this.__k10 = new Text({
                   "data": "赋相同值"
                 })))
               })
             ]
           }),
-          (this.__k12 || (this.__k12 = new SizedBox({
+          (this.__k11 || (this.__k11 = new SizedBox({
             "height": 4
           }))),
           new Row({
             "children": [
               new OutlinedButton({
                 "onPressed": () => this._toggle(),
-                "child": (this.__k13 || (this.__k13 = new Text({
+                "child": (this.__k12 || (this.__k12 = new Text({
                   "data": "切换订阅对象"
                 })))
               })

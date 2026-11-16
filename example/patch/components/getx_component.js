@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { GetxCounterVm } from '../model/getx_counter_vm.js';
-import { Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, Padding, SizedBox, StatefulWidget, Text, TextStyle, Wrap, WrapAlignment } from '../flutter.js';
 import { Get, GetBuilder, Obx } from '../packages/get.js';
 
 // 组件 GetXCard
@@ -40,8 +40,10 @@ export class GetXCard extends StatefulWidget {
                       }))),
                       "data": "GetBuilder：builder 执行 " + this._builderBuilds + " 次" + "（count = " + vm.count + "）"
                     }),
-                    new Row({
-                      "mainAxisAlignment": MainAxisAlignment.center,
+                    new Wrap({
+                      "alignment": WrapAlignment.center,
+                      "spacing": 12,
+                      "runSpacing": 8,
                       "children": [
                         new ElevatedButton({
                           "onPressed": () => { return vm.inc(); },
@@ -49,12 +51,9 @@ export class GetXCard extends StatefulWidget {
                             "data": "+1"
                           })))
                         }),
-                        (this.__k3 || (this.__k3 = new SizedBox({
-                          "width": 12
-                        }))),
                         new ElevatedButton({
                           "onPressed": () => { return Get.find({ typeArguments: {"S": "GetxCounterVm"} }).reset(); },
-                          "child": (this.__k4 || (this.__k4 = new Text({
+                          "child": (this.__k3 || (this.__k3 = new Text({
                             "data": "Reset"
                           })))
                         })
@@ -64,7 +63,7 @@ export class GetXCard extends StatefulWidget {
                 }); },
               "typeArguments": {"T": "GetxCounterVm"}
             }),
-            (this.__k5 || (this.__k5 = new SizedBox({
+            (this.__k4 || (this.__k4 = new SizedBox({
               "height": 12
             }))),
             new Obx({
@@ -73,29 +72,29 @@ export class GetXCard extends StatefulWidget {
                   "mainAxisSize": MainAxisSize.min,
                   "children": [
                     new Text({
-                      "style": (this.__k6 || (this.__k6 = new TextStyle({
+                      "style": (this.__k5 || (this.__k5 = new TextStyle({
                         "color": Colors.green,
                         "fontSize": 20,
                         "fontWeight": FontWeight.bold
                       }))),
                       "data": "Obx：builder 执行 " + this._obxBuilds + " 次" + "（reactiveCount = " + this._vm.reactiveCount.value + "）"
                     }),
-                    (this.__k7 || (this.__k7 = new SizedBox({
+                    (this.__k6 || (this.__k6 = new SizedBox({
                       "height": 8
                     }))),
                     new ElevatedButton({
                       "onPressed": () => { return this._vm.incReactive(); },
-                      "child": (this.__k8 || (this.__k8 = new Text({
+                      "child": (this.__k7 || (this.__k7 = new Text({
                         "data": "响应式 +1"
                       })))
                     })
                   ]
                 }); }
             }),
-            (this.__k5 || (this.__k5 = new SizedBox({
+            (this.__k4 || (this.__k4 = new SizedBox({
               "height": 12
             }))),
-            (this.__k9 || (this.__k9 = new Text({
+            (this.__k8 || (this.__k8 = new Text({
               "data": "GetxController.update() 只重建 GetBuilder；" + "RxInt 赋值只重建 Obx",
               "style": new TextStyle({
                 "fontSize": 14,

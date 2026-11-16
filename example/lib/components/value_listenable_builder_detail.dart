@@ -121,12 +121,12 @@ class _ValueListenableBuilderDetailState
             ),
           ),
           const SizedBox(height: 10),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
             children: [
               OutlinedButton(onPressed: _dec, child: const Text('-1')),
-              const SizedBox(width: 8),
               OutlinedButton(onPressed: _inc, child: const Text('+1')),
-              const SizedBox(width: 8),
               OutlinedButton(onPressed: _same, child: const Text('赋相同值')),
             ],
           ),

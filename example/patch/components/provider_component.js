@@ -4,7 +4,7 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
-import { Builder, Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Builder, Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle, Wrap, WrapAlignment } from '../flutter.js';
 import { ChangeNotifierProvider, Consumer, MultiProvider, Selector } from '../packages/provider.js';
 
 // 组件 ProviderCard
@@ -53,8 +53,10 @@ export class ProviderCard extends StatefulWidget {
                         }))),
                         "data": "context.watch：count = " + model.count
                       }),
-                      new Row({
-                        "mainAxisAlignment": MainAxisAlignment.center,
+                      new Wrap({
+                        "alignment": WrapAlignment.center,
+                        "spacing": 12,
+                        "runSpacing": 8,
                         "children": [
                           new ElevatedButton({
                             "onPressed": () => { return model.inc(); },
@@ -62,12 +64,9 @@ export class ProviderCard extends StatefulWidget {
                               "data": "+1"
                             })))
                           }),
-                          (this.__k3 || (this.__k3 = new SizedBox({
-                            "width": 12
-                          }))),
                           new ElevatedButton({
                             "onPressed": () => { context.read({ typeArguments: {"T": "CounterVm"} }).reset(); },
-                            "child": (this.__k4 || (this.__k4 = new Text({
+                            "child": (this.__k3 || (this.__k3 = new Text({
                               "data": "Reset"
                             })))
                           })
@@ -77,13 +76,13 @@ export class ProviderCard extends StatefulWidget {
                   });
                 }
               }),
-              (this.__k5 || (this.__k5 = new SizedBox({
+              (this.__k4 || (this.__k4 = new SizedBox({
                 "height": 12
               }))),
               new Consumer({
                 "builder": (context, model, child) => { this._consumerBuilds++;
                   return new Text({
-                    "style": (this.__k6 || (this.__k6 = new TextStyle({
+                    "style": (this.__k5 || (this.__k5 = new TextStyle({
                       "color": Colors.green,
                       "fontSize": 20,
                       "fontWeight": FontWeight.bold
@@ -92,12 +91,12 @@ export class ProviderCard extends StatefulWidget {
                   }); },
                 "typeArguments": {"T": "CounterVm"}
               }),
-              (this.__k5 || (this.__k5 = new SizedBox({
+              (this.__k4 || (this.__k4 = new SizedBox({
                 "height": 12
               }))),
               new Selector({
                 "selector": (_, model) => { return (model.count >= 5); },
-                "child": (this.__k7 || (this.__k7 = new Text({
+                "child": (this.__k6 || (this.__k6 = new Text({
                   "data": "child：跨重建复用的固定子树",
                   "style": new TextStyle({
                     "fontSize": 12,
@@ -109,7 +108,7 @@ export class ProviderCard extends StatefulWidget {
                     "mainAxisSize": MainAxisSize.min,
                     "children": [
                       new Text({
-                        "style": (this.__k6 || (this.__k6 = new TextStyle({
+                        "style": (this.__k5 || (this.__k5 = new TextStyle({
                           "color": Colors.green,
                           "fontSize": 20,
                           "fontWeight": FontWeight.bold
@@ -121,11 +120,11 @@ export class ProviderCard extends StatefulWidget {
                   }); },
                 "typeArguments": {"A": "CounterVm", "S": "bool"}
               }),
-              (this.__k5 || (this.__k5 = new SizedBox({
+              (this.__k4 || (this.__k4 = new SizedBox({
                 "height": 12
               }))),
               new Consumer({
-                "builder": (context, model, child) => (this.__k8 || (this.__k8 = new Text({
+                "builder": (context, model, child) => (this.__k7 || (this.__k7 = new Text({
                   "data": "NetworkVm：ChangeNotifierProvider.value 由 State 手动 dispose",
                   "style": new TextStyle({
                     "fontSize": 14,
@@ -134,7 +133,7 @@ export class ProviderCard extends StatefulWidget {
                 }))),
                 "typeArguments": {"T": "NetworkVm"}
               }),
-              (this.__k9 || (this.__k9 = new SizedBox({
+              (this.__k8 || (this.__k8 = new SizedBox({
                 "height": 8
               }))),
               new Row({
@@ -142,7 +141,7 @@ export class ProviderCard extends StatefulWidget {
                 "children": [
                   new ElevatedButton({
                     "onPressed": () => this._loadUser(),
-                    "child": (this.__k10 || (this.__k10 = new Text({
+                    "child": (this.__k9 || (this.__k9 = new Text({
                       "data": "加载用户信息"
                     })))
                   })

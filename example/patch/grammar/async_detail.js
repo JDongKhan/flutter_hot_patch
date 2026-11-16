@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/grammar/async_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, Completer, CrossAxisAlignment, Duration, ElevatedButton, FontWeight, Future, OutlinedButton, Row, SizedBox, StateError, StatefulWidget, Text, TextStyle, int } from '../flutter.js';
+import { Column, Completer, CrossAxisAlignment, Duration, ElevatedButton, FontWeight, Future, OutlinedButton, SizedBox, StateError, StatefulWidget, Text, TextStyle, Wrap, int } from '../flutter.js';
 
 // 组件 AsyncDetail
 export class AsyncDetail extends StatefulWidget {
@@ -68,7 +68,9 @@ export class AsyncDetail extends StatefulWidget {
         (this.__k2 || (this.__k2 = new SizedBox({
           "height": 12
         }))),
-        new Row({
+        new Wrap({
+          "spacing": 12,
+          "runSpacing": 8,
           "children": [
             new ElevatedButton({
               "onPressed": () => this._run(),
@@ -76,12 +78,9 @@ export class AsyncDetail extends StatefulWidget {
                 "data": "complete(42)"
               })))
             }),
-            (this.__k4 || (this.__k4 = new SizedBox({
-              "width": 12
-            }))),
             new OutlinedButton({
               "onPressed": () => this._runError(),
-              "child": (this.__k5 || (this.__k5 = new Text({
+              "child": (this.__k4 || (this.__k4 = new Text({
                 "data": "completeError"
               })))
             })

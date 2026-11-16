@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/overlay_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Builder, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisAlignment, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Radius, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Builder, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Radius, SizedBox, StatefulWidget, Text, TextStyle, Wrap, WrapAlignment } from '../flutter.js';
 
 // 组件 OverlayDetail
 export class OverlayDetail extends StatefulWidget {
@@ -56,8 +56,10 @@ export class OverlayDetail extends StatefulWidget {
                             "value": 10
                           })
                         }))),
-                        new Row({
-                          "mainAxisAlignment": MainAxisAlignment.center,
+                        new Wrap({
+                          "spacing": 12,
+                          "runSpacing": 8,
+                          "alignment": WrapAlignment.center,
                           "children": [
                             new OutlinedButton({
                               "onPressed": () => { this.setState(() => {
@@ -99,9 +101,6 @@ export class OverlayDetail extends StatefulWidget {
                                 "data": "插入浮层"
                               })))
                             }),
-                            (this.__k8 || (this.__k8 = new SizedBox({
-                              "width": 8
-                            }))),
                             new OutlinedButton({
                               "onPressed": () => { const entry = (this._entries.isNotEmpty ? this._entries.removeLast() : null);
                                 if ((__nn(entry) != null)) {
@@ -110,7 +109,7 @@ export class OverlayDetail extends StatefulWidget {
                                 this.setState(() => {
                                   this._log = "移除浮层（剩余 " + this._entries.length + " 层）";
                                 }); },
-                              "child": (this.__k9 || (this.__k9 = new Text({
+                              "child": (this.__k8 || (this.__k8 = new Text({
                                 "data": "移除浮层"
                               })))
                             })
@@ -124,11 +123,11 @@ export class OverlayDetail extends StatefulWidget {
             ]
           })
         }),
-        (this.__k10 || (this.__k10 = new SizedBox({
+        (this.__k9 || (this.__k9 = new SizedBox({
           "height": 8
         }))),
         new Text({
-          "style": (this.__k11 || (this.__k11 = new TextStyle({
+          "style": (this.__k10 || (this.__k10 = new TextStyle({
             "color": Colors.black54,
             "fontSize": 12
           }))),

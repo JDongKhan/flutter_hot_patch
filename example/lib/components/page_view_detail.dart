@@ -92,8 +92,10 @@ class _PageViewDetailState extends State<PageViewDetail> {
           ],
         ),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
           children: [
             TextButton(onPressed: _prevPage, child: const Text('上一页')),
             TextButton(onPressed: _nextPage, child: const Text('下一页')),

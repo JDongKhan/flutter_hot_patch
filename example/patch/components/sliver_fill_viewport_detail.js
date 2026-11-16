@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_fill_viewport_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AppBar, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Row, Scaffold, SizedBox, SliverFillViewport, StatefulWidget, Text, TextStyle, double } from '../flutter.js';
+import { Alignment, AppBar, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Scaffold, SizedBox, SliverFillViewport, StatefulWidget, Text, TextStyle, Wrap, double } from '../flutter.js';
 
 // 组件 SliverFillViewportDetail
 export class SliverFillViewportDetail extends StatefulWidget {
@@ -56,7 +56,9 @@ export class SliverFillViewportDetail extends StatefulWidget {
                 (this.__k5 || (this.__k5 = new SizedBox({
                   "height": 8
                 }))),
-                new Row({
+                new Wrap({
+                  "spacing": 12,
+                  "runSpacing": 8,
                   "children": [
                     new OutlinedButton({
                       "onPressed": () => { return this._setFraction(1.0); },
@@ -64,21 +66,15 @@ export class SliverFillViewportDetail extends StatefulWidget {
                         "data": "1.0 整屏"
                       })))
                     }),
-                    (this.__k7 || (this.__k7 = new SizedBox({
-                      "width": 8
-                    }))),
                     new OutlinedButton({
                       "onPressed": () => { return this._setFraction(0.8); },
-                      "child": (this.__k8 || (this.__k8 = new Text({
+                      "child": (this.__k7 || (this.__k7 = new Text({
                         "data": "0.8"
                       })))
                     }),
-                    (this.__k7 || (this.__k7 = new SizedBox({
-                      "width": 8
-                    }))),
                     new OutlinedButton({
                       "onPressed": () => { return this._setFraction(0.5); },
-                      "child": (this.__k9 || (this.__k9 = new Text({
+                      "child": (this.__k8 || (this.__k8 = new Text({
                         "data": "0.5"
                       })))
                     })
@@ -96,10 +92,10 @@ export class SliverFillViewportDetail extends StatefulWidget {
                   "delegate": {
                     "__delegate": "builder",
                     "builder": (context, index) => new Container({
-                      "margin": (this.__k10 || (this.__k10 = EdgeInsets.all({
+                      "margin": (this.__k9 || (this.__k9 = EdgeInsets.all({
                         "value": 12
                       }))),
-                      "padding": (this.__k11 || (this.__k11 = EdgeInsets.all({
+                      "padding": (this.__k10 || (this.__k10 = EdgeInsets.all({
                         "value": 16
                       }))),
                       "decoration": new BoxDecoration({
@@ -113,17 +109,17 @@ export class SliverFillViewportDetail extends StatefulWidget {
                           "mainAxisSize": MainAxisSize.min,
                           "children": [
                             new Text({
-                              "style": (this.__k12 || (this.__k12 = new TextStyle({
+                              "style": (this.__k11 || (this.__k11 = new TextStyle({
                                 "fontSize": 18,
                                 "fontWeight": FontWeight.bold
                               }))),
                               "data": "第 " + index + " 屏 / 共 5 屏"
                             }),
-                            (this.__k13 || (this.__k13 = new SizedBox({
+                            (this.__k12 || (this.__k12 = new SizedBox({
                               "height": 4
                             }))),
                             new Text({
-                              "style": (this.__k14 || (this.__k14 = new TextStyle({
+                              "style": (this.__k13 || (this.__k13 = new TextStyle({
                                 "color": Colors.black54,
                                 "fontSize": 12
                               }))),
@@ -141,12 +137,12 @@ export class SliverFillViewportDetail extends StatefulWidget {
           }),
           new Container({
             "width": double.infinity,
-            "padding": (this.__k15 || (this.__k15 = EdgeInsets.symmetric({
+            "padding": (this.__k14 || (this.__k14 = EdgeInsets.symmetric({
               "horizontal": 12,
               "vertical": 6
             }))),
             "color": Colors.grey.shade200,
-            "child": (this.__k16 || (this.__k16 = new Text({
+            "child": (this.__k15 || (this.__k15 = new Text({
               "data": "padEnds: false · fraction 0.5 · 3 项（首屏贴顶，不留白）",
               "style": new TextStyle({
                 "fontSize": 12,
@@ -164,7 +160,7 @@ export class SliverFillViewportDetail extends StatefulWidget {
                   "delegate": {
                     "__delegate": "builder",
                     "builder": (context, index) => new Container({
-                      "margin": (this.__k17 || (this.__k17 = EdgeInsets.fromLTRB({
+                      "margin": (this.__k16 || (this.__k16 = EdgeInsets.fromLTRB({
                         "bottom": 6,
                         "left": 12,
                         "right": 12,
@@ -178,7 +174,7 @@ export class SliverFillViewportDetail extends StatefulWidget {
                         })
                       }),
                       "child": new Text({
-                        "style": (this.__k18 || (this.__k18 = new TextStyle({
+                        "style": (this.__k17 || (this.__k17 = new TextStyle({
                           "fontSize": 13
                         }))),
                         "data": "padEnds false 第 " + index + " 项"

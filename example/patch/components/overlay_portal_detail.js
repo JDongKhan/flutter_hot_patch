@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { GuideBubbleWidget } from '../packages/hot_module_base/src/guide_bubble_widget.js';
-import { Align, Alignment, Chip, Color, Column, CrossAxisAlignment, Duration, FilledButton, FontWeight, OutlinedButton, Row, SingleChildScrollView, SizedBox, StatefulWidget, Text, TextStyle, ValueKey, Wrap } from '../flutter.js';
+import { Align, Alignment, Chip, Color, Column, CrossAxisAlignment, Duration, FilledButton, FontWeight, OutlinedButton, SingleChildScrollView, SizedBox, StatefulWidget, Text, TextStyle, ValueKey, Wrap } from '../flutter.js';
 
 // 组件 OverlayPortalDetail
 export class OverlayPortalDetail extends StatefulWidget {
@@ -42,7 +42,9 @@ export class OverlayPortalDetail extends StatefulWidget {
           }))),
           "data": "对齐方式：" + this._alignment
         }),
-        new Row({
+        new Wrap({
+          "spacing": 12,
+          "runSpacing": 8,
           "children": [
             new FilledButton({
               "onPressed": () => { return this._switchAlignment("left"); },
@@ -50,27 +52,21 @@ export class OverlayPortalDetail extends StatefulWidget {
                 "data": "left"
               })))
             }),
-            (this.__k4 || (this.__k4 = new SizedBox({
-              "width": 8
-            }))),
             new FilledButton({
               "onPressed": () => { return this._switchAlignment("center"); },
-              "child": (this.__k5 || (this.__k5 = new Text({
+              "child": (this.__k4 || (this.__k4 = new Text({
                 "data": "center"
               })))
             }),
-            (this.__k4 || (this.__k4 = new SizedBox({
-              "width": 8
-            }))),
             new FilledButton({
               "onPressed": () => { return this._switchAlignment("right"); },
-              "child": (this.__k6 || (this.__k6 = new Text({
+              "child": (this.__k5 || (this.__k5 = new Text({
                 "data": "right"
               })))
             })
           ]
         }),
-        (this.__k7 || (this.__k7 = new SizedBox({
+        (this.__k6 || (this.__k6 = new SizedBox({
           "height": 16
         }))),
         new Wrap({
@@ -80,12 +76,12 @@ export class OverlayPortalDetail extends StatefulWidget {
             new GuideBubbleWidget({
               "text": "点这里开始",
               "alignment": this._alignment,
-              "duration": (this.__k8 || (this.__k8 = new Duration({
+              "duration": (this.__k7 || (this.__k7 = new Duration({
                 "seconds": 3
               }))),
               "child": new OutlinedButton({
                 "onPressed": () => this._replay(),
-                "child": (this.__k9 || (this.__k9 = new Text({
+                "child": (this.__k8 || (this.__k8 = new Text({
                   "data": "目标 A"
                 })))
               }),
@@ -94,16 +90,16 @@ export class OverlayPortalDetail extends StatefulWidget {
             new GuideBubbleWidget({
               "text": "这是第二个锚点，气泡会自动跟随它",
               "alignment": this._alignment,
-              "duration": (this.__k8 || (this.__k8 = new Duration({
+              "duration": (this.__k7 || (this.__k7 = new Duration({
                 "seconds": 3
               }))),
               "gap": 12,
-              "backgroundColor": (this.__k10 || (this.__k10 = new Color({
+              "backgroundColor": (this.__k9 || (this.__k9 = new Color({
                 "value": 0xE6307AF0
               }))),
               "child": new OutlinedButton({
                 "onPressed": () => this._replay(),
-                "child": (this.__k11 || (this.__k11 = new Text({
+                "child": (this.__k10 || (this.__k10 = new Text({
                   "data": "目标 B"
                 })))
               }),
@@ -111,7 +107,7 @@ export class OverlayPortalDetail extends StatefulWidget {
             })
           ]
         }),
-        (this.__k7 || (this.__k7 = new SizedBox({
+        (this.__k6 || (this.__k6 = new SizedBox({
           "height": 16
         }))),
         new SizedBox({
@@ -119,7 +115,7 @@ export class OverlayPortalDetail extends StatefulWidget {
           "child": new SingleChildScrollView({
             "child": new Column({
               "children": [
-                (this.__k12 || (this.__k12 = new SizedBox({
+                (this.__k11 || (this.__k11 = new SizedBox({
                   "height": 60
                 }))),
                 new Align({
@@ -127,10 +123,10 @@ export class OverlayPortalDetail extends StatefulWidget {
                   "child": new GuideBubbleWidget({
                     "text": "我在滚动区里，滚一下看我跟着走",
                     "alignment": this._alignment,
-                    "duration": (this.__k8 || (this.__k8 = new Duration({
+                    "duration": (this.__k7 || (this.__k7 = new Duration({
                       "seconds": 3
                     }))),
-                    "child": (this.__k13 || (this.__k13 = new Chip({
+                    "child": (this.__k12 || (this.__k12 = new Chip({
                       "label": new Text({
                         "data": "滚动里的锚点"
                       })
@@ -138,7 +134,7 @@ export class OverlayPortalDetail extends StatefulWidget {
                     "key": new ValueKey({value: "b3-" + this._round})
                   })
                 }),
-                (this.__k14 || (this.__k14 = new SizedBox({
+                (this.__k13 || (this.__k13 = new SizedBox({
                   "height": 300
                 })))
               ]

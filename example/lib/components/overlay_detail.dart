@@ -60,8 +60,10 @@ class _OverlayDetailState extends State<OverlayDetail> {
                             style: TextStyle(fontSize: 12),
                           ),
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
                           children: [
                             OutlinedButton(
                               onPressed: () {
@@ -102,7 +104,6 @@ class _OverlayDetailState extends State<OverlayDetail> {
                               },
                               child: const Text('插入浮层'),
                             ),
-                            const SizedBox(width: 8),
                             OutlinedButton(
                               onPressed: () {
                                 // 栈顶是最上面那条；空表时不移除（避免对已移除的

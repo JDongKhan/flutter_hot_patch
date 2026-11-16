@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { ArgumentError, Builder, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, Row, SizedBox, StatefulWidget, Text, TextStyle, double, int, num } from '../flutter.js';
+import { ArgumentError, Builder, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle, Wrap, double, int, num } from '../flutter.js';
 import { ChangeNotifierProvider } from '../packages/provider.js';
 
 // 模型 TypeCodec
@@ -222,7 +222,9 @@ export class GenericDetail extends StatefulWidget {
                   (this.__k1 || (this.__k1 = new SizedBox({
                     "height": 8
                   }))),
-                  new Row({
+                  new Wrap({
+                    "spacing": 12,
+                    "runSpacing": 8,
                     "children": [
                       new ElevatedButton({
                         "onPressed": (...__a) => model.inc(...__a),
@@ -230,12 +232,9 @@ export class GenericDetail extends StatefulWidget {
                           "data": "+1"
                         })))
                       }),
-                      (this.__k13 || (this.__k13 = new SizedBox({
-                        "width": 12
-                      }))),
                       new ElevatedButton({
                         "onPressed": () => { return this._snapshot(context.read({ typeArguments: {"T": "CounterVm"} })); },
-                        "child": (this.__k14 || (this.__k14 = new Text({
+                        "child": (this.__k13 || (this.__k13 = new Text({
                           "data": "read 快照"
                         })))
                       })

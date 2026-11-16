@@ -37,17 +37,29 @@ class _OverlayPortalDetailState extends State<OverlayPortalDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('OverlayPortal / CompositedTransform', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text(
+          'OverlayPortal / CompositedTransform',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         Text('对齐方式：$_alignment', style: const TextStyle(fontSize: 12)),
 
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
           children: [
-            FilledButton(onPressed: () => _switchAlignment('left'), child: const Text('left')),
-            const SizedBox(width: 8),
-            FilledButton(onPressed: () => _switchAlignment('center'), child: const Text('center')),
-            const SizedBox(width: 8),
-            FilledButton(onPressed: () => _switchAlignment('right'), child: const Text('right')),
+            FilledButton(
+              onPressed: () => _switchAlignment('left'),
+              child: const Text('left'),
+            ),
+            FilledButton(
+              onPressed: () => _switchAlignment('center'),
+              child: const Text('center'),
+            ),
+            FilledButton(
+              onPressed: () => _switchAlignment('right'),
+              child: const Text('right'),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -62,7 +74,10 @@ class _OverlayPortalDetailState extends State<OverlayPortalDetail> {
               text: '点这里开始',
               alignment: _alignment,
               duration: const Duration(seconds: 3),
-              child: OutlinedButton(onPressed: _replay, child: const Text('目标 A')),
+              child: OutlinedButton(
+                onPressed: _replay,
+                child: const Text('目标 A'),
+              ),
             ),
             GuideBubbleWidget(
               key: ValueKey('b2-$_round'),
@@ -71,7 +86,10 @@ class _OverlayPortalDetailState extends State<OverlayPortalDetail> {
               duration: const Duration(seconds: 3),
               gap: 12,
               backgroundColor: const Color(0xE6307AF0),
-              child: OutlinedButton(onPressed: _replay, child: const Text('目标 B')),
+              child: OutlinedButton(
+                onPressed: _replay,
+                child: const Text('目标 B'),
+              ),
             ),
           ],
         ),

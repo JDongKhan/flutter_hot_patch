@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { TaskItem } from 'constructor_detail.js';
-import { Column, CrossAxisAlignment, ElevatedButton, FontWeight, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Column, CrossAxisAlignment, ElevatedButton, FontWeight, OutlinedButton, SizedBox, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
 
 // 组件 PatternDetail
 export class PatternDetail extends StatefulWidget {
@@ -204,7 +204,9 @@ export class PatternDetail extends StatefulWidget {
         (this.__k2 || (this.__k2 = new SizedBox({
           "height": 12
         }))),
-        new Row({
+        new Wrap({
+          "spacing": 12,
+          "runSpacing": 8,
           "children": [
             new ElevatedButton({
               "onPressed": () => this._run(),
@@ -212,12 +214,9 @@ export class PatternDetail extends StatefulWidget {
                 "data": "生成"
               })))
             }),
-            (this.__k4 || (this.__k4 = new SizedBox({
-              "width": 12
-            }))),
             new OutlinedButton({
               "onPressed": () => this._clear(),
-              "child": (this.__k5 || (this.__k5 = new Text({
+              "child": (this.__k4 || (this.__k4 = new Text({
                 "data": "置空"
               })))
             })

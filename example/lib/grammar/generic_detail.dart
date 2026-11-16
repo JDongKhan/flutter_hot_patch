@@ -52,7 +52,7 @@ class TypeCodec<T> {
     return T.toString();
   }
 
-  String getEType<E> () {
+  String getEType<E>() {
     return E.toString();
   }
 }
@@ -119,7 +119,10 @@ class _GenericDetailState extends State<GenericDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('泛型：类泛型 / 方法泛型', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          '泛型：类泛型 / 方法泛型',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         const Text(
           'Dart 泛型在 JS 侧擦除：<T> 只作为 typeArguments 元信息下发，不占位置参数。',
@@ -131,7 +134,9 @@ class _GenericDetailState extends State<GenericDetail> {
         const SizedBox(height: 6),
         Text('TypeCodec<String>().parse("123") → ${stringCodec.parse('123')}'),
         Text('TypeCodec<int>().parse("42") → ${intCodec.parse('42')}'),
-        Text('TypeCodec<double>().parse("3.14") → ${doubleCodec.parse('3.14')}'),
+        Text(
+          'TypeCodec<double>().parse("3.14") → ${doubleCodec.parse('3.14')}',
+        ),
         Text('Pair<String, int> → ${pair.describe()}'),
 
         Text('stringCodec.getType() → ${stringCodec.getType()}'),
@@ -150,11 +155,18 @@ class _GenericDetailState extends State<GenericDetail> {
         ),
 
         const SizedBox(height: 16),
-        const Text('泛型 extension', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text(
+          '泛型 extension',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 6),
         Text('List<int>[1, 2, 3].tailOrNull → ${const [1, 2, 3].tailOrNull}'),
-        Text('List<String>[].tailOrNull → ${const <String>[].tailOrNull ?? 'null'}'),
-        Text('List<String>["a", "b"].tailText() → ${const ['a', 'b'].tailText()}'),
+        Text(
+          'List<String>[].tailOrNull → ${const <String>[].tailOrNull ?? 'null'}',
+        ),
+        Text(
+          'List<String>["a", "b"].tailText() → ${const ['a', 'b'].tailText()}',
+        ),
         Text('TypeCodec<int>().label("type") → ${intCodec.label('type')}'),
         const SizedBox(height: 6),
         const Text(
@@ -184,13 +196,21 @@ class _GenericDetailState extends State<GenericDetail> {
                 children: [
                   Text(
                     'context.watch<CounterVm>() → count = ${model.count}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepOrange,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
-                      ElevatedButton(onPressed: model.inc, child: const Text('+1')),
-                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: model.inc,
+                        child: const Text('+1'),
+                      ),
                       ElevatedButton(
                         // read：仅取实例，不订阅；事件作用域里 context 形参仍可用。
                         onPressed: () => _snapshot(context.read<CounterVm>()),

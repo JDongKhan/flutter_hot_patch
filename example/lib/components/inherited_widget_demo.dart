@@ -36,19 +36,20 @@ class _InheritedCardState extends State<InheritedCard> {
               _ModeLabel(),
               Text('read 快照 = $_lastRead'),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
                 children: [
                   ElevatedButton(
                     onPressed: () => setState(() => _count += 1),
                     child: const Text('count +1'),
                   ),
-                  const SizedBox(width: 12),
                   ElevatedButton(
-                    onPressed: () => setState(() => _mode = _mode == 'A' ? 'B' : 'A'),
+                    onPressed: () =>
+                        setState(() => _mode = _mode == 'A' ? 'B' : 'A'),
                     child: const Text('切换 mode'),
                   ),
-                  const SizedBox(width: 12),
                   // Builder 的 context 是 _DemoScope 的子孙：get 只取值、不登记依赖。
                   Builder(
                     builder: (context) => ElevatedButton(

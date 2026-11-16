@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/visibility_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Center, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, Offstage, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle, Visibility } from '../flutter.js';
+import { Alignment, Center, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, Offstage, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle, Visibility, Wrap } from '../flutter.js';
 
 // 组件 VisibilityDetail
 export class VisibilityDetail extends StatefulWidget {
@@ -121,7 +121,9 @@ export class VisibilityDetail extends StatefulWidget {
               (this.__k2 || (this.__k2 = new SizedBox({
                 "height": 8
               }))),
-              new Row({
+              new Wrap({
+                "spacing": 12,
+                "runSpacing": 8,
                 "children": [
                   new OutlinedButton({
                     "onPressed": () => this._show(),
@@ -129,30 +131,21 @@ export class VisibilityDetail extends StatefulWidget {
                       "data": "显示"
                     })))
                   }),
-                  (this.__k6 || (this.__k6 = new SizedBox({
-                    "width": 6
-                  }))),
                   new OutlinedButton({
                     "onPressed": () => this._hideTight(),
-                    "child": (this.__k7 || (this.__k7 = new Text({
+                    "child": (this.__k6 || (this.__k6 = new Text({
                       "data": "隐藏·不占位"
                     })))
                   }),
-                  (this.__k6 || (this.__k6 = new SizedBox({
-                    "width": 6
-                  }))),
                   new OutlinedButton({
                     "onPressed": () => this._hideKeepSpace(),
-                    "child": (this.__k8 || (this.__k8 = new Text({
+                    "child": (this.__k7 || (this.__k7 = new Text({
                       "data": "隐藏·占位"
                     })))
                   }),
-                  (this.__k6 || (this.__k6 = new SizedBox({
-                    "width": 6
-                  }))),
                   new OutlinedButton({
                     "onPressed": () => this._hideKeepTap(),
-                    "child": (this.__k9 || (this.__k9 = new Text({
+                    "child": (this.__k8 || (this.__k8 = new Text({
                       "data": "隐藏·仍可点"
                     })))
                   })
@@ -161,7 +154,7 @@ export class VisibilityDetail extends StatefulWidget {
             ]
           })
         }),
-        (this.__k10 || (this.__k10 = new SizedBox({
+        (this.__k9 || (this.__k9 = new SizedBox({
           "height": 12
         }))),
         new Container({
@@ -197,7 +190,7 @@ export class VisibilityDetail extends StatefulWidget {
               (this.__k2 || (this.__k2 = new SizedBox({
                 "height": 8
               }))),
-              (this.__k11 || (this.__k11 = new Text({
+              (this.__k10 || (this.__k10 = new Text({
                 "data": "↑ offstage 时不占位、不绘制、不响应点击（State 仍保留）",
                 "style": new TextStyle({
                   "fontSize": 12,

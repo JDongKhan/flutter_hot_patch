@@ -112,7 +112,10 @@ class _KeyboardListenerDetailState extends State<KeyboardListenerDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('KeyboardListener', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text(
+          'KeyboardListener',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 4),
         const Text(
           '方向键移动方块，空格切换颜色，Esc 复位；KeyDown / KeyRepeat / KeyUp 分别计数',
@@ -138,7 +141,10 @@ class _KeyboardListenerDetailState extends State<KeyboardListenerDetail> {
                 ),
                 const SizedBox(height: 8),
                 Text('最近事件：$_last', style: const TextStyle(fontSize: 12)),
-                Text('字符 character：$_char', style: const TextStyle(fontSize: 12)),
+                Text(
+                  '字符 character：$_char',
+                  style: const TextStyle(fontSize: 12),
+                ),
                 Text('物理键：$_phys', style: const TextStyle(fontSize: 12)),
                 Text(
                   'KeyDown $_down · KeyRepeat $_repeat · KeyUp $_up',
@@ -149,13 +155,14 @@ class _KeyboardListenerDetailState extends State<KeyboardListenerDetail> {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
           children: [
             OutlinedButton(
               onPressed: () => _node.requestFocus(),
               child: const Text('让面板获得焦点'),
             ),
-            const SizedBox(width: 8),
             OutlinedButton(
               onPressed: () {
                 setState(() {

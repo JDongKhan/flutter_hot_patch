@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/keyboard_listener_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FocusNode, FontWeight, KeyDownEvent, KeyRepeatEvent, KeyboardListener, LogicalKeyboardKey, MainAxisSize, OutlinedButton, Radius, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FocusNode, FontWeight, KeyDownEvent, KeyRepeatEvent, KeyboardListener, LogicalKeyboardKey, MainAxisSize, OutlinedButton, Radius, Row, SizedBox, StatefulWidget, Text, TextStyle, Wrap } from '../flutter.js';
 
 // 组件 KeyboardListenerDetail
 export class KeyboardListenerDetail extends StatefulWidget {
@@ -188,7 +188,9 @@ export class KeyboardListenerDetail extends StatefulWidget {
         (this.__k6 || (this.__k6 = new SizedBox({
           "height": 10
         }))),
-        new Row({
+        new Wrap({
+          "spacing": 12,
+          "runSpacing": 8,
           "children": [
             new OutlinedButton({
               "onPressed": () => { return this._node.requestFocus(); },
@@ -196,16 +198,13 @@ export class KeyboardListenerDetail extends StatefulWidget {
                 "data": "让面板获得焦点"
               })))
             }),
-            (this.__k13 || (this.__k13 = new SizedBox({
-              "width": 8
-            }))),
             new OutlinedButton({
               "onPressed": () => { this.setState(() => {
                   this._row = 1;
                   this._col = 1;
                   this._lit = false;
                 }); },
-              "child": (this.__k14 || (this.__k14 = new Text({
+              "child": (this.__k13 || (this.__k13 = new Text({
                 "data": "复位方块"
               })))
             })

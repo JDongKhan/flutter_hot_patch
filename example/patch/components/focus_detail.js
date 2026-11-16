@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/focus_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, Focus, FocusNode, FontWeight, GestureDetector, OutlinedButton, Radius, Row, SizedBox, StatefulWidget, Text, TextAlign, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, Focus, FocusNode, FontWeight, GestureDetector, OutlinedButton, Radius, Row, SizedBox, StatefulWidget, Text, TextAlign, TextStyle, Wrap } from '../flutter.js';
 
 // 组件 FocusDetail
 export class FocusDetail extends StatefulWidget {
@@ -153,7 +153,9 @@ export class FocusDetail extends StatefulWidget {
         (this.__k10 || (this.__k10 = new SizedBox({
           "height": 8
         }))),
-        new Row({
+        new Wrap({
+          "spacing": 12,
+          "runSpacing": 8,
           "children": [
             new OutlinedButton({
               "onPressed": () => { return this._a.requestFocus(); },
@@ -161,21 +163,15 @@ export class FocusDetail extends StatefulWidget {
                 "data": "聚焦 A"
               })))
             }),
-            (this.__k12 || (this.__k12 = new SizedBox({
-              "width": 8
-            }))),
             new OutlinedButton({
               "onPressed": () => { return this._b.requestFocus(); },
-              "child": (this.__k13 || (this.__k13 = new Text({
+              "child": (this.__k12 || (this.__k12 = new Text({
                 "data": "聚焦 B"
               })))
             }),
-            (this.__k12 || (this.__k12 = new SizedBox({
-              "width": 8
-            }))),
             new OutlinedButton({
               "onPressed": () => { return this._a.unfocus(); },
-              "child": (this.__k14 || (this.__k14 = new Text({
+              "child": (this.__k13 || (this.__k13 = new Text({
                 "data": "失焦"
               })))
             })

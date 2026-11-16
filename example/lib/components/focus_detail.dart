@@ -93,7 +93,10 @@ class _FocusDetailState extends State<FocusDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Focus / FocusNode', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text(
+          'Focus / FocusNode',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 4),
         const Text(
           '点块或按钮切换焦点；C 声明 canRequestFocus: false，点了不聚焦',
@@ -117,7 +120,11 @@ class _FocusDetailState extends State<FocusDetail> {
                   borderRadius: const BorderRadius.all(Radius.circular(8)),
                   border: Border.all(color: Colors.grey.shade400),
                 ),
-                child: const Text('C\n(不可聚焦)', textAlign: TextAlign.center, style: TextStyle(fontSize: 11)),
+                child: const Text(
+                  'C\n(不可聚焦)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11),
+                ),
               ),
             ),
           ],
@@ -125,15 +132,27 @@ class _FocusDetailState extends State<FocusDetail> {
         const SizedBox(height: 12),
         Text('当前聚焦：$_current', style: const TextStyle(fontSize: 13)),
         const SizedBox(height: 6),
-        Text('变化日志：$_log', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        Text(
+          '变化日志：$_log',
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
         const SizedBox(height: 8),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
           children: [
-            OutlinedButton(onPressed: () => _a.requestFocus(), child: const Text('聚焦 A')),
-            const SizedBox(width: 8),
-            OutlinedButton(onPressed: () => _b.requestFocus(), child: const Text('聚焦 B')),
-            const SizedBox(width: 8),
-            OutlinedButton(onPressed: () => _a.unfocus(), child: const Text('失焦')),
+            OutlinedButton(
+              onPressed: () => _a.requestFocus(),
+              child: const Text('聚焦 A'),
+            ),
+            OutlinedButton(
+              onPressed: () => _b.requestFocus(),
+              child: const Text('聚焦 B'),
+            ),
+            OutlinedButton(
+              onPressed: () => _a.unfocus(),
+              child: const Text('失焦'),
+            ),
           ],
         ),
       ],

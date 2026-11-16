@@ -67,10 +67,11 @@ class _AsyncDetailState extends State<AsyncDetail> {
         Text('状态：$_status'),
         Text('异常分支：$_error'),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
           children: [
             ElevatedButton(onPressed: _run, child: const Text('complete(42)')),
-            const SizedBox(width: 12),
             OutlinedButton(
               onPressed: _runError,
               child: const Text('completeError'),
