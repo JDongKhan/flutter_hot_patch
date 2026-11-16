@@ -28,6 +28,18 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // 发布包只打 arm64（去掉 x86_64 / armeabi-v7a 的插件 so）：
+        //   ORG_GRADLE_PROJECT_onlyArm64=true fvm flutter build apk --release \
+        //     --target-platform android-arm64 --no-tree-shake-icons
+        // 不传该属性时保持原样，x86_64 模拟器调试不受影响。
+        val onlyArm64 = (project.findProperty("onlyArm64") as String?)?.toBoolean() ?: false
+        if (onlyArm64) {
+            ndk {
+                abiFilters.clear()
+                abiFilters.add("arm64-v8a")
+            }
+        }
     }
 
     buildTypes {
