@@ -5,6 +5,7 @@ import 'asset_override_detail.dart';
 import 'automatic_keep_alive_detail.dart';
 import 'button_detail.dart';
 import 'color_filtered_detail.dart';
+import 'compare_pane.dart';
 import 'container_detail.dart';
 import 'custom_paint_detail.dart';
 import 'dialog_detail.dart';
@@ -472,9 +473,6 @@ class WidgetDetailPage extends StatefulWidget {
 }
 
 class _WidgetDetailPageState extends State<WidgetDetailPage> {
-  /// 窄屏模式下的当前视图：默认 JS 热更版，可切到原生组件对照。
-  bool _narrowShowJs = true;
-
   static const String _jsZip = 'http://127.0.0.1:8765/patch/patch.zip';
 
   /// 组件名 → 产物入口（`patch/<源文件镜像路径>.js`）。
@@ -678,94 +676,13 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final js = JsUiWidget(jsAsset: _jsAsset, params: _jsProps());
-
-    // 窄屏（手机）默认 JS 热更版，右上角开关切原生组件对照；宽屏始终双栏对比。
-    final narrow = MediaQuery.sizeOf(context).width < 700;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(narrow ? widget.component : '${widget.component} · JS 热更'),
-        actions: [
-          if (narrow)
-            TextButton.icon(
-              onPressed: () => setState(() => _narrowShowJs = !_narrowShowJs),
-              icon: Icon(
-                _narrowShowJs ? Icons.construction : Icons.bolt,
-                size: 18,
-              ),
-              label: Text(_narrowShowJs ? 'JS 热更' : '原生组件'),
-            ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          // 整页 demo 两栏直接铺满，其余组件各自套滚动容器。
-          final fillPane = widget.fillPane;
-          // 只有宽屏才做原生 / JS 双栏对比；手机这类窄屏按开关二选一。
-          final wide = constraints.maxWidth >= 700;
-          if (!wide) {
-            // 整页 demo 自带滚动容器 / Scaffold，直接铺满 body；套滚动容器会给它无界高度。
-            if (fillPane) return _narrowShowJs ? js : _native();
-            return SingleChildScrollView(child: _narrowShowJs ? js : _native());
-          }
-
-          Column side(String title, Widget child, {bool fill = false}) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                if (fill)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: child,
-                    ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: child,
-                  ),
-              ],
-            );
-          }
-
-          if (fillPane) {
-            // 两栏各自铺满，内部滚动交给组件自己的滚动容器。
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: side('原生组件', _native(), fill: true)),
-                const VerticalDivider(width: 1),
-                Expanded(child: side('JS 热更（JsUiWidget）', js, fill: true)),
-              ],
-            );
-          }
-
-          // 左右对比：两列各自独立滚动
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(child: side('原生组件', _native())),
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: side('JS 热更（JsUiWidget）', js),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+    // 宽屏左右双栏 / 窄屏单栏 + 标题栏切换，统一由 ComparePane 提供；
+    // 本页只负责「组件名 → 原生实例 / JS 产物路径 / JS 构造参数」这三张表。
+    return ComparePane(
+      title: widget.component,
+      left: _native(),
+      right: JsUiWidget(jsAsset: _jsAsset, params: _jsProps()),
+      fillPane: widget.fillPane,
     );
   }
 }

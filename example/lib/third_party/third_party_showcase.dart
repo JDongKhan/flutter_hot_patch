@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 
-import '../components/compare_test.dart';
+import '../components/compare_pane.dart';
 import '../components/construct_only_card.dart';
 import '../components/dio_card.dart';
 import '../components/getx_component.dart';
@@ -145,12 +145,11 @@ class _ComparePage extends StatelessWidget {
     final jsAsset = '${ThirdPartyShowcase._zip}'
         '?component=${entry.component}'
         '&entry=${Uri.encodeComponent(entry.jsEntry)}';
-    return Scaffold(
-      appBar: AppBar(title: Text(entry.title)),
-      body: CompareTest(
-        native: entry.native,
-        js: JsUiWidget(jsAsset: jsAsset),
-      ),
+    // 统一对比外壳：宽屏左右分栏，窄屏单栏 + 标题栏切换（与列表页入口一致）。
+    return ComparePane(
+      title: entry.title,
+      left: entry.native,
+      right: JsUiWidget(jsAsset: jsAsset),
     );
   }
 }

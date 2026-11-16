@@ -5,11 +5,13 @@ import 'package:hot_patch/hot_patch.dart';
 
 import 'app/app.dart';
 import 'base/app_log_console.dart';
-import 'components/compare_test.dart';
+import 'components/compare_pane.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
 import 'components/inherited_widget_demo.dart';
 import 'components/leak_demo_card.dart';
+import 'components/perf_list_page.dart';
+import 'components/stateless_card.dart';
 import 'components/widget_showcase.dart';
 import 'components/test_widget.dart';
 import 'custom/custom_capabilities.dart';
@@ -101,13 +103,42 @@ String _patchUrl(String component, [String? entry]) {
 }
 
 /// 一个 Demo 场景条目。
+///
+/// [right] 为 null 表示该入口只有一页实现（导航列表页等），按单页打开；
+/// 否则左右两侧成对打开 [ComparePane]（宽屏双栏 / 窄屏切换）。
 class _DemoEntry {
   final String title;
   final String subtitle;
-  final Widget child;
-  final bool hasAppBar;
 
-  const _DemoEntry(this.title, this.subtitle, this.child, {this.hasAppBar = true});
+  /// 左栏（原生组件）；单页入口时它是唯一内容。
+  final Widget left;
+
+  /// 右栏（JS 热更）；null = 该入口没有对照实现。
+  final Widget? right;
+
+  final String leftLabel;
+  final String rightLabel;
+
+  /// 窄屏默认显示右栏。
+  final bool initialShowRight;
+
+  /// 两侧内容自带滚动 / Scaffold 的整页 demo。
+  final bool fillPane;
+
+  /// 两侧内容各自带 AppBar（如「完整 App」）。
+  final bool innerAppBar;
+
+  const _DemoEntry(
+    this.title,
+    this.subtitle, {
+    required this.left,
+    this.right,
+    this.leftLabel = '原生组件',
+    this.rightLabel = 'JS 热更（JsUiWidget）',
+    this.initialShowRight = true,
+    this.fillPane = false,
+    this.innerAppBar = false,
+  });
 }
 
 /// Demo 场景列表页。
@@ -115,92 +146,102 @@ class DemoListPage extends StatelessWidget {
   const DemoListPage({super.key});
 
   static final _demos = <_DemoEntry>[
-    _DemoEntry('完整 App · 原生', '四 tab 外壳（AppShell）原生渲染：首页 / 社区 / 订单 / 我的', const AppShell(), hasAppBar: false),
+    _DemoEntry(
+      '完整 App · 原生',
+      '四 tab 外壳（AppShell）原生渲染：首页 / 社区 / 订单 / 我的；宽屏左侧为原生、右侧为 JS',
+      left: const AppShell(),
+      right: const AppShellJsPage(),
+      fillPane: true,
+      innerAppBar: true,
+      initialShowRight: false,
+    ),
     _DemoEntry(
       '完整 App · JS 热更',
       'AppShell 整壳由 JS 补丁渲染，四个 tab 页面也是 JS 产物（连带翻译）',
-      const AppShellJsPage(),
-      hasAppBar: false,
+      left: const AppShell(),
+      right: const AppShellJsPage(),
+      fillPane: true,
+      innerAppBar: true,
     ),
     _DemoEntry(
       'HelloCard · 原生 vs JS 热更',
       '同屏对比：正常组件与 JS 补丁的渲染与逻辑',
-      CompareTest(
-        native: HelloCard(),
-        js: JsUiWidget(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js')),
-      ),
+      left: HelloCard(),
+      right: JsUiWidget(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js')),
     ),
     _DemoEntry(
       'DashboardCard · 原生 vs JS 热更',
       '复合组件：内嵌 BannerCard（注解）+ 私有/非私有自定义 widget 双路径',
-      CompareTest(
-        native: DashboardCard(),
-        js: JsUiWidget(
-          jsAsset: _patchUrl('DashboardCard', 'components/composite_component.js'),
-          // 嵌套组件（BannerCard）与公开 widget（LabeledDivider）都由生成器
-          // 连带翻译进同一产物（JS 类引用），运行时直接 new，使用方无需声明依赖。
-          // 只有标了 @PatchIgnore 的私有组件走宿主注册（私有类跨库不可见），
-          // 其等价实现见 main() 里的 jsWidgetRegistry.register。
-        ),
-      ),
+      left: DashboardCard(),
+      // 嵌套组件（BannerCard）与公开 widget（LabeledDivider）都由生成器连带
+      // 翻译进同一产物（JS 类引用），运行时直接 new，使用方无需声明依赖。
+      // 只有标了 @PatchIgnore 的私有组件走宿主注册（私有类跨库不可见），
+      // 其等价实现见 main() 里的 jsWidgetRegistry.register。
+      right: JsUiWidget(jsAsset: _patchUrl('DashboardCard', 'components/composite_component.js')),
     ),
     _DemoEntry(
       '三方库 · 列表',
       'provider / getx 状态管理 + path_provider / permission_handler / dio 工具类 + uuid 同名类',
-      const ThirdPartyShowcase(),
+      left: const ThirdPartyShowcase(),
     ),
     _DemoEntry(
       'InheritedCard · 原生 vs JS 热更',
       'InheritedWidget：祖先数据共享，updateShouldNotify 精确重建依赖者',
-      CompareTest(
-        native: InheritedCard(),
-        js: JsUiWidget(jsAsset: _patchUrl('InheritedCard', 'components/inherited_widget_demo.js')),
-      ),
+      left: InheritedCard(),
+      right: JsUiWidget(jsAsset: _patchUrl('InheritedCard', 'components/inherited_widget_demo.js')),
     ),
     _DemoEntry(
       'HelloCard · JS 双实例隔离',
       '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
-      _TwinTest(label: 'HelloCard'),
+      left: JsUiWidget(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js')),
+      right: JsUiWidget(jsAsset: _patchUrl('RichTextDetail', 'components/rich_text_detail.js')),
+      leftLabel: 'JS 实例 #1（HelloCard）',
+      rightLabel: 'JS 实例 #2（RichTextDetail）',
+      initialShowRight: false,
     ),
     _DemoEntry(
       'Props 更新 · JS 热更',
-      '宿主重建 JsUiWidget 并传入新 props：JS 侧 __applyProps + 重建',
-      _PropsUpdateDemo(),
+      '宿主重建 JsUiWidget 并传入新 props：JS 侧 __applyProps + 重建（左右各一套按钮）',
+      left: _PropsUpdateDemo(nativeSide: true),
+      right: _PropsUpdateDemo(),
+      leftLabel: '原生 StatelessCard',
+      rightLabel: 'JS 热更（StatelessCard）',
+      fillPane: true,
     ),
     _DemoEntry(
       'TestWidget · 局部 widget 变量',
       'Text text = Text(); final items = [Text(), Text()]; 局部变量与列表按元素翻译',
-      CompareTest(
-        native: const TestWidget(),
-        js: JsUiWidget(
-          jsAsset: _patchUrl('TestWidget', 'components/test_widget.js'),
-        ),
-      ),
+      left: const TestWidget(),
+      right: JsUiWidget(jsAsset: _patchUrl('TestWidget', 'components/test_widget.js')),
     ),
     _DemoEntry(
       '异步归属 · JS 热更',
       'Timer 回调里创建 GlobalKey：验证随组件释放，退出后 leak-check 应为 clean',
-      CompareTest(
-        native: const LeakDemoCard(),
-        js: JsUiWidget(
-          jsAsset: _patchUrl('LeakDemoCard', 'components/leak_demo_card.js'),
-        ),
-      ),
+      left: const LeakDemoCard(),
+      right: JsUiWidget(jsAsset: _patchUrl('LeakDemoCard', 'components/leak_demo_card.js')),
     ),
     _DemoEntry(
       '生命周期 · 挂载失败回滚',
       'initState 注册持久帧回调后抛错：验证 __abortRoot 广播 rootClose，回调随根丢弃（退出后 leak-check 应为 clean）',
-      const _MountFailDemo(),
+      left: const _MountFailDemo(),
     ),
-    _DemoEntry('基础语法 · 列表', 'Dart mixin / extension：State 扩展日志、String 扩展打印（原生 vs JS 热更）', const GrammarShowcase()),
+    _DemoEntry(
+      '基础语法 · 列表',
+      'Dart mixin / extension：State 扩展日志、String 扩展打印（原生 vs JS 热更）',
+      left: const GrammarShowcase(),
+    ),
     _DemoEntry(
       '性能 · 大图长列表',
-      '单个 ListView.builder：200 项通栏大图 + 每项隐式动画（JS 热更），看滚动与构建表现',
-      JsUiWidget(
-        jsAsset: _patchUrl('PerfListPage', 'components/perf_list_page.js'),
-      ),
+      '单个 ListView.builder：200 项通栏大图 + 每项隐式动画，宽屏左右同时跑原生与 JS',
+      left: const PerfListPage(),
+      right: JsUiWidget(jsAsset: _patchUrl('PerfListPage', 'components/perf_list_page.js')),
+      fillPane: true,
     ),
-    _DemoEntry('常用组件 · 列表', '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）', const WidgetShowcase()),
+    _DemoEntry(
+      '常用组件 · 列表',
+      '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）',
+      left: const WidgetShowcase(),
+    ),
   ];
 
   /// 清除补丁缓存（调试入口）：删本地解压产物 + 重置运行时模块缓存。
@@ -244,7 +285,18 @@ class DemoListPage extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => _SimpleDemoPage(title: d.title, hasAppBar: d.hasAppBar, child: d.child),
+                  builder: (_) => d.right == null
+                      ? _SingleDemoPage(title: d.title, child: d.left)
+                      : ComparePane(
+                          title: d.title,
+                          left: d.left,
+                          right: d.right!,
+                          leftLabel: d.leftLabel,
+                          rightLabel: d.rightLabel,
+                          initialShowRight: d.initialShowRight,
+                          fillPane: d.fillPane,
+                          innerAppBar: d.innerAppBar,
+                        ),
                 ),
               ),
             ),
@@ -255,29 +307,31 @@ class DemoListPage extends StatelessWidget {
   }
 }
 
-/// 单个场景页的简洁外壳：只提供返回栏与正文区域。
-/// 不使用 Center / SingleChildScrollView（这两个组件由
-/// ScaffoldDemo 注解组件专门演示，避免 main 里重复）。
-class _SimpleDemoPage extends StatelessWidget {
-  const _SimpleDemoPage({required this.title, required this.child, this.hasAppBar = true});
+/// 单个场景页的简洁外壳（仅用于只有一页实现的入口）。
+/// 对比类入口统一走 [ComparePane]。
+class _SingleDemoPage extends StatelessWidget {
+  const _SingleDemoPage({required this.title, required this.child});
 
   final String title;
   final Widget child;
-  final bool hasAppBar;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: hasAppBar ? AppBar(title: Text(title)) : null,
+      appBar: AppBar(title: Text(title)),
       body: child,
     );
   }
 }
 
-/// props 更新演示：宿主 State 每次重建都会给 JsUiWidget 传新的 props。
-/// JS 侧由 `__jsui.updateProps` 更新根实例 props、重跑 `__applyProps` 并重建。
+/// props 更新演示（单侧实例）：宿主 State 每次重建都会给子组件传新 props。
+/// JS 侧由 `__jsui.updateProps` 更新根实例 props、重跑 `__applyProps` 并重建；
+/// 原生侧直接构造新的 StatelessCard 对照。左右各放一个由 [ComparePane] 装配。
 class _PropsUpdateDemo extends StatefulWidget {
-  const _PropsUpdateDemo();
+  const _PropsUpdateDemo({this.nativeSide = false});
+
+  /// true = 原生 StatelessCard；false = JS 热更。
+  final bool nativeSide;
 
   @override
   State<_PropsUpdateDemo> createState() => _PropsUpdateDemoState();
@@ -288,6 +342,12 @@ class _PropsUpdateDemoState extends State<_PropsUpdateDemo> {
 
   @override
   Widget build(BuildContext context) {
+    final title = 'Props 更新 #$_revision';
+    final subtitle = widget.nativeSide
+        ? '原生 StatelessCard：重建即拿到新 props'
+        : '宿主重建 JsUiWidget，新 props 已下发到 JS';
+    final badge = 'R$_revision';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -297,52 +357,41 @@ class _PropsUpdateDemoState extends State<_PropsUpdateDemo> {
             children: [
               ElevatedButton(
                 onPressed: () => setState(() => _revision++),
-                child: Text('宿主更新 props（第 $_revision 次）'),
+                child: Text('更新 props（第 $_revision 次）'),
               ),
               const SizedBox(width: 12),
-              const Expanded(
-                child: Text('点击后 JsUiWidget 收到新 props，JS 侧更新字段并重建'),
+              Expanded(
+                child: Text(
+                  widget.nativeSide ? '原生侧：直接重建 StatelessCard' : 'JS 侧：__applyProps + 重建',
+                ),
               ),
             ],
           ),
         ),
         Expanded(
-          child: JsUiWidget(
-            jsAsset: _patchUrl('StatelessCard', 'components/stateless_card.js'),
-            params: {
-              'title': 'Props 更新 #$_revision',
-              'subtitle': '宿主重建 JsUiWidget，新 props 已下发到 JS',
-              'badge': 'R$_revision',
-            },
-          ),
+          child: widget.nativeSide
+              ? SingleChildScrollView(
+                  padding: const EdgeInsets.all(12),
+                  child: StatelessCard(
+                    title: title,
+                    subtitle: subtitle,
+                    badge: badge,
+                  ),
+                )
+              : JsUiWidget(
+                  jsAsset: _patchUrl('StatelessCard', 'components/stateless_card.js'),
+                  params: {
+                    'title': title,
+                    'subtitle': subtitle,
+                    'badge': badge,
+                  },
+                ),
         ),
       ],
     );
   }
 }
 
-/// 双实例隔离测试：同屏渲染两个相同组件（单 runtime 内按 pageKey 隔离）。
-/// 验证：点其中一个的按钮，另一个的状态不受影响（roots[pageKey] 隔离）。
-class _TwinTest extends StatelessWidget {
-  const _TwinTest({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text('$label #1', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        const SizedBox(height: 8),
-        JsUiWidget(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js')),
-        const Divider(height: 32),
-        Text('$label #2', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        const SizedBox(height: 8),
-        JsUiWidget(jsAsset: _patchUrl('RichTextDetail', 'components/rich_text_detail.js')),
-      ],
-    );
-  }
-}
 
 /// 挂载失败回滚演示：JS 侧 `initState` 抛错，验证 `__abortRoot` 也广播
 /// `onRootClose`（持久帧回调随根丢弃）。页面会停在 boot 失败态，返回列表即可。
