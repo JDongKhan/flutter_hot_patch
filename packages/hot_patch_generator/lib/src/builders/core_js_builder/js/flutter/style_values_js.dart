@@ -143,6 +143,26 @@ const String styleValuesJsSource = r'''
     }
   }
 
+  // 宿主协议：`InputDecoration.border` / `focusedBorder` 等 → `{kind:'outline',
+  // borderSide, borderRadius, gapPadding}`；宿主 `inputBorderFromJson` 还原成
+  // Flutter `OutlineInputBorder`（borderSide 走 BorderSide 的 toJSON 协议）。
+  export class OutlineInputBorder {
+    constructor(props) {
+      props = __positionalArgs(props, ['borderSide', 'borderRadius', 'gapPadding']);
+      this.borderSide = props.borderSide != null ? props.borderSide : BorderSide.none;
+      this.borderRadius = props.borderRadius != null ? props.borderRadius : BorderRadius.zero;
+      this.gapPadding = props.gapPadding != null ? props.gapPadding : 4.0;
+    }
+    toJSON() {
+      return {
+        kind: 'outline',
+        borderSide: this.borderSide != null ? this.borderSide.toJSON() : null,
+        borderRadius: this.borderRadius != null ? this.borderRadius.toJSON() : null,
+        gapPadding: this.gapPadding,
+      };
+    }
+  }
+
   export class BoxShadow {
     constructor(props) {
       props = __positionalArgs(props, ['color', 'offset', 'blurRadius', 'spreadRadius', 'blurStyle']);

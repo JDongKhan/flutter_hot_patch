@@ -7,7 +7,7 @@ import { Spot } from '../model/app_models.js';
 import { SearchFeed } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
-import { Border, BorderRadius, BorderSide, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, InputDecoration, Padding, Row, SafeArea, Scaffold, SizedBox, StatefulWidget, StatelessWidget, Text, TextDecoration, TextEditingController, TextField, TextOverflow, TextStyle, Wrap } from '../../flutter.js';
+import { Border, BorderRadius, BorderSide, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, InputDecoration, OutlineInputBorder, Padding, Row, SafeArea, Scaffold, SizedBox, StatefulWidget, StatelessWidget, Text, TextDecoration, TextEditingController, TextField, TextOverflow, TextStyle, Wrap } from '../../flutter.js';
 
 const _avatarImg = "assets/images/photo-1494790108377-be9c29b29330.jpg";
 const _bannerImg = "assets/images/photo-1519046904884-53103b34b206.jpg";

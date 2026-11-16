@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import '../../js_widget_registry.dart';
 import '../base_widget/text_from_json.dart';
+import '../core/from_json/input_decoration_from_json.dart';
 import '../core/object_bridge.dart';
 
 /// TextEditingController 句柄桥：创建/回传句柄登记/释放全走通用层，这里
@@ -59,10 +60,6 @@ void registerTextWidgets(JsWidgetRegistry r) {
     // 触发其 listeners），同时照常触发 onChanged 事件。
     final tecId = JsObjectBridge.idOf(c.props['controller']);
     final external = tecId != null ? _textBridge.controllerAt(tecId) : null;
-    // decoration 是值对象（InputDecoration，JS 侧是普通值类）：它的字段 JSON
-    // 直接读；携带的 Widget（icon / label / prefixIcon / suffixIcon）是元素描述，
-    // 用 `element` 就地还原，不进 reconciler 树。
-    final deco = c.map('decoration');
     return _JsTextField(
       key: c.key,
       controller: external,
@@ -74,12 +71,9 @@ void registerTextWidgets(JsWidgetRegistry r) {
             },
       value: c.str('value'),
       onChanged: c.on1<String>('onChanged'),
-      hintText: deco?['hintText'] == null ? null : '${deco?['hintText']}',
-      labelText: deco?['labelText'] == null ? null : '${deco?['labelText']}',
-      icon: c.element(deco?['icon']),
-      label: c.element(deco?['label']),
-      prefixIcon: c.element(deco?['prefixIcon']),
-      suffixIcon: c.element(deco?['suffixIcon']),
+      // 整个 InputDecoration 由 from_json 一次还原（边框 / 填充 / 内边距 /
+      // 图标都在里面），本组件只负责受控输入与事件回传。
+      decoration: inputDecorationFromJson(c, c.map('decoration')),
       obscureText: c.bool_('obscureText') ?? false,
       enabled: c.bool_('enabled'),
       keyboardType: c.textInputType('keyboardType'),
@@ -99,12 +93,7 @@ class _JsTextField extends StatefulWidget {
     this.onControllerText,
     required this.value,
     required this.onChanged,
-    this.hintText,
-    this.labelText,
-    this.icon,
-    this.label,
-    this.prefixIcon,
-    this.suffixIcon,
+    this.decoration,
     this.obscureText = false,
     this.enabled,
     this.keyboardType,
@@ -122,14 +111,9 @@ class _JsTextField extends StatefulWidget {
 
   final String? value;
   final ValueChanged<String>? onChanged;
-  final String? hintText;
-  final String? labelText;
 
-  /// InputDecoration 里的 Widget 字段：就地下发，不挂载。
-  final Widget? icon;
-  final Widget? label;
-  final Widget? prefixIcon;
-  final Widget? suffixIcon;
+  /// 由 [inputDecorationFromJson] 整块还原的装饰（Widget 字段已就地还原）。
+  final InputDecoration? decoration;
 
   final bool obscureText;
   final bool? enabled;
@@ -187,14 +171,7 @@ class _JsTextFieldState extends State<_JsTextField> {
       maxLines: widget.obscureText ? 1 : widget.maxLines,
       style: widget.style,
       textAlign: widget.textAlign ?? TextAlign.start,
-      decoration: InputDecoration(
-        hintText: widget.hintText,
-        labelText: widget.labelText,
-        icon: widget.icon,
-        label: widget.label,
-        prefixIcon: widget.prefixIcon,
-        suffixIcon: widget.suffixIcon,
-      ),
+      decoration: widget.decoration ?? const InputDecoration(),
     );
   }
 }

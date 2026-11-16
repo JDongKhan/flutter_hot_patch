@@ -7,6 +7,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../../../../utils/hot_patch_assets.dart';
+import '../../../../utils/hot_patch_log.dart';
 import '../../../js_widget_registry.dart';
 import 'dart_values_from_json.dart';
 import 'layout_from_json.dart';
@@ -171,6 +172,38 @@ Border? borderFromJson(Map<String, dynamic>? json) {
     right: borderSideFromJson(json['right']) ?? BorderSide.none,
     bottom: borderSideFromJson(json['bottom']) ?? BorderSide.none,
     left: borderSideFromJson(json['left']) ?? BorderSide.none,
+  );
+}
+
+/// JSON → InputBorder（flutter.js 的 `OutlineInputBorder` 值类序列化成
+/// `{kind:'outline', borderSide, borderRadius, gapPadding}`）。
+///
+/// 未登记的 kind 打印告警并返回 null —— 不静默换成别的形状。
+InputBorder? inputBorderFromJson(Object? v) {
+  if (v == null) return null;
+  if (v is! Map) {
+    JsLog.warn('[InputDecoration] border 不是对象（${v.runtimeType}），已忽略');
+    return null;
+  }
+  final kind = '${v['kind']}';
+  if (kind != 'outline') {
+    JsLog.warn('[InputDecoration] 未支持的 InputBorder kind=$kind，已忽略');
+    return null;
+  }
+  final radiusJson = v['borderRadius'];
+  final side = borderSideFromJson(v['borderSide']);
+  if (side == null) {
+    JsLog.warn('[InputDecoration] OutlineInputBorder 缺少 borderSide，按无边框渲染');
+  }
+  return OutlineInputBorder(
+    // 缺省与 Flutter 一致：4dp 圆角。
+    borderRadius:
+        (radiusJson is Map
+            ? borderRadiusFromJson(radiusJson.cast<String, dynamic>())
+            : null) ??
+        BorderRadius.circular(4),
+    borderSide: side ?? BorderSide.none,
+    gapPadding: (v['gapPadding'] as num?)?.toDouble() ?? 4.0,
   );
 }
 
