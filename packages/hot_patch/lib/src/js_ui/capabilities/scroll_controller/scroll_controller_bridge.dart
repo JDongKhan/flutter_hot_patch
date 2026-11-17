@@ -24,7 +24,30 @@ import '../core/from_json/widget_enum_from_json.dart';
 final JsObjectBridge<ScrollController>
 _scrollBridge = JsObjectBridge<ScrollController>(
   kind: 'ctrl/Scroll',
-  create: (_, _) => ScrollController(),
+  create: (_, meta) {
+    final m = meta is Map ? meta : const {};
+    return ScrollController(
+      initialScrollOffset: m['initialScrollOffset'] is num
+          ? (m['initialScrollOffset'] as num).toDouble()
+          : 0.0,
+      keepScrollOffset: m['keepScrollOffset'] != false,
+      debugLabel: m['debugLabel']?.toString(),
+    );
+  },
+  // 滚动 → 回传 metrics 镜像到 JS 实例（__onMetrics 更新镜像 → 触发 listeners，
+  // 匿名 addListener 闭包由 JS 侧直接持有，天然支持）。尚未挂上视图时返回
+  // null（没有 position 可读），挂上那一帧由 renderer 再补一次快照。
+  forward: (controller) {
+    if (!controller.hasClients) return null;
+    return [
+      {
+        'pixels': controller.offset,
+        'maxScrollExtent': controller.position.maxScrollExtent,
+        'viewportDimension': controller.position.viewportDimension,
+        'extentAfter': controller.position.extentAfter,
+      },
+    ];
+  },
   onOp: (c, op, payload) {
     if (op == 'call') {
       final method = payload['method']?.toString() ?? '';
@@ -63,9 +86,25 @@ _scrollBridge = JsObjectBridge<ScrollController>(
 final JsObjectBridge<PageController>
 _pageBridge = JsObjectBridge<PageController>(
   kind: 'ctrl/Page',
-  // 真实 PageController 由 Host 带 initialPage / viewportFraction 创建
-  // （与 TabController 同模式）；此处不能预创建默认实例，否则 Host 的
-  // putIfAbsent 会复用它而丢掉构造参数。
+  // 构造参数（initialPage / viewportFraction / keepPage）随 JS 构造的 meta
+  // 下发，宿主按同一份值建真实 controller。
+  create: (_, meta) {
+    final m = meta is Map ? meta : const {};
+    return PageController(
+      initialPage: m['initialPage'] is num ? (m['initialPage'] as num).toInt() : 0,
+      viewportFraction: m['viewportFraction'] is num
+          ? (m['viewportFraction'] as num).toDouble()
+          : 1.0,
+      keepPage: m['keepPage'] != false,
+    );
+  },
+  forward: (controller) {
+    final page = controller.hasClients ? controller.page : null;
+    if (page == null) return null;
+    return [
+      {'page': page},
+    ];
+  },
   onOp: (c, op, payload) {
     if (op == 'call') {
       final method = payload['method']?.toString() ?? '';
@@ -120,61 +159,23 @@ void ensureScrollControllerChannels() {
   _pageBridge.ensure();
 }
 
-/// controller 句柄 → 桥接 Host（ListView / GridView / CustomScrollView /
-/// SingleChildScrollView 共用）：按 id 取/建真实 controller，滚动经 invoke
-/// 回传 metrics 镜像到 JS 实例（__onMetrics 更新镜像 → 触发其 listeners——
-/// 匿名 addListener 闭包由 JS 侧直接持有，天然支持）；首次 attach 回传初始
-/// metrics：JS 镜像不依赖「先滚动才更新」，构造后立即准确——否则用户不滚动
-/// 直接点「跳到底」会读到镜像 maxScrollExtent=0，jumpTo(0) 完全无效。
-Widget _scrollControllerHost(
-  JsRenderContext c,
-  String id,
-  Widget Function(ScrollController controller) build, {
-  Key? key,
-}) => JsControllerHost<ScrollController>(
-  key: key,
-  bridge: _scrollBridge,
-  id: id,
-  create: ScrollController.new,
-  forward: (controller, handler) {
-    if (!controller.hasClients) return;
-    c.invoke(handler, [
-      {
-        'pixels': controller.offset,
-        'maxScrollExtent': controller.position.maxScrollExtent,
-        'viewportDimension': controller.position.viewportDimension,
-        'extentAfter': controller.position.extentAfter,
-      },
-    ]);
-  },
-  buildChild: build,
-);
+/// controller 句柄 → 真实 controller（ListView / GridView / CustomScrollView /
+/// SingleChildScrollView 共用）：对象在 JS 构造时已建好，这里只按 id 取；滚动
+/// 回传与首帧快照由 [JsObjectBridge.forward] / [JsObjectBridge.forwardOnNextFrame]
+/// 在本层完成，renderer 不需要额外包装组件。
+ScrollController _scrollControllerOf(String id) {
+  final controller = _scrollBridge.require(id);
+  // 挂上视图后补一次快照：JS 镜像不依赖「先滚动才更新」，构造后立即准确——
+  // 否则用户不滚动直接点「跳到底」会读到镜像 maxScrollExtent=0，jumpTo 无效。
+  _scrollBridge.forwardOnNextFrame(id);
+  return controller;
+}
 
-Widget _pageControllerHost(
-  JsRenderContext c,
-  String id,
-  int initialPage,
-  double viewportFraction,
-  Widget Function(PageController controller) build, {
-  Key? key,
-}) => JsControllerHost<PageController>(
-  key: key,
-  bridge: _pageBridge,
-  id: id,
-  create: () => PageController(
-    initialPage: initialPage,
-    viewportFraction: viewportFraction,
-  ),
-  forward: (controller, handler) {
-    if (!controller.hasClients) return;
-    final page = controller.page;
-    if (page == null) return;
-    c.invoke(handler, [
-      {'page': page, 'initialPage': initialPage},
-    ]);
-  },
-  buildChild: build,
-);
+PageController _pageControllerOf(String id) {
+  final controller = _pageBridge.require(id);
+  _pageBridge.forwardOnNextFrame(id);
+  return controller;
+}
 
 /// 从 props 还原 SliverGridDelegate：含 `maxCrossAxisExtent` →
 /// SliverGridDelegateWithMaxCrossAxisExtent，否则
@@ -294,7 +295,7 @@ List<Widget> _flatChildren(JsRenderContext c, String key) {
 /// 滚动能力域组件注册（滚动视图 + sliver 家族）。
 void registerScrollWidgets(JsWidgetRegistry r) {
   r.register('ListView', (c) {
-    // controller 是 JS ScrollController 句柄时走 _scrollControllerHost 桥接
+    // controller 是 JS ScrollController 句柄时走 _scrollControllerOf 取 controller 后直接交给组件
     // （与 SingleChildScrollView 同一套 controller 绑定/metrics 回传）。
     // 三种形态：普通 children / `.builder`（props 带 itemBuilder+itemCount）/
     // `.separated`（额外带 separatorBuilder，且 factory='separated'）——builder
@@ -377,7 +378,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
 
     final scId = JsObjectBridge.idOf(c.props['controller']);
     if (scId != null) {
-      return _scrollControllerHost(c, scId, build, key: c.key);
+      return build(_scrollControllerOf(scId), key: c.key);
     }
     return build(null, key: c.key);
   });
@@ -432,14 +433,14 @@ void registerScrollWidgets(JsWidgetRegistry r) {
 
     final scId = JsObjectBridge.idOf(c.props['scrollController']);
     if (scId != null) {
-      return _scrollControllerHost(c, scId, build, key: c.key);
+      return build(_scrollControllerOf(scId), key: c.key);
     }
     return build(null, key: c.key);
   });
 
   // GridView：普通构造 / .builder（懒加载）/ .count / .extent。gridDelegate 按
   // props 还原（crossAxisCount / maxCrossAxisExtent 双形态）；controller 与
-  // ListView 同款走 _scrollControllerHost 桥接。
+  // ListView 同款走 _scrollControllerOf 取 controller 后直接交给组件。
   //
   // `.builder` 形态（props 带 `builder` 方法名）还原 Flutter 原生
   // `GridView.builder`，不用 `GridView(children: [...])` 顶替。
@@ -479,14 +480,14 @@ void registerScrollWidgets(JsWidgetRegistry r) {
 
     final scId = JsObjectBridge.idOf(c.props['controller']);
     if (scId != null) {
-      return _scrollControllerHost(c, scId, build, key: c.key);
+      return build(_scrollControllerOf(scId), key: c.key);
     }
     return build(null, key: c.key);
   });
 
   // CustomScrollView：slivers 按原名进 props，宿主包装类构造期抽成有序 __children
   // （宿主侧 SliverList/SliverAppBar 等已注册为 widget）；controller 与
-  // ListView 同款分流 _scrollControllerHost 桥接。
+  // ListView 同款分流 _scrollControllerOf 取 controller 后直接交给组件。
   r.register('CustomScrollView', (c) {
     final scId = JsObjectBridge.idOf(c.props['controller']);
     if (scId != null) {
@@ -496,18 +497,14 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final reverse = c.bool_('reverse') ?? false;
       final shrinkWrap = c.bool_('shrinkWrap') ?? false;
       final slivers = _flatChildren(c, 'slivers');
-      return _scrollControllerHost(
-        c,
-        scId,
-        (controller) => CustomScrollView(
-          controller: controller,
-          scrollDirection: scrollDirection,
-          physics: physics,
-          reverse: reverse,
-          shrinkWrap: shrinkWrap,
-          slivers: slivers,
-        ),
+      return CustomScrollView(
         key: c.key,
+        controller: _scrollControllerOf(scId),
+        scrollDirection: scrollDirection,
+        physics: physics,
+        reverse: reverse,
+        shrinkWrap: shrinkWrap,
+        slivers: slivers,
       );
     }
     return CustomScrollView(
@@ -547,7 +544,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         );
     final scId = JsObjectBridge.idOf(c.props['controller']);
     if (scId == null) return buildWith(null, key: c.key);
-    return _scrollControllerHost(c, scId, buildWith, key: c.key);
+    return buildWith(_scrollControllerOf(scId), key: c.key);
   });
 
   // SliverList：`.builder`/`.separated` 命名构造还原 Flutter 同名原生构造；
@@ -833,7 +830,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   });
 
   // SingleChildScrollView：controller 是 JS ScrollController 实例的序列化句柄
-  // （{__handle: 'js:ctrl/Scroll#N'}）时走 _scrollControllerHost 桥接（按 id
+  // （{__handle: 'js:ctrl/Scroll#N'}）时走 _scrollControllerOf 取 controller 后直接交给组件（按 id
   // 绑定真实 controller，滚动经 invoke 回传 metrics 镜像到 JS 实例）；
   // 无 controller → 原样 SingleChildScrollView。
   r.register('SingleChildScrollView', (c) {
@@ -844,17 +841,13 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final physics = c.scrollPhysics('physics');
       final reverse = c.bool_('reverse') ?? false;
       final child = (c.children['child'] as Widget?);
-      return _scrollControllerHost(
-        c,
-        scId,
-        (controller) => SingleChildScrollView(
-          controller: controller,
-          scrollDirection: scrollDirection,
-          physics: physics,
-          reverse: reverse,
-          child: child,
-        ),
+      return SingleChildScrollView(
         key: c.key,
+        controller: _scrollControllerOf(scId),
+        scrollDirection: scrollDirection,
+        physics: physics,
+        reverse: reverse,
+        child: child,
       );
     }
     return SingleChildScrollView(
@@ -910,14 +903,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
 
     final pcId = JsObjectBridge.idOf(c.props['controller']);
     if (pcId != null) {
-      final raw = c.props['controller'];
-      final initial = raw is Map && raw['initialPage'] is num
-          ? (raw['initialPage'] as num).toInt()
-          : 0;
-      final fraction = raw is Map && raw['viewportFraction'] is num
-          ? (raw['viewportFraction'] as num).toDouble()
-          : 1.0;
-      return _pageControllerHost(c, pcId, initial, fraction, build, key: c.key);
+      return build(_pageControllerOf(pcId), key: c.key);
     }
     return build(null, key: c.key);
   });

@@ -2,17 +2,26 @@
 // 的场景共用这一层——ScrollController / TabController / TextEditingController /
 // ChangeNotifier 只是其中几类 kind，App 自定义类同样走它（kind 用 `obj/<类名>`）。
 //
-// 一个句柄桥 = kind 描述符组装（onCreate putIfAbsent、onOp 分派、onRelease
-// 释放）+ `__handle` 解析；**对象本体与它的绑定信息全部寄存在绑定缓存里**
-// （桶名 = 本桥的 kind，见 binding_cache.dart）——不再各占「controller / 回传
-// 句柄 / attach 去重」三张全局表。各能力只留差异：create（真实对象构造，可拿
-// meta）、onOp（方法分派）、Host 的 forward（回传载荷）。
+// 一个句柄桥 = kind 描述符组装（onCreate 建对象、onOp 分派、onRelease 释放）
+// + `__handle` 解析；**对象本体与它的绑定信息全部寄存在绑定缓存里**（桶名 =
+// 本桥的 kind，见 binding_cache.dart）——不再各占「controller / 回传句柄 /
+// attach 去重」三张全局表。各能力只留差异：create（真实对象构造，可拿 meta）、
+// onOp（方法分派）、forward（宿主 → JS 镜像的载荷）。
 //
-// 回传句柄（meta.fn）与 attach 去重标记只对 Host 类控制器（Scroll/Tab/Text）
-// 有意义；镜像类（ChangeNotifier）的 meta.fn 为 null，无害。
+// **时序契约（唯一形态）**：真实对象只在 JS 侧构造时创建（`__bindHandle` 发来的
+// create 消息 → [create]，构造参数随 meta 下发）。宿主渲染组件时**只按 id 取已建好
+// 的对象**（[controllerAt] / [require]），不存在「渲染期兜底造一个实例」的路径——
+// 那会让同一 JS 实例在不同时刻对上两个宿主对象（构造参数丢失、listener 挂错实例）。
+// 缺对象时出声抛错，不静默兜底。
+//
+// **回传方向（宿主 → JS 镜像）也在本层**：需要在对象变化后回传的 kind 给
+// [forward]，onCreate 时挂一次 listener（对象是 [Listenable] 时），首帧快照由
+// [forwardOnNextFrame] 补（渲染方在挂上组件的那一帧调一次）。因此宿主侧不需要
+// 任何「控制器 Host 组件」包装：renderer 直接取对象、交给真实 widget。
 import 'package:flutter/widgets.dart';
 
 import '../../../utils/hot_patch_log.dart';
+import '../../js_widget_registry.dart';
 import 'binding_cache.dart';
 import 'handle_registry.dart';
 
@@ -34,15 +43,20 @@ class JsObjectBridge<T extends Object> {
   JsObjectBridge({
     required String kind,
 
-    /// onCreate 阶段创建真实对象（putIfAbsent——与 Host 的兜底创建配合，
-    /// 消息与 commit 到达顺序不定，哪端先建都复用同一实例）。为 null 时
-    /// onCreate 只登记回传句柄，真实对象由 Host 带参创建（如 TabController
-    /// 的 length/initialIndex 随 `__handle` 下发而非 meta）。
-    T Function(String id, Object? meta)? create,
+    /// 创建真实对象（onCreate 阶段调用）。[meta] 是 JS 侧 `__bindHandle` 随
+    /// create 一起下发的构造参数（如 TabController 的 length / initialIndex、
+    /// PageController 的 initialPage / viewportFraction）——JS 构造时就把参数
+    /// 交过来，宿主不再等渲染才建。
+    required T Function(String id, Object? meta) create,
 
-    /// 实例级 op 分派（call/get/set），controller 已按 id 解出且非空；
-    /// id 未登记（已释放/尚未创建）时静默返回 null（与释放竞态共存）。
+    /// 实例级 op 分派（call/get/set），对象已按 id 解出且非空；
+    /// id 未登记（已释放）时按 null 返回并告警。
     required Object? Function(T controller, String op, Map payload) onOp,
+
+    /// 宿主对象变化 → JS 实例镜像：返回本次要回传的参数数组，`null` 表示此刻
+    /// 没有可下发的内容（如滚动控制器还没有 clients）。给了本项时，onCreate
+    /// 会在对象是 [Listenable] 时挂一次 listener，并在首帧补一次快照。
+    List<Object?>? Function(T controller)? forward,
 
     /// 释放钩子：覆盖默认的「ChangeNotifier / AnimationController 调 dispose」。
     /// 适用于自带 dispose 语义的非 Listenable 控制器（如 EasyRefreshController
@@ -50,6 +64,7 @@ class JsObjectBridge<T extends Object> {
     void Function(T controller)? onRelease,
   })  : _kind = kind,
         _create = create,
+        _forward = forward,
         _onOp = onOp,
         _onRelease = onRelease;
 
@@ -57,7 +72,8 @@ class JsObjectBridge<T extends Object> {
   /// `notifier/ChangeNotifier` / `obj/<类名>`）：新增一类对象只注册一个 kind 即
   /// 自动获得统一缓存、统一日志与页面兜底回收。
   final String _kind;
-  final T Function(String id, Object? meta)? _create;
+  final T Function(String id, Object? meta) _create;
+  final List<Object?>? Function(T controller)? _forward;
   final Object? Function(T controller, String op, Map payload) _onOp;
   final void Function(T controller)? _onRelease;
 
@@ -69,6 +85,9 @@ class JsObjectBridge<T extends Object> {
   /// 完全静默，否则调用方只看到 null、不知道为什么没执行）。
   final Set<String> _warnedMissingOps = {};
 
+  /// 已排过首帧快照的句柄（同一 id 只排一次，避免每次 rebuild 都排）。
+  final Set<String> _pendingForward = {};
+
   /// 幂等注册 kind 描述符（重复调用短路，与 registerHandleKind 的 assert 配合）。
   void ensure() {
     if (_registered) return;
@@ -77,23 +96,32 @@ class JsObjectBridge<T extends Object> {
         _kind,
         JsHandleKind(
           onCreate: (id, meta, pageKey) {
-            final create = _create;
+            final fn = meta is Map ? meta['fn'] : null;
             // 回传句柄一并记进同一条目（cached 的 create 重发幂等）。
             // 强引用：JS 侧句柄才是这些对象的寿命驱动者（见 binding_cache.dart）。
-            _cache.putIfAbsent<T>(
+            final binding = _cache.putIfAbsent<T>(
               bucket: _kind,
               id: id,
               kind: _kind,
               // 登记方与类型名都给人看：日志里呈现为
-              // `js:ctrl/Tab#11（TabController）· 页面=jsui_2 · 强引用 · … · 登记=控制器创建`。
-              // 注意 TabController 这类真实对象由 Host 随句柄参数创建，此刻尚不存在，
-              // 故类型名只能取自泛型 T，不能等实例的 runtimeType。
-              owner: '控制器创建',
+              // `js:ctrl/Tab#11（TabController）· 页面=jsui_2 · 强引用 · … · 登记=JS 构造`。
+              owner: 'JS 构造',
               weak: false,
               pageKey: pageKey,
-              create: create == null ? null : () => create(id, meta),
-              meta: {'fn': meta is Map ? meta['fn'] : null, 'type': T.toString()},
+              create: () => _create(id, meta),
+              meta: {'fn': fn, 'type': T.toString()},
             );
+            final target = binding.target;
+            if (target == null) return;
+            // 回传句柄缺失时不挂 listener：没有句柄就没有回传对象
+            // （镜像类 ChangeNotifier 正是这种形态，方向相反）。
+            if (_forward == null || fn == null) return;
+            if (target is Listenable) {
+              target.addListener(() => _sendForward(id));
+            }
+            // 首帧快照：建对象时组件可能还没挂上（滚动控制器尚无 clients），
+            // 挂上那一帧由渲染方再调 [forwardOnNextFrame] 补一次。
+            forwardOnNextFrame(id);
           },
           onOp: (id, op, payload) {
             final c = controllerAt(id);
@@ -110,6 +138,7 @@ class JsObjectBridge<T extends Object> {
           },
           onRelease: (id) {
             final c = controllerAt(id);
+            _pendingForward.remove(id);
             _cache.remove(_kind, id);
             if (c == null) return;
             final release = _onRelease;
@@ -128,34 +157,52 @@ class JsObjectBridge<T extends Object> {
   /// 本桥的 kind（`ctrl/Tab` 等；诊断信息用）。
   String get kind => _kind;
 
-  /// 取真实 controller（未登记 / 已释放返回 null）。
+  /// 取真实对象（未登记 / 已释放返回 null）。渲染方要区分「没传句柄」与
+  /// 「句柄已失效」时用它；正常路径用 [require]。
   T? controllerAt(String id) => _cache.target<T>(_kind, id);
 
-  /// 取/建真实 controller（Host 侧兜底创建：与 onCreate 复用同一实例）。
-  T controllerOf(String id, T Function() create) =>
-      controllerAt(id) ??
-      _cache
-          .putIfAbsent<T>(
-            bucket: _kind,
-            id: id,
-            kind: _kind,
-            owner: '宿主创建',
-            weak: false,
-            create: create,
-          )
-          .target!;
+  /// 取真实对象；未建 / 已释放直接抛错（协议违约：JS 侧必须先构造）。
+  ///
+  /// 不返回 null、也不现场补建：渲染期补建会丢掉 JS 构造参数，并与 JS 实例的
+  /// lifetime 脱钩（同一个 JS 实例对上两个宿主对象）。
+  T require(String id) {
+    final controller = controllerAt(id);
+    if (controller == null) {
+      throw FlutterError(
+        '$_kind: 句柄 $id 在渲染时不存在——JS 侧必须先构造该对象'
+        '（构造参数随 create 的 meta 下发），或该对象已被释放。',
+      );
+    }
+    return controller;
+  }
 
-  /// 回传句柄 id（`meta.fn`）：Host 挂 listener 时经它 invoke 回 JS 镜像。
+  /// 回传句柄 id（`meta.fn`）：需要手工回传的路径（如动画首帧）经它 invoke。
   Object? fnHandleOf(String id) => _cache.entry<T>(_kind, id)?.meta['fn'];
 
-  /// 首次 attach 返回 true（同一 id 只挂一次转发——多视图共享同一 controller
-  /// 时不重复回传）；回传句柄尚未到达（JS 的 create 未到）也返回 false。
-  bool markAttachedOnFirst(String id) {
-    final e = _cache.entry<T>(_kind, id);
-    if (e == null || e.meta['fn'] == null) return false;
-    if (e.meta['attached'] == true) return false;
-    e.meta['attached'] = true;
-    return true;
+  /// 立刻把当前状态回传给 JS 镜像（无 [forward] / 对象已释放时短路）。
+  void forwardNow(String id) => _sendForward(id);
+
+  /// 下一帧补一次快照：渲染方挂上组件后调用（滚动控制器这一帧才有 clients）。
+  /// 同一 id 只排一次，重复调用是空操作。
+  void forwardOnNextFrame(String id) {
+    if (_forward == null) return;
+    if (!_pendingForward.add(id)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_pendingForward.remove(id)) return;
+      _sendForward(id);
+    });
+  }
+
+  void _sendForward(String id) {
+    final forward = _forward;
+    if (forward == null) return;
+    final controller = controllerAt(id);
+    if (controller == null) return; // 已释放（release 后 listener 仍可能触发一次）
+    final handle = fnHandleOf(id);
+    if (handle == null) return;
+    final payload = forward(controller);
+    if (payload == null) return; // 此刻没有可下发的内容（如尚无 clients）
+    invokeJsHandler(handle, payload);
   }
 
   /// 从 props 的 controller 取值里解析句柄 id：JS 实例跨桥经 toJSON
@@ -167,77 +214,6 @@ class JsObjectBridge<T extends Object> {
     }
     return null;
   }
-}
-
-/// 控制器桥接的通用 Host：按 id 取/建真实 controller（putIfAbsent——Host 若
-/// 先于 create 消息构建，与 onCreate 复用同一实例），首次 attach 挂 listener
-/// 并经 postFrame 回传一次初始快照（JS 镜像不依赖「先变化才更新」，构造后
-/// 立即准确）。真实 controller 生命周期由 JS 侧句柄释放驱动（jsHandle
-/// release → onRelease），Host 卸载不重复 dispose。
-class JsControllerHost<T extends ChangeNotifier> extends StatefulWidget {
-  const JsControllerHost({
-    super.key,
-    required this.bridge,
-    required this.id,
-    this.create,
-    required this.forward,
-    required this.buildChild,
-  });
-
-  final JsObjectBridge<T> bridge;
-
-  /// JS 侧控制器实例的句柄 id（如 'js:ctrl/Scroll#5'）。
-  final String id;
-
-  /// 兜底创建（仅给「JS 侧 create 只登记、不建实例」的 kind 用）。能建实例的
-  /// kind（如 TabController / ScrollController）一律由 onCreate 建好，这里留 null。
-  final T Function()? create;
-
-  /// controller 变化 → 回传 JS 实例镜像（闭包内自行 invoke）。
-  final void Function(T controller, Object? handler) forward;
-
-  /// 用（按 id 绑定好的）真实 controller 构建具体组件。
-  final Widget Function(T controller) buildChild;
-
-  @override
-  State<JsControllerHost<T>> createState() => _JsControllerHostState<T>();
-}
-
-class _JsControllerHostState<T extends ChangeNotifier>
-    extends State<JsControllerHost<T>> {
-  late final T _controller = _resolveController();
-
-  T _resolveController() {
-    final existing = widget.bridge.controllerAt(widget.id);
-    if (existing != null) return existing;
-    final create = widget.create;
-    if (create != null) return widget.bridge.controllerOf(widget.id, create);
-    // 真实对象只由 JS 侧 create 消息（onCreate）建立：走到这里说明宿主先渲染了
-    // 尚未 create 的句柄（协议违约），不能静默造一个假实例掩盖问题。
-    throw FlutterError(
-      '${widget.bridge.kind} 句柄 ${widget.id} 在渲染时尚未创建：'
-      'JS 侧 create 必须先于 props 下发。',
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // 同一 id 只挂一次转发（多视图共享同一 controller 时不重复回传）。
-    if (widget.bridge.markAttachedOnFirst(widget.id)) {
-      _controller.addListener(_forward);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _forward());
-    }
-  }
-
-  void _forward() {
-    final handler = widget.bridge.fnHandleOf(widget.id);
-    if (handler == null) return;
-    widget.forward(_controller, handler);
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.buildChild(_controller);
 }
 
 /// 「JS 侧按成员名调用宿主对象」的最小契约。
