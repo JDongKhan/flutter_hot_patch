@@ -26,11 +26,13 @@ import 'package:flutter/scheduler.dart'
     show Ticker, TickerCallback, TickerProvider;
 import 'package:flutter/widgets.dart' show BuildContext, TickerMode;
 
-/// 是否启用本模块（默认启用）。
+/// 是否启用本模块（**默认关闭**：实现先留着，需要时一行打开）。
 ///
-/// 置 false 后：`jsTickerProviderFor` 返回不带静音的裸 Ticker，`jsBindTickerMode`
-/// 变成空操作——与未实现本模块时的行为一致。
-bool jsTickerModeBindingEnabled = true;
+/// 关闭时：`jsTickerProviderFor` 返回不带静音的裸 Ticker，`jsBindTickerMode`
+/// 变成空操作——与未实现本模块时的行为一致（动画在被遮住的子树里仍后台跑完）。
+/// 打开方式：在 App `main()`（`runApp` 之前、任何 JS 控制器构造之前）写
+/// `jsTickerModeBindingEnabled = true;`。
+bool jsTickerModeBindingEnabled = false;
 
 /// id → Ticker 工厂。弱引用：控制器释放（`Ticker.dispose`）后条目自动失效，
 /// 只在下一次插入时顺带清理，不需要任何显式释放调用。
