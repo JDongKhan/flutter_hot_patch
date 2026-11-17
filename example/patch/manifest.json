@@ -1,12 +1,12 @@
 {
   "name": "flutter_hot_example",
-  "protocol": "0.14.0",
-  "buildTime": "2026-11-17T09:42:06.985460",
+  "protocol": "0.14.1",
+  "buildTime": "2026-11-17T10:11:34.438776",
   "resources": {
-    "flutter.js": "56b34f4bbf07cdb6ce34483dcae8335b2c77411b6e8037040d6b390c141499df",
+    "flutter.js": "0c24a997360d9f0465ada12122f3c0500b48790d933c9eedda59cb54de55e106",
     "packages/NoteObject.js": "2c32d68a5e767060c383c5dd7afde137f528e6cc2728fa2e40e5083b71f1a723",
     "packages/dio.js": "e07db4b4645590cf9b72c8530c0ef817f06cbe9f0323093f49bae37b8be0b730",
-    "packages/easy_refresh.js": "6e62b6af80b7e69565bfa37c9fe84cb1acd2ec0261781cbeb18ccdfd477e2c01",
+    "packages/easy_refresh.js": "8f5161884cad20a26e6e5adcda08140c6b34a2ddc5d081910ebb04ae6199ac24",
     "packages/get.js": "f8aa6f3b477af33cdf3214a64e46d1a98f8d96aaa06dbeb2be5a1bf0a8aa7027",
     "packages/provider.js": "998f91ba6314dff5b811a88baacffdb07a6b35f0901eb5a04e5e8f1d65d93414",
     "packages/uuid.js": "315bfa1aecc89c4c253d5aded272e9fa7f072c7902878c68ebbb084a60ebf57b",

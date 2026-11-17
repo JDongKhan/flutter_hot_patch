@@ -1,5 +1,15 @@
 > 注：本文件是历史版本记录，早期协议名称可能与当前实现不同；当前协议见 `docs/项目架构文档.md`。
 
+## 0.6.1
+
+**破坏性变更（运行时策略收敛）：宿主侧对象只在 JS 构造时创建；删除「控制器 Host」包装层。**
+
+- **`JsObjectBridge.create` 改为必填**（`T Function(String id, Object? meta)`）：真实对象随 JS 侧 `__bindHandle` 的 create 消息建立，构造参数经 `spec.meta(self)` 随 create 下发——TabController 的 `length/initialIndex`、PageController 的 `initialPage/viewportFraction`、ScrollController 的 `initialScrollOffset/keepScrollOffset/debugLabel`、TextEditingController 的 `text`、AnimationController 的 `value/lowerBound/upperBound/durationMs`、FixedExtentScrollController 的 `initialItem`、EasyRefreshController 的 `controlFinish*`。renderer 的 props 里只剩 `{__handle: id}`。**JS 侧自定义 `__bindHandle` 类必须补 `meta`**，否则宿主按默认参数建对象。
+- **删除 `JsControllerHost` / `_JsControllerHostState` / `controllerOf` / `markAttachedOnFirst`**：渲染组件的宿主侧改为 `bridge.require(id)` 取对象后直接交给真实 widget；取不到即抛 `FlutterError`（消息说明「JS 侧必须先构造该对象」），不再渲染期兜底创建。ScrollController / PageController / TabController / FocusNode / KeyboardListener / CupertinoPicker / OverlayPortal / AnimationController / EasyRefresh 全部改走这条路径；`jsDoubleAnimationOf` 取不到对象时按无动画处理并告警。
+- **宿主 → JS 镜像的回传收进桥**：新增 `forward: (T controller) => List<Object?>?`（`null` = 此刻无内容可发），`onCreate` 在对象是 `Listenable` 时挂一次 listener，渲染方在挂上组件那一帧调 `forwardOnNextFrame(id)` 补首帧快照。AnimationController 的逐帧 value 回传由它承担（删除 `_attachValueMirror`）。
+- **`extraJSON` 死载荷清理**：宿主不再从 props 读构造参数，`ScrollController` / `FixedExtentScrollController` / `AnimationController` / `EasyRefreshController` 的 `extraJSON` 全部删除（`__bindHandle` 的 `extraJSON` 扩展点保留，供 toJSON 追加字段的其它场景使用）。
+- **`onOp` 缺句柄时出声**：同 `{id}|{op}` 组合只告警一次（按 null 返回），不再完全静默。
+
 ## 0.6.0
 
 **加法：UI 能力装配入口 `initJsUi(...)`；无破坏性 API / 协议变更。**

@@ -18,6 +18,11 @@ const String textEditingControllerJsSource = r'''
       this.__selection = null;
       // 宿主回传（TextField 输入后同步镜像 + 触发 listeners）。
       this.__bindHandle('ctrl/Text', {
+        // 初始文本随 create 的 meta 下发：宿主在 JS 构造时就建出带同样文本的
+        // 真实 controller（不再「宿主建空的、镜像自己留着」）。
+        meta: function (self) {
+          return { text: self.__text };
+        },
         onHost: function (self, t) {
           self.__text = (t == null) ? '' : String(t);
           self.__notify();

@@ -49,7 +49,7 @@ const TickerProvider _detachedTickerProvider = _DetachedTickerProvider();
 /// TabController 句柄桥：真实 controller 在 **onCreate 阶段**创建（length /
 /// initialIndex 由 JS 侧随 meta 下发，与 AnimationController 同一形态），因此
 /// JS 构造后立即 `index =` / `animateTo()` 也能落到真实实例；渲染 TabBar /
-/// TabBarView 时按 id 取同一个实例（见 [_tabControllerHost] 的 controllerOf）。
+/// TabBarView 时按 id 取同一个实例（见 [_tabControllerOf]）。
 final JsObjectBridge<TabController> _tabBridge =
     JsObjectBridge<TabController>(
       kind: 'ctrl/Tab',
@@ -72,6 +72,9 @@ final JsObjectBridge<TabController> _tabBridge =
           vsync: _detachedTickerProvider,
         );
       },
+      // 宿主切换页签（用户点 tab / 程序改 index）→ 回传 index 给 JS 镜像；
+      // listener 在 onCreate 挂一次（见 object_bridge.dart 的 forward）。
+      forward: (controller) => [controller.index],
       onOp: (c, op, payload) {
         if (op == 'set' && payload['name'] == 'index') {
           final v = payload['value'];
@@ -92,21 +95,14 @@ final JsObjectBridge<TabController> _tabBridge =
 /// 聚合调用）。
 void ensureTabControllerChannels() => _tabBridge.ensure();
 
-/// TabController 桥接 Host（TabBar / TabBarView 共用）：按句柄 id 取**已由
-/// onCreate 建好**的真实 controller（不再带参兜底创建），首次 attach 挂 index
-/// 转发（宿主 index 变化 → invoke 回传 JS 实例镜像）。
-Widget _tabControllerHost(
-  JsRenderContext c,
-  String id,
-  Widget Function(TabController controller) build, {
-  Key? key,
-}) => JsControllerHost<TabController>(
-  key: key,
-  bridge: _tabBridge,
-  id: id,
-  forward: (controller, handler) => c.invoke(handler, [controller.index]),
-  buildChild: build,
-);
+/// TabController 句柄 → 真实 controller（TabBar / TabBarView 共用）：对象在
+/// JS 构造时已建好（length / initialIndex 来自 create 的 meta），这里只按 id
+/// 取；index 回传由 [_tabBridge] 的 forward 在本层完成。
+TabController _tabControllerOf(String id) {
+  final controller = _tabBridge.require(id);
+  _tabBridge.forwardOnNextFrame(id);
+  return controller;
+}
 
 /// Tab 家族的宿主注册。
 void registerTabWidgets(JsWidgetRegistry r) {
@@ -190,7 +186,7 @@ void registerTabWidgets(JsWidgetRegistry r) {
 
     final id = JsObjectBridge.idOf(c.props['controller']);
     if (id == null) return build(null, key: c.key);
-    return _tabControllerHost(c, id, build, key: c.key);
+    return build(_tabControllerOf(id), key: c.key);
   });
 
   // Tab：child 优先，其次 icon+text，最后 text（三者至少其一，生成器已保证）。
@@ -216,6 +212,6 @@ void registerTabWidgets(JsWidgetRegistry r) {
     );
     final id = JsObjectBridge.idOf(c.props['controller']);
     if (id == null) return build(null, key: c.key);
-    return _tabControllerHost(c, id, build, key: c.key);
+    return build(_tabControllerOf(id), key: c.key);
   });
 }

@@ -1,5 +1,13 @@
 > 注：本文件是历史版本记录，早期协议名称可能与当前实现不同；当前协议见 `docs/项目架构文档.md`。
 
+## 0.14.1
+
+**配合运行时句柄桥收敛：`flutter.js` 的值类在 `__bindHandle` 里补 `meta`，删除已被替换的 `extraJSON` 载荷。**
+
+- `TextEditingController` / `ScrollController` / `PageController` / `AnimationController` 的构造参数改由 `meta` 随 create 下发（宿主在 JS 构造时就建出参数一致的真实对象）：`{text}`、`{initialScrollOffset, keepScrollOffset, debugLabel}`、`{initialPage, viewportFraction}`、`{value, lowerBound, upperBound, durationMs}`。`ScrollController` 构造改为 `constructor(opts)`，与 Dart 具名实参同形（翻译器无需特殊处理）。
+- 删除 `FixedExtentScrollController` / `AnimationController` 的 `extraJSON`（宿主不再从 props 读构造参数）；`PageController` 的 `extraJSON` 同批删除，props 跨桥只剩 `{__handle: id}`。`__bindHandle(spec.extraJSON)` 扩展点保留。
+- 本次为**运行时策略变更**（非语法翻译）：`dart2js-syntax-reference/Dart转JS语法翻译手册.html` 无需改动。
+
 ## 0.14.0
 
 **加法：`ListView.builder` / `.separated` 改为宿主按槽位拉取；顶层函数支持（与成员函数共用形参 / 函数体翻译）；无破坏性协议变更。**

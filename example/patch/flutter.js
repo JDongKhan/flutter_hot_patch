@@ -8300,14 +8300,22 @@ export class AnimationController extends JsHandleObject {
     this.durationMs = __durationMs(opts.duration);
     if (this.durationMs == null) { this.durationMs = 300; }
     this.__bindHandle('ctrl/Flash', {
+      // 构造参数随 create 下发：真实 AnimationController 在 JS 构造时就按
+      // 同一份 value / bounds / duration 建好（不再先建 300ms 默认再靠第一个
+      // op 对齐）。
+      meta: function (self) {
+        return {
+          value: self._value,
+          lowerBound: self.lowerBound,
+          upperBound: self.upperBound,
+          durationMs: self.durationMs
+        };
+      },
       onHost: function (self, p) {
         if (p != null && typeof p === 'number') {
           self._value = p;
           self.__notify();
         }
-      },
-      extraJSON: function (self) {
-        return { value: self._value, durationMs: self.durationMs };
       }
     });
   }
@@ -8347,15 +8355,27 @@ export class AnimationController extends JsHandleObject {
 }
 
 export class ScrollController extends JsHandleObject {
-  constructor() {
+  constructor(opts) {
     super();
+    var o = opts || {};
     this.offset = 0;
+    this.initialScrollOffset =
+    (typeof o.initialScrollOffset === 'number') ? o.initialScrollOffset : 0;
+    this.keepScrollOffset = (o.keepScrollOffset !== false);
+    this.debugLabel = (o.debugLabel != null) ? o.debugLabel : null;
     this.__maxScrollExtent = 0;
     this.__viewportDimension = 0;
     this.__extentAfter = 0;
     // 宿主回传 metrics 快照 → 更新镜像并触发 listeners（listener 无参，
     // 与 Dart addListener 语义一致；闭包内读 this._scrollController.offset）。
     this.__bindHandle('ctrl/Scroll', {
+      meta: function (self) {
+        return {
+          initialScrollOffset: self.initialScrollOffset,
+          keepScrollOffset: self.keepScrollOffset,
+          debugLabel: self.debugLabel
+        };
+      },
       onHost: function (self, p) {
         if (!p) { return; }
         self.offset = p.pixels;
@@ -8389,8 +8409,8 @@ export class ScrollController extends JsHandleObject {
 
 // ===== PageController 代理类（对应 Flutter 官方 PageController）=====
 // 与 ScrollController 同一套句柄层；镜像字段只有 page / initialPage。
-// 构造参数（initialPage / viewportFraction）随 toJSON 的 extraJSON 下发，
-// 宿主 PageView renderer 据此创建真实 PageController。
+// 构造参数（initialPage / viewportFraction）随句柄 create 的 meta 下发给
+// 宿主，真实 PageController 在 JS 构造时就建好。
 export class PageController extends JsHandleObject {
   constructor(opts) {
     super();
@@ -8399,15 +8419,18 @@ export class PageController extends JsHandleObject {
     this.page = this.initialPage;
     this.viewportFraction = (o.viewportFraction != null) ? o.viewportFraction : 1.0;
     this.__bindHandle('ctrl/Page', {
-      onHost: function (self, p) {
-        if (p && p.page != null) { self.page = p.page; }
-        self.__notify();
-      },
-      extraJSON: function (self) {
+      // 构造参数（initialPage / viewportFraction）随 create 下发：宿主在
+      // JS 构造时就建出参数一致的 PageController（渲染期不再补建，props 里
+      // 只有 `{__handle: id}`）。
+      meta: function (self) {
         return {
           initialPage: self.initialPage,
           viewportFraction: self.viewportFraction
         };
+      },
+      onHost: function (self, p) {
+        if (p && p.page != null) { self.page = p.page; }
+        self.__notify();
       }
     });
   }
@@ -8439,7 +8462,8 @@ export class PageController extends JsHandleObject {
 //   - selectedItem：**宿主回传的镜像**（picker 滚动 → 宿主 listener → 回传
 //     选中项 → 本实例更新并通知 listeners），业务侧只读；
 //   - jumpToItem：走通用 op（call），宿主按 `itemIndex` 计算偏移并跳转；
-//   - initialItem / itemExtent 随 toJSON 下发，宿主据此创建真实 controller。
+//   - initialItem / itemExtent 随句柄 create 的 meta 下发，宿主据此创建真实
+//     controller（渲染期只按 `{__handle}` 取同一实例）。
 export class FixedExtentScrollController extends JsHandleObject {
   constructor(opts) {
     super();
@@ -8453,9 +8477,6 @@ export class FixedExtentScrollController extends JsHandleObject {
         self.__notify();
       },
       meta: function (self) {
-        return { initialItem: self.initialItem, itemExtent: self.itemExtent };
-      },
-      extraJSON: function (self) {
         return { initialItem: self.initialItem, itemExtent: self.itemExtent };
       }
     });
@@ -8486,6 +8507,11 @@ export class TextEditingController extends JsHandleObject {
     this.__selection = null;
     // 宿主回传（TextField 输入后同步镜像 + 触发 listeners）。
     this.__bindHandle('ctrl/Text', {
+      // 初始文本随 create 的 meta 下发：宿主在 JS 构造时就建出带同样文本的
+      // 真实 controller（不再「宿主建空的、镜像自己留着」）。
+      meta: function (self) {
+        return { text: self.__text };
+      },
       onHost: function (self, t) {
         self.__text = (t == null) ? '' : String(t);
         self.__notify();

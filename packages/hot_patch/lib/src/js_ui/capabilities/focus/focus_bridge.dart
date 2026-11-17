@@ -4,8 +4,8 @@
 //   - **FocusNode**：JS 侧代理类（见生成器 focus_js.dart）经句柄 `ctrl/Focus` 与
 //     宿主真实 FocusNode 一一绑定；`requestFocus` / `unfocus` 走通用 op（call），
 //     `hasFocus` 读镜像——镜像由宿主 Focus 的 onFocusChange 回传（见下）；
-//   - **Focus**：宿主组件注册，`focusNode` 是句柄时用 [JsControllerHost] 绑定
-//     真实节点并挂 `addListener` 转发 `hasFocus`，于是 JS 侧
+//   - **Focus**：宿主组件注册，`focusNode` 是句柄时按 id 取已建好的真实节点，
+//     节点变化经桥的 forward 回传 `hasFocus`，于是 JS 侧
 //     `node.addListener(fn)` 能感知焦点变化（与 Dart ChangeNotifier 同语义）。
 //
 // 与 Dart 一比一：`FocusNode(debugLabel: …)` 的构造参数经句柄 meta 下发到宿主，
@@ -33,6 +33,8 @@ final JsObjectBridge<FocusNode> _focusBridge =
           descendantsAreFocusable: m['descendantsAreFocusable'] != false,
         );
       },
+      // 焦点变化 → JS 实例镜像 hasFocus → 触发其 addListener 的闭包。
+      forward: (node) => [node.hasFocus],
       onOp: (node, op, payload) {
         if (op == 'call') {
           final method = payload['method']?.toString() ?? '';
@@ -79,15 +81,7 @@ void registerFocusWidgets(JsWidgetRegistry r) {
 
     final id = JsObjectBridge.idOf(c.props['focusNode']);
     if (id == null) return build(null, key: c.key);
-    return JsControllerHost<FocusNode>(
-      key: c.key,
-      bridge: _focusBridge,
-      id: id,
-      create: () => FocusNode(),
-      // 焦点变化 → JS 实例镜像 hasFocus → 触发其 addListener 的闭包
-      // （与 ScrollController 回传 metrics 同一套 Host 机制）。
-      forward: (node, handler) => c.invoke(handler, [node.hasFocus]),
-      buildChild: build,
-    );
+    // 节点在 JS 构造时已建好，这里只按 id 取；hasFocus 回传由桥的 forward 完成。
+    return build(_focusBridge.require(id), key: c.key);
   });
 }

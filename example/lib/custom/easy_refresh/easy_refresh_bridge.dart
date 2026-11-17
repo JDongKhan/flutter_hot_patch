@@ -257,22 +257,17 @@ class _JsEasyRefresh extends StatelessWidget {
 /// EasyRefresh 能力域组件注册。
 void registerEasyRefreshWidgets(JsWidgetRegistry r) {
   r.register('EasyRefresh', (c) {
-    // controller 跨桥形态见 JS 侧 extraJSON：`{__handle: id, controlFinish*}`。
-    // handle 缺失时（旧调用）不挂控制器；渲染期兜底创建（创建消息与首帧渲染
-    // 谁先到都复用同一实例）。
-    final handle = c.props['controller'];
-    final id = JsObjectBridge.idOf(handle);
-    final controller = id == null
-        ? null
-        : _easyRefreshBridge.controllerOf(
-            id,
-            () => EasyRefreshController(
-              controlFinishRefresh: handle is Map &&
-                  handle['controlFinishRefresh'] == true,
-              controlFinishLoad:
-                  handle is Map && handle['controlFinishLoad'] == true,
-            ),
-          );
+    // controller 跨桥形态只有 `{__handle: id}`：真实 EasyRefreshController 在
+    // JS 构造时按 create 的 meta（controlFinishRefresh / controlFinishLoad）建好，
+    // 这里只按 id 取。没传 controller → 由 EasyRefresh 自己管理内部控制器；
+    // 传了句柄却取不到对象 = 协议违约（已释放 / 未构造），出声报错不兜底。
+    final id = JsObjectBridge.idOf(c.props['controller']);
+    final EasyRefreshController? controller;
+    if (id == null) {
+      controller = null;
+    } else {
+      controller = _easyRefreshBridge.require(id);
+    }
     return _JsEasyRefresh(
       key: c.key,
       controller: controller,

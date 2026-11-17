@@ -99,22 +99,15 @@ export class EasyRefreshController extends JsHandleObject {
     this.controlFinishRefresh = !!o.controlFinishRefresh;
     this.controlFinishLoad = !!o.controlFinishLoad;
     this.__bindHandle('ctrl/EasyRefresh', {
-      // 构造参数随句柄 create 下发：宿主据此创建真实 controller（putIfAbsent——
-      // 创建消息与首帧渲染谁先到都复用同一实例）。
+      // 构造参数随句柄 create 下发：宿主在 JS 构造时就建出真实 controller，
+      // 渲染组件时只按 `{__handle}` 取同一实例（不再有渲染期兜底创建）。
       meta: function (self) {
         return {
           controlFinishRefresh: self.controlFinishRefresh,
           controlFinishLoad: self.controlFinishLoad
         };
       },
-      // 组件渲染时 controller 经 toJSON 跨桥（`{__handle, controlFinish*}`），
-      // Host 在渲染期兜底创建时同样读得到构造参数。
-      extraJSON: function (self) {
-        return {
-          controlFinishRefresh: self.controlFinishRefresh,
-          controlFinishLoad: self.controlFinishLoad
-        };
-      }
+
     });
   }
   __op(method, args) {

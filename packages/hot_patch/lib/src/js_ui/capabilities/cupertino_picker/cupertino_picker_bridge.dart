@@ -21,14 +21,21 @@ import '../core/object_bridge.dart';
 import '../core/from_json/dart_values_from_json.dart';
 
 /// FixedExtentScrollController 句柄桥：真实 controller 由 onCreate 按 JS 侧下发
-/// 的 `initialItem` 创建；Host 兜底创建时沿用 props 里的同名值（两边 putIfAbsent
-/// 复用同一实例，先到者生效）。
+/// 的 `initialItem` 创建（构造参数只走 meta，渲染期不再补建）。
 final JsObjectBridge<FixedExtentScrollController> _fixedExtentBridge =
     JsObjectBridge<FixedExtentScrollController>(
       kind: 'ctrl/FixedExtent',
       create: (_, meta) => FixedExtentScrollController(
         initialItem: _initialItemOf(meta is Map ? meta : null),
       ),
+      // 「当前选中项」是纯镜像：JS 侧 itemBuilder 的选中高亮与上层联动都读它；
+      // 宿主滚动（用户拨动 / jumpToItem）→ 回传 selectedItem。尚无 clients 时
+      // 返回 null，挂上视图那一帧由 renderer 补一次快照。
+      forward: (controller) => controller.hasClients
+          ? [
+              {'selectedItem': controller.selectedItem},
+            ]
+          : null,
       onOp: (c, op, payload) {
         if (op == 'call') {
           final method = payload['method']?.toString() ?? '';
@@ -98,23 +105,11 @@ Widget _cupertinoPicker(JsRenderContext c) {
 
   final id = JsObjectBridge.idOf(c.props['scrollController']);
   if (id == null) return build(null, key: c.key);
-  return JsControllerHost<FixedExtentScrollController>(
-    key: c.key,
-    bridge: _fixedExtentBridge,
-    id: id,
-    create: () => FixedExtentScrollController(
-      initialItem: _initialItemOf(c.map('scrollController')),
-    ),
-    // 只回传「当前选中项」：JS 侧 selectedItem 是纯镜像，itemBuilder 的选中
-    // 高亮与上层联动都读它。
-    forward: (controller, handler) {
-      if (!controller.hasClients) return;
-      c.invoke(handler, [
-        {'selectedItem': controller.selectedItem},
-      ]);
-    },
-    buildChild: build,
-  );
+  // controller 在 JS 构造时已建好（initialItem 随 create 的 meta 下发），
+  // 这里只按 id 取；selectedItem 回传由桥的 forward 完成。
+  final controller = _fixedExtentBridge.require(id);
+  _fixedExtentBridge.forwardOnNextFrame(id);
+  return build(controller, key: c.key);
 }
 
 /// 注册 CupertinoPicker 宿主组件映射。

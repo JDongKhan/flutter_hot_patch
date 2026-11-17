@@ -118,14 +118,22 @@ const String animationJsSource = r'''
       this.durationMs = __durationMs(opts.duration);
       if (this.durationMs == null) { this.durationMs = 300; }
       this.__bindHandle('ctrl/Flash', {
+        // 构造参数随 create 下发：真实 AnimationController 在 JS 构造时就按
+        // 同一份 value / bounds / duration 建好（不再先建 300ms 默认再靠第一个
+        // op 对齐）。
+        meta: function (self) {
+          return {
+            value: self._value,
+            lowerBound: self.lowerBound,
+            upperBound: self.upperBound,
+            durationMs: self.durationMs
+          };
+        },
         onHost: function (self, p) {
           if (p != null && typeof p === 'number') {
             self._value = p;
             self.__notify();
           }
-        },
-        extraJSON: function (self) {
-          return { value: self._value, durationMs: self.durationMs };
         }
       });
     }

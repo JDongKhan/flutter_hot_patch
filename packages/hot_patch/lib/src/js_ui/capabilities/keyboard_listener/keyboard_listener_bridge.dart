@@ -76,15 +76,7 @@ void registerKeyboardListenerWidgets(JsWidgetRegistry r) {
 
     final id = JsObjectBridge.idOf(c.props['focusNode']);
     if (id == null) return build(_fallbackNode, key: c.key);
-    return JsControllerHost<FocusNode>(
-      key: c.key,
-      bridge: focusNodeBridge,
-      id: id,
-      create: () => FocusNode(),
-      // 与 Focus 同一套回传：JS 侧 FocusNode 镜像的 hasFocus 保持准确
-      // （`node.hasFocus` / addListener 在 KeyboardListener 里同样可用）。
-      forward: (node, fn) => c.invoke(fn, [node.hasFocus]),
-      buildChild: build,
-    );
+    // 与 Focus 共享同一条 ctrl/Focus 桥：镜像 hasFocus 的回传由桥的 forward 完成。
+    return build(focusNodeBridge.require(id), key: c.key);
   });
 }

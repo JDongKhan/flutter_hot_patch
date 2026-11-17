@@ -101,21 +101,22 @@ void registerOverlayPortalWidgets(JsWidgetRegistry r) {
   });
 }
 
-/// props 里的 `{__handle:id}` → 宿主真实 LayerLink（缺 link 返回 null，由调用方
-/// 兜底出声）。
+/// props 里的 `{__handle:id}` → 宿主真实 LayerLink（没传 link / 句柄已释放返回
+/// null，由调用方出声兜底）。
 ///
-/// 用 `controllerOf`（putIfAbsent 兜底创建）而不是 `controllerAt`：句柄 create
-/// 消息与首帧渲染到达顺序不定，两端必须落到**同一个实例**（锚点是身份语义）。
+/// 对象在 JS 构造时已建好（`layer/Link` 的 create 与句柄同源）：锚点是身份语义，
+/// 不能现场补建一个「看起来一样」的新链路，那会让 target 与 follower 各自绑到
+/// 不同 Link 上（浮层定位直接失效）。
 LayerLink? _linkOf(Object? prop) {
   final id = JsObjectBridge.idOf(prop);
   if (id == null) return null;
-  return _linkBridge.controllerOf(id, LayerLink.new);
+  return _linkBridge.controllerAt(id);
 }
 
 OverlayPortalController? _controllerOf(Object? prop) {
   final id = JsObjectBridge.idOf(prop);
   if (id == null) return null;
-  return _portalBridge.controllerOf(id, OverlayPortalController.new);
+  return _portalBridge.controllerAt(id);
 }
 
 /// `OverlayChildLocation.*` 在 JS 侧是枚举名字符串（与其它 SDK 枚举同一形态）。

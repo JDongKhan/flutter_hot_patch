@@ -22,7 +22,13 @@ import '../core/object_bridge.dart';
 final JsObjectBridge<TextEditingController> _textBridge =
     JsObjectBridge<TextEditingController>(
       kind: 'ctrl/Text',
-      create: (_, _) => TextEditingController(),
+      // 初始文本随 create 的 meta 下发（JS 构造参数 `TextEditingController(text)`
+      // 在 JS 构造时就落到真实 controller，不再等第一次 set op）。
+      create: (_, meta) {
+        final m = meta is Map ? meta : const {};
+        final text = m['text'];
+        return TextEditingController(text: text == null ? '' : '$text');
+      },
       onOp: (c, op, payload) {
         if (op == 'set') {
           if (payload['name'] == 'text') {

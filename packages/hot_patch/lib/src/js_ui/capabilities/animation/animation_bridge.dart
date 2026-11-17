@@ -11,12 +11,9 @@
 //
 // 句柄桥复用通用层（capabilities/core/object_bridge.dart）：onCreate 建
 // 真实控制器、onOp 分派 forward/reverse/repeat/stop/reset、onRelease 释放。
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../../../services/js_runtime_manager.dart';
 import '../../../utils/hot_patch_log.dart';
 import '../../js_widget_registry.dart';
 import '../base_widget/text_from_json.dart';
@@ -43,10 +40,27 @@ class _JsAnimationVsync implements TickerProvider {
 final JsObjectBridge<AnimationController> _animationBridge =
     JsObjectBridge<AnimationController>(
   kind: 'ctrl/Flash',
-  create: (id, meta) => AnimationController(
-    vsync: _JsAnimationVsync.instance,
-    duration: const Duration(milliseconds: 300),
-  ),
+  // 构造参数随 create 的 meta 下发：value / lowerBound / upperBound / duration
+  // 在 JS 构造时就落到真实控制器（不再先建 300ms 默认再靠首个 op 对齐）。
+  create: (id, meta) {
+    final m = meta is Map ? meta : const {};
+    double numOf(String key, double fallback) =>
+        m[key] is num ? (m[key] as num).toDouble() : fallback;
+    final lower = numOf('lowerBound', 0.0);
+    final upper = numOf('upperBound', 1.0);
+    final ms = m['durationMs'] is num ? (m['durationMs'] as num).toInt() : 300;
+    return AnimationController(
+      vsync: _JsAnimationVsync.instance,
+      value: numOf('value', lower).clamp(lower, upper),
+      lowerBound: lower,
+      upperBound: upper,
+      duration: Duration(milliseconds: ms > 0 ? ms : 300),
+    );
+  },
+  // 每帧 value → JS 镜像（onHost 更新 _value + __notify → AnimatedBuilder 等
+  // 只重建自己的子树）。listener 在 onCreate 挂一次：控制器只在 value 变化时
+  // 通知，因此不跑动画就没有回传，开销为 0。
+  forward: (controller) => [controller.value],
   onOp: (c, op, payload) {
     if (op == 'set') {
       if (payload['name'] == 'value' && payload['value'] is num) {
@@ -60,10 +74,6 @@ final JsObjectBridge<AnimationController> _animationBridge =
     }
     if (op != 'call') return null;
     final method = payload['method']?.toString() ?? '';
-    // 本帧起的逐帧回传在这里挂：create 阶段回传句柄还没进 binding cache（
-    // putIfAbsent 先 create 后落 meta），那时挂必然失败；而「不 forward 就不会
-    // 有值变化」，故此处挂足够且不漏帧。id 由 JS 随载荷下发（基座 onOp 不带 id）。
-    _attachValueMirror(payload['id']?.toString(), c);
     // JS 镜像的 value 与宿主控制器对齐：`reverse()` 只有在当前 value 为
     // upperBound 时才真正动起来，镜像滞后会让按钮「按了没反应」。
     final rawValue = payload['value'];
@@ -94,25 +104,6 @@ final JsObjectBridge<AnimationController> _animationBridge =
   },
 );
 
-/// 逐帧 value 回传的挂载（同一 id 只挂一次；去重标记由句柄桥的 meta 维护）。
-///
-/// 回传句柄（meta.fn）随 JS 的 create 消息到达；`markAttachedOnFirst` 同时
-/// 负责「句柄未到 / 已挂过」两种短路，因此多视图共享同一控制器也只回传一份。
-void _attachValueMirror(String? id, AnimationController controller) {
-  if (id == null) return;
-  if (!_animationBridge.markAttachedOnFirst(id)) return;
-  final handle = _animationBridge.fnHandleOf(id);
-  final fnId = handle is Map ? handle['__fn'] : null;
-  if (fnId is! String) return;
-  controller.addListener(() {
-    // 与 JsUiWidget._invoke 同一编码：参数数组的 JSON 文本再包成 JS 字符串，
-    // JS 侧 invoke 解析一次还原为数组（能力句柄按位置形参收值）。
-    JsRuntimeManager.evaluateAll(
-      '__jsui.invoke(${jsonEncode(fnId)}, ${jsonEncode(jsonEncode([controller.value]))});',
-    );
-  });
-}
-
 /// 曲线派生动画缓存（挂在控制器实例上，随控制器回收）：曲线名 → 该控制器驱动的
 /// `Animation<double>`。CurvedAnimation 会向父控制器注册 listener，每次 build
 /// 现建会持续泄漏。
@@ -126,14 +117,14 @@ final Expando<Map<String, Animation<double>>> _curvedAnimations =
 Animation<double>? jsDoubleAnimationOf(Object? prop) {
   final id = JsObjectBridge.idOf(prop);
   if (id == null) return null;
-  final controller = _animationBridge.controllerOf(
-    id,
-    () => AnimationController(
-      vsync: _JsAnimationVsync.instance,
-      duration: const Duration(milliseconds: 300),
-    ),
-  );
-  _attachValueMirror(id, controller);
+  final controller = _animationBridge.controllerAt(id);
+  if (controller == null) {
+    // 句柄已释放（页面卸载竞态）：按「无动画」出声兜底，不现场补建——补建会
+    // 丢掉 JS 侧构造参数（duration / bounds），并与 JS 实例 lifetime 脱钩。
+    JsLog.warn('Animation: 句柄 $id 已释放，该 prop 按无动画处理');
+    return null;
+  }
+  _animationBridge.forwardOnNextFrame(id);
   final curveName = prop is Map ? prop['__curve'] : null;
   if (curveName is String) {
     final cache = _curvedAnimations[controller] ??= {};
