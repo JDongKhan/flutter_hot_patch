@@ -16,12 +16,11 @@
 //          invoke 回传页码给 JS 实例，JS 侧 `index= / animateTo()` 走通用 op
 //          下发驱动宿主。
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart'
-    show Ticker, TickerCallback, TickerProvider;
 
 import '../../js_widget_registry.dart';
 import '../base_widget/text_from_json.dart';
 import '../core/object_bridge.dart';
+import '../core/ticker_mode_binding.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/layout_from_json.dart';
 import '../core/from_json/widget_enum_from_json.dart';
@@ -32,27 +31,10 @@ import 'tab_from_json.dart';
 // JS 侧代理类见 capabilities/tab/tab_controller_js.dart，与 ScrollController 同构）
 // ---------------------------------------------------------------------------
 
-/// 脱离 State 生命周期的 TickerProvider：真实 TabController 的生命周期由 JS 侧
-/// dispose 通道管理（不随某次 widget 卸载而失效），故不能用某个 State 的
-/// TickerProviderStateMixin 当 vsync——承载它的 State 一旦卸载 ticker 即失效，
-/// 同一个 controller 再挂到第二个视图就是 use-after-dispose。
-///
-/// **取舍：不感知 TickerMode**。Flutter 用 `vsync: this` 时，子树被 Offstage /
-/// 非活跃 route / `TickerMode(enabled:false)` 遮住会让 ticker 静音、
-/// `animateTo` 暂停并在恢复后接着跑；这里的裸 Ticker 直接挂 SchedulerBinding，
-/// 遮住期间动画仍在后台推进（回来时已停在终点）。隐藏时不渲染，代价只是索引
-/// 动画那几百毫秒的帧。ticker 由 `TabController` 懒建（首次 `animateTo` 才
-/// `createTicker`），不切页签时零开销，`dispose` 由 controller 负责。
-class _DetachedTickerProvider implements TickerProvider {
-  const _DetachedTickerProvider(this.label);
-
-  /// 调试用归属标签（`js:ctrl/Tab#N`），出现在 Ticker 的 toString 里。
-  final String label;
-
-  @override
-  Ticker createTicker(TickerCallback onTick) =>
-      Ticker(onTick, debugLabel: label);
-}
+// vsync 走 `core/ticker_mode_binding.dart`：真实控制器在 JS 构造时创建，没有
+// 「某个 State 的 TickerProviderStateMixin」可用（绑到 State 会在它卸载后
+// use-after-dispose）。该模块默认把 Ticker 绑到渲染位置的 TickerMode（子树被
+// Offstage / 非活跃 route 遮住时暂停动画），开关见 `jsTickerModeBindingEnabled`。
 
 /// TabController 句柄桥：真实 controller 在 **onCreate 阶段**创建（length /
 /// initialIndex 由 JS 侧随 meta 下发，与 AnimationController 同一形态），因此
@@ -77,7 +59,7 @@ final JsObjectBridge<TabController> _tabBridge =
         return TabController(
           length: length,
           initialIndex: initialIndex,
-          vsync: _DetachedTickerProvider('js:ctrl/Tab#$id'),
+          vsync: jsTickerProviderFor(id),
         );
       },
       // 宿主切换页签（用户点 tab / 程序改 index）→ 回传 index 给 JS 镜像；
@@ -106,9 +88,10 @@ void ensureTabControllerChannels() => _tabBridge.ensure();
 /// TabController 句柄 → 真实 controller（TabBar / TabBarView 共用）：对象在
 /// JS 构造时已建好（length / initialIndex 来自 create 的 meta），这里只按 id
 /// 取；index 回传由 [_tabBridge] 的 forward 在本层完成。
-TabController _tabControllerOf(String id) {
+TabController _tabControllerOf(String id, BuildContext? context) {
   final controller = _tabBridge.require(id);
   _tabBridge.forwardOnNextFrame(id);
+  jsBindTickerMode(id, context);
   return controller;
 }
 
@@ -194,7 +177,7 @@ void registerTabWidgets(JsWidgetRegistry r) {
 
     final id = JsObjectBridge.idOf(c.props['controller']);
     if (id == null) return build(null, key: c.key);
-    return build(_tabControllerOf(id), key: c.key);
+    return build(_tabControllerOf(id, c.context), key: c.key);
   });
 
   // Tab：child 优先，其次 icon+text，最后 text（三者至少其一，生成器已保证）。
@@ -220,6 +203,6 @@ void registerTabWidgets(JsWidgetRegistry r) {
     );
     final id = JsObjectBridge.idOf(c.props['controller']);
     if (id == null) return build(null, key: c.key);
-    return build(_tabControllerOf(id), key: c.key);
+    return build(_tabControllerOf(id, c.context), key: c.key);
   });
 }

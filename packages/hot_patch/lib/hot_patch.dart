@@ -76,3 +76,8 @@ export 'src/js_ui/capabilities/animation/animation_from_json.dart'
     show JsRenderContextAnimation, curveFromJson;
 export 'src/js_ui/capabilities/tab/tab_from_json.dart'
     show JsRenderContextTab;
+// 可选能力开关（默认启用）：Ticker 跟随渲染位置的 TickerMode 暂停 / 续跑。
+// 关掉只需在 `main()`（runApp 之前、任何 JS 控制器构造之前）写
+// `jsTickerModeBindingEnabled = false;`，行为退回「裸 Ticker 不静音」。
+export 'src/js_ui/capabilities/core/ticker_mode_binding.dart'
+    show jsTickerModeBindingEnabled;

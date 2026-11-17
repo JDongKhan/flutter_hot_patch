@@ -12,34 +12,20 @@
 // 句柄桥复用通用层（capabilities/core/object_bridge.dart）：onCreate 建
 // 真实控制器、onOp 分派 forward/reverse/repeat/stop/reset、onRelease 释放。
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../../../utils/hot_patch_log.dart';
 import '../../js_widget_registry.dart';
 import '../base_widget/text_from_json.dart';
 import '../core/object_bridge.dart';
+import '../core/ticker_mode_binding.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/layout_from_json.dart';
 import '../core/from_json/painting_from_json.dart';
 import 'animation_from_json.dart';
 
-/// 显式动画的 Ticker 来源：控制器真实对象在宿主侧（见文件头）。
-///
-/// vsync 只是 Ticker 工厂，**不受 TickerMode 静音**：控制器在 JS 构造时就存在、
-/// 可能被多个视图共享，没有「某个 State 的 TickerMode」可依。取舍的可见后果是
-/// 「子树被 Offstage / 非活跃 route / TickerMode(enabled:false) 遮住时，动画仍
-/// 在后台跑完，回到可见时已停在终点」——看不到画面，代价只是动画期间的帧。
-/// 裸 Ticker 直接挂 SchedulerBinding；`AnimationController.dispose` 会释放它，
-/// 故本对象无状态，每个控制器一个实例只为带上句柄 id 的 [debugLabel]。
-class _JsAnimationVsync implements TickerProvider {
-  const _JsAnimationVsync(this.label);
-
-  final String label;
-
-  @override
-  Ticker createTicker(TickerCallback onTick) =>
-      Ticker(onTick, debugLabel: label);
-}
+// vsync 走 `core/ticker_mode_binding.dart`（与 Tab 同一套）：控制器在 JS 构造时
+// 创建、可能被多个视图共享，没有「某个 State 的 TickerMode」可依；该模块默认把
+// Ticker 绑到渲染位置的 TickerMode，开关见 `jsTickerModeBindingEnabled`。
 
 /// AnimationController 句柄桥（kind `ctrl/Flash`）。
 final JsObjectBridge<AnimationController> _animationBridge =
@@ -55,7 +41,7 @@ final JsObjectBridge<AnimationController> _animationBridge =
     final upper = numOf('upperBound', 1.0);
     final ms = m['durationMs'] is num ? (m['durationMs'] as num).toInt() : 300;
     return AnimationController(
-      vsync: _JsAnimationVsync('js:ctrl/Flash#$id'),
+      vsync: jsTickerProviderFor(id),
       value: numOf('value', lower).clamp(lower, upper),
       lowerBound: lower,
       upperBound: upper,
@@ -119,7 +105,7 @@ final Expando<Map<String, Animation<double>>> _curvedAnimations =
 /// `{__handle:id, __curve:name}`）→ 宿主 `Animation<double>`。
 ///
 /// 返回 null 表示该 prop 不是可解析的动画（调用方按「无动画」出声兜底）。
-Animation<double>? jsDoubleAnimationOf(Object? prop) {
+Animation<double>? jsDoubleAnimationOf(Object? prop, {BuildContext? context}) {
   final id = JsObjectBridge.idOf(prop);
   if (id == null) return null;
   final controller = _animationBridge.controllerAt(id);
@@ -130,6 +116,9 @@ Animation<double>? jsDoubleAnimationOf(Object? prop) {
     return null;
   }
   _animationBridge.forwardOnNextFrame(id);
+  // 登记挂载点：让 Ticker 跟随这棵子树被 TickerMode 遮住时暂停（可选能力，
+  // 关闭时该调用是空操作）。
+  jsBindTickerMode(id, context);
   final curveName = prop is Map ? prop['__curve'] : null;
   if (curveName is String) {
     final cache = _curvedAnimations[controller] ??= {};
@@ -332,7 +321,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
 
   // ── 过渡动画：宿主直接消费 Animation 句柄，逐帧由 Flutter 原生插值 ──
   r.register('FadeTransition', (c) {
-    final animation = jsDoubleAnimationOf(c.props['opacity']);
+    final animation = jsDoubleAnimationOf(c.props['opacity'], context: c.context);
     final child = c.children['child'] as Widget?;
     if (animation == null) {
       JsLog.warn('FadeTransition: opacity 不是 Animation 句柄，已退化为直接渲染子树');
@@ -347,7 +336,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   });
 
   r.register('ScaleTransition', (c) {
-    final animation = jsDoubleAnimationOf(c.props['scale']);
+    final animation = jsDoubleAnimationOf(c.props['scale'], context: c.context);
     final child = c.children['child'] as Widget?;
     if (animation == null) {
       JsLog.warn('ScaleTransition: scale 不是 Animation 句柄，已退化为直接渲染子树');
@@ -362,7 +351,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   });
 
   r.register('RotationTransition', (c) {
-    final animation = jsDoubleAnimationOf(c.props['turns']);
+    final animation = jsDoubleAnimationOf(c.props['turns'], context: c.context);
     final child = c.children['child'] as Widget?;
     if (animation == null) {
       JsLog.warn('RotationTransition: turns 不是 Animation 句柄，已退化为直接渲染子树');
@@ -377,7 +366,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   });
 
   r.register('SizeTransition', (c) {
-    final animation = jsDoubleAnimationOf(c.props['sizeFactor']);
+    final animation = jsDoubleAnimationOf(c.props['sizeFactor'], context: c.context);
     final child = c.children['child'] as Widget?;
     if (animation == null) {
       JsLog.warn('SizeTransition: sizeFactor 不是 Animation 句柄，已退化为直接渲染子树');
