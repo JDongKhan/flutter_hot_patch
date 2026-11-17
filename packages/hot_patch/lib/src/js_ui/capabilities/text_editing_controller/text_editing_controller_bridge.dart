@@ -88,8 +88,9 @@ void registerTextWidgets(JsWidgetRegistry r) {
       // obscureText 时 Flutter 要求 maxLines == 1。
       maxLines: obscureText ? 1 : maxLines,
       style: c.textStyle('style'),
-      // null 时 TextField 自身默认就是 TextAlign.start，不再重复兜底。
-      textAlign: c.textAlign('textAlign'),
+      // `TextField.textAlign` 非空（Flutter 默认 TextAlign.start），
+      // 未下发时取同一个默认值。
+      textAlign: c.textAlign('textAlign') ?? TextAlign.start,
     );
   });
 }
