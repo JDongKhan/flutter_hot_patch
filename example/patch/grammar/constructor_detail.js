@@ -111,7 +111,9 @@ export class ConstructorDetail extends StatelessWidget {
           "data": "factory 委托：" + byFactory.describe()
         }),
         new Text({
-          "data": "默认构造：" + new Stamp({base: 7}).describe()
+          "data": "默认构造：" + new Stamp({
+            "base": 7
+          }).describe()
         })
       ]
     });

@@ -150,11 +150,19 @@ export class SearchPage extends StatefulWidget {
           new Expanded({
             "child": this._loading ? (this.__k5 || (this.__k5 = new Center({
               "child": new CircularProgressIndicator({})
-            }))) : (((__nn(this._error) != null) ? new LoadErrorView({message: this._error, onRetry: this._load.bind(this)}) : new ListView({padding: EdgeInsets.only({bottom: 24}), children: [new _Block({
+            }))) : (((__nn(this._error) != null) ? new LoadErrorView({
+              "message": this._error,
+              "onRetry": () => this._load()
+            }) : new ListView({
+              "padding": (this.__k6 || (this.__k6 = EdgeInsets.only({
+                "bottom": 24
+              }))),
+              "children": [
+                new _Block({
                   "child": new Column({
                     "crossAxisAlignment": CrossAxisAlignment.start,
                     "children": [
-                      (this.__k6 || (this.__k6 = new _BlockTitle({
+                      (this.__k7 || (this.__k7 = new _BlockTitle({
                         "text": "热门搜索"
                       }))),
                       new Wrap({
@@ -164,7 +172,7 @@ export class SearchPage extends StatefulWidget {
                           ...(() => { var out = []; for (let k of this._hot) { out.push.apply(out, [new GestureDetector({
                                   "onTap": () => { return this._go(k); },
                                   "child": new Container({
-                                    "padding": (this.__k7 || (this.__k7 = EdgeInsets.symmetric({
+                                    "padding": (this.__k8 || (this.__k8 = EdgeInsets.symmetric({
                                       "horizontal": 13,
                                       "vertical": 6
                                     }))),
@@ -177,7 +185,7 @@ export class SearchPage extends StatefulWidget {
                                       })
                                     }),
                                     "child": new Text({
-                                      "style": (this.__k8 || (this.__k8 = new TextStyle({
+                                      "style": (this.__k9 || (this.__k9 = new TextStyle({
                                         "color": new Color({
                                           "value": 0xFF4D5462
                                         }),
@@ -191,7 +199,8 @@ export class SearchPage extends StatefulWidget {
                       })
                     ]
                   })
-                }), (this.__k9 || (this.__k9 = new Padding({
+                }),
+                (this.__k10 || (this.__k10 = new Padding({
                   "child": new Text({
                     "style": new TextStyle({
                       "fontSize": 17,
@@ -205,19 +214,26 @@ export class SearchPage extends StatefulWidget {
                     "right": 16,
                     "bottom": 10
                   })
-                }))), ...(guesses).map((s) => [new Padding({
-                    "padding": (this.__k10 || (this.__k10 = EdgeInsets.fromLTRB({
-                      "bottom": 10,
-                      "left": 12,
-                      "right": 12,
-                      "top": 0
-                    }))),
-                    "child": new GestureDetector({
-                      "child": new PostRow({
-                        "trailing": "￥" + " 起"
-                      })
-                    })
-                  })])]})))
+                }))),
+                ...(() => { var out = []; for (let s of guesses) { out.push.apply(out, [new Padding({
+                        "padding": (this.__k11 || (this.__k11 = EdgeInsets.fromLTRB({
+                          "bottom": 10,
+                          "left": 12,
+                          "right": 12,
+                          "top": 0
+                        }))),
+                        "child": new GestureDetector({
+                          "onTap": () => AppRouter.openSpot(s.id),
+                          "child": new PostRow({
+                            "img": s.img,
+                            "title": s.title,
+                            "sub": s.sub,
+                            "trailing": "￥" + s.price + " 起"
+                          })
+                        })
+                      })]); } return out; })()
+              ]
+            })))
           })
         ]
       })

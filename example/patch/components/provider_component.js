@@ -115,7 +115,7 @@ export class ProviderCard extends StatefulWidget {
                         }))),
                         "data": "Selector：builder 执行 " + this._selectorBuilds + " 次" + "（count ≥ 5 为 " + (isHigh ? "true" : "false") + "）"
                       }),
-                      (child ?? new SizedBox())
+                      (child ?? (this.__k7 || (this.__k7 = new SizedBox({}))))
                     ]
                   }); },
                 "typeArguments": {"A": "CounterVm", "S": "bool"}
@@ -124,7 +124,7 @@ export class ProviderCard extends StatefulWidget {
                 "height": 12
               }))),
               new Consumer({
-                "builder": (context, model, child) => (this.__k7 || (this.__k7 = new Text({
+                "builder": (context, model, child) => (this.__k8 || (this.__k8 = new Text({
                   "data": "NetworkVm：ChangeNotifierProvider.value 由 State 手动 dispose",
                   "style": new TextStyle({
                     "fontSize": 14,
@@ -133,7 +133,7 @@ export class ProviderCard extends StatefulWidget {
                 }))),
                 "typeArguments": {"T": "NetworkVm"}
               }),
-              (this.__k8 || (this.__k8 = new SizedBox({
+              (this.__k9 || (this.__k9 = new SizedBox({
                 "height": 8
               }))),
               new Row({
@@ -141,7 +141,7 @@ export class ProviderCard extends StatefulWidget {
                 "children": [
                   new ElevatedButton({
                     "onPressed": () => this._loadUser(),
-                    "child": (this.__k9 || (this.__k9 = new Text({
+                    "child": (this.__k10 || (this.__k10 = new Text({
                       "data": "加载用户信息"
                     })))
                   })

@@ -102,10 +102,10 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
                   (this.__k6 || (this.__k6 = new SizedBox({
                     "height": 6
                   }))),
-                  (child ?? SizedBox.shrink())
+                  (child ?? (this.__k7 || (this.__k7 = SizedBox.shrink({}))))
                 ]
               }); },
-            "child": (this.__k7 || (this.__k7 = new Text({
+            "child": (this.__k8 || (this.__k8 = new Text({
               "data": "child 插槽：值变化时不重建这段子树",
               "style": new TextStyle({
                 "fontSize": 12,
@@ -123,32 +123,32 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
             "children": [
               new OutlinedButton({
                 "onPressed": () => this._dec(),
-                "child": (this.__k8 || (this.__k8 = new Text({
+                "child": (this.__k9 || (this.__k9 = new Text({
                   "data": "-1"
                 })))
               }),
               new OutlinedButton({
                 "onPressed": () => this._inc(),
-                "child": (this.__k9 || (this.__k9 = new Text({
+                "child": (this.__k10 || (this.__k10 = new Text({
                   "data": "+1"
                 })))
               }),
               new OutlinedButton({
                 "onPressed": () => this._same(),
-                "child": (this.__k10 || (this.__k10 = new Text({
+                "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "赋相同值"
                 })))
               })
             ]
           }),
-          (this.__k11 || (this.__k11 = new SizedBox({
+          (this.__k12 || (this.__k12 = new SizedBox({
             "height": 4
           }))),
           new Row({
             "children": [
               new OutlinedButton({
                 "onPressed": () => this._toggle(),
-                "child": (this.__k12 || (this.__k12 = new Text({
+                "child": (this.__k13 || (this.__k13 = new Text({
                   "data": "切换订阅对象"
                 })))
               })

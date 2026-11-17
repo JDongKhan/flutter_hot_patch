@@ -102,6 +102,15 @@ String? exprToJs(
   // 显式扩展 getter：`E(x).g` → `E.g.get.call(x)`。
   final explicitGetter = _explicitExtensionGetterJs(e, scope, classes);
   if (explicitGetter != null) return explicitGetter;
+  // 构造表达式出现在**任意表达式位置**（含三目分支、非构造调用实参、
+  // 列表字面量元素、闭包体）时，与 children 里的子结点走同一条属性管线
+  // （[constructionHook]，由 element2js 安装）。不能只在 [rhsToJs] 入口拦一次：
+  // 三目分支 / 嵌套表达式会继续由本函数递归翻译，漏掉就会出现「同一个
+  // widget 构造，在 children 里是元素、在三目分支里是裸 `new X({})`」——
+  // 子项不按 `__children` 拆分、for 元素展开成嵌套数组，运行时出现
+  // 「op not serializable（循环引用）」。
+  final hooked = constructionHook?.call(e);
+  if (hooked != null) return hooked;
   // 构造表达式（`Color(0xFF…)` / `Color.fromARGB(…)` / 任意 `X(…)`）→
   // `new X({...})`（命名构造 `X.b({...})` 仅在签名表命中时接管）。
   // 颜色不是特殊形态：`Color` 与其它类一样由运行时注入同名类。
