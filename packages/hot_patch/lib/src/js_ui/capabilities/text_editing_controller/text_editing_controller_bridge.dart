@@ -69,7 +69,6 @@ void registerTextWidgets(JsWidgetRegistry r) {
               final h = tecId != null ? _textBridge.fnHandleOf(tecId) : null;
               if (h != null) c.invoke(h, [v]);
             },
-      value: c.str('value'),
       onChanged: c.on1<String>('onChanged'),
       // 整个 InputDecoration 由 from_json 一次还原（边框 / 填充 / 内边距 /
       // 图标都在里面），本组件只负责受控输入与事件回传。
@@ -84,14 +83,14 @@ void registerTextWidgets(JsWidgetRegistry r) {
   });
 }
 
-/// TextField 受控封装：JS 侧只下发 value 字符串与 onChanged 句柄，
-/// controller 由宿主持有并在 props.value 变化时同步（光标移到末尾）。
+/// TextField 受控封装：受控态由 `controller` 句柄承担（与 Flutter 的
+/// `TextField` 同一套形参，没有 `value` 字段）；`controller` 缺省时本组件
+/// 自建一个内部 controller（非受控模式，初始文本为空，与 Flutter 一致）。
 class _JsTextField extends StatefulWidget {
   const _JsTextField({
     super.key,
     this.controller,
     this.onControllerText,
-    required this.value,
     required this.onChanged,
     this.decoration,
     this.obscureText = false,
@@ -109,7 +108,6 @@ class _JsTextField extends StatefulWidget {
   /// 受控模式下用户输入回传 JS 镜像的通道（invoke textFn）。
   final ValueChanged<String>? onControllerText;
 
-  final String? value;
   final ValueChanged<String>? onChanged;
 
   /// 由 [inputDecorationFromJson] 整块还原的装饰（Widget 字段已就地还原）。
@@ -128,22 +126,7 @@ class _JsTextField extends StatefulWidget {
 
 class _JsTextFieldState extends State<_JsTextField> {
   late final TextEditingController _controller =
-      widget.controller ?? TextEditingController(text: widget.value ?? '');
-
-  @override
-  void didUpdateWidget(_JsTextField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // 外部受控时 controller 由桥接表持有，不回写；仅自建（非受控）且
-    // value 下发变化时同步 controller，避免清空用户输入。
-    if (widget.controller != null) return;
-    final v = widget.value;
-    if (v != null && v != _controller.text) {
-      _controller.value = TextEditingValue(
-        text: v,
-        selection: TextSelection.collapsed(offset: v.length),
-      );
-    }
-  }
+      widget.controller ?? TextEditingController();
 
   @override
   void dispose() {
