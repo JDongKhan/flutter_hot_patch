@@ -9,6 +9,7 @@
 - **宿主 → JS 镜像的回传收进桥**：新增 `forward: (T controller) => List<Object?>?`（`null` = 此刻无内容可发），`onCreate` 在对象是 `Listenable` 时挂一次 listener，渲染方在挂上组件那一帧调 `forwardOnNextFrame(id)` 补首帧快照。AnimationController 的逐帧 value 回传由它承担（删除 `_attachValueMirror`）。
 - **`extraJSON` 死载荷清理**：宿主不再从 props 读构造参数，`ScrollController` / `FixedExtentScrollController` / `AnimationController` / `EasyRefreshController` 的 `extraJSON` 全部删除（`__bindHandle` 的 `extraJSON` 扩展点保留，供 toJSON 追加字段的其它场景使用）。
 - **`onOp` 缺句柄时出声**：同 `{id}|{op}` 组合只告警一次（按 null 返回），不再完全静默。
+- **控制器 `vsync` 标签与语义写实**：TabController / AnimationController 的 TickerProvider 改为带 `debugLabel`（`js:ctrl/Tab#N` / `js:ctrl/Flash#N`），debug 下 Ticker 列表可定位到具体 JS 句柄；注释明确取舍——裸 Ticker 不受 `TickerMode` 静音，子树被遮住时动画仍在后台推进（回到可见时已停在终点）。
 
 ## 0.6.0
 

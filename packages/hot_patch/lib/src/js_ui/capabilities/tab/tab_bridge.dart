@@ -34,17 +34,25 @@ import 'tab_from_json.dart';
 
 /// 脱离 State 生命周期的 TickerProvider：真实 TabController 的生命周期由 JS 侧
 /// dispose 通道管理（不随某次 widget 卸载而失效），故不能用某个 State 的
-/// TickerProviderStateMixin 当 vsync——承载它的 State 一旦卸载 ticker 即失效。
-/// 裸 Ticker 直接挂 SchedulerBinding（与 flutter_test 的 TestVSync 同理），
-/// 代价是不受 TickerMode 静音——对 TabController 的索引动画无感。
+/// TickerProviderStateMixin 当 vsync——承载它的 State 一旦卸载 ticker 即失效，
+/// 同一个 controller 再挂到第二个视图就是 use-after-dispose。
+///
+/// **取舍：不感知 TickerMode**。Flutter 用 `vsync: this` 时，子树被 Offstage /
+/// 非活跃 route / `TickerMode(enabled:false)` 遮住会让 ticker 静音、
+/// `animateTo` 暂停并在恢复后接着跑；这里的裸 Ticker 直接挂 SchedulerBinding，
+/// 遮住期间动画仍在后台推进（回来时已停在终点）。隐藏时不渲染，代价只是索引
+/// 动画那几百毫秒的帧。ticker 由 `TabController` 懒建（首次 `animateTo` 才
+/// `createTicker`），不切页签时零开销，`dispose` 由 controller 负责。
 class _DetachedTickerProvider implements TickerProvider {
-  const _DetachedTickerProvider();
+  const _DetachedTickerProvider(this.label);
+
+  /// 调试用归属标签（`js:ctrl/Tab#N`），出现在 Ticker 的 toString 里。
+  final String label;
 
   @override
-  Ticker createTicker(TickerCallback onTick) => Ticker(onTick);
+  Ticker createTicker(TickerCallback onTick) =>
+      Ticker(onTick, debugLabel: label);
 }
-
-const TickerProvider _detachedTickerProvider = _DetachedTickerProvider();
 
 /// TabController 句柄桥：真实 controller 在 **onCreate 阶段**创建（length /
 /// initialIndex 由 JS 侧随 meta 下发，与 AnimationController 同一形态），因此
@@ -69,7 +77,7 @@ final JsObjectBridge<TabController> _tabBridge =
         return TabController(
           length: length,
           initialIndex: initialIndex,
-          vsync: _detachedTickerProvider,
+          vsync: _DetachedTickerProvider('js:ctrl/Tab#$id'),
         );
       },
       // 宿主切换页签（用户点 tab / 程序改 index）→ 回传 index 给 JS 镜像；

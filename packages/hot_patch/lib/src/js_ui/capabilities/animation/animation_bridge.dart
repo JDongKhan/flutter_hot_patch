@@ -25,15 +25,20 @@ import 'animation_from_json.dart';
 
 /// 显式动画的 Ticker 来源：控制器真实对象在宿主侧（见文件头）。
 ///
-/// vsync 只是一个 Ticker 工厂；AnimationController 的 `dispose` 会自行释放其
-/// 内部 Ticker，故本对象无状态、进程内单例即可。
+/// vsync 只是 Ticker 工厂，**不受 TickerMode 静音**：控制器在 JS 构造时就存在、
+/// 可能被多个视图共享，没有「某个 State 的 TickerMode」可依。取舍的可见后果是
+/// 「子树被 Offstage / 非活跃 route / TickerMode(enabled:false) 遮住时，动画仍
+/// 在后台跑完，回到可见时已停在终点」——看不到画面，代价只是动画期间的帧。
+/// 裸 Ticker 直接挂 SchedulerBinding；`AnimationController.dispose` 会释放它，
+/// 故本对象无状态，每个控制器一个实例只为带上句柄 id 的 [debugLabel]。
 class _JsAnimationVsync implements TickerProvider {
-  _JsAnimationVsync._();
+  const _JsAnimationVsync(this.label);
 
-  static final _JsAnimationVsync instance = _JsAnimationVsync._();
+  final String label;
 
   @override
-  Ticker createTicker(TickerCallback onTick) => Ticker(onTick);
+  Ticker createTicker(TickerCallback onTick) =>
+      Ticker(onTick, debugLabel: label);
 }
 
 /// AnimationController 句柄桥（kind `ctrl/Flash`）。
@@ -50,7 +55,7 @@ final JsObjectBridge<AnimationController> _animationBridge =
     final upper = numOf('upperBound', 1.0);
     final ms = m['durationMs'] is num ? (m['durationMs'] as num).toInt() : 300;
     return AnimationController(
-      vsync: _JsAnimationVsync.instance,
+      vsync: _JsAnimationVsync('js:ctrl/Flash#$id'),
       value: numOf('value', lower).clamp(lower, upper),
       lowerBound: lower,
       upperBound: upper,
