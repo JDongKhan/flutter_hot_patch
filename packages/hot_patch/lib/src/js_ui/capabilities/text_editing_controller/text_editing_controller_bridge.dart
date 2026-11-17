@@ -25,8 +25,9 @@ final JsObjectBridge<TextEditingController> _textBridge =
       create: (_, _) => TextEditingController(),
       onOp: (c, op, payload) {
         if (op == 'set') {
-          if (payload['name'] == 'text')
+          if (payload['name'] == 'text') {
             c.text = payload['value']?.toString() ?? '';
+          }
         } else if (op == 'call') {
           final method = payload['method']?.toString() ?? '';
           final args = payload['args'] is List
