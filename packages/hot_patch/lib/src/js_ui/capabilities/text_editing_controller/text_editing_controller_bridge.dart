@@ -55,106 +55,41 @@ void ensureTextEditingControllerChannels() => _textBridge.ensure();
 /// 文本能力域组件注册。
 void registerTextWidgets(JsWidgetRegistry r) {
   r.register('TextField', (c) {
-    // controller 是 JS TextEditingController 句柄 → 受控模式：用桥接表中
-    // 的真实 controller，用户输入经 textFn 回传 JS 实例镜像（更新 text +
-    // 触发其 listeners），同时照常触发 onChanged 事件。
+    // 形参与 Flutter `TextField` 完全一致：受控态由 `controller` 句柄承担
+    // （桥接表里的真实 controller），`controller` 缺省时传 null ——
+    // `TextField` 自己创建并释放内部 controller，宿主不额外持有。
     final tecId = JsObjectBridge.idOf(c.props['controller']);
     final external = tecId != null ? _textBridge.controllerAt(tecId) : null;
-    return _JsTextField(
+    final onChanged = c.on1<String>('onChanged');
+    // 用户输入回传 JS 实例镜像（更新 text + 触发其 listeners）只在受控模式
+    // 需要：JS 侧把 controller 句柄给过来了才有镜像对象可回传。
+    final mirrorBack = tecId != null;
+    final obscureText = c.bool_('obscureText') ?? false;
+    final maxLines = c.int_('maxLines') ?? 1;
+    return TextField(
       key: c.key,
       controller: external,
-      onControllerText: external == null
+      onChanged: (onChanged == null && !mirrorBack)
           ? null
           : (v) {
-              final h = tecId != null ? _textBridge.fnHandleOf(tecId) : null;
-              if (h != null) c.invoke(h, [v]);
+              onChanged?.call(v);
+              if (mirrorBack) {
+                final h = _textBridge.fnHandleOf(tecId);
+                if (h != null) c.invoke(h, [v]);
+              }
             },
-      onChanged: c.on1<String>('onChanged'),
       // 整个 InputDecoration 由 from_json 一次还原（边框 / 填充 / 内边距 /
-      // 图标都在里面），本组件只负责受控输入与事件回传。
+      // 图标都在里面），这里只做输入与事件回传。
+      // 未下发时传 null，`TextField` 自身按 Flutter 默认装饰渲染。
       decoration: inputDecorationFromJson(c, c.map('decoration')),
-      obscureText: c.bool_('obscureText') ?? false,
+      obscureText: obscureText,
       enabled: c.bool_('enabled'),
       keyboardType: c.textInputType('keyboardType'),
-      maxLines: c.int_('maxLines') ?? 1,
+      // obscureText 时 Flutter 要求 maxLines == 1。
+      maxLines: obscureText ? 1 : maxLines,
       style: c.textStyle('style'),
+      // null 时 TextField 自身默认就是 TextAlign.start，不再重复兜底。
       textAlign: c.textAlign('textAlign'),
     );
   });
-}
-
-/// TextField 受控封装：受控态由 `controller` 句柄承担（与 Flutter 的
-/// `TextField` 同一套形参，没有 `value` 字段）；`controller` 缺省时本组件
-/// 自建一个内部 controller（非受控模式，初始文本为空，与 Flutter 一致）。
-class _JsTextField extends StatefulWidget {
-  const _JsTextField({
-    super.key,
-    this.controller,
-    this.onControllerText,
-    required this.onChanged,
-    this.decoration,
-    this.obscureText = false,
-    this.enabled,
-    this.keyboardType,
-    this.maxLines = 1,
-    this.style,
-    this.textAlign,
-  });
-
-  /// 外部受控 controller（JS TextEditingController 桥接实例）；null 时内部
-  /// 自建（非受控模式）。
-  final TextEditingController? controller;
-
-  /// 受控模式下用户输入回传 JS 镜像的通道（invoke textFn）。
-  final ValueChanged<String>? onControllerText;
-
-  final ValueChanged<String>? onChanged;
-
-  /// 由 [inputDecorationFromJson] 整块还原的装饰（Widget 字段已就地还原）。
-  final InputDecoration? decoration;
-
-  final bool obscureText;
-  final bool? enabled;
-  final TextInputType? keyboardType;
-  final int? maxLines;
-  final TextStyle? style;
-  final TextAlign? textAlign;
-
-  @override
-  State<_JsTextField> createState() => _JsTextFieldState();
-}
-
-class _JsTextFieldState extends State<_JsTextField> {
-  late final TextEditingController _controller =
-      widget.controller ?? TextEditingController();
-
-  @override
-  void dispose() {
-    // 外部 controller 由桥接表（jsHandle release → ctrl/Text onRelease）释放。
-    if (widget.controller == null) _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final onChanged = widget.onChanged;
-    final onControllerText = widget.onControllerText;
-    return TextField(
-      controller: _controller,
-      onChanged: onChanged == null
-          ? onControllerText
-          : (v) {
-              onChanged(v);
-              onControllerText?.call(v);
-            },
-      obscureText: widget.obscureText,
-      enabled: widget.enabled,
-      keyboardType: widget.keyboardType,
-      // obscureText 时 Flutter 要求 maxLines == 1
-      maxLines: widget.obscureText ? 1 : widget.maxLines,
-      style: widget.style,
-      textAlign: widget.textAlign ?? TextAlign.start,
-      decoration: widget.decoration ?? const InputDecoration(),
-    );
-  }
 }
