@@ -32,7 +32,6 @@ import '../shared/js_format.dart';
 import '../shared/js_class_defs.dart';
 import '../shared/package_sources.dart';
 import '../shared/paths.dart';
-import '../shared/runtime_global_types.dart';
 import '../shared/source_index.dart';
 import 'analysis/analyze_dart_class.dart';
 import 'analysis/class_table.dart';
@@ -489,19 +488,10 @@ String? renderProjectPackageFile(
   // 不进 usedWidgetPackages，必须按实际出现的名字补 import（与组件产物
   // `_renderJsProduct` 同一口径）。
   final bodyText = body.toString();
-  final usedValues = <String>{
-    for (final name in flutterExportTypes())
-      if (RegExp('\\b${RegExp.escape(name)}\\b').hasMatch(bodyText)) name,
-  };
-  // 宿主 widget 包装类（`Padding` / `Column` / `FilledButton` …）由 hostWidgetTypes
-  // 在 flutter.js 里动态生成，不在 [flutterExportTypes] 的片段文本中；顶层函数 /
-  // 常量初始化器不经过元素渲染路径（element2js），依赖表收不到它们，同样按
-  // 产物文本兜底补 import，否则运行期 ReferenceError。
-  for (final name in hostWrapperTypes) {
-    if (RegExp('\\b${RegExp.escape(name)}\\b').hasMatch(bodyText)) {
-      usedValues.add(name);
-    }
-  }
+  // 元素渲染路径登记不到的名字（值类、顶层常量初始化器里的构造、以及
+  // **表达式位置**的 `ListView(...)` 这类构造）统一按正文文本兜底补 import，
+  // 否则运行期 ReferenceError（`Can't find variable: ListView`）。
+  final usedValues = flutterJsImportsInText(bodyText);
   (usedWidgets[nodeHelperPackage] ??= <String>{}).addAll(usedValues);
   for (final e in usedWidgets.entries) {
     if (e.value.isEmpty) continue;

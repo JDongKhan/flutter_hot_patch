@@ -345,6 +345,31 @@ String? missingHostJsPackageOf(String type) {
   return null;
 }
 
+/// 产物正文里**实际出现**、且由 `flutter.js` 导出的类型名 → 需要补的 import。
+///
+/// 这是「按文本兜底」的统一入口：元素渲染路径（element2js）会登记
+/// `usedWidgetPackages`，但**表达式位置**的构造（三目分支、赋值、回调体里的
+/// `ListView(...)`）若 `translate` 不成中立结点，会退回通用构造翻译，直接写出
+/// `new X({...})` 而不经登记 —— 只看元素登记会漏 import，运行期表现为
+/// `Can't find variable: X`。
+///
+/// 判据分两种，因为两类名字在产物里出现的**形态**不同：
+///   - 值类 / 全局函数 / 命名空间（[flutterExportTypes]）：以 `Colors.red` /
+///     `EdgeInsets.all(…)` 形态出现，只能按裸名字匹配；
+///   - 宿主类型 / JS 类（[hostWidgetTypes]）：产物里唯一的引用形态是构造
+///     `new X({...})`，按**构造字面量**匹配 —— 只按裸名字匹配会命中注释与
+///     字符串文案里的同名文字（`'Row + Expanded / Flexible / Spacer'`），
+///     凭空多出 import。
+Set<String> flutterJsImportsInText(String bodyText) {
+  final names = <String>{
+    for (final name in flutterExportTypes())
+      if (RegExp('\\b${RegExp.escape(name)}\\b').hasMatch(bodyText)) name,
+    for (final name in hostWidgetTypes())
+      if (bodyText.contains('new $name(')) name,
+  };
+  return names;
+}
+
 /// 需要在 flutter.js 生成**宿主包装类**的类型：宿主 widget，排除已有 JS 类的
 /// 类型（逻辑组件 / builder 代理，它们的类由各自 package 模块产出，类名不能
 /// 重复）。

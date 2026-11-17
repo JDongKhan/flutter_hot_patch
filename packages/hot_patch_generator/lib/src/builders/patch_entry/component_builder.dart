@@ -22,7 +22,6 @@ import 'translator/dart2js.dart';
 import 'translator/js_value.dart';
 import '../shared/js_format.dart';
 import '../shared/js_class_defs.dart';
-import '../shared/runtime_global_types.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';
 import '../shared/source_location.dart';
@@ -862,10 +861,9 @@ String _renderJsProduct(
   // 这些名字不在 any 组件的 usedWidgets 里（它们不是元素），必须按实际出现的
   // 名字补 import，否则执行期是未定义全局。
   final bodyText = b.toString();
-  final usedValues = <String>{
-    for (final name in flutterExportTypes())
-      if (RegExp('\\b${RegExp.escape(name)}\\b').hasMatch(bodyText)) name,
-  };
+  // 与 module 产物同一口径：正文里出现的宿主类型 / 值类都由 flutter.js
+  // 导出，按文本兜底补 import（表达式位置的构造不经元素登记）。
+  final usedValues = flutterJsImportsInText(bodyText);
   if (usedValues.isNotEmpty) {
     (importsByPackage[nodeHelperPackage] ??= <String>{}).addAll(usedValues);
   }
