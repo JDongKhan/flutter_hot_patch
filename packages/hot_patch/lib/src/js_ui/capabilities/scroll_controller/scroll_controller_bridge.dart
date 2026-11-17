@@ -393,7 +393,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   //   - `.builder`：代理类已按 itemCount 展开子结点，宿主还原
   //     `ReorderableListView.builder`（itemBuilder 按下标取已展开的结点）；
   //   - controller：Flutter 的形参名是 `scrollController`（不是 ListView 的
-  //     `controller`），走与 ListView 同一套 `_scrollControllerHost` 桥接。
+  //     `controller`），走与 ListView 同一套 `_scrollControllerOf` 取 controller 交给组件。
   r.register('ReorderableListView', (c) {
     final isBuilder = _isNamedBuilderForm(c);
     final children = _flatChildren(c, 'children');
@@ -520,7 +520,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
 
   // NestedScrollView：头部 slivers 由 JS 侧组件调用 `headerSliverBuilder`
   // 展开后经 `headerSlivers` 插槽下发（宿主不感知 builder），`body` 同插槽。
-  // controller 与其它滚动视图同款分流 _scrollControllerHost。
+  // controller 与其它滚动视图同款分流 _scrollControllerOf。
   r.register('NestedScrollView', (c) {
     final headers = _flatChildren(c, 'headerSlivers');
     final body = (c.children['body'] as Widget?) ?? const SizedBox.shrink();
