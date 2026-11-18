@@ -8,7 +8,9 @@
 ///      `build()` 的坏产物与大把告警。
 ///   2. **[符号级] 被引用**：非根文件里**只有真的被「会产出的类」引用到的类**
 ///      才产出（字段类型 / 方法体构造 / build 树里的自定义组件）。数据的可翻译性
-///      由「被引用」决定，与模型类（`model/user.dart`）同理。
+///      由「被引用」决定，与模型类（`model/user.dart`）同理。根文件同样遵守：
+///      注解类之外，只有被**其它产物**跨文件引用到的非注解类才补出（同库引用
+///      由产物内依赖递归承接，见 [TranslationScope.crossFileClasses]）。
 ///
 /// 文件级遍历在 `@PatchIgnore` 文件处停止（显式退出翻译，产物里保留其类型名
 /// 结点、无 JS 类）。
@@ -38,6 +40,13 @@ typedef TranslationScope = ({
   Set<String> reachableFiles,
   /// 符号级「需要产出的类」：文件 → 该类名集合。
   Map<String, Set<String>> neededClasses,
+  /// 符号级「必须由根文件补出的类」：声明文件 → 类名集合。
+  ///
+  /// 取 [neededClasses] 中被**其它产物**（不同库）引用、且没有同库引用的部分：
+  /// 根文件（有 `@PatchEntry`）在注解类之外必须补出这些非注解类，否则消费方
+  /// `import { X } from '<本产物>'` 指向不存在的 export（运行时 `new X(...)`
+  /// 是 undefined）。同库引用（part ↔ 根 / 同文件）由产物内依赖递归承接。
+  Map<String, Set<String>> crossFileClasses,
   /// 符号级「需要写进产物的顶层常量」：文件 → 常量名集合。
   /// 只有被会产出的产物引用到的常量才写入，纯数据文件据此决定是否产出。
   Map<String, Set<String>> neededConsts,
@@ -80,7 +89,14 @@ Future<TranslationScope> componentTranslationScope(BuildStep buildStep) async {
   }
 
   final reachable = _reachableFiles(units);
-  var needed = _neededClasses(units, reachable);
+  // 引用来源（类声明文件 → 类名），多轮迭代共用一份（只增不减）：
+  //   - crossFileClasses：引用来自**另一个产物**的文件；
+  //   - localClasses：引用来自**同一库**（同一产物）的文件——这类类已由产物内
+  //     的依赖递归（inline / 同名 export）承接，根文件不必再补成根类。
+  final crossFileClasses = <String, Set<String>>{};
+  final localClasses = <String, Set<String>>{};
+  var needed = _neededClasses(units, reachable,
+      crossFileClasses: crossFileClasses, localClasses: localClasses);
   var neededFunctions = _neededFunctions(units, reachable, needed);
   var neededConsts = _neededConsts(units, reachable, needed,
       neededFunctions: neededFunctions);
@@ -93,7 +109,10 @@ Future<TranslationScope> componentTranslationScope(BuildStep buildStep) async {
   // 把整个文件拖进产物（app_log_console 就是被这样带出来的）。
   for (var i = 0; i < 10; i++) {
     final nextClasses = _neededClasses(units, reachable,
-        neededConsts: neededConsts, neededFunctions: neededFunctions);
+        neededConsts: neededConsts,
+        neededFunctions: neededFunctions,
+        crossFileClasses: crossFileClasses,
+        localClasses: localClasses);
     final nextFunctions = _neededFunctions(units, reachable, nextClasses);
     final nextConsts = _neededConsts(units, reachable, nextClasses,
         neededFunctions: nextFunctions);
@@ -105,9 +124,16 @@ Future<TranslationScope> componentTranslationScope(BuildStep buildStep) async {
     neededConsts = nextConsts;
     if (stable) break;
   }
+  // 只有「同库引用接不住」的跨文件引用才需要根文件补出。
+  final neededCrossFile = <String, Set<String>>{};
+  for (final e in crossFileClasses.entries) {
+    final rest = e.value.difference(localClasses[e.key] ?? const <String>{});
+    if (rest.isNotEmpty) neededCrossFile[e.key] = rest;
+  }
   return (
     reachableFiles: reachable,
     neededClasses: needed,
+    crossFileClasses: neededCrossFile,
     neededConsts: neededConsts,
     neededFunctions: neededFunctions,
   );
@@ -187,6 +213,11 @@ Map<String, Set<String>> _neededClasses(
   Map<String, Set<String>> neededConsts = const {},
   /// 已确认要发射的顶层函数（文件 → 函数名）：函数体里构造 / 引用的类同样要产出。
   Map<String, Set<String>> neededFunctions = const {},
+  /// 输出：跨文件被引用的类（声明文件 → 类名）。同库（part ↔ 根）共享产物，
+  /// 这类引用记进 [localClasses]。
+  Map<String, Set<String>>? crossFileClasses,
+  /// 输出：被**同一库**引用的类（声明文件 → 类名）。
+  Map<String, Set<String>>? localClasses,
 }) {
   // 类声明索引：file → 类名 → 声明（可翻译的类，含私有类）。
   final ownDecls = <String, Map<String, ClassDeclaration>>{};
@@ -274,7 +305,15 @@ Map<String, Set<String>> _neededClasses(
     final owner = visible[file]?[name];
     if (owner == null) return;
     final decl = ownDecls[owner]?[name] ?? ownMixins[owner]?[name];
-    if (decl != null) mark(owner, name, decl);
+    if (decl == null) return;
+    mark(owner, name, decl);
+    if (sameLibrary(owner, file)) {
+      if (localClasses != null) {
+        (localClasses[owner] ??= <String>{}).add(name);
+      }
+    } else if (crossFileClasses != null) {
+      (crossFileClasses[owner] ??= <String>{}).add(name);
+    }
   }
 
   // 种子 1：根类（@PatchEntry 注解类）——与 builder 的根类收集同口径。

@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.2",
-  "buildTime": "2026-11-18T13:39:41.256939",
+  "buildTime": "2026-11-18T13:52:58.423345",
   "resources": {
     "flutter.js": "697598458f086263d3019bdd047f501466c924df76264810dc524d712e8387e7",
     "packages/NoteObject.js": "2c32d68a5e767060c383c5dd7afde137f528e6cc2728fa2e40e5083b71f1a723",
@@ -74,7 +74,7 @@
     "app/pages/community_page.js": "c2066dbaad720d38f7f5616452ff9ec721acc9a7fc4bce7fa41d6f6e8a676638",
     "app/pages/home_page.js": "c9441832db898b4caa4f24f93f4fd7857da28c7c8b3fc60b0713c8d44a0e7a20",
     "app/pages/mine_page.js": "e3c981e18216e3a796fc02f652f92f7c8f29622851b4d2c2e348764e89fc729f",
-    "app/pages/detail_pages.js": "16029c5e82269c51da20d2977d3264f3cc8f8cb55ebd5998e36b85b9e3f98f69",
+    "app/pages/detail_pages.js": "ad51838f158ed14085e9f828444025a1dd1bc9f63269b0105d7f659512e24ff5",
     "app/app.js": "4effca3a944304c06481cdc69b3bf876116ea970555ff62c5ab4f9189acfe8b1",
     "app/widgets/load_error_view.js": "a4d2d67c38118eef5e855dac341c75fdf833a64e6d3c492609760fbfa8a225fa",
     "app/widgets/countdown_text.js": "dc705bbbc6bf400502251e67c3ceb9d5f48e59004f9520f8282dd85fdfdb2685",

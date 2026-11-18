@@ -182,14 +182,14 @@ class ComponentBuilder implements Builder {
       return importProducts[name];
     }
 
-    // 根类收集——两种文件走同一入口，差别只在 isComponent 参数：
-    //   - 有 @PatchEntry 类 → 根文件：根类 = 全部注解类（组件产物）；
+    // 根类收集——两种文件共用同一套符号级判据，差别只在是否强制注解类：
+    //   - 有 @PatchEntry 类 → 根文件：注解类全部产出，**外加**符号级判据命中的
+    //     非注解类（被其它产物跨文件引用的类——如 `detail_pages.dart` 里被订单卡
+    //     `new` 的 MiniButton，漏掉它就是消费方 `import` 到 undefined）；
     //   - 否则 → 双重判据（见 componentTranslationScope）：文件级可达 + 符号级
     //     「被引用」——根类 = 本文件里**真的被会产出的类引用到**的类
-    //     （public 的 widget 类与普通类）。数据的可翻译性由「被引用」决定
-    //     （`model/user.dart` 同理）——入口页 / 展示页（main.dart、
-    //     widget_showcase.dart）不被任何注解组件引用、不产出；`detail_pages.dart`
-    //     只有三个 tab 页订单卡真的用到的 MiniButton 产出，只在 @HostInjected
+    //     （public 的 widget 类与普通类）。入口页 / 展示页（main.dart、
+    //     widget_showcase.dart）不被任何注解组件引用、不产出；只在 @HostInjected
     //     宿主方法体里 `new` 出来的详情页不翻译（依赖链在宿主方法体处断掉）。
     //     @PatchIgnore 亦不翻译。
     final roots = <(ClassDeclaration, bool)>[];
@@ -225,6 +225,32 @@ class ComponentBuilder implements Builder {
       return out;
     }
 
+    // 按「被引用」的类名集合补入根类：只有真的被**会产出的类**引用到的
+    // 非注解类才产出（判据见 componentTranslationScope）。
+    //   - 非根文件传 [TranslationScope.neededClasses]（同文件引用由产物内递归
+    //     承接，这里补齐跨文件在外的整体所需）；
+    //   - 根文件只传 [TranslationScope.crossFileClasses]：本文件内被自己的根类
+    //     引用到的类已由依赖递归（inline / 同名 export）承接，重复加进来只会
+    //     改变产物里的类顺序，不新增任何 export。
+    void addNeededRoots(Set<String> neededHere) {
+      for (final e in libraryUnits) {
+        for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
+          final name = d.name.lexeme;
+          if (name.startsWith('_')) continue;
+          if (!neededHere.contains(name)) continue;
+          if (ignoredTypes.contains(name)) continue;
+          if (roots.any((r) => identical(r.$1, d))) continue;
+          final info = classTable[name];
+          if (info == null) continue;
+          // isComponent=true → 组件根类（build 树 / export class）；
+          // false → 普通类根类（模型，export class）。
+          // 抽象类只能作为模型根类产出（它没有 build，也不会是 @PatchEntry 组件）：
+          // 被具体类 extends 时，父类产物必须存在才能 `import` / `extends`。
+          roots.add((d, d.abstractKeyword == null && info.isComponent));
+        }
+      }
+    }
+
     if (annotated.isNotEmpty) {
       roots.addAll([for (final e in annotated) (e.$1, true)]);
       // `mixin class` 既是类也是 mixin：根文件里被 with 引用的 mixin class 必须
@@ -237,25 +263,15 @@ class ComponentBuilder implements Builder {
         }
       }
       mixinDecls.addAll(unitMixins);
+      // 根文件的非注解类：被别的产物跨文件引用到时同样要产出（如
+      // detail_pages.dart 的 MiniButton 被 orders_page.dart 的订单卡 `new`）。
+      final rootScope = await componentTranslationScope(buildStep);
+      addNeededRoots(unionFor(rootScope.crossFileClasses));
     } else {
       scope = await componentTranslationScope(buildStep);
       if (!libraryPaths.any(scope.reachableFiles.contains)) return;
       final neededHere = unionFor(scope.neededClasses);
-      for (final e in libraryUnits) {
-        for (final d in e.$2.declarations.whereType<ClassDeclaration>()) {
-          final name = d.name.lexeme;
-          if (name.startsWith('_')) continue;
-          if (!neededHere.contains(name)) continue;
-          if (ignoredTypes.contains(name)) continue;
-          final info = classTable[name];
-          if (info == null) continue;
-          // isComponent=true → 组件根类（build 树 / export class）；
-          // false → 普通类根类（模型，export class）。
-          // 抽象类只能作为模型根类产出（它没有 build，也不会是 @PatchEntry 组件）：
-          // 被具体类 extends 时，父类产物必须存在才能 `import` / `extends`。
-          roots.add((d, d.abstractKeyword == null && info.isComponent));
-        }
-      }
+      addNeededRoots(neededHere);
       for (final d in unitMixins) {
         if (neededHere.contains(d.name.lexeme)) mixinDecls.add(d);
       }

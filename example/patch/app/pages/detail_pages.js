@@ -7,7 +7,7 @@ import { Spot } from '../model/app_models.js';
 import { SearchFeed } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
-import { Border, BorderRadius, BorderSide, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, InputDecoration, ListView, OutlineInputBorder, Padding, Row, SafeArea, Scaffold, SizedBox, StatefulWidget, StatelessWidget, Text, TextDecoration, TextEditingController, TextField, TextOverflow, TextStyle, Wrap } from '../../flutter.js';
+import { Alignment, Border, BorderRadius, BorderSide, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, InputDecoration, ListView, OutlineInputBorder, Padding, Row, SafeArea, Scaffold, SizedBox, StatefulWidget, StatelessWidget, Text, TextDecoration, TextEditingController, TextField, TextOverflow, TextStyle, Wrap } from '../../flutter.js';
 
 const _avatarImg = "assets/images/photo-1494790108377-be9c29b29330.jpg";
 const _bannerImg = "assets/images/photo-1519046904884-53103b34b206.jpg";
@@ -236,6 +236,53 @@ export class SearchPage extends StatefulWidget {
             })))
           })
         ]
+      })
+    });
+  }
+}
+
+// 组件 MiniButton
+export class MiniButton extends StatelessWidget {
+  constructor(args) {
+    super(args);
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.label = (args && args.label !== undefined) ? args.label : '';
+    this.primary = (args && args.primary !== undefined) ? args.primary : false;
+    this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
+  }
+  build(context) {
+    return new GestureDetector({
+      "onTap": this.onTap,
+      "child": new Container({
+        "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
+          "horizontal": 14,
+          "vertical": 0
+        }))),
+        "height": 32,
+        "alignment": Alignment.center,
+        "decoration": new BoxDecoration({
+          "color": this.primary ? kBrand : Colors.white,
+          "borderRadius": BorderRadius.circular({
+            "radius": 14
+          }),
+          "border": Border.all({
+            "color": this.primary ? kBrand : (this.__k1 || (this.__k1 = new Color({
+              "value": 0xFFDFE4EC
+            })))
+          })
+        }),
+        "child": new Text({
+          "style": new TextStyle({
+            "fontSize": 12,
+            "fontWeight": this.primary ? FontWeight.w600 : FontWeight.w500,
+            "color": this.primary ? Colors.white : (this.__k2 || (this.__k2 = new Color({
+              "value": 0xFF4D5462
+            })))
+          }),
+          "data": this.label
+        })
       })
     });
   }
