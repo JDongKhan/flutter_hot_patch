@@ -13,7 +13,6 @@ set -euo pipefail
 # 脚本在仓库根目录
 cd "$(dirname "$0")"
 
-HOST="127.0.0.1"
 PORT="8765"
 # 示例 App 目录与其 patch 产物目录（相对仓库根）
 EX_DIR="example"
@@ -77,16 +76,7 @@ fi
 # 等端口释放
 sleep 0.5
 
-echo "[start] 启动 http 服务 http://$HOST:$PORT/"
-nohup dart run tool/patch_server.dart > /tmp/patch_server.log 2>&1 &
-echo "[start] 后台 PID=$!，日志：/tmp/patch_server.log"
-
-# `dart run` 首次编译需数秒，轮询等待就绪（最多约 10s），避免验证误报 HTTP 000。
-echo "[start] 验证：curl -s -o /dev/null -w '%{http_code}' http://$HOST:$PORT/patch/patch.zip"
-CODE=""
-for _ in $(seq 1 20); do
-  CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://$HOST:$PORT/patch/patch.zip" || true)
-  [ "$CODE" = "200" ] && break
-  sleep 0.5
-done
-echo "  → HTTP $CODE"
+# 前台运行：patch_server 的启动日志与每个 mock 请求都直接打到当前终端，
+# Ctrl+C 停止。需要后台常驻时自行改用 `nohup dart run tool/patch_server.dart &`。
+echo "[start] 启动 patch_server（前台，Ctrl+C 停止）"
+dart run tool/patch_server.dart

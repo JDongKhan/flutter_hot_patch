@@ -4,6 +4,7 @@
 
 import { PlatformTools } from '../base/platform_tools.js';
 import { HostHttp } from '../base/host_http.js';
+import { devServerBaseUrl } from '../base/dev_server.js';
 import { Card, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, Padding, SizedBox, StatefulWidget, StatelessWidget, Text, TextStyle, Wrap } from '../flutter.js';
 
 // 组件 ThirdPartyToolsCard
@@ -40,7 +41,7 @@ export class ThirdPartyToolsCard extends StatefulWidget {
   }
   async _callHttp() {
     try {
-      const res = await HostHttp.get("http://127.0.0.1:8765/hello");
+      const res = await HostHttp.get(devServerBaseUrl + "/hello");
       this.setState(() => {
         this._http = "HTTP " + res["statusCode"] + " · " + (res["statusMessage"] ?? "");
       });

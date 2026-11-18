@@ -2,6 +2,7 @@
 // 由 dynamic_flutter_generator 从 lib/components/dio_card.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { devServerBaseUrl } from '../base/dev_server.js';
 import { Card, Color, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, Expanded, FontWeight, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, StatelessWidget, Text, TextStyle, Wrap } from '../flutter.js';
 import { Dio } from '../packages/dio.js';
 
@@ -20,7 +21,7 @@ export class DioCard extends StatefulWidget {
       this._hello = "请求中…";
     });
     try {
-      const res = await this._dio.get("http://127.0.0.1:8765/hello");
+      const res = await this._dio.get(devServerBaseUrl + "/hello");
       const body = res.data;
       const message = ((__nn(body) == null) ? "" : "" + body["message"]);
       const name = ((__nn(body) == null) ? "" : "" + body["data"]["name"]);
@@ -40,7 +41,7 @@ export class DioCard extends StatefulWidget {
       this._community = "请求中…";
     });
     try {
-      const res = await this._dio.get("http://127.0.0.1:8765/app/community", { "queryParameters": new Map([["tab", "recommend"], ["page", 2]]) });
+      const res = await this._dio.get(devServerBaseUrl + "/app/community", { "queryParameters": new Map([["tab", "recommend"], ["page", 2]]) });
       const uri = "" + res.requestOptions.uri;
       const root = res.data;
       const tabs = ((__nn(root) == null) ? "" : "" + root["tabs"]);

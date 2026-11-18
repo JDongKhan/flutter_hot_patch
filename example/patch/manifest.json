@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.2",
-  "buildTime": "2026-11-18T16:57:11.587411",
+  "buildTime": "2026-11-18T17:21:51.726198",
   "resources": {
     "flutter.js": "e5bd819540bc177d1b1c4c07cbc585b982bc6dce0693ef5f5a029d00b2a04361",
     "packages/NoteObject.js": "2c32d68a5e767060c383c5dd7afde137f528e6cc2728fa2e40e5083b71f1a723",
@@ -111,7 +111,7 @@
     "components/scaffold_detail.js": "c82a333965a393b23d0469f70275f76078ce9ca95c65b297b62cf637c7f4b058",
     "components/mount_fail_card.js": "e1773e3ccc81d33c9a9c4ad3e37f9f4d97fd1181de869d43d01f99e20b9be797",
     "components/tab_detail.js": "273a6414b0c66913c0dab5fae274d3abc7166d1210f45769f56d3f46a3f1236d",
-    "components/third_party_tools_card.js": "a385c786eea82a547d0298fe1b5a61d858ca483fd901901b0d8f26b39a208496",
+    "components/third_party_tools_card.js": "9fd7f71de309f0146bee2984fe3bd2aa36f718550b7c1aaaaaf121103f17ce5b",
     "components/sliver_fill_viewport_detail.js": "48c9d43280ba4d7f094973802713b97d024b56bac7601de28dc16a0c00a3c5de",
     "components/composite_component.js": "4880117d3e6f334f433548f042a5668e4f4b03bb38e022a3cb72205f3a799750",
     "components/phone_label.js": "532417c58b8887da803515a72d6d510e924f8134f80d61bc2ecd140ba0409f4f",
@@ -131,7 +131,7 @@
     "components/sliver_detail.js": "0f0cebf1f99db8a430942c275bbc714345639d9d8e04f5a6a945c44e1ce990cb",
     "components/stateless_card.js": "01056a506d11cae66b3dde7d3c31df50a93149b3c5326c267fa3bfd685c2fe6f",
     "components/timetable_picker_detail.js": "d509fe321f53a5b709737d249d092b661531656f6aaf0e09f1796f1c85aeb5b6",
-    "components/dio_card.js": "8454780440b47f3891567f8adfe9978d1e9703d9050b99ca1d4cdc1d8cd2d465",
+    "components/dio_card.js": "7ca596f4a8ae0e3b3ceb0357443cd86ed7d8edd39bd6667ccfed90d9906b8dfc",
     "components/explicit_animation_detail.js": "e93466a8aae314bc87a8104e042d122fd19d4756f25e68769d5ad1528a5fe6f6",
     "components/keyboard_listener_detail.js": "d29305bbdf966e4e16303a5146d71cb9ec61af4c4cb571715e3f82b5347a22ee",
     "components/image_detail.js": "21b1412f8b6909d470c0d500731487e41b06bf0268df71d17dbb0dbbe6361a11",
@@ -159,6 +159,7 @@
     "base/app_router.js": "13cae4d075f8e1c115df5c607c6b4265fb47acf74ccdd8e0196c5f9fc747d20d",
     "base/tracker.js": "f4594b857632b2f5f233ed0dc3fcc025767daf4b1699dd69dbe77ac3b9f6805b",
     "base/web_view.js": "b37f0061564f47f17af2f8353f09190a84d3668afd60bb9650451637baf26492",
-    "base/platform_tools.js": "609ea4d8bea55edd84abf38e99aaa8979762c329bd21c5b3a9bb07bbd9910841"
+    "base/platform_tools.js": "609ea4d8bea55edd84abf38e99aaa8979762c329bd21c5b3a9bb07bbd9910841",
+    "base/dev_server.js": "03652ebe2d435a16bb0562dd03b3eeae4504f7db44a8223a5736ff99a375759e"
   }
 }
