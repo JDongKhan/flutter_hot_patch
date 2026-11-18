@@ -471,6 +471,8 @@ class JsRuntimeManager {
     // `ch` 字段二次分发（[_dispatch]）。订阅只发生这一次，与处理器注册
     // 时机完全解耦——不需要任何「补接线 / 防重」逻辑。
     _runtime.onMessage(_bridgeChannel, _dispatch);
+    // Android（QuickJS）需要在引擎内置 setTimeout 回调之后补排空微任务。
+    _installTimerMicrotaskDrain();
   }
 
   /// 所有 JS 求值的统一入口（纯求值，无注册副作用）。
@@ -529,6 +531,34 @@ class JsRuntimeManager {
       JsLog.warn('executePendingJob 失败：$e');
     }
     return result;
+  }
+
+  /// QuickJS 引擎内部回调（flutter_js 自己实现的 `setTimeout`）执行完后同样
+  /// 不会排空 Promise 微任务——`Future.delayed` / `Completer` 的续体会停在队列
+  /// 里（异步 demo 一直「等待 complete…」且无报错）。
+  ///
+  /// 这里**按需**排空，不做常驻轮询：包一层 flutter_js 的 `SetTimeout` 通道，
+  /// JS 每次注册定时器时，顺带在相同延迟之后再排空一次微任务。没有定时器就
+  /// 没有任何额外开销。JSC（iOS/macOS）执行脚本后会自己跑微任务，跳过。
+  void _installTimerMicrotaskDrain() {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    final handlers = JavascriptRuntime
+        .channelFunctionsRegistered[_runtime.getEngineInstanceId()];
+    final previous = handlers?['SetTimeout'];
+    if (handlers == null || previous == null) return;
+    handlers['SetTimeout'] = (dynamic args) {
+      previous(args);
+      final raw = args is Map ? args['timeout'] : null;
+      final ms = raw is num ? raw.toInt() : 0;
+      // 排在引擎定时器之后（同延迟 +1ms）：等回调执行完再排空它产生的微任务。
+      Timer(Duration(milliseconds: ms + 1), () {
+        try {
+          _runtime.executePendingJob();
+        } catch (e) {
+          JsLog.warn('executePendingJob 失败：$e');
+        }
+      });
+    };
   }
 
   /// 确保 js_ui 运行时骨架就位（幂等）。
