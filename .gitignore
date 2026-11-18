@@ -36,6 +36,7 @@ migrate_working_dir/
 
 # 压缩混淆后的 patch 产物（由 tool/minify_patch.sh 生成）
 example/patch_minified/
+example/patch/**/*.js.map
 
 # Symbolication related
 app.*.symbols

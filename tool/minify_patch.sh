@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
-# patch 产物压缩 / 混淆脚本（默认输出到独立目录，处理后重建 patch.zip）。
+# patch 产物压缩 / 混淆脚本。
 #
 # 规则（按产物路径区分）：
 #   - flutter.js、runtime.js、packages/**（三方 package 产物）：只压缩，不混淆；
 #   - 其余 .js：压缩 + 只混淆方法体，即只重命名形参与局部变量；
 #     类名、全局变量、方法名（属性名）一律保持原样。
+#   - 每个 .js 同时生成同名 .js.map（source 指向 patch/ 下的原产物）。
+#
+# 产出：压缩后的 patch.zip 回填到源目录（默认 example/patch/patch.zip），
+# sourcemap 按相对路径落到 patch/ 下，临时目录处理完即删除。
 #
 # 依赖 terser（优先用已安装的，找不到时用 npx 缓存）：
 #   npm install -g terser
 #
-# 用法：bash tool/minify_patch.sh [源patch目录] [输出目录] [并发数]
-#   默认：源 example/patch，输出 example/patch_minified，并发 8。
-#   两个目录相同时就地处理；不同时先完整拷贝到输出目录再处理，
-#   保证 build_runner 产出的原始 patch/ 不被改写。
+# 用法：bash tool/minify_patch.sh [源patch目录] [临时输出目录] [并发数]
+#   默认：源 example/patch，临时输出 example/patch_minified，并发 8。
+#   两个目录相同时就地处理（不删除源目录）。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -65,7 +68,9 @@ minify_one() {
   local rel="$1"
   local mode="$2"
   local src="$PATCH_DIR/$rel"
-  local tmp="$src.minify.tmp"
+  local tmp_rel="$rel.minify.tmp"
+  local tmp="$PATCH_DIR/$tmp_rel"
+  local map="$src.map"
   local err
   err="$(mktemp -t terser)"
 
@@ -90,13 +95,20 @@ minify_one() {
     args+=(--module)
   fi
 
-  if ! "${terser_cmd[@]}" "$src" "${args[@]}" --comments false -o "$tmp" 2>"$err"; then
+  # 在补丁根目录下用相对路径跑 terser：sourcemap 的 sources 就是产物相对路径，
+  # 与 patch/ 下的文件一一对应。输出先写临时文件，成功后替换原文件。
+  if ! (cd "$PATCH_DIR" && "${terser_cmd[@]}" "$rel" "${args[@]}" --comments false \
+      --source-map "filename='$rel',url='$(basename "$rel").map'" -o "$tmp_rel") 2>"$err"; then
     echo "[minify] 失败：$rel"
     head -5 "$err" | sed 's/^/    /'
-    rm -f "$tmp" "$err"
+    rm -f "$tmp" "$tmp.map" "$err"
     return 1
   fi
   mv "$tmp" "$src"
+  # terser 的 map 文件固定叫「输出文件 + .map」，改名成 <产物>.map。
+  if [ -f "$tmp.map" ]; then
+    mv "$tmp.map" "$map"
+  fi
   rm -f "$err"
 }
 export -f minify_one
@@ -158,11 +170,24 @@ NODE
 fi
 
 # 重建归档：条目以 patch/ 为根，与生成器 patch_archive_builder 的口径一致。
+# sourcemap 不进 zip（体积翻倍且运行时不消费），随产物单独落到 patch/ 下。
 echo "[minify] 重建 patch.zip ..."
 rm -f "$PATCH_DIR/patch.zip"
-(cd "$PATCH_DIR" && zip -qrD patch.zip . -x 'patch.zip' '*.DS_Store')
+(cd "$PATCH_DIR" && zip -qrD patch.zip . \
+  -x 'patch.zip' '*.DS_Store' '*.js.map' '*.minify.tmp')
+
+# 输出目录与源目录不同时：zip 与 sourcemap 回填到 patch/，再删掉临时目录。
+if [ "$PATCH_DIR" != "$SRC_DIR" ]; then
+  echo "[minify] 回填 patch.zip 与 sourcemap 到 $SRC_DIR/ ..."
+  cp "$PATCH_DIR/patch.zip" "$SRC_DIR/patch.zip"
+  # 清掉上一次遗留、这次已不存在的 map，再把本次 map 按相对路径铺回去。
+  find "$SRC_DIR" -type f -name '*.js.map' -delete
+  rsync -a --include='*/' --include='*.js.map' --exclude='*' "$PATCH_DIR"/ "$SRC_DIR"/
+  rm -rf "$PATCH_DIR"
+fi
 
 awk -v before="$JS_SIZE_BEFORE" -v after="$JS_SIZE_AFTER" 'BEGIN {
   printf "[minify] JS 合计：%.1f MB → %.1f MB（保留 %.0f%%）\n", before/1048576, after/1048576, after*100/before;
 }'
-echo "[minify] patch.zip：$(du -h "$PATCH_DIR/patch.zip" | cut -f1)"
+echo "[minify] patch.zip：$(du -h "$SRC_DIR/patch.zip" | cut -f1)"
+echo "[minify] sourcemap 已落到 patch/ 下（$(find "$SRC_DIR" -type f -name '*.js.map' | wc -l | tr -d ' ') 个）"

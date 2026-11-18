@@ -5,30 +5,17 @@
 /// 都可访问）。
 ///
 /// 路由规则：
-///   GET /patch/<相对路径>  → 返回 patch 根目录下对应文件（Content-Type 按后缀识别）
+///   GET /patch/<相对路径>  → 返回 example/patch/ 下对应文件（Content-Type 按后缀识别）
 ///   GET /                 → 列目录（调试用）
-///
-/// patch 根默认 `example/patch/`；设环境变量 `PATCH_DIR` 可指向别的目录
-/// （如压缩混淆后的 `example/patch_minified/`），相对路径按仓库根解析。
 library;
 
 import 'dart:io';
 
 class PatchRoute {
   PatchRoute({required String repoRoot})
-      : root = _resolveRoot(repoRoot);
+      : root = Directory('$repoRoot/example/patch');
 
   final Directory root;
-
-  static Directory _resolveRoot(String repoRoot) {
-    final configured = Platform.environment['PATCH_DIR'];
-    if (configured == null || configured.isEmpty) {
-      return Directory('$repoRoot/example/patch');
-    }
-    return Directory(
-      configured.startsWith('/') ? configured : '$repoRoot/$configured',
-    );
-  }
 
   static const Map<String, String> _mime = {
     '.js': 'application/javascript; charset=utf-8',

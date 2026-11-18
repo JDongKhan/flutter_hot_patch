@@ -33,24 +33,25 @@ fi
 
 # 是否需要压缩 / 混淆本次产物：
 #   flutter.js、runtime.js、packages/** 只压缩不混淆；其余只混淆方法体。
-# 压缩后的产物写到独立目录，原始 example/patch/ 保持 build_runner 产出的样子。
+# 压缩后的 patch.zip 与 sourcemap 回填到 example/patch/，临时目录处理完即删除。
 # 非交互场景（无 tty）默认不处理。
-SERVE_DIR="$PATCH_DIR"
 MINIFY_ANSWER=""
 if [ -t 0 ]; then
   read -r -p "[start] 是否压缩/混淆本次产物？[y/N] " MINIFY_ANSWER || true
 fi
 case "$MINIFY_ANSWER" in
   y | Y | yes | YES)
-    SERVE_DIR="$EX_DIR/patch_minified"
-    bash tool/minify_patch.sh "$PATCH_DIR" "$SERVE_DIR"
+    bash tool/minify_patch.sh "$PATCH_DIR"
     ;;
   *)
     echo "[start] 跳过压缩混淆"
+    # 清掉上一次压缩留下的 sourcemap / 临时目录，避免和本次未压缩产物混在一起。
+    find "$PATCH_DIR" -type f -name '*.js.map' -delete
+    rm -rf "$EX_DIR/patch_minified"
     ;;
 esac
 
-echo "[start] patch.zip 大小：$(du -h "$SERVE_DIR/patch.zip" | cut -f1)"
+echo "[start] patch.zip 大小：$(du -h "$PATCH_DIR/patch.zip" | cut -f1)"
 
 # 同步一份归档到 docs/blog/patch.zip：docs/ 是 GitHub Pages 的发布目录，
 # push 之后 release 包就能从
@@ -59,7 +60,7 @@ echo "[start] patch.zip 大小：$(du -h "$SERVE_DIR/patch.zip" | cut -f1)"
 # 别人装包后不需要再自己起本地服务。
 DOC_ZIP="docs/blog/patch.zip"
 mkdir -p "$(dirname "$DOC_ZIP")"
-cp "$SERVE_DIR/patch.zip" "$DOC_ZIP"
+cp "$PATCH_DIR/patch.zip" "$DOC_ZIP"
 echo "[start] 已同步到 ${DOC_ZIP}（$(du -h "$DOC_ZIP" | cut -f1)）；push 后线上可用"
 
 # 杀进程放在产物就绪之后：旧服务只在这段极短的窗口内不可用，避免构建期间
@@ -76,8 +77,8 @@ fi
 # 等端口释放
 sleep 0.5
 
-echo "[start] 启动 http 服务 http://$HOST:$PORT/（patch 根：$SERVE_DIR/）"
-PATCH_DIR="$SERVE_DIR" nohup dart run tool/patch_server.dart > /tmp/patch_server.log 2>&1 &
+echo "[start] 启动 http 服务 http://$HOST:$PORT/"
+nohup dart run tool/patch_server.dart > /tmp/patch_server.log 2>&1 &
 echo "[start] 后台 PID=$!，日志：/tmp/patch_server.log"
 
 # `dart run` 首次编译需数秒，轮询等待就绪（最多约 10s），避免验证误报 HTTP 000。
