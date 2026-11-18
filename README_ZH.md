@@ -1,4 +1,4 @@
-# flutter_hot_patch（简体中文）
+# dynamic_flutter（简体中文）
 
 [English](README.md)
 
