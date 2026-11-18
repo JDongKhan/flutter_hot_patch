@@ -6,6 +6,7 @@ import { HomeVm } from '../vm/home_vm.js';
 import { AppRouter } from '../../base/app_router.js';
 import { HomeFloor } from '../floors/floor_base.js';
 import { Tracker } from '../../base/tracker.js';
+import { AppRoutes } from '../../base/app_router.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
 import { TrackerVisibilityWidget } from '../../packages/hot_module_base/src/widgets/tracker_visibility_widget.js';
 import { BannerFloor } from '../floors/banner_floor.js';
@@ -20,17 +21,11 @@ import { EasyRefresh, EasyRefreshController, IndicatorResult } from '../../packa
 export class HomePage extends StatelessWidget {
   constructor(args) {
     super(args);
-    this.__applyProps(args);
-  }
-  __applyProps(args) {
-    this.jsMode = (args && args.jsMode !== undefined) ? args.jsMode : false;
   }
   build(context) {
     return new ChangeNotifierProvider({
       "create": (_) => { return (() => { const _t = new HomeVm(); _t.load(); return _t; })(); },
-      "child": new HomeView({
-        "jsMode": this.jsMode
-      }),
+      "child": (this.__k0 || (this.__k0 = new HomeView({}))),
       "typeArguments": {"T": "HomeVm"}
     });
   }
@@ -41,12 +36,8 @@ export class HomeView extends StatefulWidget {
   static _navFadeDistance = 120;
   constructor(args) {
     super(args);
-    this.__applyProps(args);
     this._refreshController = new EasyRefreshController();
     this._scrollController = new ScrollController();
-  }
-  __applyProps(args) {
-    this.jsMode = (args && args.jsMode !== undefined) ? args.jsMode : false;
   }
   get _navOpacity() {
     let opacity = (this._scrollController.offset / HomeView._navFadeDistance);
@@ -130,8 +121,7 @@ export class HomeView extends StatefulWidget {
                 "city": vm.city,
                 "navOpacity": this._navOpacity,
                 "onRefresh": () => this._refresh(),
-                "onPickCity": () => this._pickCity(),
-                "jsMode": this.jsMode
+                "onPickCity": () => this._pickCity()
               })
             })
           })
@@ -198,14 +188,18 @@ export class HomeHeader extends StatelessWidget {
     this.__applyProps(args);
   }
   __applyProps(args) {
-    this.jsMode = (args && args.jsMode !== undefined) ? args.jsMode : false;
     this.onRefresh = (args && args.onRefresh !== undefined) ? args.onRefresh : null;
     this.city = (args && args.city !== undefined) ? args.city : '';
     this.navOpacity = (args && args.navOpacity !== undefined) ? args.navOpacity : 0;
     this.onPickCity = (args && args.onPickCity !== undefined) ? args.onPickCity : null;
   }
   openSearch() {
-    AppRouter.openSearch({ "isJs": this.jsMode });
+    const args = new Map();
+    if (kInJsRuntime) {
+      __idxSet(args, "component", "SearchPage");
+      __idxSet(args, "entry", "app/pages/detail_pages.js");
+    }
+    AppRouter.pushNamed(AppRoutes.search, args);
   }
   openMessages() {
     AppRouter.openNotifications();

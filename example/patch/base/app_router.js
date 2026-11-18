@@ -4,15 +4,39 @@
 
 import '../flutter.js';
 
+// 模型 AppRoutes
+export class AppRoutes {
+  static demoList = "/demo-list";
+  static heroTarget = "/hero-target";
+  static search = "/search";
+  static spot = "/spot";
+  static post = "/post";
+  static resource = "/resource";
+  static order = "/order";
+  static channel = "/channel";
+  static notifications = "/notifications";
+  static orders = "/orders";
+  static widgetShowcase = "/widget-showcase";
+  static userCenter = "/user-center";
+  static login = "/login";
+  constructor() {
+  }
+  // 命名构造 AppRoutes._
+  static _(args) {
+    const __o = new AppRoutes(args);
+    return __o;
+  }
+}
+
 // 模型 AppRouter
 export class AppRouter {
   constructor() {
   }
+  static pushNamed(name, arguments) {
+    return _app_host_.invoke("pushNamed", Array.prototype.slice.call(arguments));
+  }
   static openHeroTarget(tag, label) {
     return _app_host_.invoke("openHeroTarget", Array.prototype.slice.call(arguments));
-  }
-  static openSearch(__o) {
-    return _app_host_.invoke("openSearch", arguments.length ? arguments[0] : {});
   }
   static openSpot(id) {
     return _app_host_.invoke("openSpot", Array.prototype.slice.call(arguments));

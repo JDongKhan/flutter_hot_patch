@@ -50,9 +50,12 @@ class AppRouter {
   static NavigatorState? get _navigator =>
       JsRuntimeManager.navigatorKey?.currentState;
 
-  /// 统一按**命名路由**推页：页面构造集中在 `base/app_routes.dart` 的路由表，
-  /// 本类只负责「取数据 + 带参数」。
-  static void _pushNamed(String name, [Object? arguments]) {
+  /// 通用命名路由跳转：路由名与参数完全由调用方决定。
+  /// 原生侧直接执行；JS 侧经 `@HostInjected` 通道回到宿主执行同一份逻辑。
+  /// 例如调用方按 `kInJsRuntime` 决定是否在参数里带上 `component` / `entry`，
+  /// 路由表据此渲染 JS 版页面或原生页面。
+  @HostInjected()
+  static void pushNamed(String name, [Object? arguments]) {
     assert(_navigator != null, 'Navigator 未初始化');
     _navigator?.pushNamed(name, arguments: arguments);
   }
@@ -77,27 +80,17 @@ class AppRouter {
   /// 因为原生 / JS 两栏同处一个路由，同 tag 会触发 Flutter 重复 Hero 断言。
   @HostInjected()
   static void openHeroTarget(String tag, String label) {
-    _pushNamed(AppRoutes.heroTarget, <String, dynamic>{
+    pushNamed(AppRoutes.heroTarget, <String, dynamic>{
       'tag': tag,
       'label': label,
     });
   }
 
-  /// 打开搜索页（热搜词 + 猜你想去随接口下发）。
-  /// [isJs] 随路由参数下发（`arguments: {'isJs': true}`）：路由表据此选
-  /// **JS 版** SearchPage 还是原生版。调用方按 `kInJsRuntime` 判断自己是否
-  /// 跑在 JS 里，不需要逐层透传壳标记。
-  @HostInjected()
-  static Future<void> openSearch({bool isJs = false}) =>
-      _guard('打开搜索页', () async {
-        _pushNamed(AppRoutes.search, <String, dynamic>{'isJs': isJs});
-      });
-
   /// 打开景点详情页（按 id 定位，找不到时回退首个）。
   @HostInjected()
   static Future<void> openSpot(String id) => _guard('打开景点详情', () async {
     final Spot spot = await _service.fetchSpot(id);
-    _pushNamed(AppRoutes.spot, <String, dynamic>{'spot': spot});
+    pushNamed(AppRoutes.spot, <String, dynamic>{'spot': spot});
   });
 
   /// 唤起城市选择器（底部面板），返回选中的城市名；用户直接关闭面板时返回 null。
@@ -121,7 +114,7 @@ class AppRouter {
   /// 打开九宫格频道详情页（门票 / 酒店 / 机票 …）。
   @HostInjected()
   static Future<void> openChannel(String title, String emoji) async {
-    _pushNamed(AppRoutes.channel, <String, dynamic>{
+    pushNamed(AppRoutes.channel, <String, dynamic>{
       'title': title,
       'emoji': emoji,
     });
@@ -131,21 +124,21 @@ class AppRouter {
   @HostInjected()
   static Future<void> openNotifications() => _guard('打开消息中心', () async {
     final List<AppNotice> notices = await _service.fetchNotifications();
-    _pushNamed(AppRoutes.notifications, <String, dynamic>{'notices': notices});
+    pushNamed(AppRoutes.notifications, <String, dynamic>{'notices': notices});
   });
 
   /// 打开帖子详情页。
   @HostInjected()
   static Future<void> openPost(String id) => _guard('打开帖子详情', () async {
     final Post post = await _service.fetchPost(id);
-    _pushNamed(AppRoutes.post, <String, dynamic>{'post': post});
+    pushNamed(AppRoutes.post, <String, dynamic>{'post': post});
   });
 
   /// 打开资源专题页（专题 + 相关推荐随接口下发）。
   @HostInjected()
   static Future<void> openResource(String id) => _guard('打开资源专题', () async {
     final ResourceFeed feed = await _service.fetchResource(id);
-    _pushNamed(AppRoutes.resource, <String, dynamic>{
+    pushNamed(AppRoutes.resource, <String, dynamic>{
       'resource': feed.resource,
       'related': feed.related,
     });
@@ -155,7 +148,7 @@ class AppRouter {
   @HostInjected()
   static Future<void> openOrder(String no) => _guard('打开订单详情', () async {
     final Order order = await _service.fetchOrder(no);
-    _pushNamed(AppRoutes.order, <String, dynamic>{'order': order});
+    pushNamed(AppRoutes.order, <String, dynamic>{'order': order});
   });
 
   /// 返回上一页。
@@ -168,7 +161,7 @@ class AppRouter {
   /// 打开登录页。
   @HostInjected()
   static Future<void> openLogin() async {
-    _pushNamed(AppRoutes.login);
+    pushNamed(AppRoutes.login);
   }
 
   /// 打开用户中心（「我的」页点击个人信息进入）。
@@ -177,7 +170,7 @@ class AppRouter {
   /// 这里只负责推入，数据请求由页面自己的 `UserCenterVm` 发起。
   @HostInjected()
   static Future<void> openUserCenter() async {
-    _pushNamed(AppRoutes.userCenter);
+    pushNamed(AppRoutes.userCenter);
   }
 
   /// 打开订单 tab 对应的页面（「我的」页统计项/菜单入口）。
@@ -187,19 +180,19 @@ class AppRouter {
   /// Material 上下文（实测就是"从我的页进来很丑"的那一页）。
   @HostInjected()
   static Future<void> openOrders() async {
-    _pushNamed(AppRoutes.orders);
+    pushNamed(AppRoutes.orders);
   }
 
   /// 打开「组件案例」页。
   @HostInjected()
   static Future<void> openWidgetShowcase() async {
-    _pushNamed(AppRoutes.widgetShowcase);
+    pushNamed(AppRoutes.widgetShowcase);
   }
 
   /// 打开「热更 Demo 列表」页。
   @HostInjected()
   static Future<void> openDemoList() async {
-    _pushNamed(AppRoutes.demoList);
+    pushNamed(AppRoutes.demoList);
   }
 
   /// 轻提示（原生与 JS 组件共用；JS 侧 `AppRouter.toast('...')` 走同一通道）。

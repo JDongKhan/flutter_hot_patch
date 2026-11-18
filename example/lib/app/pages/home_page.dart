@@ -208,8 +208,13 @@ class HomeHeader extends StatelessWidget {
   final VoidCallback onPickCity;
 
   void openSearch() {
-    // JS 侧求值为 true（宿主注入的全局），原生侧恒为 false——据此选 JS / 原生搜索页。
-    AppRouter.openSearch(isJs: kInJsRuntime);
+    // 通用跳转：JS 侧带上 JS 页入口，原生侧不带 —— 路由表据此选对应版本。
+    final args = <String, dynamic>{};
+    if (kInJsRuntime) {
+      args['component'] = 'SearchPage';
+      args['entry'] = 'app/pages/detail_pages.js';
+    }
+    AppRouter.pushNamed(AppRoutes.search, args);
   }
 
   void openMessages() {

@@ -16,6 +16,8 @@ import 'patch_config.dart';
 /// 分工：
 /// - 页面构造只在这里（`AppRouter` 只负责取数据 + `pushNamed(name, arguments)`）；
 /// - 参数一律走 `RouteSettings.arguments`（宿主侧对象原样传递，不经 JSON）；
+/// - 路由参数带 `component`（可选 `entry`）时优先渲染对应 JS 版页面，与具体
+///   路由无关，新增页面共用同一套参数；
 /// - 路由名常量在 `base/app_router.dart` 的 [AppRoutes]（必须与宿主路由能力同文件，
 ///   否则会被翻译成不存在的 JS 模块引用）。
 ///
@@ -24,6 +26,17 @@ import 'patch_config.dart';
 Route<dynamic>? appOnGenerateRoute(RouteSettings settings) {
   final args = settings.arguments;
   final map = args is Map ? args : const <String, dynamic>{};
+
+  // 通用 JS 版页面：路由参数带 component 就按补丁入口渲染，与具体路由无关，
+  // 后续新增页面直接用同一套参数即可走 JS 版。
+  final component = map['component'];
+  if (component is String) {
+    final entry = map['entry'];
+    return _route(
+      _jsPage(component, entry is String ? entry : null),
+      settings,
+    );
+  }
 
   switch (settings.name) {
     case AppRoutes.demoList:
@@ -38,9 +51,7 @@ Route<dynamic>? appOnGenerateRoute(RouteSettings settings) {
       return _route(HeroTargetPage(tag: tag, label: label), settings);
 
     case AppRoutes.search:
-      // 路由参数 isJs == true → JS 版搜索页（补丁产物），否则原生版。
-      final isJs = map['isJs'] == true;
-      return _route(isJs ? _searchPageJs() : const SearchPage(), settings);
+      return _route(const SearchPage(), settings);
 
     case AppRoutes.spot:
       final spot = map['spot'];
@@ -132,15 +143,15 @@ MaterialPageRoute<void> _badArgs(RouteSettings settings, String keys) {
   );
 }
 
-/// JS 版搜索页：`@PatchEntry('SearchPage')` 的补丁产物。
+/// 通用 JS 版页面：component / entry 全部来自路由参数 map。
 ///
-/// 产物按**源文件**聚合 —— SearchPage 与同级页面同住 `detail_pages.dart`，
+/// 产物按**源文件**聚合 —— 例如 SearchPage 与同级页面同住 `detail_pages.dart`，
 /// 所以入口是 `app/pages/detail_pages.js`，组件名才是 `SearchPage`。
 ///
 /// 页面自己请求数据（JS 侧 `AppService` → Network 桥），故不需要 `params`；
 /// 与原生版同签名、同布局，用于验证「同一页面在原生与 JS 两侧行为一致」。
-Widget _searchPageJs() => JsUiWidget(
-  jsAsset: patchUrl('SearchPage', 'app/pages/detail_pages.js'),
+Widget _jsPage(String component, String? entry) => JsUiWidget(
+  jsAsset: patchUrl(component, entry),
   showBuildTime: true,
 );
 
