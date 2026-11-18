@@ -1754,10 +1754,11 @@ export class Size {
     props = __positionalArgs(props, ['source']);
     return new Size({ width: props.source.width, height: props.source.height });
   }
-  /** Dart 的 static const：零尺寸 / 无穷尺寸。 */
-  static zero = new Size({ width: 0, height: 0 });
-  static infinite = new Size({ width: Infinity, height: Infinity });
 }
+// 常量在类外赋值：Android 旧版 QuickJS 在静态字段初始化期间引用自身类名
+// 会误报 TDZ（`Size is not initialized`）。
+Size.zero = new Size({ width: 0, height: 0 });
+Size.infinite = new Size({ width: Infinity, height: Infinity });
 // Dart `Size` 的命名构造 / 静态常量（产物按统一规则发射 `Size.fromHeight({…})`）。
 // **无界维度是 +∞**：跨桥时 `JSON.stringify(Infinity)` 得到 null，宿主侧按 ∞
 // 还原（见 js_widget_registry 的 PreferredSize / layout 约束的 null 约定）。
@@ -2422,8 +2423,9 @@ export class Rect {
       right: c.dx + w / 2, bottom: c.dy + h / 2
     });
   }
-  static zero = new Rect({});
 }
+// 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+Rect.zero = new Rect({});
 
 // ---------------------------------------------------------------------------
 // RRect：四角圆角半径按 Dart 的 Radius 值对象读取（Radius.circular 已有镜像）。
@@ -4144,8 +4146,8 @@ export class SchedulerServiceExtensions {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SchedulerServiceExtensions.' + this.name; }
-  static timeDilation = new SchedulerServiceExtensions('timeDilation', 0);
 }
+SchedulerServiceExtensions.timeDilation = new SchedulerServiceExtensions('timeDilation', 0);
 SchedulerServiceExtensions.values = [SchedulerServiceExtensions.timeDilation];
 
 export class SchedulerPhase {
@@ -4156,12 +4158,12 @@ export class SchedulerPhase {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SchedulerPhase.' + this.name; }
-  static idle = new SchedulerPhase('idle', 0);
-  static transientCallbacks = new SchedulerPhase('transientCallbacks', 1);
-  static midFrameMicrotasks = new SchedulerPhase('midFrameMicrotasks', 2);
-  static persistentCallbacks = new SchedulerPhase('persistentCallbacks', 3);
-  static postFrameCallbacks = new SchedulerPhase('postFrameCallbacks', 4);
 }
+SchedulerPhase.idle = new SchedulerPhase('idle', 0);
+SchedulerPhase.transientCallbacks = new SchedulerPhase('transientCallbacks', 1);
+SchedulerPhase.midFrameMicrotasks = new SchedulerPhase('midFrameMicrotasks', 2);
+SchedulerPhase.persistentCallbacks = new SchedulerPhase('persistentCallbacks', 3);
+SchedulerPhase.postFrameCallbacks = new SchedulerPhase('postFrameCallbacks', 4);
 SchedulerPhase.values = [SchedulerPhase.idle, SchedulerPhase.transientCallbacks, SchedulerPhase.midFrameMicrotasks, SchedulerPhase.persistentCallbacks, SchedulerPhase.postFrameCallbacks];
 
 export class AnimationBehavior {
@@ -4172,9 +4174,9 @@ export class AnimationBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AnimationBehavior.' + this.name; }
-  static normal = new AnimationBehavior('normal', 0);
-  static preserve = new AnimationBehavior('preserve', 1);
 }
+AnimationBehavior.normal = new AnimationBehavior('normal', 0);
+AnimationBehavior.preserve = new AnimationBehavior('preserve', 1);
 AnimationBehavior.values = [AnimationBehavior.normal, AnimationBehavior.preserve];
 
 export class AnimationStatus {
@@ -4185,11 +4187,11 @@ export class AnimationStatus {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AnimationStatus.' + this.name; }
-  static dismissed = new AnimationStatus('dismissed', 0);
-  static forward = new AnimationStatus('forward', 1);
-  static reverse = new AnimationStatus('reverse', 2);
-  static completed = new AnimationStatus('completed', 3);
 }
+AnimationStatus.dismissed = new AnimationStatus('dismissed', 0);
+AnimationStatus.forward = new AnimationStatus('forward', 1);
+AnimationStatus.reverse = new AnimationStatus('reverse', 2);
+AnimationStatus.completed = new AnimationStatus('completed', 3);
 AnimationStatus.values = [AnimationStatus.dismissed, AnimationStatus.forward, AnimationStatus.reverse, AnimationStatus.completed];
 
 export class DiagnosticLevel {
@@ -4200,16 +4202,16 @@ export class DiagnosticLevel {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DiagnosticLevel.' + this.name; }
-  static hidden = new DiagnosticLevel('hidden', 0);
-  static fine = new DiagnosticLevel('fine', 1);
-  static debug = new DiagnosticLevel('debug', 2);
-  static info = new DiagnosticLevel('info', 3);
-  static warning = new DiagnosticLevel('warning', 4);
-  static hint = new DiagnosticLevel('hint', 5);
-  static summary = new DiagnosticLevel('summary', 6);
-  static error = new DiagnosticLevel('error', 7);
-  static off = new DiagnosticLevel('off', 8);
 }
+DiagnosticLevel.hidden = new DiagnosticLevel('hidden', 0);
+DiagnosticLevel.fine = new DiagnosticLevel('fine', 1);
+DiagnosticLevel.debug = new DiagnosticLevel('debug', 2);
+DiagnosticLevel.info = new DiagnosticLevel('info', 3);
+DiagnosticLevel.warning = new DiagnosticLevel('warning', 4);
+DiagnosticLevel.hint = new DiagnosticLevel('hint', 5);
+DiagnosticLevel.summary = new DiagnosticLevel('summary', 6);
+DiagnosticLevel.error = new DiagnosticLevel('error', 7);
+DiagnosticLevel.off = new DiagnosticLevel('off', 8);
 DiagnosticLevel.values = [DiagnosticLevel.hidden, DiagnosticLevel.fine, DiagnosticLevel.debug, DiagnosticLevel.info, DiagnosticLevel.warning, DiagnosticLevel.hint, DiagnosticLevel.summary, DiagnosticLevel.error, DiagnosticLevel.off];
 
 export class DiagnosticsTreeStyle {
@@ -4220,19 +4222,19 @@ export class DiagnosticsTreeStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DiagnosticsTreeStyle.' + this.name; }
-  static none = new DiagnosticsTreeStyle('none', 0);
-  static sparse = new DiagnosticsTreeStyle('sparse', 1);
-  static offstage = new DiagnosticsTreeStyle('offstage', 2);
-  static dense = new DiagnosticsTreeStyle('dense', 3);
-  static transition = new DiagnosticsTreeStyle('transition', 4);
-  static error = new DiagnosticsTreeStyle('error', 5);
-  static whitespace = new DiagnosticsTreeStyle('whitespace', 6);
-  static flat = new DiagnosticsTreeStyle('flat', 7);
-  static singleLine = new DiagnosticsTreeStyle('singleLine', 8);
-  static errorProperty = new DiagnosticsTreeStyle('errorProperty', 9);
-  static shallow = new DiagnosticsTreeStyle('shallow', 10);
-  static truncateChildren = new DiagnosticsTreeStyle('truncateChildren', 11);
 }
+DiagnosticsTreeStyle.none = new DiagnosticsTreeStyle('none', 0);
+DiagnosticsTreeStyle.sparse = new DiagnosticsTreeStyle('sparse', 1);
+DiagnosticsTreeStyle.offstage = new DiagnosticsTreeStyle('offstage', 2);
+DiagnosticsTreeStyle.dense = new DiagnosticsTreeStyle('dense', 3);
+DiagnosticsTreeStyle.transition = new DiagnosticsTreeStyle('transition', 4);
+DiagnosticsTreeStyle.error = new DiagnosticsTreeStyle('error', 5);
+DiagnosticsTreeStyle.whitespace = new DiagnosticsTreeStyle('whitespace', 6);
+DiagnosticsTreeStyle.flat = new DiagnosticsTreeStyle('flat', 7);
+DiagnosticsTreeStyle.singleLine = new DiagnosticsTreeStyle('singleLine', 8);
+DiagnosticsTreeStyle.errorProperty = new DiagnosticsTreeStyle('errorProperty', 9);
+DiagnosticsTreeStyle.shallow = new DiagnosticsTreeStyle('shallow', 10);
+DiagnosticsTreeStyle.truncateChildren = new DiagnosticsTreeStyle('truncateChildren', 11);
 DiagnosticsTreeStyle.values = [DiagnosticsTreeStyle.none, DiagnosticsTreeStyle.sparse, DiagnosticsTreeStyle.offstage, DiagnosticsTreeStyle.dense, DiagnosticsTreeStyle.transition, DiagnosticsTreeStyle.error, DiagnosticsTreeStyle.whitespace, DiagnosticsTreeStyle.flat, DiagnosticsTreeStyle.singleLine, DiagnosticsTreeStyle.errorProperty, DiagnosticsTreeStyle.shallow, DiagnosticsTreeStyle.truncateChildren];
 
 export class TargetPlatform {
@@ -4243,13 +4245,13 @@ export class TargetPlatform {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TargetPlatform.' + this.name; }
-  static android = new TargetPlatform('android', 0);
-  static fuchsia = new TargetPlatform('fuchsia', 1);
-  static iOS = new TargetPlatform('iOS', 2);
-  static linux = new TargetPlatform('linux', 3);
-  static macOS = new TargetPlatform('macOS', 4);
-  static windows = new TargetPlatform('windows', 5);
 }
+TargetPlatform.android = new TargetPlatform('android', 0);
+TargetPlatform.fuchsia = new TargetPlatform('fuchsia', 1);
+TargetPlatform.iOS = new TargetPlatform('iOS', 2);
+TargetPlatform.linux = new TargetPlatform('linux', 3);
+TargetPlatform.macOS = new TargetPlatform('macOS', 4);
+TargetPlatform.windows = new TargetPlatform('windows', 5);
 TargetPlatform.values = [TargetPlatform.android, TargetPlatform.fuchsia, TargetPlatform.iOS, TargetPlatform.linux, TargetPlatform.macOS, TargetPlatform.windows];
 
 export class FoundationServiceExtensions {
@@ -4260,13 +4262,13 @@ export class FoundationServiceExtensions {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FoundationServiceExtensions.' + this.name; }
-  static reassemble = new FoundationServiceExtensions('reassemble', 0);
-  static exit = new FoundationServiceExtensions('exit', 1);
-  static connectedVmServiceUri = new FoundationServiceExtensions('connectedVmServiceUri', 2);
-  static activeDevToolsServerAddress = new FoundationServiceExtensions('activeDevToolsServerAddress', 3);
-  static platformOverride = new FoundationServiceExtensions('platformOverride', 4);
-  static brightnessOverride = new FoundationServiceExtensions('brightnessOverride', 5);
 }
+FoundationServiceExtensions.reassemble = new FoundationServiceExtensions('reassemble', 0);
+FoundationServiceExtensions.exit = new FoundationServiceExtensions('exit', 1);
+FoundationServiceExtensions.connectedVmServiceUri = new FoundationServiceExtensions('connectedVmServiceUri', 2);
+FoundationServiceExtensions.activeDevToolsServerAddress = new FoundationServiceExtensions('activeDevToolsServerAddress', 3);
+FoundationServiceExtensions.platformOverride = new FoundationServiceExtensions('platformOverride', 4);
+FoundationServiceExtensions.brightnessOverride = new FoundationServiceExtensions('brightnessOverride', 5);
 FoundationServiceExtensions.values = [FoundationServiceExtensions.reassemble, FoundationServiceExtensions.exit, FoundationServiceExtensions.connectedVmServiceUri, FoundationServiceExtensions.activeDevToolsServerAddress, FoundationServiceExtensions.platformOverride, FoundationServiceExtensions.brightnessOverride];
 
 export class Assertiveness {
@@ -4277,9 +4279,9 @@ export class Assertiveness {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'Assertiveness.' + this.name; }
-  static polite = new Assertiveness('polite', 0);
-  static assertive = new Assertiveness('assertive', 1);
 }
+Assertiveness.polite = new Assertiveness('polite', 0);
+Assertiveness.assertive = new Assertiveness('assertive', 1);
 Assertiveness.values = [Assertiveness.polite, Assertiveness.assertive];
 
 export class AccessibilityFocusBlockType {
@@ -4290,10 +4292,10 @@ export class AccessibilityFocusBlockType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AccessibilityFocusBlockType.' + this.name; }
-  static none = new AccessibilityFocusBlockType('none', 0);
-  static blockSubtree = new AccessibilityFocusBlockType('blockSubtree', 1);
-  static blockNode = new AccessibilityFocusBlockType('blockNode', 2);
 }
+AccessibilityFocusBlockType.none = new AccessibilityFocusBlockType('none', 0);
+AccessibilityFocusBlockType.blockSubtree = new AccessibilityFocusBlockType('blockSubtree', 1);
+AccessibilityFocusBlockType.blockNode = new AccessibilityFocusBlockType('blockNode', 2);
 AccessibilityFocusBlockType.values = [AccessibilityFocusBlockType.none, AccessibilityFocusBlockType.blockSubtree, AccessibilityFocusBlockType.blockNode];
 
 export class DebugSemanticsDumpOrder {
@@ -4304,9 +4306,9 @@ export class DebugSemanticsDumpOrder {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DebugSemanticsDumpOrder.' + this.name; }
-  static inverseHitTest = new DebugSemanticsDumpOrder('inverseHitTest', 0);
-  static traversalOrder = new DebugSemanticsDumpOrder('traversalOrder', 1);
 }
+DebugSemanticsDumpOrder.inverseHitTest = new DebugSemanticsDumpOrder('inverseHitTest', 0);
+DebugSemanticsDumpOrder.traversalOrder = new DebugSemanticsDumpOrder('traversalOrder', 1);
 DebugSemanticsDumpOrder.values = [DebugSemanticsDumpOrder.inverseHitTest, DebugSemanticsDumpOrder.traversalOrder];
 
 export class BorderStyle {
@@ -4317,9 +4319,9 @@ export class BorderStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BorderStyle.' + this.name; }
-  static none = new BorderStyle('none', 0);
-  static solid = new BorderStyle('solid', 1);
 }
+BorderStyle.none = new BorderStyle('none', 0);
+BorderStyle.solid = new BorderStyle('solid', 1);
 BorderStyle.values = [BorderStyle.none, BorderStyle.solid];
 
 export class BoxShape {
@@ -4330,9 +4332,9 @@ export class BoxShape {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BoxShape.' + this.name; }
-  static rectangle = new BoxShape('rectangle', 0);
-  static circle = new BoxShape('circle', 1);
 }
+BoxShape.rectangle = new BoxShape('rectangle', 0);
+BoxShape.circle = new BoxShape('circle', 1);
 BoxShape.values = [BoxShape.rectangle, BoxShape.circle];
 
 export class ResizeImagePolicy {
@@ -4343,9 +4345,9 @@ export class ResizeImagePolicy {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ResizeImagePolicy.' + this.name; }
-  static exact = new ResizeImagePolicy('exact', 0);
-  static fit = new ResizeImagePolicy('fit', 1);
 }
+ResizeImagePolicy.exact = new ResizeImagePolicy('exact', 0);
+ResizeImagePolicy.fit = new ResizeImagePolicy('fit', 1);
 ResizeImagePolicy.values = [ResizeImagePolicy.exact, ResizeImagePolicy.fit];
 
 export class WebHtmlElementStrategy {
@@ -4356,10 +4358,10 @@ export class WebHtmlElementStrategy {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'WebHtmlElementStrategy.' + this.name; }
-  static never = new WebHtmlElementStrategy('never', 0);
-  static fallback = new WebHtmlElementStrategy('fallback', 1);
-  static prefer = new WebHtmlElementStrategy('prefer', 2);
 }
+WebHtmlElementStrategy.never = new WebHtmlElementStrategy('never', 0);
+WebHtmlElementStrategy.fallback = new WebHtmlElementStrategy('fallback', 1);
+WebHtmlElementStrategy.prefer = new WebHtmlElementStrategy('prefer', 2);
 WebHtmlElementStrategy.values = [WebHtmlElementStrategy.never, WebHtmlElementStrategy.fallback, WebHtmlElementStrategy.prefer];
 
 export class FlutterLogoStyle {
@@ -4370,10 +4372,10 @@ export class FlutterLogoStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FlutterLogoStyle.' + this.name; }
-  static markOnly = new FlutterLogoStyle('markOnly', 0);
-  static horizontal = new FlutterLogoStyle('horizontal', 1);
-  static stacked = new FlutterLogoStyle('stacked', 2);
 }
+FlutterLogoStyle.markOnly = new FlutterLogoStyle('markOnly', 0);
+FlutterLogoStyle.horizontal = new FlutterLogoStyle('horizontal', 1);
+FlutterLogoStyle.stacked = new FlutterLogoStyle('stacked', 2);
 FlutterLogoStyle.values = [FlutterLogoStyle.markOnly, FlutterLogoStyle.horizontal, FlutterLogoStyle.stacked];
 
 export class RenderComparison {
@@ -4384,11 +4386,11 @@ export class RenderComparison {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'RenderComparison.' + this.name; }
-  static identical = new RenderComparison('identical', 0);
-  static metadata = new RenderComparison('metadata', 1);
-  static paint = new RenderComparison('paint', 2);
-  static layout = new RenderComparison('layout', 3);
 }
+RenderComparison.identical = new RenderComparison('identical', 0);
+RenderComparison.metadata = new RenderComparison('metadata', 1);
+RenderComparison.paint = new RenderComparison('paint', 2);
+RenderComparison.layout = new RenderComparison('layout', 3);
 RenderComparison.values = [RenderComparison.identical, RenderComparison.metadata, RenderComparison.paint, RenderComparison.layout];
 
 export class Axis {
@@ -4399,9 +4401,9 @@ export class Axis {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'Axis.' + this.name; }
-  static horizontal = new Axis('horizontal', 0);
-  static vertical = new Axis('vertical', 1);
 }
+Axis.horizontal = new Axis('horizontal', 0);
+Axis.vertical = new Axis('vertical', 1);
 Axis.values = [Axis.horizontal, Axis.vertical];
 
 export class VerticalDirection {
@@ -4412,9 +4414,9 @@ export class VerticalDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'VerticalDirection.' + this.name; }
-  static up = new VerticalDirection('up', 0);
-  static down = new VerticalDirection('down', 1);
 }
+VerticalDirection.up = new VerticalDirection('up', 0);
+VerticalDirection.down = new VerticalDirection('down', 1);
 VerticalDirection.values = [VerticalDirection.up, VerticalDirection.down];
 
 export class AxisDirection {
@@ -4425,11 +4427,11 @@ export class AxisDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AxisDirection.' + this.name; }
-  static up = new AxisDirection('up', 0);
-  static right = new AxisDirection('right', 1);
-  static down = new AxisDirection('down', 2);
-  static left = new AxisDirection('left', 3);
 }
+AxisDirection.up = new AxisDirection('up', 0);
+AxisDirection.right = new AxisDirection('right', 1);
+AxisDirection.down = new AxisDirection('down', 2);
+AxisDirection.left = new AxisDirection('left', 3);
 AxisDirection.values = [AxisDirection.up, AxisDirection.right, AxisDirection.down, AxisDirection.left];
 
 export class BoxFit {
@@ -4440,14 +4442,14 @@ export class BoxFit {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BoxFit.' + this.name; }
-  static fill = new BoxFit('fill', 0);
-  static contain = new BoxFit('contain', 1);
-  static cover = new BoxFit('cover', 2);
-  static fitWidth = new BoxFit('fitWidth', 3);
-  static fitHeight = new BoxFit('fitHeight', 4);
-  static none = new BoxFit('none', 5);
-  static scaleDown = new BoxFit('scaleDown', 6);
 }
+BoxFit.fill = new BoxFit('fill', 0);
+BoxFit.contain = new BoxFit('contain', 1);
+BoxFit.cover = new BoxFit('cover', 2);
+BoxFit.fitWidth = new BoxFit('fitWidth', 3);
+BoxFit.fitHeight = new BoxFit('fitHeight', 4);
+BoxFit.none = new BoxFit('none', 5);
+BoxFit.scaleDown = new BoxFit('scaleDown', 6);
 BoxFit.values = [BoxFit.fill, BoxFit.contain, BoxFit.cover, BoxFit.fitWidth, BoxFit.fitHeight, BoxFit.none, BoxFit.scaleDown];
 
 export class TextOverflow {
@@ -4458,11 +4460,11 @@ export class TextOverflow {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextOverflow.' + this.name; }
-  static clip = new TextOverflow('clip', 0);
-  static fade = new TextOverflow('fade', 1);
-  static ellipsis = new TextOverflow('ellipsis', 2);
-  static visible = new TextOverflow('visible', 3);
 }
+TextOverflow.clip = new TextOverflow('clip', 0);
+TextOverflow.fade = new TextOverflow('fade', 1);
+TextOverflow.ellipsis = new TextOverflow('ellipsis', 2);
+TextOverflow.visible = new TextOverflow('visible', 3);
 TextOverflow.values = [TextOverflow.clip, TextOverflow.fade, TextOverflow.ellipsis, TextOverflow.visible];
 
 export class TextWidthBasis {
@@ -4473,9 +4475,9 @@ export class TextWidthBasis {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextWidthBasis.' + this.name; }
-  static parent = new TextWidthBasis('parent', 0);
-  static longestLine = new TextWidthBasis('longestLine', 1);
 }
+TextWidthBasis.parent = new TextWidthBasis('parent', 0);
+TextWidthBasis.longestLine = new TextWidthBasis('longestLine', 1);
 TextWidthBasis.values = [TextWidthBasis.parent, TextWidthBasis.longestLine];
 
 export class ImageRepeat {
@@ -4486,11 +4488,11 @@ export class ImageRepeat {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ImageRepeat.' + this.name; }
-  static repeat = new ImageRepeat('repeat', 0);
-  static repeatX = new ImageRepeat('repeatX', 1);
-  static repeatY = new ImageRepeat('repeatY', 2);
-  static noRepeat = new ImageRepeat('noRepeat', 3);
 }
+ImageRepeat.repeat = new ImageRepeat('repeat', 0);
+ImageRepeat.repeatX = new ImageRepeat('repeatX', 1);
+ImageRepeat.repeatY = new ImageRepeat('repeatY', 2);
+ImageRepeat.noRepeat = new ImageRepeat('noRepeat', 3);
 ImageRepeat.values = [ImageRepeat.repeat, ImageRepeat.repeatX, ImageRepeat.repeatY, ImageRepeat.noRepeat];
 
 export class GestureDisposition {
@@ -4501,9 +4503,9 @@ export class GestureDisposition {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'GestureDisposition.' + this.name; }
-  static accepted = new GestureDisposition('accepted', 0);
-  static rejected = new GestureDisposition('rejected', 1);
 }
+GestureDisposition.accepted = new GestureDisposition('accepted', 0);
+GestureDisposition.rejected = new GestureDisposition('rejected', 1);
 GestureDisposition.values = [GestureDisposition.accepted, GestureDisposition.rejected];
 
 export class DragStartBehavior {
@@ -4514,9 +4516,9 @@ export class DragStartBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DragStartBehavior.' + this.name; }
-  static down = new DragStartBehavior('down', 0);
-  static start = new DragStartBehavior('start', 1);
 }
+DragStartBehavior.down = new DragStartBehavior('down', 0);
+DragStartBehavior.start = new DragStartBehavior('start', 1);
 DragStartBehavior.values = [DragStartBehavior.down, DragStartBehavior.start];
 
 export class MultitouchDragStrategy {
@@ -4527,10 +4529,10 @@ export class MultitouchDragStrategy {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'MultitouchDragStrategy.' + this.name; }
-  static latestPointer = new MultitouchDragStrategy('latestPointer', 0);
-  static averageBoundaryPointers = new MultitouchDragStrategy('averageBoundaryPointers', 1);
-  static sumAllPointers = new MultitouchDragStrategy('sumAllPointers', 2);
 }
+MultitouchDragStrategy.latestPointer = new MultitouchDragStrategy('latestPointer', 0);
+MultitouchDragStrategy.averageBoundaryPointers = new MultitouchDragStrategy('averageBoundaryPointers', 1);
+MultitouchDragStrategy.sumAllPointers = new MultitouchDragStrategy('sumAllPointers', 2);
 MultitouchDragStrategy.values = [MultitouchDragStrategy.latestPointer, MultitouchDragStrategy.averageBoundaryPointers, MultitouchDragStrategy.sumAllPointers];
 
 export class GestureRecognizerState {
@@ -4541,10 +4543,10 @@ export class GestureRecognizerState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'GestureRecognizerState.' + this.name; }
-  static ready = new GestureRecognizerState('ready', 0);
-  static possible = new GestureRecognizerState('possible', 1);
-  static defunct = new GestureRecognizerState('defunct', 2);
 }
+GestureRecognizerState.ready = new GestureRecognizerState('ready', 0);
+GestureRecognizerState.possible = new GestureRecognizerState('possible', 1);
+GestureRecognizerState.defunct = new GestureRecognizerState('defunct', 2);
 GestureRecognizerState.values = [GestureRecognizerState.ready, GestureRecognizerState.possible, GestureRecognizerState.defunct];
 
 export class WrapAlignment {
@@ -4555,13 +4557,13 @@ export class WrapAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'WrapAlignment.' + this.name; }
-  static start = new WrapAlignment('start', 0);
-  static end = new WrapAlignment('end', 1);
-  static center = new WrapAlignment('center', 2);
-  static spaceBetween = new WrapAlignment('spaceBetween', 3);
-  static spaceAround = new WrapAlignment('spaceAround', 4);
-  static spaceEvenly = new WrapAlignment('spaceEvenly', 5);
 }
+WrapAlignment.start = new WrapAlignment('start', 0);
+WrapAlignment.end = new WrapAlignment('end', 1);
+WrapAlignment.center = new WrapAlignment('center', 2);
+WrapAlignment.spaceBetween = new WrapAlignment('spaceBetween', 3);
+WrapAlignment.spaceAround = new WrapAlignment('spaceAround', 4);
+WrapAlignment.spaceEvenly = new WrapAlignment('spaceEvenly', 5);
 WrapAlignment.values = [WrapAlignment.start, WrapAlignment.end, WrapAlignment.center, WrapAlignment.spaceBetween, WrapAlignment.spaceAround, WrapAlignment.spaceEvenly];
 
 export class WrapCrossAlignment {
@@ -4572,10 +4574,10 @@ export class WrapCrossAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'WrapCrossAlignment.' + this.name; }
-  static start = new WrapCrossAlignment('start', 0);
-  static end = new WrapCrossAlignment('end', 1);
-  static center = new WrapCrossAlignment('center', 2);
 }
+WrapCrossAlignment.start = new WrapCrossAlignment('start', 0);
+WrapCrossAlignment.end = new WrapCrossAlignment('end', 1);
+WrapCrossAlignment.center = new WrapCrossAlignment('center', 2);
 WrapCrossAlignment.values = [WrapCrossAlignment.start, WrapCrossAlignment.end, WrapCrossAlignment.center];
 
 export class HitTestBehavior {
@@ -4586,10 +4588,10 @@ export class HitTestBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'HitTestBehavior.' + this.name; }
-  static deferToChild = new HitTestBehavior('deferToChild', 0);
-  static opaque = new HitTestBehavior('opaque', 1);
-  static translucent = new HitTestBehavior('translucent', 2);
 }
+HitTestBehavior.deferToChild = new HitTestBehavior('deferToChild', 0);
+HitTestBehavior.opaque = new HitTestBehavior('opaque', 1);
+HitTestBehavior.translucent = new HitTestBehavior('translucent', 2);
 HitTestBehavior.values = [HitTestBehavior.deferToChild, HitTestBehavior.opaque, HitTestBehavior.translucent];
 
 export class DecorationPosition {
@@ -4600,9 +4602,9 @@ export class DecorationPosition {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DecorationPosition.' + this.name; }
-  static background = new DecorationPosition('background', 0);
-  static foreground = new DecorationPosition('foreground', 1);
 }
+DecorationPosition.background = new DecorationPosition('background', 0);
+DecorationPosition.foreground = new DecorationPosition('foreground', 1);
 DecorationPosition.values = [DecorationPosition.background, DecorationPosition.foreground];
 
 export class ScrollDirection {
@@ -4613,10 +4615,10 @@ export class ScrollDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ScrollDirection.' + this.name; }
-  static idle = new ScrollDirection('idle', 0);
-  static forward = new ScrollDirection('forward', 1);
-  static reverse = new ScrollDirection('reverse', 2);
 }
+ScrollDirection.idle = new ScrollDirection('idle', 0);
+ScrollDirection.forward = new ScrollDirection('forward', 1);
+ScrollDirection.reverse = new ScrollDirection('reverse', 2);
 ScrollDirection.values = [ScrollDirection.idle, ScrollDirection.forward, ScrollDirection.reverse];
 
 export class SelectionResult {
@@ -4627,12 +4629,12 @@ export class SelectionResult {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SelectionResult.' + this.name; }
-  static next = new SelectionResult('next', 0);
-  static previous = new SelectionResult('previous', 1);
-  static end = new SelectionResult('end', 2);
-  static pending = new SelectionResult('pending', 3);
-  static none = new SelectionResult('none', 4);
 }
+SelectionResult.next = new SelectionResult('next', 0);
+SelectionResult.previous = new SelectionResult('previous', 1);
+SelectionResult.end = new SelectionResult('end', 2);
+SelectionResult.pending = new SelectionResult('pending', 3);
+SelectionResult.none = new SelectionResult('none', 4);
 SelectionResult.values = [SelectionResult.next, SelectionResult.previous, SelectionResult.end, SelectionResult.pending, SelectionResult.none];
 
 export class SelectionEventType {
@@ -4643,15 +4645,15 @@ export class SelectionEventType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SelectionEventType.' + this.name; }
-  static startEdgeUpdate = new SelectionEventType('startEdgeUpdate', 0);
-  static endEdgeUpdate = new SelectionEventType('endEdgeUpdate', 1);
-  static clear = new SelectionEventType('clear', 2);
-  static selectAll = new SelectionEventType('selectAll', 3);
-  static selectWord = new SelectionEventType('selectWord', 4);
-  static selectParagraph = new SelectionEventType('selectParagraph', 5);
-  static granularlyExtendSelection = new SelectionEventType('granularlyExtendSelection', 6);
-  static directionallyExtendSelection = new SelectionEventType('directionallyExtendSelection', 7);
 }
+SelectionEventType.startEdgeUpdate = new SelectionEventType('startEdgeUpdate', 0);
+SelectionEventType.endEdgeUpdate = new SelectionEventType('endEdgeUpdate', 1);
+SelectionEventType.clear = new SelectionEventType('clear', 2);
+SelectionEventType.selectAll = new SelectionEventType('selectAll', 3);
+SelectionEventType.selectWord = new SelectionEventType('selectWord', 4);
+SelectionEventType.selectParagraph = new SelectionEventType('selectParagraph', 5);
+SelectionEventType.granularlyExtendSelection = new SelectionEventType('granularlyExtendSelection', 6);
+SelectionEventType.directionallyExtendSelection = new SelectionEventType('directionallyExtendSelection', 7);
 SelectionEventType.values = [SelectionEventType.startEdgeUpdate, SelectionEventType.endEdgeUpdate, SelectionEventType.clear, SelectionEventType.selectAll, SelectionEventType.selectWord, SelectionEventType.selectParagraph, SelectionEventType.granularlyExtendSelection, SelectionEventType.directionallyExtendSelection];
 
 export class TextGranularity {
@@ -4662,12 +4664,12 @@ export class TextGranularity {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextGranularity.' + this.name; }
-  static character = new TextGranularity('character', 0);
-  static word = new TextGranularity('word', 1);
-  static paragraph = new TextGranularity('paragraph', 2);
-  static line = new TextGranularity('line', 3);
-  static document = new TextGranularity('document', 4);
 }
+TextGranularity.character = new TextGranularity('character', 0);
+TextGranularity.word = new TextGranularity('word', 1);
+TextGranularity.paragraph = new TextGranularity('paragraph', 2);
+TextGranularity.line = new TextGranularity('line', 3);
+TextGranularity.document = new TextGranularity('document', 4);
 TextGranularity.values = [TextGranularity.character, TextGranularity.word, TextGranularity.paragraph, TextGranularity.line, TextGranularity.document];
 
 export class SelectionExtendDirection {
@@ -4678,11 +4680,11 @@ export class SelectionExtendDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SelectionExtendDirection.' + this.name; }
-  static previousLine = new SelectionExtendDirection('previousLine', 0);
-  static nextLine = new SelectionExtendDirection('nextLine', 1);
-  static forward = new SelectionExtendDirection('forward', 2);
-  static backward = new SelectionExtendDirection('backward', 3);
 }
+SelectionExtendDirection.previousLine = new SelectionExtendDirection('previousLine', 0);
+SelectionExtendDirection.nextLine = new SelectionExtendDirection('nextLine', 1);
+SelectionExtendDirection.forward = new SelectionExtendDirection('forward', 2);
+SelectionExtendDirection.backward = new SelectionExtendDirection('backward', 3);
 SelectionExtendDirection.values = [SelectionExtendDirection.previousLine, SelectionExtendDirection.nextLine, SelectionExtendDirection.forward, SelectionExtendDirection.backward];
 
 export class SelectionStatus {
@@ -4693,10 +4695,10 @@ export class SelectionStatus {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SelectionStatus.' + this.name; }
-  static uncollapsed = new SelectionStatus('uncollapsed', 0);
-  static collapsed = new SelectionStatus('collapsed', 1);
-  static none = new SelectionStatus('none', 2);
 }
+SelectionStatus.uncollapsed = new SelectionStatus('uncollapsed', 0);
+SelectionStatus.collapsed = new SelectionStatus('collapsed', 1);
+SelectionStatus.none = new SelectionStatus('none', 2);
 SelectionStatus.values = [SelectionStatus.uncollapsed, SelectionStatus.collapsed, SelectionStatus.none];
 
 export class TextSelectionHandleType {
@@ -4707,10 +4709,10 @@ export class TextSelectionHandleType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextSelectionHandleType.' + this.name; }
-  static left = new TextSelectionHandleType('left', 0);
-  static right = new TextSelectionHandleType('right', 1);
-  static collapsed = new TextSelectionHandleType('collapsed', 2);
 }
+TextSelectionHandleType.left = new TextSelectionHandleType('left', 0);
+TextSelectionHandleType.right = new TextSelectionHandleType('right', 1);
+TextSelectionHandleType.collapsed = new TextSelectionHandleType('collapsed', 2);
 TextSelectionHandleType.values = [TextSelectionHandleType.left, TextSelectionHandleType.right, TextSelectionHandleType.collapsed];
 
 export class FlexFit {
@@ -4721,9 +4723,9 @@ export class FlexFit {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FlexFit.' + this.name; }
-  static tight = new FlexFit('tight', 0);
-  static loose = new FlexFit('loose', 1);
 }
+FlexFit.tight = new FlexFit('tight', 0);
+FlexFit.loose = new FlexFit('loose', 1);
 FlexFit.values = [FlexFit.tight, FlexFit.loose];
 
 export class MainAxisSize {
@@ -4734,9 +4736,9 @@ export class MainAxisSize {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'MainAxisSize.' + this.name; }
-  static min = new MainAxisSize('min', 0);
-  static max = new MainAxisSize('max', 1);
 }
+MainAxisSize.min = new MainAxisSize('min', 0);
+MainAxisSize.max = new MainAxisSize('max', 1);
 MainAxisSize.values = [MainAxisSize.min, MainAxisSize.max];
 
 export class MainAxisAlignment {
@@ -4747,13 +4749,13 @@ export class MainAxisAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'MainAxisAlignment.' + this.name; }
-  static start = new MainAxisAlignment('start', 0);
-  static end = new MainAxisAlignment('end', 1);
-  static center = new MainAxisAlignment('center', 2);
-  static spaceBetween = new MainAxisAlignment('spaceBetween', 3);
-  static spaceAround = new MainAxisAlignment('spaceAround', 4);
-  static spaceEvenly = new MainAxisAlignment('spaceEvenly', 5);
 }
+MainAxisAlignment.start = new MainAxisAlignment('start', 0);
+MainAxisAlignment.end = new MainAxisAlignment('end', 1);
+MainAxisAlignment.center = new MainAxisAlignment('center', 2);
+MainAxisAlignment.spaceBetween = new MainAxisAlignment('spaceBetween', 3);
+MainAxisAlignment.spaceAround = new MainAxisAlignment('spaceAround', 4);
+MainAxisAlignment.spaceEvenly = new MainAxisAlignment('spaceEvenly', 5);
 MainAxisAlignment.values = [MainAxisAlignment.start, MainAxisAlignment.end, MainAxisAlignment.center, MainAxisAlignment.spaceBetween, MainAxisAlignment.spaceAround, MainAxisAlignment.spaceEvenly];
 
 export class CrossAxisAlignment {
@@ -4764,12 +4766,12 @@ export class CrossAxisAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'CrossAxisAlignment.' + this.name; }
-  static start = new CrossAxisAlignment('start', 0);
-  static end = new CrossAxisAlignment('end', 1);
-  static center = new CrossAxisAlignment('center', 2);
-  static stretch = new CrossAxisAlignment('stretch', 3);
-  static baseline = new CrossAxisAlignment('baseline', 4);
 }
+CrossAxisAlignment.start = new CrossAxisAlignment('start', 0);
+CrossAxisAlignment.end = new CrossAxisAlignment('end', 1);
+CrossAxisAlignment.center = new CrossAxisAlignment('center', 2);
+CrossAxisAlignment.stretch = new CrossAxisAlignment('stretch', 3);
+CrossAxisAlignment.baseline = new CrossAxisAlignment('baseline', 4);
 CrossAxisAlignment.values = [CrossAxisAlignment.start, CrossAxisAlignment.end, CrossAxisAlignment.center, CrossAxisAlignment.stretch, CrossAxisAlignment.baseline];
 
 export class TableCellVerticalAlignment {
@@ -4780,13 +4782,13 @@ export class TableCellVerticalAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TableCellVerticalAlignment.' + this.name; }
-  static top = new TableCellVerticalAlignment('top', 0);
-  static middle = new TableCellVerticalAlignment('middle', 1);
-  static bottom = new TableCellVerticalAlignment('bottom', 2);
-  static baseline = new TableCellVerticalAlignment('baseline', 3);
-  static fill = new TableCellVerticalAlignment('fill', 4);
-  static intrinsicHeight = new TableCellVerticalAlignment('intrinsicHeight', 5);
 }
+TableCellVerticalAlignment.top = new TableCellVerticalAlignment('top', 0);
+TableCellVerticalAlignment.middle = new TableCellVerticalAlignment('middle', 1);
+TableCellVerticalAlignment.bottom = new TableCellVerticalAlignment('bottom', 2);
+TableCellVerticalAlignment.baseline = new TableCellVerticalAlignment('baseline', 3);
+TableCellVerticalAlignment.fill = new TableCellVerticalAlignment('fill', 4);
+TableCellVerticalAlignment.intrinsicHeight = new TableCellVerticalAlignment('intrinsicHeight', 5);
 TableCellVerticalAlignment.values = [TableCellVerticalAlignment.top, TableCellVerticalAlignment.middle, TableCellVerticalAlignment.bottom, TableCellVerticalAlignment.baseline, TableCellVerticalAlignment.fill, TableCellVerticalAlignment.intrinsicHeight];
 
 export class OverflowBoxFit {
@@ -4797,9 +4799,9 @@ export class OverflowBoxFit {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'OverflowBoxFit.' + this.name; }
-  static max = new OverflowBoxFit('max', 0);
-  static deferToChild = new OverflowBoxFit('deferToChild', 1);
 }
+OverflowBoxFit.max = new OverflowBoxFit('max', 0);
+OverflowBoxFit.deferToChild = new OverflowBoxFit('deferToChild', 1);
 OverflowBoxFit.values = [OverflowBoxFit.max, OverflowBoxFit.deferToChild];
 
 export class PerformanceOverlayOption {
@@ -4810,11 +4812,11 @@ export class PerformanceOverlayOption {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PerformanceOverlayOption.' + this.name; }
-  static displayRasterizerStatistics = new PerformanceOverlayOption('displayRasterizerStatistics', 0);
-  static visualizeRasterizerStatistics = new PerformanceOverlayOption('visualizeRasterizerStatistics', 1);
-  static displayEngineStatistics = new PerformanceOverlayOption('displayEngineStatistics', 2);
-  static visualizeEngineStatistics = new PerformanceOverlayOption('visualizeEngineStatistics', 3);
 }
+PerformanceOverlayOption.displayRasterizerStatistics = new PerformanceOverlayOption('displayRasterizerStatistics', 0);
+PerformanceOverlayOption.visualizeRasterizerStatistics = new PerformanceOverlayOption('visualizeRasterizerStatistics', 1);
+PerformanceOverlayOption.displayEngineStatistics = new PerformanceOverlayOption('displayEngineStatistics', 2);
+PerformanceOverlayOption.visualizeEngineStatistics = new PerformanceOverlayOption('visualizeEngineStatistics', 3);
 PerformanceOverlayOption.values = [PerformanceOverlayOption.displayRasterizerStatistics, PerformanceOverlayOption.visualizeRasterizerStatistics, PerformanceOverlayOption.displayEngineStatistics, PerformanceOverlayOption.visualizeEngineStatistics];
 
 export class CacheExtentStyle {
@@ -4825,9 +4827,9 @@ export class CacheExtentStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'CacheExtentStyle.' + this.name; }
-  static pixel = new CacheExtentStyle('pixel', 0);
-  static viewport = new CacheExtentStyle('viewport', 1);
 }
+CacheExtentStyle.pixel = new CacheExtentStyle('pixel', 0);
+CacheExtentStyle.viewport = new CacheExtentStyle('viewport', 1);
 CacheExtentStyle.values = [CacheExtentStyle.pixel, CacheExtentStyle.viewport];
 
 export class SliverPaintOrder {
@@ -4838,9 +4840,9 @@ export class SliverPaintOrder {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SliverPaintOrder.' + this.name; }
-  static firstIsTop = new SliverPaintOrder('firstIsTop', 0);
-  static lastIsTop = new SliverPaintOrder('lastIsTop', 1);
 }
+SliverPaintOrder.firstIsTop = new SliverPaintOrder('firstIsTop', 0);
+SliverPaintOrder.lastIsTop = new SliverPaintOrder('lastIsTop', 1);
 SliverPaintOrder.values = [SliverPaintOrder.firstIsTop, SliverPaintOrder.lastIsTop];
 
 export class GrowthDirection {
@@ -4851,9 +4853,9 @@ export class GrowthDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'GrowthDirection.' + this.name; }
-  static forward = new GrowthDirection('forward', 0);
-  static reverse = new GrowthDirection('reverse', 1);
 }
+GrowthDirection.forward = new GrowthDirection('forward', 0);
+GrowthDirection.reverse = new GrowthDirection('reverse', 1);
 GrowthDirection.values = [GrowthDirection.forward, GrowthDirection.reverse];
 
 export class StackFit {
@@ -4864,10 +4866,10 @@ export class StackFit {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'StackFit.' + this.name; }
-  static loose = new StackFit('loose', 0);
-  static expand = new StackFit('expand', 1);
-  static passthrough = new StackFit('passthrough', 2);
 }
+StackFit.loose = new StackFit('loose', 0);
+StackFit.expand = new StackFit('expand', 1);
+StackFit.passthrough = new StackFit('passthrough', 2);
 StackFit.values = [StackFit.loose, StackFit.expand, StackFit.passthrough];
 
 export class PlatformViewHitTestBehavior {
@@ -4878,10 +4880,10 @@ export class PlatformViewHitTestBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PlatformViewHitTestBehavior.' + this.name; }
-  static opaque = new PlatformViewHitTestBehavior('opaque', 0);
-  static translucent = new PlatformViewHitTestBehavior('translucent', 1);
-  static transparent = new PlatformViewHitTestBehavior('transparent', 2);
 }
+PlatformViewHitTestBehavior.opaque = new PlatformViewHitTestBehavior('opaque', 0);
+PlatformViewHitTestBehavior.translucent = new PlatformViewHitTestBehavior('translucent', 1);
+PlatformViewHitTestBehavior.transparent = new PlatformViewHitTestBehavior('transparent', 2);
 PlatformViewHitTestBehavior.values = [PlatformViewHitTestBehavior.opaque, PlatformViewHitTestBehavior.translucent, PlatformViewHitTestBehavior.transparent];
 
 export class RenderingServiceExtensions {
@@ -4892,20 +4894,20 @@ export class RenderingServiceExtensions {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'RenderingServiceExtensions.' + this.name; }
-  static invertOversizedImages = new RenderingServiceExtensions('invertOversizedImages', 0);
-  static debugPaint = new RenderingServiceExtensions('debugPaint', 1);
-  static debugPaintBaselinesEnabled = new RenderingServiceExtensions('debugPaintBaselinesEnabled', 2);
-  static repaintRainbow = new RenderingServiceExtensions('repaintRainbow', 3);
-  static debugDumpLayerTree = new RenderingServiceExtensions('debugDumpLayerTree', 4);
-  static debugDisableClipLayers = new RenderingServiceExtensions('debugDisableClipLayers', 5);
-  static debugDisablePhysicalShapeLayers = new RenderingServiceExtensions('debugDisablePhysicalShapeLayers', 6);
-  static debugDisableOpacityLayers = new RenderingServiceExtensions('debugDisableOpacityLayers', 7);
-  static debugDumpRenderTree = new RenderingServiceExtensions('debugDumpRenderTree', 8);
-  static debugDumpSemanticsTreeInTraversalOrder = new RenderingServiceExtensions('debugDumpSemanticsTreeInTraversalOrder', 9);
-  static debugDumpSemanticsTreeInInverseHitTestOrder = new RenderingServiceExtensions('debugDumpSemanticsTreeInInverseHitTestOrder', 10);
-  static profileRenderObjectPaints = new RenderingServiceExtensions('profileRenderObjectPaints', 11);
-  static profileRenderObjectLayouts = new RenderingServiceExtensions('profileRenderObjectLayouts', 12);
 }
+RenderingServiceExtensions.invertOversizedImages = new RenderingServiceExtensions('invertOversizedImages', 0);
+RenderingServiceExtensions.debugPaint = new RenderingServiceExtensions('debugPaint', 1);
+RenderingServiceExtensions.debugPaintBaselinesEnabled = new RenderingServiceExtensions('debugPaintBaselinesEnabled', 2);
+RenderingServiceExtensions.repaintRainbow = new RenderingServiceExtensions('repaintRainbow', 3);
+RenderingServiceExtensions.debugDumpLayerTree = new RenderingServiceExtensions('debugDumpLayerTree', 4);
+RenderingServiceExtensions.debugDisableClipLayers = new RenderingServiceExtensions('debugDisableClipLayers', 5);
+RenderingServiceExtensions.debugDisablePhysicalShapeLayers = new RenderingServiceExtensions('debugDisablePhysicalShapeLayers', 6);
+RenderingServiceExtensions.debugDisableOpacityLayers = new RenderingServiceExtensions('debugDisableOpacityLayers', 7);
+RenderingServiceExtensions.debugDumpRenderTree = new RenderingServiceExtensions('debugDumpRenderTree', 8);
+RenderingServiceExtensions.debugDumpSemanticsTreeInTraversalOrder = new RenderingServiceExtensions('debugDumpSemanticsTreeInTraversalOrder', 9);
+RenderingServiceExtensions.debugDumpSemanticsTreeInInverseHitTestOrder = new RenderingServiceExtensions('debugDumpSemanticsTreeInInverseHitTestOrder', 10);
+RenderingServiceExtensions.profileRenderObjectPaints = new RenderingServiceExtensions('profileRenderObjectPaints', 11);
+RenderingServiceExtensions.profileRenderObjectLayouts = new RenderingServiceExtensions('profileRenderObjectLayouts', 12);
 RenderingServiceExtensions.values = [RenderingServiceExtensions.invertOversizedImages, RenderingServiceExtensions.debugPaint, RenderingServiceExtensions.debugPaintBaselinesEnabled, RenderingServiceExtensions.repaintRainbow, RenderingServiceExtensions.debugDumpLayerTree, RenderingServiceExtensions.debugDisableClipLayers, RenderingServiceExtensions.debugDisablePhysicalShapeLayers, RenderingServiceExtensions.debugDisableOpacityLayers, RenderingServiceExtensions.debugDumpRenderTree, RenderingServiceExtensions.debugDumpSemanticsTreeInTraversalOrder, RenderingServiceExtensions.debugDumpSemanticsTreeInInverseHitTestOrder, RenderingServiceExtensions.profileRenderObjectPaints, RenderingServiceExtensions.profileRenderObjectLayouts];
 
 export class RenderAnimatedSizeState {
@@ -4916,11 +4918,11 @@ export class RenderAnimatedSizeState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'RenderAnimatedSizeState.' + this.name; }
-  static start = new RenderAnimatedSizeState('start', 0);
-  static stable = new RenderAnimatedSizeState('stable', 1);
-  static changed = new RenderAnimatedSizeState('changed', 2);
-  static unstable = new RenderAnimatedSizeState('unstable', 3);
 }
+RenderAnimatedSizeState.start = new RenderAnimatedSizeState('start', 0);
+RenderAnimatedSizeState.stable = new RenderAnimatedSizeState('stable', 1);
+RenderAnimatedSizeState.changed = new RenderAnimatedSizeState('changed', 2);
+RenderAnimatedSizeState.unstable = new RenderAnimatedSizeState('unstable', 3);
 RenderAnimatedSizeState.values = [RenderAnimatedSizeState.start, RenderAnimatedSizeState.stable, RenderAnimatedSizeState.changed, RenderAnimatedSizeState.unstable];
 
 export class SpringType {
@@ -4931,10 +4933,10 @@ export class SpringType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SpringType.' + this.name; }
-  static criticallyDamped = new SpringType('criticallyDamped', 0);
-  static underDamped = new SpringType('underDamped', 1);
-  static overDamped = new SpringType('overDamped', 2);
 }
+SpringType.criticallyDamped = new SpringType('criticallyDamped', 0);
+SpringType.underDamped = new SpringType('underDamped', 1);
+SpringType.overDamped = new SpringType('overDamped', 2);
 SpringType.values = [SpringType.criticallyDamped, SpringType.underDamped, SpringType.overDamped];
 
 export class OverlayVisibilityMode {
@@ -4945,11 +4947,11 @@ export class OverlayVisibilityMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'OverlayVisibilityMode.' + this.name; }
-  static never = new OverlayVisibilityMode('never', 0);
-  static editing = new OverlayVisibilityMode('editing', 1);
-  static notEditing = new OverlayVisibilityMode('notEditing', 2);
-  static always = new OverlayVisibilityMode('always', 3);
 }
+OverlayVisibilityMode.never = new OverlayVisibilityMode('never', 0);
+OverlayVisibilityMode.editing = new OverlayVisibilityMode('editing', 1);
+OverlayVisibilityMode.notEditing = new OverlayVisibilityMode('notEditing', 2);
+OverlayVisibilityMode.always = new OverlayVisibilityMode('always', 3);
 OverlayVisibilityMode.values = [OverlayVisibilityMode.never, OverlayVisibilityMode.editing, OverlayVisibilityMode.notEditing, OverlayVisibilityMode.always];
 
 export class CupertinoButtonSize {
@@ -4960,10 +4962,10 @@ export class CupertinoButtonSize {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'CupertinoButtonSize.' + this.name; }
-  static small = new CupertinoButtonSize('small', 0);
-  static medium = new CupertinoButtonSize('medium', 1);
-  static large = new CupertinoButtonSize('large', 2);
 }
+CupertinoButtonSize.small = new CupertinoButtonSize('small', 0);
+CupertinoButtonSize.medium = new CupertinoButtonSize('medium', 1);
+CupertinoButtonSize.large = new CupertinoButtonSize('large', 2);
 CupertinoButtonSize.values = [CupertinoButtonSize.small, CupertinoButtonSize.medium, CupertinoButtonSize.large];
 
 export class CupertinoDatePickerMode {
@@ -4974,11 +4976,11 @@ export class CupertinoDatePickerMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'CupertinoDatePickerMode.' + this.name; }
-  static time = new CupertinoDatePickerMode('time', 0);
-  static date = new CupertinoDatePickerMode('date', 1);
-  static dateAndTime = new CupertinoDatePickerMode('dateAndTime', 2);
-  static monthYear = new CupertinoDatePickerMode('monthYear', 3);
 }
+CupertinoDatePickerMode.time = new CupertinoDatePickerMode('time', 0);
+CupertinoDatePickerMode.date = new CupertinoDatePickerMode('date', 1);
+CupertinoDatePickerMode.dateAndTime = new CupertinoDatePickerMode('dateAndTime', 2);
+CupertinoDatePickerMode.monthYear = new CupertinoDatePickerMode('monthYear', 3);
 CupertinoDatePickerMode.values = [CupertinoDatePickerMode.time, CupertinoDatePickerMode.date, CupertinoDatePickerMode.dateAndTime, CupertinoDatePickerMode.monthYear];
 
 export class CupertinoTimerPickerMode {
@@ -4989,10 +4991,10 @@ export class CupertinoTimerPickerMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'CupertinoTimerPickerMode.' + this.name; }
-  static hm = new CupertinoTimerPickerMode('hm', 0);
-  static ms = new CupertinoTimerPickerMode('ms', 1);
-  static hms = new CupertinoTimerPickerMode('hms', 2);
 }
+CupertinoTimerPickerMode.hm = new CupertinoTimerPickerMode('hm', 0);
+CupertinoTimerPickerMode.ms = new CupertinoTimerPickerMode('ms', 1);
+CupertinoTimerPickerMode.hms = new CupertinoTimerPickerMode('hms', 2);
 CupertinoTimerPickerMode.values = [CupertinoTimerPickerMode.hm, CupertinoTimerPickerMode.ms, CupertinoTimerPickerMode.hms];
 
 export class RefreshIndicatorMode {
@@ -5003,12 +5005,12 @@ export class RefreshIndicatorMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'RefreshIndicatorMode.' + this.name; }
-  static inactive = new RefreshIndicatorMode('inactive', 0);
-  static drag = new RefreshIndicatorMode('drag', 1);
-  static armed = new RefreshIndicatorMode('armed', 2);
-  static refresh = new RefreshIndicatorMode('refresh', 3);
-  static done = new RefreshIndicatorMode('done', 4);
 }
+RefreshIndicatorMode.inactive = new RefreshIndicatorMode('inactive', 0);
+RefreshIndicatorMode.drag = new RefreshIndicatorMode('drag', 1);
+RefreshIndicatorMode.armed = new RefreshIndicatorMode('armed', 2);
+RefreshIndicatorMode.refresh = new RefreshIndicatorMode('refresh', 3);
+RefreshIndicatorMode.done = new RefreshIndicatorMode('done', 4);
 RefreshIndicatorMode.values = [RefreshIndicatorMode.inactive, RefreshIndicatorMode.drag, RefreshIndicatorMode.armed, RefreshIndicatorMode.refresh, RefreshIndicatorMode.done];
 
 export class ExpansionTileTransitionMode {
@@ -5019,9 +5021,9 @@ export class ExpansionTileTransitionMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ExpansionTileTransitionMode.' + this.name; }
-  static fade = new ExpansionTileTransitionMode('fade', 0);
-  static scroll = new ExpansionTileTransitionMode('scroll', 1);
 }
+ExpansionTileTransitionMode.fade = new ExpansionTileTransitionMode('fade', 0);
+ExpansionTileTransitionMode.scroll = new ExpansionTileTransitionMode('scroll', 1);
 ExpansionTileTransitionMode.values = [ExpansionTileTransitionMode.fade, ExpansionTileTransitionMode.scroll];
 
 export class CupertinoListSectionType {
@@ -5032,9 +5034,9 @@ export class CupertinoListSectionType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'CupertinoListSectionType.' + this.name; }
-  static base = new CupertinoListSectionType('base', 0);
-  static insetGrouped = new CupertinoListSectionType('insetGrouped', 1);
 }
+CupertinoListSectionType.base = new CupertinoListSectionType('base', 0);
+CupertinoListSectionType.insetGrouped = new CupertinoListSectionType('insetGrouped', 1);
 CupertinoListSectionType.values = [CupertinoListSectionType.base, CupertinoListSectionType.insetGrouped];
 
 export class CupertinoUserInterfaceLevelData {
@@ -5045,9 +5047,9 @@ export class CupertinoUserInterfaceLevelData {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'CupertinoUserInterfaceLevelData.' + this.name; }
-  static base = new CupertinoUserInterfaceLevelData('base', 0);
-  static elevated = new CupertinoUserInterfaceLevelData('elevated', 1);
 }
+CupertinoUserInterfaceLevelData.base = new CupertinoUserInterfaceLevelData('base', 0);
+CupertinoUserInterfaceLevelData.elevated = new CupertinoUserInterfaceLevelData('elevated', 1);
 CupertinoUserInterfaceLevelData.values = [CupertinoUserInterfaceLevelData.base, CupertinoUserInterfaceLevelData.elevated];
 
 export class NavigationBarBottomMode {
@@ -5058,9 +5060,9 @@ export class NavigationBarBottomMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'NavigationBarBottomMode.' + this.name; }
-  static automatic = new NavigationBarBottomMode('automatic', 0);
-  static always = new NavigationBarBottomMode('always', 1);
 }
+NavigationBarBottomMode.automatic = new NavigationBarBottomMode('automatic', 0);
+NavigationBarBottomMode.always = new NavigationBarBottomMode('always', 1);
 NavigationBarBottomMode.values = [NavigationBarBottomMode.automatic, NavigationBarBottomMode.always];
 
 export class DatePickerDateTimeOrder {
@@ -5071,11 +5073,11 @@ export class DatePickerDateTimeOrder {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DatePickerDateTimeOrder.' + this.name; }
-  static date_time_dayPeriod = new DatePickerDateTimeOrder('date_time_dayPeriod', 0);
-  static date_dayPeriod_time = new DatePickerDateTimeOrder('date_dayPeriod_time', 1);
-  static time_dayPeriod_date = new DatePickerDateTimeOrder('time_dayPeriod_date', 2);
-  static dayPeriod_time_date = new DatePickerDateTimeOrder('dayPeriod_time_date', 3);
 }
+DatePickerDateTimeOrder.date_time_dayPeriod = new DatePickerDateTimeOrder('date_time_dayPeriod', 0);
+DatePickerDateTimeOrder.date_dayPeriod_time = new DatePickerDateTimeOrder('date_dayPeriod_time', 1);
+DatePickerDateTimeOrder.time_dayPeriod_date = new DatePickerDateTimeOrder('time_dayPeriod_date', 2);
+DatePickerDateTimeOrder.dayPeriod_time_date = new DatePickerDateTimeOrder('dayPeriod_time_date', 3);
 DatePickerDateTimeOrder.values = [DatePickerDateTimeOrder.date_time_dayPeriod, DatePickerDateTimeOrder.date_dayPeriod_time, DatePickerDateTimeOrder.time_dayPeriod_date, DatePickerDateTimeOrder.dayPeriod_time_date];
 
 export class DatePickerDateOrder {
@@ -5086,11 +5088,11 @@ export class DatePickerDateOrder {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DatePickerDateOrder.' + this.name; }
-  static dmy = new DatePickerDateOrder('dmy', 0);
-  static mdy = new DatePickerDateOrder('mdy', 1);
-  static ymd = new DatePickerDateOrder('ymd', 2);
-  static ydm = new DatePickerDateOrder('ydm', 3);
 }
+DatePickerDateOrder.dmy = new DatePickerDateOrder('dmy', 0);
+DatePickerDateOrder.mdy = new DatePickerDateOrder('mdy', 1);
+DatePickerDateOrder.ymd = new DatePickerDateOrder('ymd', 2);
+DatePickerDateOrder.ydm = new DatePickerDateOrder('ydm', 3);
 DatePickerDateOrder.values = [DatePickerDateOrder.dmy, DatePickerDateOrder.mdy, DatePickerDateOrder.ymd, DatePickerDateOrder.ydm];
 
 export class MaterialType {
@@ -5101,12 +5103,12 @@ export class MaterialType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'MaterialType.' + this.name; }
-  static canvas = new MaterialType('canvas', 0);
-  static card = new MaterialType('card', 1);
-  static circle = new MaterialType('circle', 2);
-  static button = new MaterialType('button', 3);
-  static transparency = new MaterialType('transparency', 4);
 }
+MaterialType.canvas = new MaterialType('canvas', 0);
+MaterialType.card = new MaterialType('card', 1);
+MaterialType.circle = new MaterialType('circle', 2);
+MaterialType.button = new MaterialType('button', 3);
+MaterialType.transparency = new MaterialType('transparency', 4);
 MaterialType.values = [MaterialType.canvas, MaterialType.card, MaterialType.circle, MaterialType.button, MaterialType.transparency];
 
 export class NavigationDestinationLabelBehavior {
@@ -5117,10 +5119,10 @@ export class NavigationDestinationLabelBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'NavigationDestinationLabelBehavior.' + this.name; }
-  static alwaysShow = new NavigationDestinationLabelBehavior('alwaysShow', 0);
-  static alwaysHide = new NavigationDestinationLabelBehavior('alwaysHide', 1);
-  static onlyShowSelected = new NavigationDestinationLabelBehavior('onlyShowSelected', 2);
 }
+NavigationDestinationLabelBehavior.alwaysShow = new NavigationDestinationLabelBehavior('alwaysShow', 0);
+NavigationDestinationLabelBehavior.alwaysHide = new NavigationDestinationLabelBehavior('alwaysHide', 1);
+NavigationDestinationLabelBehavior.onlyShowSelected = new NavigationDestinationLabelBehavior('onlyShowSelected', 2);
 NavigationDestinationLabelBehavior.values = [NavigationDestinationLabelBehavior.alwaysShow, NavigationDestinationLabelBehavior.alwaysHide, NavigationDestinationLabelBehavior.onlyShowSelected];
 
 export class RefreshIndicatorStatus {
@@ -5131,13 +5133,13 @@ export class RefreshIndicatorStatus {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'RefreshIndicatorStatus.' + this.name; }
-  static drag = new RefreshIndicatorStatus('drag', 0);
-  static armed = new RefreshIndicatorStatus('armed', 1);
-  static snap = new RefreshIndicatorStatus('snap', 2);
-  static refresh = new RefreshIndicatorStatus('refresh', 3);
-  static done = new RefreshIndicatorStatus('done', 4);
-  static canceled = new RefreshIndicatorStatus('canceled', 5);
 }
+RefreshIndicatorStatus.drag = new RefreshIndicatorStatus('drag', 0);
+RefreshIndicatorStatus.armed = new RefreshIndicatorStatus('armed', 1);
+RefreshIndicatorStatus.snap = new RefreshIndicatorStatus('snap', 2);
+RefreshIndicatorStatus.refresh = new RefreshIndicatorStatus('refresh', 3);
+RefreshIndicatorStatus.done = new RefreshIndicatorStatus('done', 4);
+RefreshIndicatorStatus.canceled = new RefreshIndicatorStatus('canceled', 5);
 RefreshIndicatorStatus.values = [RefreshIndicatorStatus.drag, RefreshIndicatorStatus.armed, RefreshIndicatorStatus.snap, RefreshIndicatorStatus.refresh, RefreshIndicatorStatus.done, RefreshIndicatorStatus.canceled];
 
 export class RefreshIndicatorTriggerMode {
@@ -5148,9 +5150,9 @@ export class RefreshIndicatorTriggerMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'RefreshIndicatorTriggerMode.' + this.name; }
-  static anywhere = new RefreshIndicatorTriggerMode('anywhere', 0);
-  static onEdge = new RefreshIndicatorTriggerMode('onEdge', 1);
 }
+RefreshIndicatorTriggerMode.anywhere = new RefreshIndicatorTriggerMode('anywhere', 0);
+RefreshIndicatorTriggerMode.onEdge = new RefreshIndicatorTriggerMode('onEdge', 1);
 RefreshIndicatorTriggerMode.values = [RefreshIndicatorTriggerMode.anywhere, RefreshIndicatorTriggerMode.onEdge];
 
 export class SnackBarClosedReason {
@@ -5161,13 +5163,13 @@ export class SnackBarClosedReason {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SnackBarClosedReason.' + this.name; }
-  static action = new SnackBarClosedReason('action', 0);
-  static dismiss = new SnackBarClosedReason('dismiss', 1);
-  static swipe = new SnackBarClosedReason('swipe', 2);
-  static hide = new SnackBarClosedReason('hide', 3);
-  static remove = new SnackBarClosedReason('remove', 4);
-  static timeout = new SnackBarClosedReason('timeout', 5);
 }
+SnackBarClosedReason.action = new SnackBarClosedReason('action', 0);
+SnackBarClosedReason.dismiss = new SnackBarClosedReason('dismiss', 1);
+SnackBarClosedReason.swipe = new SnackBarClosedReason('swipe', 2);
+SnackBarClosedReason.hide = new SnackBarClosedReason('hide', 3);
+SnackBarClosedReason.remove = new SnackBarClosedReason('remove', 4);
+SnackBarClosedReason.timeout = new SnackBarClosedReason('timeout', 5);
 SnackBarClosedReason.values = [SnackBarClosedReason.action, SnackBarClosedReason.dismiss, SnackBarClosedReason.swipe, SnackBarClosedReason.hide, SnackBarClosedReason.remove, SnackBarClosedReason.timeout];
 
 export class FloatingLabelBehavior {
@@ -5178,10 +5180,10 @@ export class FloatingLabelBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FloatingLabelBehavior.' + this.name; }
-  static never = new FloatingLabelBehavior('never', 0);
-  static auto = new FloatingLabelBehavior('auto', 1);
-  static always = new FloatingLabelBehavior('always', 2);
 }
+FloatingLabelBehavior.never = new FloatingLabelBehavior('never', 0);
+FloatingLabelBehavior.auto = new FloatingLabelBehavior('auto', 1);
+FloatingLabelBehavior.always = new FloatingLabelBehavior('always', 2);
 FloatingLabelBehavior.values = [FloatingLabelBehavior.never, FloatingLabelBehavior.auto, FloatingLabelBehavior.always];
 
 export class DynamicSchemeVariant {
@@ -5192,16 +5194,16 @@ export class DynamicSchemeVariant {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DynamicSchemeVariant.' + this.name; }
-  static tonalSpot = new DynamicSchemeVariant('tonalSpot', 0);
-  static fidelity = new DynamicSchemeVariant('fidelity', 1);
-  static monochrome = new DynamicSchemeVariant('monochrome', 2);
-  static neutral = new DynamicSchemeVariant('neutral', 3);
-  static vibrant = new DynamicSchemeVariant('vibrant', 4);
-  static expressive = new DynamicSchemeVariant('expressive', 5);
-  static content = new DynamicSchemeVariant('content', 6);
-  static rainbow = new DynamicSchemeVariant('rainbow', 7);
-  static fruitSalad = new DynamicSchemeVariant('fruitSalad', 8);
 }
+DynamicSchemeVariant.tonalSpot = new DynamicSchemeVariant('tonalSpot', 0);
+DynamicSchemeVariant.fidelity = new DynamicSchemeVariant('fidelity', 1);
+DynamicSchemeVariant.monochrome = new DynamicSchemeVariant('monochrome', 2);
+DynamicSchemeVariant.neutral = new DynamicSchemeVariant('neutral', 3);
+DynamicSchemeVariant.vibrant = new DynamicSchemeVariant('vibrant', 4);
+DynamicSchemeVariant.expressive = new DynamicSchemeVariant('expressive', 5);
+DynamicSchemeVariant.content = new DynamicSchemeVariant('content', 6);
+DynamicSchemeVariant.rainbow = new DynamicSchemeVariant('rainbow', 7);
+DynamicSchemeVariant.fruitSalad = new DynamicSchemeVariant('fruitSalad', 8);
 DynamicSchemeVariant.values = [DynamicSchemeVariant.tonalSpot, DynamicSchemeVariant.fidelity, DynamicSchemeVariant.monochrome, DynamicSchemeVariant.neutral, DynamicSchemeVariant.vibrant, DynamicSchemeVariant.expressive, DynamicSchemeVariant.content, DynamicSchemeVariant.rainbow, DynamicSchemeVariant.fruitSalad];
 
 export class DayPeriod {
@@ -5212,9 +5214,9 @@ export class DayPeriod {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DayPeriod.' + this.name; }
-  static am = new DayPeriod('am', 0);
-  static pm = new DayPeriod('pm', 1);
 }
+DayPeriod.am = new DayPeriod('am', 0);
+DayPeriod.pm = new DayPeriod('pm', 1);
 DayPeriod.values = [DayPeriod.am, DayPeriod.pm];
 
 export class TimeOfDayFormat {
@@ -5225,13 +5227,13 @@ export class TimeOfDayFormat {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TimeOfDayFormat.' + this.name; }
-  static HH_colon_mm = new TimeOfDayFormat('HH_colon_mm', 0);
-  static HH_dot_mm = new TimeOfDayFormat('HH_dot_mm', 1);
-  static frenchCanadian = new TimeOfDayFormat('frenchCanadian', 2);
-  static H_colon_mm = new TimeOfDayFormat('H_colon_mm', 3);
-  static h_colon_mm_space_a = new TimeOfDayFormat('h_colon_mm_space_a', 4);
-  static a_space_h_colon_mm = new TimeOfDayFormat('a_space_h_colon_mm', 5);
 }
+TimeOfDayFormat.HH_colon_mm = new TimeOfDayFormat('HH_colon_mm', 0);
+TimeOfDayFormat.HH_dot_mm = new TimeOfDayFormat('HH_dot_mm', 1);
+TimeOfDayFormat.frenchCanadian = new TimeOfDayFormat('frenchCanadian', 2);
+TimeOfDayFormat.H_colon_mm = new TimeOfDayFormat('H_colon_mm', 3);
+TimeOfDayFormat.h_colon_mm_space_a = new TimeOfDayFormat('h_colon_mm_space_a', 4);
+TimeOfDayFormat.a_space_h_colon_mm = new TimeOfDayFormat('a_space_h_colon_mm', 5);
 TimeOfDayFormat.values = [TimeOfDayFormat.HH_colon_mm, TimeOfDayFormat.HH_dot_mm, TimeOfDayFormat.frenchCanadian, TimeOfDayFormat.H_colon_mm, TimeOfDayFormat.h_colon_mm_space_a, TimeOfDayFormat.a_space_h_colon_mm];
 
 export class HourFormat {
@@ -5242,10 +5244,10 @@ export class HourFormat {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'HourFormat.' + this.name; }
-  static HH = new HourFormat('HH', 0);
-  static H = new HourFormat('H', 1);
-  static h = new HourFormat('h', 2);
 }
+HourFormat.HH = new HourFormat('HH', 0);
+HourFormat.H = new HourFormat('H', 1);
+HourFormat.h = new HourFormat('h', 2);
 HourFormat.values = [HourFormat.HH, HourFormat.H, HourFormat.h];
 
 export class PopupMenuPosition {
@@ -5256,9 +5258,9 @@ export class PopupMenuPosition {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PopupMenuPosition.' + this.name; }
-  static over = new PopupMenuPosition('over', 0);
-  static under = new PopupMenuPosition('under', 1);
 }
+PopupMenuPosition.over = new PopupMenuPosition('over', 0);
+PopupMenuPosition.under = new PopupMenuPosition('under', 1);
 PopupMenuPosition.values = [PopupMenuPosition.over, PopupMenuPosition.under];
 
 export class NavigationRailLabelType {
@@ -5269,10 +5271,10 @@ export class NavigationRailLabelType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'NavigationRailLabelType.' + this.name; }
-  static none = new NavigationRailLabelType('none', 0);
-  static selected = new NavigationRailLabelType('selected', 1);
-  static all = new NavigationRailLabelType('all', 2);
 }
+NavigationRailLabelType.none = new NavigationRailLabelType('none', 0);
+NavigationRailLabelType.selected = new NavigationRailLabelType('selected', 1);
+NavigationRailLabelType.all = new NavigationRailLabelType('all', 2);
 NavigationRailLabelType.values = [NavigationRailLabelType.none, NavigationRailLabelType.selected, NavigationRailLabelType.all];
 
 export class TimePickerEntryMode {
@@ -5283,11 +5285,11 @@ export class TimePickerEntryMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TimePickerEntryMode.' + this.name; }
-  static dial = new TimePickerEntryMode('dial', 0);
-  static input = new TimePickerEntryMode('input', 1);
-  static dialOnly = new TimePickerEntryMode('dialOnly', 2);
-  static inputOnly = new TimePickerEntryMode('inputOnly', 3);
 }
+TimePickerEntryMode.dial = new TimePickerEntryMode('dial', 0);
+TimePickerEntryMode.input = new TimePickerEntryMode('input', 1);
+TimePickerEntryMode.dialOnly = new TimePickerEntryMode('dialOnly', 2);
+TimePickerEntryMode.inputOnly = new TimePickerEntryMode('inputOnly', 3);
 TimePickerEntryMode.values = [TimePickerEntryMode.dial, TimePickerEntryMode.input, TimePickerEntryMode.dialOnly, TimePickerEntryMode.inputOnly];
 
 export class StepState {
@@ -5298,12 +5300,12 @@ export class StepState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'StepState.' + this.name; }
-  static indexed = new StepState('indexed', 0);
-  static editing = new StepState('editing', 1);
-  static complete = new StepState('complete', 2);
-  static disabled = new StepState('disabled', 3);
-  static error = new StepState('error', 4);
 }
+StepState.indexed = new StepState('indexed', 0);
+StepState.editing = new StepState('editing', 1);
+StepState.complete = new StepState('complete', 2);
+StepState.disabled = new StepState('disabled', 3);
+StepState.error = new StepState('error', 4);
 StepState.values = [StepState.indexed, StepState.editing, StepState.complete, StepState.disabled, StepState.error];
 
 export class StepperType {
@@ -5314,9 +5316,9 @@ export class StepperType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'StepperType.' + this.name; }
-  static vertical = new StepperType('vertical', 0);
-  static horizontal = new StepperType('horizontal', 1);
 }
+StepperType.vertical = new StepperType('vertical', 0);
+StepperType.horizontal = new StepperType('horizontal', 1);
 StepperType.values = [StepperType.vertical, StepperType.horizontal];
 
 export class TabBarIndicatorSize {
@@ -5327,9 +5329,9 @@ export class TabBarIndicatorSize {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TabBarIndicatorSize.' + this.name; }
-  static tab = new TabBarIndicatorSize('tab', 0);
-  static label = new TabBarIndicatorSize('label', 1);
 }
+TabBarIndicatorSize.tab = new TabBarIndicatorSize('tab', 0);
+TabBarIndicatorSize.label = new TabBarIndicatorSize('label', 1);
 TabBarIndicatorSize.values = [TabBarIndicatorSize.tab, TabBarIndicatorSize.label];
 
 export class TabAlignment {
@@ -5340,11 +5342,11 @@ export class TabAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TabAlignment.' + this.name; }
-  static start = new TabAlignment('start', 0);
-  static startOffset = new TabAlignment('startOffset', 1);
-  static fill = new TabAlignment('fill', 2);
-  static center = new TabAlignment('center', 3);
 }
+TabAlignment.start = new TabAlignment('start', 0);
+TabAlignment.startOffset = new TabAlignment('startOffset', 1);
+TabAlignment.fill = new TabAlignment('fill', 2);
+TabAlignment.center = new TabAlignment('center', 3);
 TabAlignment.values = [TabAlignment.start, TabAlignment.startOffset, TabAlignment.fill, TabAlignment.center];
 
 export class TabIndicatorAnimation {
@@ -5355,9 +5357,9 @@ export class TabIndicatorAnimation {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TabIndicatorAnimation.' + this.name; }
-  static linear = new TabIndicatorAnimation('linear', 0);
-  static elastic = new TabIndicatorAnimation('elastic', 1);
 }
+TabIndicatorAnimation.linear = new TabIndicatorAnimation('linear', 0);
+TabIndicatorAnimation.elastic = new TabIndicatorAnimation('elastic', 1);
 TabIndicatorAnimation.values = [TabIndicatorAnimation.linear, TabIndicatorAnimation.elastic];
 
 export class MaterialBannerClosedReason {
@@ -5368,11 +5370,11 @@ export class MaterialBannerClosedReason {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'MaterialBannerClosedReason.' + this.name; }
-  static dismiss = new MaterialBannerClosedReason('dismiss', 0);
-  static swipe = new MaterialBannerClosedReason('swipe', 1);
-  static hide = new MaterialBannerClosedReason('hide', 2);
-  static remove = new MaterialBannerClosedReason('remove', 3);
 }
+MaterialBannerClosedReason.dismiss = new MaterialBannerClosedReason('dismiss', 0);
+MaterialBannerClosedReason.swipe = new MaterialBannerClosedReason('swipe', 1);
+MaterialBannerClosedReason.hide = new MaterialBannerClosedReason('hide', 2);
+MaterialBannerClosedReason.remove = new MaterialBannerClosedReason('remove', 3);
 MaterialBannerClosedReason.values = [MaterialBannerClosedReason.dismiss, MaterialBannerClosedReason.swipe, MaterialBannerClosedReason.hide, MaterialBannerClosedReason.remove];
 
 export class DropdownMenuCloseBehavior {
@@ -5383,10 +5385,10 @@ export class DropdownMenuCloseBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DropdownMenuCloseBehavior.' + this.name; }
-  static all = new DropdownMenuCloseBehavior('all', 0);
-  static self = new DropdownMenuCloseBehavior('self', 1);
-  static none = new DropdownMenuCloseBehavior('none', 2);
 }
+DropdownMenuCloseBehavior.all = new DropdownMenuCloseBehavior('all', 0);
+DropdownMenuCloseBehavior.self = new DropdownMenuCloseBehavior('self', 1);
+DropdownMenuCloseBehavior.none = new DropdownMenuCloseBehavior('none', 2);
 DropdownMenuCloseBehavior.values = [DropdownMenuCloseBehavior.all, DropdownMenuCloseBehavior.self, DropdownMenuCloseBehavior.none];
 
 export class SliderInteraction {
@@ -5397,11 +5399,11 @@ export class SliderInteraction {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SliderInteraction.' + this.name; }
-  static tapAndSlide = new SliderInteraction('tapAndSlide', 0);
-  static tapOnly = new SliderInteraction('tapOnly', 1);
-  static slideOnly = new SliderInteraction('slideOnly', 2);
-  static slideThumb = new SliderInteraction('slideThumb', 3);
 }
+SliderInteraction.tapAndSlide = new SliderInteraction('tapAndSlide', 0);
+SliderInteraction.tapOnly = new SliderInteraction('tapOnly', 1);
+SliderInteraction.slideOnly = new SliderInteraction('slideOnly', 2);
+SliderInteraction.slideThumb = new SliderInteraction('slideThumb', 3);
 SliderInteraction.values = [SliderInteraction.tapAndSlide, SliderInteraction.tapOnly, SliderInteraction.slideOnly, SliderInteraction.slideThumb];
 
 export class ButtonTextTheme {
@@ -5412,10 +5414,10 @@ export class ButtonTextTheme {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ButtonTextTheme.' + this.name; }
-  static normal = new ButtonTextTheme('normal', 0);
-  static accent = new ButtonTextTheme('accent', 1);
-  static primary = new ButtonTextTheme('primary', 2);
 }
+ButtonTextTheme.normal = new ButtonTextTheme('normal', 0);
+ButtonTextTheme.accent = new ButtonTextTheme('accent', 1);
+ButtonTextTheme.primary = new ButtonTextTheme('primary', 2);
 ButtonTextTheme.values = [ButtonTextTheme.normal, ButtonTextTheme.accent, ButtonTextTheme.primary];
 
 export class ButtonBarLayoutBehavior {
@@ -5426,9 +5428,9 @@ export class ButtonBarLayoutBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ButtonBarLayoutBehavior.' + this.name; }
-  static constrained = new ButtonBarLayoutBehavior('constrained', 0);
-  static padded = new ButtonBarLayoutBehavior('padded', 1);
 }
+ButtonBarLayoutBehavior.constrained = new ButtonBarLayoutBehavior('constrained', 0);
+ButtonBarLayoutBehavior.padded = new ButtonBarLayoutBehavior('padded', 1);
 ButtonBarLayoutBehavior.values = [ButtonBarLayoutBehavior.constrained, ButtonBarLayoutBehavior.padded];
 
 export class ListTileStyle {
@@ -5439,9 +5441,9 @@ export class ListTileStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ListTileStyle.' + this.name; }
-  static list = new ListTileStyle('list', 0);
-  static drawer = new ListTileStyle('drawer', 1);
 }
+ListTileStyle.list = new ListTileStyle('list', 0);
+ListTileStyle.drawer = new ListTileStyle('drawer', 1);
 ListTileStyle.values = [ListTileStyle.list, ListTileStyle.drawer];
 
 export class ListTileControlAffinity {
@@ -5452,10 +5454,10 @@ export class ListTileControlAffinity {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ListTileControlAffinity.' + this.name; }
-  static leading = new ListTileControlAffinity('leading', 0);
-  static trailing = new ListTileControlAffinity('trailing', 1);
-  static platform = new ListTileControlAffinity('platform', 2);
 }
+ListTileControlAffinity.leading = new ListTileControlAffinity('leading', 0);
+ListTileControlAffinity.trailing = new ListTileControlAffinity('trailing', 1);
+ListTileControlAffinity.platform = new ListTileControlAffinity('platform', 2);
 ListTileControlAffinity.values = [ListTileControlAffinity.leading, ListTileControlAffinity.trailing, ListTileControlAffinity.platform];
 
 export class ListTileTitleAlignment {
@@ -5466,12 +5468,12 @@ export class ListTileTitleAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ListTileTitleAlignment.' + this.name; }
-  static threeLine = new ListTileTitleAlignment('threeLine', 0);
-  static titleHeight = new ListTileTitleAlignment('titleHeight', 1);
-  static top = new ListTileTitleAlignment('top', 2);
-  static center = new ListTileTitleAlignment('center', 3);
-  static bottom = new ListTileTitleAlignment('bottom', 4);
 }
+ListTileTitleAlignment.threeLine = new ListTileTitleAlignment('threeLine', 0);
+ListTileTitleAlignment.titleHeight = new ListTileTitleAlignment('titleHeight', 1);
+ListTileTitleAlignment.top = new ListTileTitleAlignment('top', 2);
+ListTileTitleAlignment.center = new ListTileTitleAlignment('center', 3);
+ListTileTitleAlignment.bottom = new ListTileTitleAlignment('bottom', 4);
 ListTileTitleAlignment.values = [ListTileTitleAlignment.threeLine, ListTileTitleAlignment.titleHeight, ListTileTitleAlignment.top, ListTileTitleAlignment.center, ListTileTitleAlignment.bottom];
 
 export class ScriptCategory {
@@ -5482,10 +5484,10 @@ export class ScriptCategory {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ScriptCategory.' + this.name; }
-  static englishLike = new ScriptCategory('englishLike', 0);
-  static dense = new ScriptCategory('dense', 1);
-  static tall = new ScriptCategory('tall', 2);
 }
+ScriptCategory.englishLike = new ScriptCategory('englishLike', 0);
+ScriptCategory.dense = new ScriptCategory('dense', 1);
+ScriptCategory.tall = new ScriptCategory('tall', 2);
 ScriptCategory.values = [ScriptCategory.englishLike, ScriptCategory.dense, ScriptCategory.tall];
 
 export class ShowValueIndicator {
@@ -5496,13 +5498,13 @@ export class ShowValueIndicator {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ShowValueIndicator.' + this.name; }
-  static onlyForDiscrete = new ShowValueIndicator('onlyForDiscrete', 0);
-  static onlyForContinuous = new ShowValueIndicator('onlyForContinuous', 1);
-  static always = new ShowValueIndicator('always', 2);
-  static onDrag = new ShowValueIndicator('onDrag', 3);
-  static alwaysVisible = new ShowValueIndicator('alwaysVisible', 4);
-  static never = new ShowValueIndicator('never', 5);
 }
+ShowValueIndicator.onlyForDiscrete = new ShowValueIndicator('onlyForDiscrete', 0);
+ShowValueIndicator.onlyForContinuous = new ShowValueIndicator('onlyForContinuous', 1);
+ShowValueIndicator.always = new ShowValueIndicator('always', 2);
+ShowValueIndicator.onDrag = new ShowValueIndicator('onDrag', 3);
+ShowValueIndicator.alwaysVisible = new ShowValueIndicator('alwaysVisible', 4);
+ShowValueIndicator.never = new ShowValueIndicator('never', 5);
 ShowValueIndicator.values = [ShowValueIndicator.onlyForDiscrete, ShowValueIndicator.onlyForContinuous, ShowValueIndicator.always, ShowValueIndicator.onDrag, ShowValueIndicator.alwaysVisible, ShowValueIndicator.never];
 
 export class Thumb {
@@ -5513,9 +5515,9 @@ export class Thumb {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'Thumb.' + this.name; }
-  static start = new Thumb('start', 0);
-  static end = new Thumb('end', 1);
 }
+Thumb.start = new Thumb('start', 0);
+Thumb.end = new Thumb('end', 1);
 Thumb.values = [Thumb.start, Thumb.end];
 
 export class DrawerAlignment {
@@ -5526,9 +5528,9 @@ export class DrawerAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DrawerAlignment.' + this.name; }
-  static start = new DrawerAlignment('start', 0);
-  static end = new DrawerAlignment('end', 1);
 }
+DrawerAlignment.start = new DrawerAlignment('start', 0);
+DrawerAlignment.end = new DrawerAlignment('end', 1);
 DrawerAlignment.values = [DrawerAlignment.start, DrawerAlignment.end];
 
 export class DatePickerEntryMode {
@@ -5539,11 +5541,11 @@ export class DatePickerEntryMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DatePickerEntryMode.' + this.name; }
-  static calendar = new DatePickerEntryMode('calendar', 0);
-  static input = new DatePickerEntryMode('input', 1);
-  static calendarOnly = new DatePickerEntryMode('calendarOnly', 2);
-  static inputOnly = new DatePickerEntryMode('inputOnly', 3);
 }
+DatePickerEntryMode.calendar = new DatePickerEntryMode('calendar', 0);
+DatePickerEntryMode.input = new DatePickerEntryMode('input', 1);
+DatePickerEntryMode.calendarOnly = new DatePickerEntryMode('calendarOnly', 2);
+DatePickerEntryMode.inputOnly = new DatePickerEntryMode('inputOnly', 3);
 DatePickerEntryMode.values = [DatePickerEntryMode.calendar, DatePickerEntryMode.input, DatePickerEntryMode.calendarOnly, DatePickerEntryMode.inputOnly];
 
 export class DatePickerMode {
@@ -5554,9 +5556,9 @@ export class DatePickerMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DatePickerMode.' + this.name; }
-  static day = new DatePickerMode('day', 0);
-  static year = new DatePickerMode('year', 1);
 }
+DatePickerMode.day = new DatePickerMode('day', 0);
+DatePickerMode.year = new DatePickerMode('year', 1);
 DatePickerMode.values = [DatePickerMode.day, DatePickerMode.year];
 
 export class SnackBarBehavior {
@@ -5567,9 +5569,9 @@ export class SnackBarBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SnackBarBehavior.' + this.name; }
-  static fixed = new SnackBarBehavior('fixed', 0);
-  static floating = new SnackBarBehavior('floating', 1);
 }
+SnackBarBehavior.fixed = new SnackBarBehavior('fixed', 0);
+SnackBarBehavior.floating = new SnackBarBehavior('floating', 1);
 SnackBarBehavior.values = [SnackBarBehavior.fixed, SnackBarBehavior.floating];
 
 export class MaterialTapTargetSize {
@@ -5580,9 +5582,9 @@ export class MaterialTapTargetSize {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'MaterialTapTargetSize.' + this.name; }
-  static padded = new MaterialTapTargetSize('padded', 0);
-  static shrinkWrap = new MaterialTapTargetSize('shrinkWrap', 1);
 }
+MaterialTapTargetSize.padded = new MaterialTapTargetSize('padded', 0);
+MaterialTapTargetSize.shrinkWrap = new MaterialTapTargetSize('shrinkWrap', 1);
 MaterialTapTargetSize.values = [MaterialTapTargetSize.padded, MaterialTapTargetSize.shrinkWrap];
 
 export class CollapseMode {
@@ -5593,10 +5595,10 @@ export class CollapseMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'CollapseMode.' + this.name; }
-  static parallax = new CollapseMode('parallax', 0);
-  static pin = new CollapseMode('pin', 1);
-  static none = new CollapseMode('none', 2);
 }
+CollapseMode.parallax = new CollapseMode('parallax', 0);
+CollapseMode.pin = new CollapseMode('pin', 1);
+CollapseMode.none = new CollapseMode('none', 2);
 CollapseMode.values = [CollapseMode.parallax, CollapseMode.pin, CollapseMode.none];
 
 export class StretchMode {
@@ -5607,10 +5609,10 @@ export class StretchMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'StretchMode.' + this.name; }
-  static zoomBackground = new StretchMode('zoomBackground', 0);
-  static blurBackground = new StretchMode('blurBackground', 1);
-  static fadeTitle = new StretchMode('fadeTitle', 2);
 }
+StretchMode.zoomBackground = new StretchMode('zoomBackground', 0);
+StretchMode.blurBackground = new StretchMode('blurBackground', 1);
+StretchMode.fadeTitle = new StretchMode('fadeTitle', 2);
 StretchMode.values = [StretchMode.zoomBackground, StretchMode.blurBackground, StretchMode.fadeTitle];
 
 export class IconAlignment {
@@ -5621,9 +5623,9 @@ export class IconAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'IconAlignment.' + this.name; }
-  static start = new IconAlignment('start', 0);
-  static end = new IconAlignment('end', 1);
 }
+IconAlignment.start = new IconAlignment('start', 0);
+IconAlignment.end = new IconAlignment('end', 1);
 IconAlignment.values = [IconAlignment.start, IconAlignment.end];
 
 export class BottomNavigationBarType {
@@ -5634,9 +5636,9 @@ export class BottomNavigationBarType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BottomNavigationBarType.' + this.name; }
-  static fixed = new BottomNavigationBarType('fixed', 0);
-  static shifting = new BottomNavigationBarType('shifting', 1);
 }
+BottomNavigationBarType.fixed = new BottomNavigationBarType('fixed', 0);
+BottomNavigationBarType.shifting = new BottomNavigationBarType('shifting', 1);
 BottomNavigationBarType.values = [BottomNavigationBarType.fixed, BottomNavigationBarType.shifting];
 
 export class BottomNavigationBarLandscapeLayout {
@@ -5647,10 +5649,10 @@ export class BottomNavigationBarLandscapeLayout {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BottomNavigationBarLandscapeLayout.' + this.name; }
-  static spread = new BottomNavigationBarLandscapeLayout('spread', 0);
-  static centered = new BottomNavigationBarLandscapeLayout('centered', 1);
-  static linear = new BottomNavigationBarLandscapeLayout('linear', 2);
 }
+BottomNavigationBarLandscapeLayout.spread = new BottomNavigationBarLandscapeLayout('spread', 0);
+BottomNavigationBarLandscapeLayout.centered = new BottomNavigationBarLandscapeLayout('centered', 1);
+BottomNavigationBarLandscapeLayout.linear = new BottomNavigationBarLandscapeLayout('linear', 2);
 BottomNavigationBarLandscapeLayout.values = [BottomNavigationBarLandscapeLayout.spread, BottomNavigationBarLandscapeLayout.centered, BottomNavigationBarLandscapeLayout.linear];
 
 export class ThemeMode {
@@ -5661,10 +5663,10 @@ export class ThemeMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ThemeMode.' + this.name; }
-  static system = new ThemeMode('system', 0);
-  static light = new ThemeMode('light', 1);
-  static dark = new ThemeMode('dark', 2);
 }
+ThemeMode.system = new ThemeMode('system', 0);
+ThemeMode.light = new ThemeMode('light', 1);
+ThemeMode.dark = new ThemeMode('dark', 2);
 ThemeMode.values = [ThemeMode.system, ThemeMode.light, ThemeMode.dark];
 
 export class KeyDataTransitMode {
@@ -5675,9 +5677,9 @@ export class KeyDataTransitMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'KeyDataTransitMode.' + this.name; }
-  static rawKeyData = new KeyDataTransitMode('rawKeyData', 0);
-  static keyDataThenRawKeyData = new KeyDataTransitMode('keyDataThenRawKeyData', 1);
 }
+KeyDataTransitMode.rawKeyData = new KeyDataTransitMode('rawKeyData', 0);
+KeyDataTransitMode.keyDataThenRawKeyData = new KeyDataTransitMode('keyDataThenRawKeyData', 1);
 KeyDataTransitMode.values = [KeyDataTransitMode.rawKeyData, KeyDataTransitMode.keyDataThenRawKeyData];
 
 export class SystemSoundType {
@@ -5688,10 +5690,10 @@ export class SystemSoundType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SystemSoundType.' + this.name; }
-  static click = new SystemSoundType('click', 0);
-  static tick = new SystemSoundType('tick', 1);
-  static alert = new SystemSoundType('alert', 2);
 }
+SystemSoundType.click = new SystemSoundType('click', 0);
+SystemSoundType.tick = new SystemSoundType('tick', 1);
+SystemSoundType.alert = new SystemSoundType('alert', 2);
 SystemSoundType.values = [SystemSoundType.click, SystemSoundType.tick, SystemSoundType.alert];
 
 export class SmartDashesType {
@@ -5702,9 +5704,9 @@ export class SmartDashesType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SmartDashesType.' + this.name; }
-  static disabled = new SmartDashesType('disabled', 0);
-  static enabled = new SmartDashesType('enabled', 1);
 }
+SmartDashesType.disabled = new SmartDashesType('disabled', 0);
+SmartDashesType.enabled = new SmartDashesType('enabled', 1);
 SmartDashesType.values = [SmartDashesType.disabled, SmartDashesType.enabled];
 
 export class SmartQuotesType {
@@ -5715,9 +5717,9 @@ export class SmartQuotesType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SmartQuotesType.' + this.name; }
-  static disabled = new SmartQuotesType('disabled', 0);
-  static enabled = new SmartQuotesType('enabled', 1);
 }
+SmartQuotesType.disabled = new SmartQuotesType('disabled', 0);
+SmartQuotesType.enabled = new SmartQuotesType('enabled', 1);
 SmartQuotesType.values = [SmartQuotesType.disabled, SmartQuotesType.enabled];
 
 export class TextInputAction {
@@ -5728,20 +5730,20 @@ export class TextInputAction {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextInputAction.' + this.name; }
-  static none = new TextInputAction('none', 0);
-  static unspecified = new TextInputAction('unspecified', 1);
-  static done = new TextInputAction('done', 2);
-  static go = new TextInputAction('go', 3);
-  static search = new TextInputAction('search', 4);
-  static send = new TextInputAction('send', 5);
-  static next = new TextInputAction('next', 6);
-  static previous = new TextInputAction('previous', 7);
-  static continueAction = new TextInputAction('continueAction', 8);
-  static join = new TextInputAction('join', 9);
-  static route = new TextInputAction('route', 10);
-  static emergencyCall = new TextInputAction('emergencyCall', 11);
-  static newline = new TextInputAction('newline', 12);
 }
+TextInputAction.none = new TextInputAction('none', 0);
+TextInputAction.unspecified = new TextInputAction('unspecified', 1);
+TextInputAction.done = new TextInputAction('done', 2);
+TextInputAction.go = new TextInputAction('go', 3);
+TextInputAction.search = new TextInputAction('search', 4);
+TextInputAction.send = new TextInputAction('send', 5);
+TextInputAction.next = new TextInputAction('next', 6);
+TextInputAction.previous = new TextInputAction('previous', 7);
+TextInputAction.continueAction = new TextInputAction('continueAction', 8);
+TextInputAction.join = new TextInputAction('join', 9);
+TextInputAction.route = new TextInputAction('route', 10);
+TextInputAction.emergencyCall = new TextInputAction('emergencyCall', 11);
+TextInputAction.newline = new TextInputAction('newline', 12);
 TextInputAction.values = [TextInputAction.none, TextInputAction.unspecified, TextInputAction.done, TextInputAction.go, TextInputAction.search, TextInputAction.send, TextInputAction.next, TextInputAction.previous, TextInputAction.continueAction, TextInputAction.join, TextInputAction.route, TextInputAction.emergencyCall, TextInputAction.newline];
 
 export class TextCapitalization {
@@ -5752,11 +5754,11 @@ export class TextCapitalization {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextCapitalization.' + this.name; }
-  static words = new TextCapitalization('words', 0);
-  static sentences = new TextCapitalization('sentences', 1);
-  static characters = new TextCapitalization('characters', 2);
-  static none = new TextCapitalization('none', 3);
 }
+TextCapitalization.words = new TextCapitalization('words', 0);
+TextCapitalization.sentences = new TextCapitalization('sentences', 1);
+TextCapitalization.characters = new TextCapitalization('characters', 2);
+TextCapitalization.none = new TextCapitalization('none', 3);
 TextCapitalization.values = [TextCapitalization.words, TextCapitalization.sentences, TextCapitalization.characters, TextCapitalization.none];
 
 export class FloatingCursorDragState {
@@ -5767,10 +5769,10 @@ export class FloatingCursorDragState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FloatingCursorDragState.' + this.name; }
-  static Start = new FloatingCursorDragState('Start', 0);
-  static Update = new FloatingCursorDragState('Update', 1);
-  static End = new FloatingCursorDragState('End', 2);
 }
+FloatingCursorDragState.Start = new FloatingCursorDragState('Start', 0);
+FloatingCursorDragState.Update = new FloatingCursorDragState('Update', 1);
+FloatingCursorDragState.End = new FloatingCursorDragState('End', 2);
 FloatingCursorDragState.values = [FloatingCursorDragState.Start, FloatingCursorDragState.Update, FloatingCursorDragState.End];
 
 export class SelectionChangedCause {
@@ -5781,15 +5783,15 @@ export class SelectionChangedCause {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SelectionChangedCause.' + this.name; }
-  static tap = new SelectionChangedCause('tap', 0);
-  static doubleTap = new SelectionChangedCause('doubleTap', 1);
-  static longPress = new SelectionChangedCause('longPress', 2);
-  static forcePress = new SelectionChangedCause('forcePress', 3);
-  static keyboard = new SelectionChangedCause('keyboard', 4);
-  static toolbar = new SelectionChangedCause('toolbar', 5);
-  static drag = new SelectionChangedCause('drag', 6);
-  static stylusHandwriting = new SelectionChangedCause('stylusHandwriting', 7);
 }
+SelectionChangedCause.tap = new SelectionChangedCause('tap', 0);
+SelectionChangedCause.doubleTap = new SelectionChangedCause('doubleTap', 1);
+SelectionChangedCause.longPress = new SelectionChangedCause('longPress', 2);
+SelectionChangedCause.forcePress = new SelectionChangedCause('forcePress', 3);
+SelectionChangedCause.keyboard = new SelectionChangedCause('keyboard', 4);
+SelectionChangedCause.toolbar = new SelectionChangedCause('toolbar', 5);
+SelectionChangedCause.drag = new SelectionChangedCause('drag', 6);
+SelectionChangedCause.stylusHandwriting = new SelectionChangedCause('stylusHandwriting', 7);
 SelectionChangedCause.values = [SelectionChangedCause.tap, SelectionChangedCause.doubleTap, SelectionChangedCause.longPress, SelectionChangedCause.forcePress, SelectionChangedCause.keyboard, SelectionChangedCause.toolbar, SelectionChangedCause.drag, SelectionChangedCause.stylusHandwriting];
 
 export class MaxLengthEnforcement {
@@ -5800,10 +5802,10 @@ export class MaxLengthEnforcement {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'MaxLengthEnforcement.' + this.name; }
-  static none = new MaxLengthEnforcement('none', 0);
-  static enforced = new MaxLengthEnforcement('enforced', 1);
-  static truncateAfterCompositionEnds = new MaxLengthEnforcement('truncateAfterCompositionEnds', 2);
 }
+MaxLengthEnforcement.none = new MaxLengthEnforcement('none', 0);
+MaxLengthEnforcement.enforced = new MaxLengthEnforcement('enforced', 1);
+MaxLengthEnforcement.truncateAfterCompositionEnds = new MaxLengthEnforcement('truncateAfterCompositionEnds', 2);
 MaxLengthEnforcement.values = [MaxLengthEnforcement.none, MaxLengthEnforcement.enforced, MaxLengthEnforcement.truncateAfterCompositionEnds];
 
 export class SwipeEdge {
@@ -5814,9 +5816,9 @@ export class SwipeEdge {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SwipeEdge.' + this.name; }
-  static left = new SwipeEdge('left', 0);
-  static right = new SwipeEdge('right', 1);
 }
+SwipeEdge.left = new SwipeEdge('left', 0);
+SwipeEdge.right = new SwipeEdge('right', 1);
 SwipeEdge.values = [SwipeEdge.left, SwipeEdge.right];
 
 export class UndoDirection {
@@ -5827,9 +5829,9 @@ export class UndoDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'UndoDirection.' + this.name; }
-  static undo = new UndoDirection('undo', 0);
-  static redo = new UndoDirection('redo', 1);
 }
+UndoDirection.undo = new UndoDirection('undo', 0);
+UndoDirection.redo = new UndoDirection('redo', 1);
 UndoDirection.values = [UndoDirection.undo, UndoDirection.redo];
 
 export class DeviceOrientation {
@@ -5840,11 +5842,11 @@ export class DeviceOrientation {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DeviceOrientation.' + this.name; }
-  static portraitUp = new DeviceOrientation('portraitUp', 0);
-  static landscapeLeft = new DeviceOrientation('landscapeLeft', 1);
-  static portraitDown = new DeviceOrientation('portraitDown', 2);
-  static landscapeRight = new DeviceOrientation('landscapeRight', 3);
 }
+DeviceOrientation.portraitUp = new DeviceOrientation('portraitUp', 0);
+DeviceOrientation.landscapeLeft = new DeviceOrientation('landscapeLeft', 1);
+DeviceOrientation.portraitDown = new DeviceOrientation('portraitDown', 2);
+DeviceOrientation.landscapeRight = new DeviceOrientation('landscapeRight', 3);
 DeviceOrientation.values = [DeviceOrientation.portraitUp, DeviceOrientation.landscapeLeft, DeviceOrientation.portraitDown, DeviceOrientation.landscapeRight];
 
 export class SystemUiOverlay {
@@ -5855,9 +5857,9 @@ export class SystemUiOverlay {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SystemUiOverlay.' + this.name; }
-  static top = new SystemUiOverlay('top', 0);
-  static bottom = new SystemUiOverlay('bottom', 1);
 }
+SystemUiOverlay.top = new SystemUiOverlay('top', 0);
+SystemUiOverlay.bottom = new SystemUiOverlay('bottom', 1);
 SystemUiOverlay.values = [SystemUiOverlay.top, SystemUiOverlay.bottom];
 
 export class SystemUiMode {
@@ -5868,12 +5870,12 @@ export class SystemUiMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SystemUiMode.' + this.name; }
-  static leanBack = new SystemUiMode('leanBack', 0);
-  static immersive = new SystemUiMode('immersive', 1);
-  static immersiveSticky = new SystemUiMode('immersiveSticky', 2);
-  static edgeToEdge = new SystemUiMode('edgeToEdge', 3);
-  static manual = new SystemUiMode('manual', 4);
 }
+SystemUiMode.leanBack = new SystemUiMode('leanBack', 0);
+SystemUiMode.immersive = new SystemUiMode('immersive', 1);
+SystemUiMode.immersiveSticky = new SystemUiMode('immersiveSticky', 2);
+SystemUiMode.edgeToEdge = new SystemUiMode('edgeToEdge', 3);
+SystemUiMode.manual = new SystemUiMode('manual', 4);
 SystemUiMode.values = [SystemUiMode.leanBack, SystemUiMode.immersive, SystemUiMode.immersiveSticky, SystemUiMode.edgeToEdge, SystemUiMode.manual];
 
 export class ContentSensitivity {
@@ -5884,11 +5886,11 @@ export class ContentSensitivity {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ContentSensitivity.' + this.name; }
-  static autoSensitive = new ContentSensitivity('autoSensitive', 0);
-  static sensitive = new ContentSensitivity('sensitive', 1);
-  static notSensitive = new ContentSensitivity('notSensitive', 2);
-  static _unknown = new ContentSensitivity('_unknown', 3);
 }
+ContentSensitivity.autoSensitive = new ContentSensitivity('autoSensitive', 0);
+ContentSensitivity.sensitive = new ContentSensitivity('sensitive', 1);
+ContentSensitivity.notSensitive = new ContentSensitivity('notSensitive', 2);
+ContentSensitivity._unknown = new ContentSensitivity('_unknown', 3);
 ContentSensitivity.values = [ContentSensitivity.autoSensitive, ContentSensitivity.sensitive, ContentSensitivity.notSensitive, ContentSensitivity._unknown];
 
 export class KeyboardSide {
@@ -5899,11 +5901,11 @@ export class KeyboardSide {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'KeyboardSide.' + this.name; }
-  static any = new KeyboardSide('any', 0);
-  static left = new KeyboardSide('left', 1);
-  static right = new KeyboardSide('right', 2);
-  static all = new KeyboardSide('all', 3);
 }
+KeyboardSide.any = new KeyboardSide('any', 0);
+KeyboardSide.left = new KeyboardSide('left', 1);
+KeyboardSide.right = new KeyboardSide('right', 2);
+KeyboardSide.all = new KeyboardSide('all', 3);
 KeyboardSide.values = [KeyboardSide.any, KeyboardSide.left, KeyboardSide.right, KeyboardSide.all];
 
 export class ModifierKey {
@@ -5914,16 +5916,16 @@ export class ModifierKey {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ModifierKey.' + this.name; }
-  static controlModifier = new ModifierKey('controlModifier', 0);
-  static shiftModifier = new ModifierKey('shiftModifier', 1);
-  static altModifier = new ModifierKey('altModifier', 2);
-  static metaModifier = new ModifierKey('metaModifier', 3);
-  static capsLockModifier = new ModifierKey('capsLockModifier', 4);
-  static numLockModifier = new ModifierKey('numLockModifier', 5);
-  static scrollLockModifier = new ModifierKey('scrollLockModifier', 6);
-  static functionModifier = new ModifierKey('functionModifier', 7);
-  static symbolModifier = new ModifierKey('symbolModifier', 8);
 }
+ModifierKey.controlModifier = new ModifierKey('controlModifier', 0);
+ModifierKey.shiftModifier = new ModifierKey('shiftModifier', 1);
+ModifierKey.altModifier = new ModifierKey('altModifier', 2);
+ModifierKey.metaModifier = new ModifierKey('metaModifier', 3);
+ModifierKey.capsLockModifier = new ModifierKey('capsLockModifier', 4);
+ModifierKey.numLockModifier = new ModifierKey('numLockModifier', 5);
+ModifierKey.scrollLockModifier = new ModifierKey('scrollLockModifier', 6);
+ModifierKey.functionModifier = new ModifierKey('functionModifier', 7);
+ModifierKey.symbolModifier = new ModifierKey('symbolModifier', 8);
 ModifierKey.values = [ModifierKey.controlModifier, ModifierKey.shiftModifier, ModifierKey.altModifier, ModifierKey.metaModifier, ModifierKey.capsLockModifier, ModifierKey.numLockModifier, ModifierKey.scrollLockModifier, ModifierKey.functionModifier, ModifierKey.symbolModifier];
 
 export class ServicesServiceExtensions {
@@ -5934,9 +5936,9 @@ export class ServicesServiceExtensions {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ServicesServiceExtensions.' + this.name; }
-  static profilePlatformChannels = new ServicesServiceExtensions('profilePlatformChannels', 0);
-  static evict = new ServicesServiceExtensions('evict', 1);
 }
+ServicesServiceExtensions.profilePlatformChannels = new ServicesServiceExtensions('profilePlatformChannels', 0);
+ServicesServiceExtensions.evict = new ServicesServiceExtensions('evict', 1);
 ServicesServiceExtensions.values = [ServicesServiceExtensions.profilePlatformChannels, ServicesServiceExtensions.evict];
 
 export class CrossFadeState {
@@ -5947,9 +5949,9 @@ export class CrossFadeState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'CrossFadeState.' + this.name; }
-  static showFirst = new CrossFadeState('showFirst', 0);
-  static showSecond = new CrossFadeState('showSecond', 1);
 }
+CrossFadeState.showFirst = new CrossFadeState('showFirst', 0);
+CrossFadeState.showSecond = new CrossFadeState('showSecond', 1);
 CrossFadeState.values = [CrossFadeState.showFirst, CrossFadeState.showSecond];
 
 export class ScrollIncrementType {
@@ -5960,9 +5962,9 @@ export class ScrollIncrementType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ScrollIncrementType.' + this.name; }
-  static line = new ScrollIncrementType('line', 0);
-  static page = new ScrollIncrementType('page', 1);
 }
+ScrollIncrementType.line = new ScrollIncrementType('line', 0);
+ScrollIncrementType.page = new ScrollIncrementType('page', 1);
 ScrollIncrementType.values = [ScrollIncrementType.line, ScrollIncrementType.page];
 
 export class RouteInformationReportingType {
@@ -5973,10 +5975,10 @@ export class RouteInformationReportingType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'RouteInformationReportingType.' + this.name; }
-  static none = new RouteInformationReportingType('none', 0);
-  static neglect = new RouteInformationReportingType('neglect', 1);
-  static navigate = new RouteInformationReportingType('navigate', 2);
 }
+RouteInformationReportingType.none = new RouteInformationReportingType('none', 0);
+RouteInformationReportingType.neglect = new RouteInformationReportingType('neglect', 1);
+RouteInformationReportingType.navigate = new RouteInformationReportingType('navigate', 2);
 RouteInformationReportingType.values = [RouteInformationReportingType.none, RouteInformationReportingType.neglect, RouteInformationReportingType.navigate];
 
 export class WidgetState {
@@ -5987,15 +5989,15 @@ export class WidgetState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'WidgetState.' + this.name; }
-  static hovered = new WidgetState('hovered', 0);
-  static focused = new WidgetState('focused', 1);
-  static pressed = new WidgetState('pressed', 2);
-  static dragged = new WidgetState('dragged', 3);
-  static selected = new WidgetState('selected', 4);
-  static scrolledUnder = new WidgetState('scrolledUnder', 5);
-  static disabled = new WidgetState('disabled', 6);
-  static error = new WidgetState('error', 7);
 }
+WidgetState.hovered = new WidgetState('hovered', 0);
+WidgetState.focused = new WidgetState('focused', 1);
+WidgetState.pressed = new WidgetState('pressed', 2);
+WidgetState.dragged = new WidgetState('dragged', 3);
+WidgetState.selected = new WidgetState('selected', 4);
+WidgetState.scrolledUnder = new WidgetState('scrolledUnder', 5);
+WidgetState.disabled = new WidgetState('disabled', 6);
+WidgetState.error = new WidgetState('error', 7);
 WidgetState.values = [WidgetState.hovered, WidgetState.focused, WidgetState.pressed, WidgetState.dragged, WidgetState.selected, WidgetState.scrolledUnder, WidgetState.disabled, WidgetState.error];
 
 export class ConnectionState {
@@ -6006,11 +6008,11 @@ export class ConnectionState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ConnectionState.' + this.name; }
-  static none = new ConnectionState('none', 0);
-  static waiting = new ConnectionState('waiting', 1);
-  static active = new ConnectionState('active', 2);
-  static done = new ConnectionState('done', 3);
 }
+ConnectionState.none = new ConnectionState('none', 0);
+ConnectionState.waiting = new ConnectionState('waiting', 1);
+ConnectionState.active = new ConnectionState('active', 2);
+ConnectionState.done = new ConnectionState('done', 3);
 ConnectionState.values = [ConnectionState.none, ConnectionState.waiting, ConnectionState.active, ConnectionState.done];
 
 export class AutovalidateMode {
@@ -6021,12 +6023,12 @@ export class AutovalidateMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AutovalidateMode.' + this.name; }
-  static disabled = new AutovalidateMode('disabled', 0);
-  static always = new AutovalidateMode('always', 1);
-  static onUserInteraction = new AutovalidateMode('onUserInteraction', 2);
-  static onUnfocus = new AutovalidateMode('onUnfocus', 3);
-  static onUserInteractionIfError = new AutovalidateMode('onUserInteractionIfError', 4);
 }
+AutovalidateMode.disabled = new AutovalidateMode('disabled', 0);
+AutovalidateMode.always = new AutovalidateMode('always', 1);
+AutovalidateMode.onUserInteraction = new AutovalidateMode('onUserInteraction', 2);
+AutovalidateMode.onUnfocus = new AutovalidateMode('onUnfocus', 3);
+AutovalidateMode.onUserInteractionIfError = new AutovalidateMode('onUserInteractionIfError', 4);
 AutovalidateMode.values = [AutovalidateMode.disabled, AutovalidateMode.always, AutovalidateMode.onUserInteraction, AutovalidateMode.onUnfocus, AutovalidateMode.onUserInteractionIfError];
 
 export class ContextMenuButtonType {
@@ -6037,17 +6039,17 @@ export class ContextMenuButtonType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ContextMenuButtonType.' + this.name; }
-  static cut = new ContextMenuButtonType('cut', 0);
-  static copy = new ContextMenuButtonType('copy', 1);
-  static paste = new ContextMenuButtonType('paste', 2);
-  static selectAll = new ContextMenuButtonType('selectAll', 3);
-  static delete = new ContextMenuButtonType('delete', 4);
-  static lookUp = new ContextMenuButtonType('lookUp', 5);
-  static searchWeb = new ContextMenuButtonType('searchWeb', 6);
-  static share = new ContextMenuButtonType('share', 7);
-  static liveTextInput = new ContextMenuButtonType('liveTextInput', 8);
-  static custom = new ContextMenuButtonType('custom', 9);
 }
+ContextMenuButtonType.cut = new ContextMenuButtonType('cut', 0);
+ContextMenuButtonType.copy = new ContextMenuButtonType('copy', 1);
+ContextMenuButtonType.paste = new ContextMenuButtonType('paste', 2);
+ContextMenuButtonType.selectAll = new ContextMenuButtonType('selectAll', 3);
+ContextMenuButtonType.delete = new ContextMenuButtonType('delete', 4);
+ContextMenuButtonType.lookUp = new ContextMenuButtonType('lookUp', 5);
+ContextMenuButtonType.searchWeb = new ContextMenuButtonType('searchWeb', 6);
+ContextMenuButtonType.share = new ContextMenuButtonType('share', 7);
+ContextMenuButtonType.liveTextInput = new ContextMenuButtonType('liveTextInput', 8);
+ContextMenuButtonType.custom = new ContextMenuButtonType('custom', 9);
 ContextMenuButtonType.values = [ContextMenuButtonType.cut, ContextMenuButtonType.copy, ContextMenuButtonType.paste, ContextMenuButtonType.selectAll, ContextMenuButtonType.delete, ContextMenuButtonType.lookUp, ContextMenuButtonType.searchWeb, ContextMenuButtonType.share, ContextMenuButtonType.liveTextInput, ContextMenuButtonType.custom];
 
 export class RoutePopDisposition {
@@ -6058,10 +6060,10 @@ export class RoutePopDisposition {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'RoutePopDisposition.' + this.name; }
-  static pop = new RoutePopDisposition('pop', 0);
-  static doNotPop = new RoutePopDisposition('doNotPop', 1);
-  static bubble = new RoutePopDisposition('bubble', 2);
 }
+RoutePopDisposition.pop = new RoutePopDisposition('pop', 0);
+RoutePopDisposition.doNotPop = new RoutePopDisposition('doNotPop', 1);
+RoutePopDisposition.bubble = new RoutePopDisposition('bubble', 2);
 RoutePopDisposition.values = [RoutePopDisposition.pop, RoutePopDisposition.doNotPop, RoutePopDisposition.bubble];
 
 export class Orientation {
@@ -6072,9 +6074,9 @@ export class Orientation {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'Orientation.' + this.name; }
-  static portrait = new Orientation('portrait', 0);
-  static landscape = new Orientation('landscape', 1);
 }
+Orientation.portrait = new Orientation('portrait', 0);
+Orientation.landscape = new Orientation('landscape', 1);
 Orientation.values = [Orientation.portrait, Orientation.landscape];
 
 export class NavigationMode {
@@ -6085,9 +6087,9 @@ export class NavigationMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'NavigationMode.' + this.name; }
-  static traditional = new NavigationMode('traditional', 0);
-  static directional = new NavigationMode('directional', 1);
 }
+NavigationMode.traditional = new NavigationMode('traditional', 0);
+NavigationMode.directional = new NavigationMode('directional', 1);
 NavigationMode.values = [NavigationMode.traditional, NavigationMode.directional];
 
 export class ScrollPositionAlignmentPolicy {
@@ -6098,10 +6100,10 @@ export class ScrollPositionAlignmentPolicy {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ScrollPositionAlignmentPolicy.' + this.name; }
-  static explicit = new ScrollPositionAlignmentPolicy('explicit', 0);
-  static keepVisibleAtEnd = new ScrollPositionAlignmentPolicy('keepVisibleAtEnd', 1);
-  static keepVisibleAtStart = new ScrollPositionAlignmentPolicy('keepVisibleAtStart', 2);
 }
+ScrollPositionAlignmentPolicy.explicit = new ScrollPositionAlignmentPolicy('explicit', 0);
+ScrollPositionAlignmentPolicy.keepVisibleAtEnd = new ScrollPositionAlignmentPolicy('keepVisibleAtEnd', 1);
+ScrollPositionAlignmentPolicy.keepVisibleAtStart = new ScrollPositionAlignmentPolicy('keepVisibleAtStart', 2);
 ScrollPositionAlignmentPolicy.values = [ScrollPositionAlignmentPolicy.explicit, ScrollPositionAlignmentPolicy.keepVisibleAtEnd, ScrollPositionAlignmentPolicy.keepVisibleAtStart];
 
 export class DiagonalDragBehavior {
@@ -6112,11 +6114,11 @@ export class DiagonalDragBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DiagonalDragBehavior.' + this.name; }
-  static none = new DiagonalDragBehavior('none', 0);
-  static weightedEvent = new DiagonalDragBehavior('weightedEvent', 1);
-  static weightedContinuous = new DiagonalDragBehavior('weightedContinuous', 2);
-  static free = new DiagonalDragBehavior('free', 3);
 }
+DiagonalDragBehavior.none = new DiagonalDragBehavior('none', 0);
+DiagonalDragBehavior.weightedEvent = new DiagonalDragBehavior('weightedEvent', 1);
+DiagonalDragBehavior.weightedContinuous = new DiagonalDragBehavior('weightedContinuous', 2);
+DiagonalDragBehavior.free = new DiagonalDragBehavior('free', 3);
 DiagonalDragBehavior.values = [DiagonalDragBehavior.none, DiagonalDragBehavior.weightedEvent, DiagonalDragBehavior.weightedContinuous, DiagonalDragBehavior.free];
 
 export class KeyEventResult {
@@ -6127,10 +6129,10 @@ export class KeyEventResult {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'KeyEventResult.' + this.name; }
-  static handled = new KeyEventResult('handled', 0);
-  static ignored = new KeyEventResult('ignored', 1);
-  static skipRemainingHandlers = new KeyEventResult('skipRemainingHandlers', 2);
 }
+KeyEventResult.handled = new KeyEventResult('handled', 0);
+KeyEventResult.ignored = new KeyEventResult('ignored', 1);
+KeyEventResult.skipRemainingHandlers = new KeyEventResult('skipRemainingHandlers', 2);
 KeyEventResult.values = [KeyEventResult.handled, KeyEventResult.ignored, KeyEventResult.skipRemainingHandlers];
 
 export class UnfocusDisposition {
@@ -6141,9 +6143,9 @@ export class UnfocusDisposition {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'UnfocusDisposition.' + this.name; }
-  static scope = new UnfocusDisposition('scope', 0);
-  static previouslyFocusedChild = new UnfocusDisposition('previouslyFocusedChild', 1);
 }
+UnfocusDisposition.scope = new UnfocusDisposition('scope', 0);
+UnfocusDisposition.previouslyFocusedChild = new UnfocusDisposition('previouslyFocusedChild', 1);
 UnfocusDisposition.values = [UnfocusDisposition.scope, UnfocusDisposition.previouslyFocusedChild];
 
 export class FocusHighlightMode {
@@ -6154,9 +6156,9 @@ export class FocusHighlightMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FocusHighlightMode.' + this.name; }
-  static touch = new FocusHighlightMode('touch', 0);
-  static traditional = new FocusHighlightMode('traditional', 1);
 }
+FocusHighlightMode.touch = new FocusHighlightMode('touch', 0);
+FocusHighlightMode.traditional = new FocusHighlightMode('traditional', 1);
 FocusHighlightMode.values = [FocusHighlightMode.touch, FocusHighlightMode.traditional];
 
 export class FocusHighlightStrategy {
@@ -6167,10 +6169,10 @@ export class FocusHighlightStrategy {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FocusHighlightStrategy.' + this.name; }
-  static automatic = new FocusHighlightStrategy('automatic', 0);
-  static alwaysTouch = new FocusHighlightStrategy('alwaysTouch', 1);
-  static alwaysTraditional = new FocusHighlightStrategy('alwaysTraditional', 2);
 }
+FocusHighlightStrategy.automatic = new FocusHighlightStrategy('automatic', 0);
+FocusHighlightStrategy.alwaysTouch = new FocusHighlightStrategy('alwaysTouch', 1);
+FocusHighlightStrategy.alwaysTraditional = new FocusHighlightStrategy('alwaysTraditional', 2);
 FocusHighlightStrategy.values = [FocusHighlightStrategy.automatic, FocusHighlightStrategy.alwaysTouch, FocusHighlightStrategy.alwaysTraditional];
 
 export class TraversalDirection {
@@ -6181,11 +6183,11 @@ export class TraversalDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TraversalDirection.' + this.name; }
-  static up = new TraversalDirection('up', 0);
-  static right = new TraversalDirection('right', 1);
-  static down = new TraversalDirection('down', 2);
-  static left = new TraversalDirection('left', 3);
 }
+TraversalDirection.up = new TraversalDirection('up', 0);
+TraversalDirection.right = new TraversalDirection('right', 1);
+TraversalDirection.down = new TraversalDirection('down', 2);
+TraversalDirection.left = new TraversalDirection('left', 3);
 TraversalDirection.values = [TraversalDirection.up, TraversalDirection.right, TraversalDirection.down, TraversalDirection.left];
 
 export class TraversalEdgeBehavior {
@@ -6196,11 +6198,11 @@ export class TraversalEdgeBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TraversalEdgeBehavior.' + this.name; }
-  static closedLoop = new TraversalEdgeBehavior('closedLoop', 0);
-  static leaveFlutterView = new TraversalEdgeBehavior('leaveFlutterView', 1);
-  static parentScope = new TraversalEdgeBehavior('parentScope', 2);
-  static stop = new TraversalEdgeBehavior('stop', 3);
 }
+TraversalEdgeBehavior.closedLoop = new TraversalEdgeBehavior('closedLoop', 0);
+TraversalEdgeBehavior.leaveFlutterView = new TraversalEdgeBehavior('leaveFlutterView', 1);
+TraversalEdgeBehavior.parentScope = new TraversalEdgeBehavior('parentScope', 2);
+TraversalEdgeBehavior.stop = new TraversalEdgeBehavior('stop', 3);
 TraversalEdgeBehavior.values = [TraversalEdgeBehavior.closedLoop, TraversalEdgeBehavior.leaveFlutterView, TraversalEdgeBehavior.parentScope, TraversalEdgeBehavior.stop];
 
 export class SnapshotMode {
@@ -6211,10 +6213,10 @@ export class SnapshotMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SnapshotMode.' + this.name; }
-  static permissive = new SnapshotMode('permissive', 0);
-  static normal = new SnapshotMode('normal', 1);
-  static forced = new SnapshotMode('forced', 2);
 }
+SnapshotMode.permissive = new SnapshotMode('permissive', 0);
+SnapshotMode.normal = new SnapshotMode('normal', 1);
+SnapshotMode.forced = new SnapshotMode('forced', 2);
 SnapshotMode.values = [SnapshotMode.permissive, SnapshotMode.normal, SnapshotMode.forced];
 
 export class TooltipTriggerMode {
@@ -6225,10 +6227,10 @@ export class TooltipTriggerMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TooltipTriggerMode.' + this.name; }
-  static manual = new TooltipTriggerMode('manual', 0);
-  static longPress = new TooltipTriggerMode('longPress', 1);
-  static tap = new TooltipTriggerMode('tap', 2);
 }
+TooltipTriggerMode.manual = new TooltipTriggerMode('manual', 0);
+TooltipTriggerMode.longPress = new TooltipTriggerMode('longPress', 1);
+TooltipTriggerMode.tap = new TooltipTriggerMode('tap', 2);
 TooltipTriggerMode.values = [TooltipTriggerMode.manual, TooltipTriggerMode.longPress, TooltipTriggerMode.tap];
 
 export class BannerLocation {
@@ -6239,11 +6241,11 @@ export class BannerLocation {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BannerLocation.' + this.name; }
-  static topStart = new BannerLocation('topStart', 0);
-  static topEnd = new BannerLocation('topEnd', 1);
-  static bottomStart = new BannerLocation('bottomStart', 2);
-  static bottomEnd = new BannerLocation('bottomEnd', 3);
 }
+BannerLocation.topStart = new BannerLocation('topStart', 0);
+BannerLocation.topEnd = new BannerLocation('topEnd', 1);
+BannerLocation.bottomStart = new BannerLocation('bottomStart', 2);
+BannerLocation.bottomEnd = new BannerLocation('bottomEnd', 3);
 BannerLocation.values = [BannerLocation.topStart, BannerLocation.topEnd, BannerLocation.bottomStart, BannerLocation.bottomEnd];
 
 export class FloatingHeaderSnapMode {
@@ -6254,9 +6256,9 @@ export class FloatingHeaderSnapMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FloatingHeaderSnapMode.' + this.name; }
-  static overlay = new FloatingHeaderSnapMode('overlay', 0);
-  static scroll = new FloatingHeaderSnapMode('scroll', 1);
 }
+FloatingHeaderSnapMode.overlay = new FloatingHeaderSnapMode('overlay', 0);
+FloatingHeaderSnapMode.scroll = new FloatingHeaderSnapMode('scroll', 1);
 FloatingHeaderSnapMode.values = [FloatingHeaderSnapMode.overlay, FloatingHeaderSnapMode.scroll];
 
 export class LockState {
@@ -6267,10 +6269,10 @@ export class LockState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'LockState.' + this.name; }
-  static ignored = new LockState('ignored', 0);
-  static locked = new LockState('locked', 1);
-  static unlocked = new LockState('unlocked', 2);
 }
+LockState.ignored = new LockState('ignored', 0);
+LockState.locked = new LockState('locked', 1);
+LockState.unlocked = new LockState('unlocked', 2);
 LockState.values = [LockState.ignored, LockState.locked, LockState.unlocked];
 
 export class HeroFlightDirection {
@@ -6281,9 +6283,9 @@ export class HeroFlightDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'HeroFlightDirection.' + this.name; }
-  static push = new HeroFlightDirection('push', 0);
-  static pop = new HeroFlightDirection('pop', 1);
 }
+HeroFlightDirection.push = new HeroFlightDirection('push', 0);
+HeroFlightDirection.pop = new HeroFlightDirection('pop', 1);
 HeroFlightDirection.values = [HeroFlightDirection.push, HeroFlightDirection.pop];
 
 export class StandardComponentType {
@@ -6294,11 +6296,11 @@ export class StandardComponentType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'StandardComponentType.' + this.name; }
-  static backButton = new StandardComponentType('backButton', 0);
-  static closeButton = new StandardComponentType('closeButton', 1);
-  static moreButton = new StandardComponentType('moreButton', 2);
-  static drawerButton = new StandardComponentType('drawerButton', 3);
 }
+StandardComponentType.backButton = new StandardComponentType('backButton', 0);
+StandardComponentType.closeButton = new StandardComponentType('closeButton', 1);
+StandardComponentType.moreButton = new StandardComponentType('moreButton', 2);
+StandardComponentType.drawerButton = new StandardComponentType('drawerButton', 3);
 StandardComponentType.values = [StandardComponentType.backButton, StandardComponentType.closeButton, StandardComponentType.moreButton, StandardComponentType.drawerButton];
 
 export class InspectorButtonVariant {
@@ -6309,10 +6311,10 @@ export class InspectorButtonVariant {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'InspectorButtonVariant.' + this.name; }
-  static filled = new InspectorButtonVariant('filled', 0);
-  static toggle = new InspectorButtonVariant('toggle', 1);
-  static iconOnly = new InspectorButtonVariant('iconOnly', 2);
 }
+InspectorButtonVariant.filled = new InspectorButtonVariant('filled', 0);
+InspectorButtonVariant.toggle = new InspectorButtonVariant('toggle', 1);
+InspectorButtonVariant.iconOnly = new InspectorButtonVariant('iconOnly', 2);
 InspectorButtonVariant.values = [InspectorButtonVariant.filled, InspectorButtonVariant.toggle, InspectorButtonVariant.iconOnly];
 
 export class AndroidOverscrollIndicator {
@@ -6323,9 +6325,9 @@ export class AndroidOverscrollIndicator {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AndroidOverscrollIndicator.' + this.name; }
-  static stretch = new AndroidOverscrollIndicator('stretch', 0);
-  static glow = new AndroidOverscrollIndicator('glow', 1);
 }
+AndroidOverscrollIndicator.stretch = new AndroidOverscrollIndicator('stretch', 0);
+AndroidOverscrollIndicator.glow = new AndroidOverscrollIndicator('glow', 1);
 AndroidOverscrollIndicator.values = [AndroidOverscrollIndicator.stretch, AndroidOverscrollIndicator.glow];
 
 export class ClipboardStatus {
@@ -6336,10 +6338,10 @@ export class ClipboardStatus {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ClipboardStatus.' + this.name; }
-  static pasteable = new ClipboardStatus('pasteable', 0);
-  static unknown = new ClipboardStatus('unknown', 1);
-  static notPasteable = new ClipboardStatus('notPasteable', 2);
 }
+ClipboardStatus.pasteable = new ClipboardStatus('pasteable', 0);
+ClipboardStatus.unknown = new ClipboardStatus('unknown', 1);
+ClipboardStatus.notPasteable = new ClipboardStatus('notPasteable', 2);
 ClipboardStatus.values = [ClipboardStatus.pasteable, ClipboardStatus.unknown, ClipboardStatus.notPasteable];
 
 export class LiveTextInputStatus {
@@ -6350,10 +6352,10 @@ export class LiveTextInputStatus {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'LiveTextInputStatus.' + this.name; }
-  static enabled = new LiveTextInputStatus('enabled', 0);
-  static unknown = new LiveTextInputStatus('unknown', 1);
-  static disabled = new LiveTextInputStatus('disabled', 2);
 }
+LiveTextInputStatus.enabled = new LiveTextInputStatus('enabled', 0);
+LiveTextInputStatus.unknown = new LiveTextInputStatus('unknown', 1);
+LiveTextInputStatus.disabled = new LiveTextInputStatus('disabled', 2);
 LiveTextInputStatus.values = [LiveTextInputStatus.enabled, LiveTextInputStatus.unknown, LiveTextInputStatus.disabled];
 
 export class ScrollDecelerationRate {
@@ -6364,9 +6366,9 @@ export class ScrollDecelerationRate {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ScrollDecelerationRate.' + this.name; }
-  static normal = new ScrollDecelerationRate('normal', 0);
-  static fast = new ScrollDecelerationRate('fast', 1);
 }
+ScrollDecelerationRate.normal = new ScrollDecelerationRate('normal', 0);
+ScrollDecelerationRate.fast = new ScrollDecelerationRate('fast', 1);
 ScrollDecelerationRate.values = [ScrollDecelerationRate.normal, ScrollDecelerationRate.fast];
 
 export class OverflowBarAlignment {
@@ -6377,10 +6379,10 @@ export class OverflowBarAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'OverflowBarAlignment.' + this.name; }
-  static start = new OverflowBarAlignment('start', 0);
-  static end = new OverflowBarAlignment('end', 1);
-  static center = new OverflowBarAlignment('center', 2);
 }
+OverflowBarAlignment.start = new OverflowBarAlignment('start', 0);
+OverflowBarAlignment.end = new OverflowBarAlignment('end', 1);
+OverflowBarAlignment.center = new OverflowBarAlignment('center', 2);
 OverflowBarAlignment.values = [OverflowBarAlignment.start, OverflowBarAlignment.end, OverflowBarAlignment.center];
 
 export class PanAxis {
@@ -6391,11 +6393,11 @@ export class PanAxis {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PanAxis.' + this.name; }
-  static horizontal = new PanAxis('horizontal', 0);
-  static vertical = new PanAxis('vertical', 1);
-  static aligned = new PanAxis('aligned', 2);
-  static free = new PanAxis('free', 3);
 }
+PanAxis.horizontal = new PanAxis('horizontal', 0);
+PanAxis.vertical = new PanAxis('vertical', 1);
+PanAxis.aligned = new PanAxis('aligned', 2);
+PanAxis.free = new PanAxis('free', 3);
 PanAxis.values = [PanAxis.horizontal, PanAxis.vertical, PanAxis.aligned, PanAxis.free];
 
 export class AutofillContextAction {
@@ -6406,9 +6408,9 @@ export class AutofillContextAction {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AutofillContextAction.' + this.name; }
-  static commit = new AutofillContextAction('commit', 0);
-  static cancel = new AutofillContextAction('cancel', 1);
 }
+AutofillContextAction.commit = new AutofillContextAction('commit', 0);
+AutofillContextAction.cancel = new AutofillContextAction('cancel', 1);
 AutofillContextAction.values = [AutofillContextAction.commit, AutofillContextAction.cancel];
 
 export class ChangeReportingBehavior {
@@ -6419,9 +6421,9 @@ export class ChangeReportingBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ChangeReportingBehavior.' + this.name; }
-  static onScrollEnd = new ChangeReportingBehavior('onScrollEnd', 0);
-  static onScrollUpdate = new ChangeReportingBehavior('onScrollUpdate', 1);
 }
+ChangeReportingBehavior.onScrollEnd = new ChangeReportingBehavior('onScrollEnd', 0);
+ChangeReportingBehavior.onScrollUpdate = new ChangeReportingBehavior('onScrollUpdate', 1);
 ChangeReportingBehavior.values = [ChangeReportingBehavior.onScrollEnd, ChangeReportingBehavior.onScrollUpdate];
 
 export class PlatformProvidedMenuItemType {
@@ -6432,19 +6434,19 @@ export class PlatformProvidedMenuItemType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PlatformProvidedMenuItemType.' + this.name; }
-  static about = new PlatformProvidedMenuItemType('about', 0);
-  static quit = new PlatformProvidedMenuItemType('quit', 1);
-  static servicesSubmenu = new PlatformProvidedMenuItemType('servicesSubmenu', 2);
-  static hide = new PlatformProvidedMenuItemType('hide', 3);
-  static hideOtherApplications = new PlatformProvidedMenuItemType('hideOtherApplications', 4);
-  static showAllApplications = new PlatformProvidedMenuItemType('showAllApplications', 5);
-  static startSpeaking = new PlatformProvidedMenuItemType('startSpeaking', 6);
-  static stopSpeaking = new PlatformProvidedMenuItemType('stopSpeaking', 7);
-  static toggleFullScreen = new PlatformProvidedMenuItemType('toggleFullScreen', 8);
-  static minimizeWindow = new PlatformProvidedMenuItemType('minimizeWindow', 9);
-  static zoomWindow = new PlatformProvidedMenuItemType('zoomWindow', 10);
-  static arrangeWindowsInFront = new PlatformProvidedMenuItemType('arrangeWindowsInFront', 11);
 }
+PlatformProvidedMenuItemType.about = new PlatformProvidedMenuItemType('about', 0);
+PlatformProvidedMenuItemType.quit = new PlatformProvidedMenuItemType('quit', 1);
+PlatformProvidedMenuItemType.servicesSubmenu = new PlatformProvidedMenuItemType('servicesSubmenu', 2);
+PlatformProvidedMenuItemType.hide = new PlatformProvidedMenuItemType('hide', 3);
+PlatformProvidedMenuItemType.hideOtherApplications = new PlatformProvidedMenuItemType('hideOtherApplications', 4);
+PlatformProvidedMenuItemType.showAllApplications = new PlatformProvidedMenuItemType('showAllApplications', 5);
+PlatformProvidedMenuItemType.startSpeaking = new PlatformProvidedMenuItemType('startSpeaking', 6);
+PlatformProvidedMenuItemType.stopSpeaking = new PlatformProvidedMenuItemType('stopSpeaking', 7);
+PlatformProvidedMenuItemType.toggleFullScreen = new PlatformProvidedMenuItemType('toggleFullScreen', 8);
+PlatformProvidedMenuItemType.minimizeWindow = new PlatformProvidedMenuItemType('minimizeWindow', 9);
+PlatformProvidedMenuItemType.zoomWindow = new PlatformProvidedMenuItemType('zoomWindow', 10);
+PlatformProvidedMenuItemType.arrangeWindowsInFront = new PlatformProvidedMenuItemType('arrangeWindowsInFront', 11);
 PlatformProvidedMenuItemType.values = [PlatformProvidedMenuItemType.about, PlatformProvidedMenuItemType.quit, PlatformProvidedMenuItemType.servicesSubmenu, PlatformProvidedMenuItemType.hide, PlatformProvidedMenuItemType.hideOtherApplications, PlatformProvidedMenuItemType.showAllApplications, PlatformProvidedMenuItemType.startSpeaking, PlatformProvidedMenuItemType.stopSpeaking, PlatformProvidedMenuItemType.toggleFullScreen, PlatformProvidedMenuItemType.minimizeWindow, PlatformProvidedMenuItemType.zoomWindow, PlatformProvidedMenuItemType.arrangeWindowsInFront];
 
 export class DismissDirection {
@@ -6455,14 +6457,14 @@ export class DismissDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DismissDirection.' + this.name; }
-  static vertical = new DismissDirection('vertical', 0);
-  static horizontal = new DismissDirection('horizontal', 1);
-  static endToStart = new DismissDirection('endToStart', 2);
-  static startToEnd = new DismissDirection('startToEnd', 3);
-  static up = new DismissDirection('up', 4);
-  static down = new DismissDirection('down', 5);
-  static none = new DismissDirection('none', 6);
 }
+DismissDirection.vertical = new DismissDirection('vertical', 0);
+DismissDirection.horizontal = new DismissDirection('horizontal', 1);
+DismissDirection.endToStart = new DismissDirection('endToStart', 2);
+DismissDirection.startToEnd = new DismissDirection('startToEnd', 3);
+DismissDirection.up = new DismissDirection('up', 4);
+DismissDirection.down = new DismissDirection('down', 5);
+DismissDirection.none = new DismissDirection('none', 6);
 DismissDirection.values = [DismissDirection.vertical, DismissDirection.horizontal, DismissDirection.endToStart, DismissDirection.startToEnd, DismissDirection.up, DismissDirection.down, DismissDirection.none];
 
 export class ScrollbarOrientation {
@@ -6473,11 +6475,11 @@ export class ScrollbarOrientation {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ScrollbarOrientation.' + this.name; }
-  static left = new ScrollbarOrientation('left', 0);
-  static right = new ScrollbarOrientation('right', 1);
-  static top = new ScrollbarOrientation('top', 2);
-  static bottom = new ScrollbarOrientation('bottom', 3);
 }
+ScrollbarOrientation.left = new ScrollbarOrientation('left', 0);
+ScrollbarOrientation.right = new ScrollbarOrientation('right', 1);
+ScrollbarOrientation.top = new ScrollbarOrientation('top', 2);
+ScrollbarOrientation.bottom = new ScrollbarOrientation('bottom', 3);
 ScrollbarOrientation.values = [ScrollbarOrientation.left, ScrollbarOrientation.right, ScrollbarOrientation.top, ScrollbarOrientation.bottom];
 
 export class RepeatMode {
@@ -6488,9 +6490,9 @@ export class RepeatMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'RepeatMode.' + this.name; }
-  static restart = new RepeatMode('restart', 0);
-  static reverse = new RepeatMode('reverse', 1);
 }
+RepeatMode.restart = new RepeatMode('restart', 0);
+RepeatMode.reverse = new RepeatMode('reverse', 1);
 RepeatMode.values = [RepeatMode.restart, RepeatMode.reverse];
 
 export class OptionsViewOpenDirection {
@@ -6501,10 +6503,10 @@ export class OptionsViewOpenDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'OptionsViewOpenDirection.' + this.name; }
-  static up = new OptionsViewOpenDirection('up', 0);
-  static down = new OptionsViewOpenDirection('down', 1);
-  static mostSpace = new OptionsViewOpenDirection('mostSpace', 2);
 }
+OptionsViewOpenDirection.up = new OptionsViewOpenDirection('up', 0);
+OptionsViewOpenDirection.down = new OptionsViewOpenDirection('down', 1);
+OptionsViewOpenDirection.mostSpace = new OptionsViewOpenDirection('mostSpace', 2);
 OptionsViewOpenDirection.values = [OptionsViewOpenDirection.up, OptionsViewOpenDirection.down, OptionsViewOpenDirection.mostSpace];
 
 export class OverlayChildLocation {
@@ -6515,9 +6517,9 @@ export class OverlayChildLocation {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'OverlayChildLocation.' + this.name; }
-  static nearestOverlay = new OverlayChildLocation('nearestOverlay', 0);
-  static rootOverlay = new OverlayChildLocation('rootOverlay', 1);
 }
+OverlayChildLocation.nearestOverlay = new OverlayChildLocation('nearestOverlay', 0);
+OverlayChildLocation.rootOverlay = new OverlayChildLocation('rootOverlay', 1);
 OverlayChildLocation.values = [OverlayChildLocation.nearestOverlay, OverlayChildLocation.rootOverlay];
 
 export class WidgetsServiceExtensions {
@@ -6528,16 +6530,16 @@ export class WidgetsServiceExtensions {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'WidgetsServiceExtensions.' + this.name; }
-  static debugDumpApp = new WidgetsServiceExtensions('debugDumpApp', 0);
-  static debugDumpFocusTree = new WidgetsServiceExtensions('debugDumpFocusTree', 1);
-  static showPerformanceOverlay = new WidgetsServiceExtensions('showPerformanceOverlay', 2);
-  static didSendFirstFrameEvent = new WidgetsServiceExtensions('didSendFirstFrameEvent', 3);
-  static didSendFirstFrameRasterizedEvent = new WidgetsServiceExtensions('didSendFirstFrameRasterizedEvent', 4);
-  static fastReassemble = new WidgetsServiceExtensions('fastReassemble', 5);
-  static profileWidgetBuilds = new WidgetsServiceExtensions('profileWidgetBuilds', 6);
-  static profileUserWidgetBuilds = new WidgetsServiceExtensions('profileUserWidgetBuilds', 7);
-  static debugAllowBanner = new WidgetsServiceExtensions('debugAllowBanner', 8);
 }
+WidgetsServiceExtensions.debugDumpApp = new WidgetsServiceExtensions('debugDumpApp', 0);
+WidgetsServiceExtensions.debugDumpFocusTree = new WidgetsServiceExtensions('debugDumpFocusTree', 1);
+WidgetsServiceExtensions.showPerformanceOverlay = new WidgetsServiceExtensions('showPerformanceOverlay', 2);
+WidgetsServiceExtensions.didSendFirstFrameEvent = new WidgetsServiceExtensions('didSendFirstFrameEvent', 3);
+WidgetsServiceExtensions.didSendFirstFrameRasterizedEvent = new WidgetsServiceExtensions('didSendFirstFrameRasterizedEvent', 4);
+WidgetsServiceExtensions.fastReassemble = new WidgetsServiceExtensions('fastReassemble', 5);
+WidgetsServiceExtensions.profileWidgetBuilds = new WidgetsServiceExtensions('profileWidgetBuilds', 6);
+WidgetsServiceExtensions.profileUserWidgetBuilds = new WidgetsServiceExtensions('profileUserWidgetBuilds', 7);
+WidgetsServiceExtensions.debugAllowBanner = new WidgetsServiceExtensions('debugAllowBanner', 8);
 WidgetsServiceExtensions.values = [WidgetsServiceExtensions.debugDumpApp, WidgetsServiceExtensions.debugDumpFocusTree, WidgetsServiceExtensions.showPerformanceOverlay, WidgetsServiceExtensions.didSendFirstFrameEvent, WidgetsServiceExtensions.didSendFirstFrameRasterizedEvent, WidgetsServiceExtensions.fastReassemble, WidgetsServiceExtensions.profileWidgetBuilds, WidgetsServiceExtensions.profileUserWidgetBuilds, WidgetsServiceExtensions.debugAllowBanner];
 
 export class WidgetInspectorServiceExtensions {
@@ -6548,39 +6550,39 @@ export class WidgetInspectorServiceExtensions {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'WidgetInspectorServiceExtensions.' + this.name; }
-  static structuredErrors = new WidgetInspectorServiceExtensions('structuredErrors', 0);
-  static show = new WidgetInspectorServiceExtensions('show', 1);
-  static trackRebuildDirtyWidgets = new WidgetInspectorServiceExtensions('trackRebuildDirtyWidgets', 2);
-  static widgetLocationIdMap = new WidgetInspectorServiceExtensions('widgetLocationIdMap', 3);
-  static trackRepaintWidgets = new WidgetInspectorServiceExtensions('trackRepaintWidgets', 4);
-  static disposeAllGroups = new WidgetInspectorServiceExtensions('disposeAllGroups', 5);
-  static disposeGroup = new WidgetInspectorServiceExtensions('disposeGroup', 6);
-  static isWidgetTreeReady = new WidgetInspectorServiceExtensions('isWidgetTreeReady', 7);
-  static disposeId = new WidgetInspectorServiceExtensions('disposeId', 8);
-  static setPubRootDirectories = new WidgetInspectorServiceExtensions('setPubRootDirectories', 9);
-  static addPubRootDirectories = new WidgetInspectorServiceExtensions('addPubRootDirectories', 10);
-  static removePubRootDirectories = new WidgetInspectorServiceExtensions('removePubRootDirectories', 11);
-  static getPubRootDirectories = new WidgetInspectorServiceExtensions('getPubRootDirectories', 12);
-  static setSelectionById = new WidgetInspectorServiceExtensions('setSelectionById', 13);
-  static getParentChain = new WidgetInspectorServiceExtensions('getParentChain', 14);
-  static getProperties = new WidgetInspectorServiceExtensions('getProperties', 15);
-  static getChildren = new WidgetInspectorServiceExtensions('getChildren', 16);
-  static getChildrenSummaryTree = new WidgetInspectorServiceExtensions('getChildrenSummaryTree', 17);
-  static getChildrenDetailsSubtree = new WidgetInspectorServiceExtensions('getChildrenDetailsSubtree', 18);
-  static getRootWidget = new WidgetInspectorServiceExtensions('getRootWidget', 19);
-  static getRootWidgetTree = new WidgetInspectorServiceExtensions('getRootWidgetTree', 20);
-  static getRootWidgetSummaryTree = new WidgetInspectorServiceExtensions('getRootWidgetSummaryTree', 21);
-  static getRootWidgetSummaryTreeWithPreviews = new WidgetInspectorServiceExtensions('getRootWidgetSummaryTreeWithPreviews', 22);
-  static getDetailsSubtree = new WidgetInspectorServiceExtensions('getDetailsSubtree', 23);
-  static getSelectedWidget = new WidgetInspectorServiceExtensions('getSelectedWidget', 24);
-  static getSelectedSummaryWidget = new WidgetInspectorServiceExtensions('getSelectedSummaryWidget', 25);
-  static isWidgetCreationTracked = new WidgetInspectorServiceExtensions('isWidgetCreationTracked', 26);
-  static screenshot = new WidgetInspectorServiceExtensions('screenshot', 27);
-  static getLayoutExplorerNode = new WidgetInspectorServiceExtensions('getLayoutExplorerNode', 28);
-  static setFlexFit = new WidgetInspectorServiceExtensions('setFlexFit', 29);
-  static setFlexFactor = new WidgetInspectorServiceExtensions('setFlexFactor', 30);
-  static setFlexProperties = new WidgetInspectorServiceExtensions('setFlexProperties', 31);
 }
+WidgetInspectorServiceExtensions.structuredErrors = new WidgetInspectorServiceExtensions('structuredErrors', 0);
+WidgetInspectorServiceExtensions.show = new WidgetInspectorServiceExtensions('show', 1);
+WidgetInspectorServiceExtensions.trackRebuildDirtyWidgets = new WidgetInspectorServiceExtensions('trackRebuildDirtyWidgets', 2);
+WidgetInspectorServiceExtensions.widgetLocationIdMap = new WidgetInspectorServiceExtensions('widgetLocationIdMap', 3);
+WidgetInspectorServiceExtensions.trackRepaintWidgets = new WidgetInspectorServiceExtensions('trackRepaintWidgets', 4);
+WidgetInspectorServiceExtensions.disposeAllGroups = new WidgetInspectorServiceExtensions('disposeAllGroups', 5);
+WidgetInspectorServiceExtensions.disposeGroup = new WidgetInspectorServiceExtensions('disposeGroup', 6);
+WidgetInspectorServiceExtensions.isWidgetTreeReady = new WidgetInspectorServiceExtensions('isWidgetTreeReady', 7);
+WidgetInspectorServiceExtensions.disposeId = new WidgetInspectorServiceExtensions('disposeId', 8);
+WidgetInspectorServiceExtensions.setPubRootDirectories = new WidgetInspectorServiceExtensions('setPubRootDirectories', 9);
+WidgetInspectorServiceExtensions.addPubRootDirectories = new WidgetInspectorServiceExtensions('addPubRootDirectories', 10);
+WidgetInspectorServiceExtensions.removePubRootDirectories = new WidgetInspectorServiceExtensions('removePubRootDirectories', 11);
+WidgetInspectorServiceExtensions.getPubRootDirectories = new WidgetInspectorServiceExtensions('getPubRootDirectories', 12);
+WidgetInspectorServiceExtensions.setSelectionById = new WidgetInspectorServiceExtensions('setSelectionById', 13);
+WidgetInspectorServiceExtensions.getParentChain = new WidgetInspectorServiceExtensions('getParentChain', 14);
+WidgetInspectorServiceExtensions.getProperties = new WidgetInspectorServiceExtensions('getProperties', 15);
+WidgetInspectorServiceExtensions.getChildren = new WidgetInspectorServiceExtensions('getChildren', 16);
+WidgetInspectorServiceExtensions.getChildrenSummaryTree = new WidgetInspectorServiceExtensions('getChildrenSummaryTree', 17);
+WidgetInspectorServiceExtensions.getChildrenDetailsSubtree = new WidgetInspectorServiceExtensions('getChildrenDetailsSubtree', 18);
+WidgetInspectorServiceExtensions.getRootWidget = new WidgetInspectorServiceExtensions('getRootWidget', 19);
+WidgetInspectorServiceExtensions.getRootWidgetTree = new WidgetInspectorServiceExtensions('getRootWidgetTree', 20);
+WidgetInspectorServiceExtensions.getRootWidgetSummaryTree = new WidgetInspectorServiceExtensions('getRootWidgetSummaryTree', 21);
+WidgetInspectorServiceExtensions.getRootWidgetSummaryTreeWithPreviews = new WidgetInspectorServiceExtensions('getRootWidgetSummaryTreeWithPreviews', 22);
+WidgetInspectorServiceExtensions.getDetailsSubtree = new WidgetInspectorServiceExtensions('getDetailsSubtree', 23);
+WidgetInspectorServiceExtensions.getSelectedWidget = new WidgetInspectorServiceExtensions('getSelectedWidget', 24);
+WidgetInspectorServiceExtensions.getSelectedSummaryWidget = new WidgetInspectorServiceExtensions('getSelectedSummaryWidget', 25);
+WidgetInspectorServiceExtensions.isWidgetCreationTracked = new WidgetInspectorServiceExtensions('isWidgetCreationTracked', 26);
+WidgetInspectorServiceExtensions.screenshot = new WidgetInspectorServiceExtensions('screenshot', 27);
+WidgetInspectorServiceExtensions.getLayoutExplorerNode = new WidgetInspectorServiceExtensions('getLayoutExplorerNode', 28);
+WidgetInspectorServiceExtensions.setFlexFit = new WidgetInspectorServiceExtensions('setFlexFit', 29);
+WidgetInspectorServiceExtensions.setFlexFactor = new WidgetInspectorServiceExtensions('setFlexFactor', 30);
+WidgetInspectorServiceExtensions.setFlexProperties = new WidgetInspectorServiceExtensions('setFlexProperties', 31);
 WidgetInspectorServiceExtensions.values = [WidgetInspectorServiceExtensions.structuredErrors, WidgetInspectorServiceExtensions.show, WidgetInspectorServiceExtensions.trackRebuildDirtyWidgets, WidgetInspectorServiceExtensions.widgetLocationIdMap, WidgetInspectorServiceExtensions.trackRepaintWidgets, WidgetInspectorServiceExtensions.disposeAllGroups, WidgetInspectorServiceExtensions.disposeGroup, WidgetInspectorServiceExtensions.isWidgetTreeReady, WidgetInspectorServiceExtensions.disposeId, WidgetInspectorServiceExtensions.setPubRootDirectories, WidgetInspectorServiceExtensions.addPubRootDirectories, WidgetInspectorServiceExtensions.removePubRootDirectories, WidgetInspectorServiceExtensions.getPubRootDirectories, WidgetInspectorServiceExtensions.setSelectionById, WidgetInspectorServiceExtensions.getParentChain, WidgetInspectorServiceExtensions.getProperties, WidgetInspectorServiceExtensions.getChildren, WidgetInspectorServiceExtensions.getChildrenSummaryTree, WidgetInspectorServiceExtensions.getChildrenDetailsSubtree, WidgetInspectorServiceExtensions.getRootWidget, WidgetInspectorServiceExtensions.getRootWidgetTree, WidgetInspectorServiceExtensions.getRootWidgetSummaryTree, WidgetInspectorServiceExtensions.getRootWidgetSummaryTreeWithPreviews, WidgetInspectorServiceExtensions.getDetailsSubtree, WidgetInspectorServiceExtensions.getSelectedWidget, WidgetInspectorServiceExtensions.getSelectedSummaryWidget, WidgetInspectorServiceExtensions.isWidgetCreationTracked, WidgetInspectorServiceExtensions.screenshot, WidgetInspectorServiceExtensions.getLayoutExplorerNode, WidgetInspectorServiceExtensions.setFlexFit, WidgetInspectorServiceExtensions.setFlexFactor, WidgetInspectorServiceExtensions.setFlexProperties];
 
 export class ScrollViewKeyboardDismissBehavior {
@@ -6591,9 +6593,9 @@ export class ScrollViewKeyboardDismissBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ScrollViewKeyboardDismissBehavior.' + this.name; }
-  static manual = new ScrollViewKeyboardDismissBehavior('manual', 0);
-  static onDrag = new ScrollViewKeyboardDismissBehavior('onDrag', 1);
 }
+ScrollViewKeyboardDismissBehavior.manual = new ScrollViewKeyboardDismissBehavior('manual', 0);
+ScrollViewKeyboardDismissBehavior.onDrag = new ScrollViewKeyboardDismissBehavior('onDrag', 1);
 ScrollViewKeyboardDismissBehavior.values = [ScrollViewKeyboardDismissBehavior.manual, ScrollViewKeyboardDismissBehavior.onDrag];
 
 export class SelectableRegionSelectionStatus {
@@ -6604,9 +6606,9 @@ export class SelectableRegionSelectionStatus {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SelectableRegionSelectionStatus.' + this.name; }
-  static changing = new SelectableRegionSelectionStatus('changing', 0);
-  static finalized = new SelectableRegionSelectionStatus('finalized', 1);
 }
+SelectableRegionSelectionStatus.changing = new SelectableRegionSelectionStatus('changing', 0);
+SelectableRegionSelectionStatus.finalized = new SelectableRegionSelectionStatus('finalized', 1);
 SelectableRegionSelectionStatus.values = [SelectableRegionSelectionStatus.changing, SelectableRegionSelectionStatus.finalized];
 
 export class WindowPositionerAnchor {
@@ -6617,16 +6619,16 @@ export class WindowPositionerAnchor {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'WindowPositionerAnchor.' + this.name; }
-  static center = new WindowPositionerAnchor('center', 0);
-  static top = new WindowPositionerAnchor('top', 1);
-  static bottom = new WindowPositionerAnchor('bottom', 2);
-  static left = new WindowPositionerAnchor('left', 3);
-  static right = new WindowPositionerAnchor('right', 4);
-  static topLeft = new WindowPositionerAnchor('topLeft', 5);
-  static bottomLeft = new WindowPositionerAnchor('bottomLeft', 6);
-  static topRight = new WindowPositionerAnchor('topRight', 7);
-  static bottomRight = new WindowPositionerAnchor('bottomRight', 8);
 }
+WindowPositionerAnchor.center = new WindowPositionerAnchor('center', 0);
+WindowPositionerAnchor.top = new WindowPositionerAnchor('top', 1);
+WindowPositionerAnchor.bottom = new WindowPositionerAnchor('bottom', 2);
+WindowPositionerAnchor.left = new WindowPositionerAnchor('left', 3);
+WindowPositionerAnchor.right = new WindowPositionerAnchor('right', 4);
+WindowPositionerAnchor.topLeft = new WindowPositionerAnchor('topLeft', 5);
+WindowPositionerAnchor.bottomLeft = new WindowPositionerAnchor('bottomLeft', 6);
+WindowPositionerAnchor.topRight = new WindowPositionerAnchor('topRight', 7);
+WindowPositionerAnchor.bottomRight = new WindowPositionerAnchor('bottomRight', 8);
 WindowPositionerAnchor.values = [WindowPositionerAnchor.center, WindowPositionerAnchor.top, WindowPositionerAnchor.bottom, WindowPositionerAnchor.left, WindowPositionerAnchor.right, WindowPositionerAnchor.topLeft, WindowPositionerAnchor.bottomLeft, WindowPositionerAnchor.topRight, WindowPositionerAnchor.bottomRight];
 
 export class Brightness {
@@ -6637,9 +6639,9 @@ export class Brightness {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'Brightness.' + this.name; }
-  static dark = new Brightness('dark', 0);
-  static light = new Brightness('light', 1);
 }
+Brightness.dark = new Brightness('dark', 0);
+Brightness.light = new Brightness('light', 1);
 Brightness.values = [Brightness.dark, Brightness.light];
 
 export class FontStyle {
@@ -6650,9 +6652,9 @@ export class FontStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FontStyle.' + this.name; }
-  static normal = new FontStyle('normal', 0);
-  static italic = new FontStyle('italic', 1);
 }
+FontStyle.normal = new FontStyle('normal', 0);
+FontStyle.italic = new FontStyle('italic', 1);
 FontStyle.values = [FontStyle.normal, FontStyle.italic];
 
 export class TextAlign {
@@ -6663,13 +6665,13 @@ export class TextAlign {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextAlign.' + this.name; }
-  static left = new TextAlign('left', 0);
-  static right = new TextAlign('right', 1);
-  static center = new TextAlign('center', 2);
-  static justify = new TextAlign('justify', 3);
-  static start = new TextAlign('start', 4);
-  static end = new TextAlign('end', 5);
 }
+TextAlign.left = new TextAlign('left', 0);
+TextAlign.right = new TextAlign('right', 1);
+TextAlign.center = new TextAlign('center', 2);
+TextAlign.justify = new TextAlign('justify', 3);
+TextAlign.start = new TextAlign('start', 4);
+TextAlign.end = new TextAlign('end', 5);
 TextAlign.values = [TextAlign.left, TextAlign.right, TextAlign.center, TextAlign.justify, TextAlign.start, TextAlign.end];
 
 export class TextBaseline {
@@ -6680,9 +6682,9 @@ export class TextBaseline {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextBaseline.' + this.name; }
-  static alphabetic = new TextBaseline('alphabetic', 0);
-  static ideographic = new TextBaseline('ideographic', 1);
 }
+TextBaseline.alphabetic = new TextBaseline('alphabetic', 0);
+TextBaseline.ideographic = new TextBaseline('ideographic', 1);
 TextBaseline.values = [TextBaseline.alphabetic, TextBaseline.ideographic];
 
 export class TextDecorationStyle {
@@ -6693,12 +6695,12 @@ export class TextDecorationStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextDecorationStyle.' + this.name; }
-  static solid = new TextDecorationStyle('solid', 0);
-  static double = new TextDecorationStyle('double', 1);
-  static dotted = new TextDecorationStyle('dotted', 2);
-  static dashed = new TextDecorationStyle('dashed', 3);
-  static wavy = new TextDecorationStyle('wavy', 4);
 }
+TextDecorationStyle.solid = new TextDecorationStyle('solid', 0);
+TextDecorationStyle.double = new TextDecorationStyle('double', 1);
+TextDecorationStyle.dotted = new TextDecorationStyle('dotted', 2);
+TextDecorationStyle.dashed = new TextDecorationStyle('dashed', 3);
+TextDecorationStyle.wavy = new TextDecorationStyle('wavy', 4);
 TextDecorationStyle.values = [TextDecorationStyle.solid, TextDecorationStyle.double, TextDecorationStyle.dotted, TextDecorationStyle.dashed, TextDecorationStyle.wavy];
 
 export class TextLeadingDistribution {
@@ -6709,9 +6711,9 @@ export class TextLeadingDistribution {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextLeadingDistribution.' + this.name; }
-  static proportional = new TextLeadingDistribution('proportional', 0);
-  static even = new TextLeadingDistribution('even', 1);
 }
+TextLeadingDistribution.proportional = new TextLeadingDistribution('proportional', 0);
+TextLeadingDistribution.even = new TextLeadingDistribution('even', 1);
 TextLeadingDistribution.values = [TextLeadingDistribution.proportional, TextLeadingDistribution.even];
 
 export class TextDirection {
@@ -6722,9 +6724,9 @@ export class TextDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextDirection.' + this.name; }
-  static rtl = new TextDirection('rtl', 0);
-  static ltr = new TextDirection('ltr', 1);
 }
+TextDirection.rtl = new TextDirection('rtl', 0);
+TextDirection.ltr = new TextDirection('ltr', 1);
 TextDirection.values = [TextDirection.rtl, TextDirection.ltr];
 
 export class TextAffinity {
@@ -6735,9 +6737,9 @@ export class TextAffinity {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TextAffinity.' + this.name; }
-  static upstream = new TextAffinity('upstream', 0);
-  static downstream = new TextAffinity('downstream', 1);
 }
+TextAffinity.upstream = new TextAffinity('upstream', 0);
+TextAffinity.downstream = new TextAffinity('downstream', 1);
 TextAffinity.values = [TextAffinity.upstream, TextAffinity.downstream];
 
 export class BoxHeightStyle {
@@ -6748,13 +6750,13 @@ export class BoxHeightStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BoxHeightStyle.' + this.name; }
-  static tight = new BoxHeightStyle('tight', 0);
-  static max = new BoxHeightStyle('max', 1);
-  static includeLineSpacingMiddle = new BoxHeightStyle('includeLineSpacingMiddle', 2);
-  static includeLineSpacingTop = new BoxHeightStyle('includeLineSpacingTop', 3);
-  static includeLineSpacingBottom = new BoxHeightStyle('includeLineSpacingBottom', 4);
-  static strut = new BoxHeightStyle('strut', 5);
 }
+BoxHeightStyle.tight = new BoxHeightStyle('tight', 0);
+BoxHeightStyle.max = new BoxHeightStyle('max', 1);
+BoxHeightStyle.includeLineSpacingMiddle = new BoxHeightStyle('includeLineSpacingMiddle', 2);
+BoxHeightStyle.includeLineSpacingTop = new BoxHeightStyle('includeLineSpacingTop', 3);
+BoxHeightStyle.includeLineSpacingBottom = new BoxHeightStyle('includeLineSpacingBottom', 4);
+BoxHeightStyle.strut = new BoxHeightStyle('strut', 5);
 BoxHeightStyle.values = [BoxHeightStyle.tight, BoxHeightStyle.max, BoxHeightStyle.includeLineSpacingMiddle, BoxHeightStyle.includeLineSpacingTop, BoxHeightStyle.includeLineSpacingBottom, BoxHeightStyle.strut];
 
 export class BoxWidthStyle {
@@ -6765,9 +6767,9 @@ export class BoxWidthStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BoxWidthStyle.' + this.name; }
-  static tight = new BoxWidthStyle('tight', 0);
-  static max = new BoxWidthStyle('max', 1);
 }
+BoxWidthStyle.tight = new BoxWidthStyle('tight', 0);
+BoxWidthStyle.max = new BoxWidthStyle('max', 1);
 BoxWidthStyle.values = [BoxWidthStyle.tight, BoxWidthStyle.max];
 
 export class PlaceholderAlignment {
@@ -6778,13 +6780,13 @@ export class PlaceholderAlignment {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PlaceholderAlignment.' + this.name; }
-  static baseline = new PlaceholderAlignment('baseline', 0);
-  static aboveBaseline = new PlaceholderAlignment('aboveBaseline', 1);
-  static belowBaseline = new PlaceholderAlignment('belowBaseline', 2);
-  static top = new PlaceholderAlignment('top', 3);
-  static bottom = new PlaceholderAlignment('bottom', 4);
-  static middle = new PlaceholderAlignment('middle', 5);
 }
+PlaceholderAlignment.baseline = new PlaceholderAlignment('baseline', 0);
+PlaceholderAlignment.aboveBaseline = new PlaceholderAlignment('aboveBaseline', 1);
+PlaceholderAlignment.belowBaseline = new PlaceholderAlignment('belowBaseline', 2);
+PlaceholderAlignment.top = new PlaceholderAlignment('top', 3);
+PlaceholderAlignment.bottom = new PlaceholderAlignment('bottom', 4);
+PlaceholderAlignment.middle = new PlaceholderAlignment('middle', 5);
 PlaceholderAlignment.values = [PlaceholderAlignment.baseline, PlaceholderAlignment.aboveBaseline, PlaceholderAlignment.belowBaseline, PlaceholderAlignment.top, PlaceholderAlignment.bottom, PlaceholderAlignment.middle];
 
 export class PointerChange {
@@ -6795,17 +6797,17 @@ export class PointerChange {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PointerChange.' + this.name; }
-  static cancel = new PointerChange('cancel', 0);
-  static add = new PointerChange('add', 1);
-  static remove = new PointerChange('remove', 2);
-  static hover = new PointerChange('hover', 3);
-  static down = new PointerChange('down', 4);
-  static move = new PointerChange('move', 5);
-  static up = new PointerChange('up', 6);
-  static panZoomStart = new PointerChange('panZoomStart', 7);
-  static panZoomUpdate = new PointerChange('panZoomUpdate', 8);
-  static panZoomEnd = new PointerChange('panZoomEnd', 9);
 }
+PointerChange.cancel = new PointerChange('cancel', 0);
+PointerChange.add = new PointerChange('add', 1);
+PointerChange.remove = new PointerChange('remove', 2);
+PointerChange.hover = new PointerChange('hover', 3);
+PointerChange.down = new PointerChange('down', 4);
+PointerChange.move = new PointerChange('move', 5);
+PointerChange.up = new PointerChange('up', 6);
+PointerChange.panZoomStart = new PointerChange('panZoomStart', 7);
+PointerChange.panZoomUpdate = new PointerChange('panZoomUpdate', 8);
+PointerChange.panZoomEnd = new PointerChange('panZoomEnd', 9);
 PointerChange.values = [PointerChange.cancel, PointerChange.add, PointerChange.remove, PointerChange.hover, PointerChange.down, PointerChange.move, PointerChange.up, PointerChange.panZoomStart, PointerChange.panZoomUpdate, PointerChange.panZoomEnd];
 
 export class PointerDeviceKind {
@@ -6816,13 +6818,13 @@ export class PointerDeviceKind {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PointerDeviceKind.' + this.name; }
-  static touch = new PointerDeviceKind('touch', 0);
-  static mouse = new PointerDeviceKind('mouse', 1);
-  static stylus = new PointerDeviceKind('stylus', 2);
-  static invertedStylus = new PointerDeviceKind('invertedStylus', 3);
-  static trackpad = new PointerDeviceKind('trackpad', 4);
-  static unknown = new PointerDeviceKind('unknown', 5);
 }
+PointerDeviceKind.touch = new PointerDeviceKind('touch', 0);
+PointerDeviceKind.mouse = new PointerDeviceKind('mouse', 1);
+PointerDeviceKind.stylus = new PointerDeviceKind('stylus', 2);
+PointerDeviceKind.invertedStylus = new PointerDeviceKind('invertedStylus', 3);
+PointerDeviceKind.trackpad = new PointerDeviceKind('trackpad', 4);
+PointerDeviceKind.unknown = new PointerDeviceKind('unknown', 5);
 PointerDeviceKind.values = [PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.stylus, PointerDeviceKind.invertedStylus, PointerDeviceKind.trackpad, PointerDeviceKind.unknown];
 
 export class PointerSignalKind {
@@ -6833,12 +6835,12 @@ export class PointerSignalKind {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PointerSignalKind.' + this.name; }
-  static none = new PointerSignalKind('none', 0);
-  static scroll = new PointerSignalKind('scroll', 1);
-  static scrollInertiaCancel = new PointerSignalKind('scrollInertiaCancel', 2);
-  static scale = new PointerSignalKind('scale', 3);
-  static unknown = new PointerSignalKind('unknown', 4);
 }
+PointerSignalKind.none = new PointerSignalKind('none', 0);
+PointerSignalKind.scroll = new PointerSignalKind('scroll', 1);
+PointerSignalKind.scrollInertiaCancel = new PointerSignalKind('scrollInertiaCancel', 2);
+PointerSignalKind.scale = new PointerSignalKind('scale', 3);
+PointerSignalKind.unknown = new PointerSignalKind('unknown', 4);
 PointerSignalKind.values = [PointerSignalKind.none, PointerSignalKind.scroll, PointerSignalKind.scrollInertiaCancel, PointerSignalKind.scale, PointerSignalKind.unknown];
 
 export class BlendMode {
@@ -6849,36 +6851,36 @@ export class BlendMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BlendMode.' + this.name; }
-  static clear = new BlendMode('clear', 0);
-  static src = new BlendMode('src', 1);
-  static dst = new BlendMode('dst', 2);
-  static srcOver = new BlendMode('srcOver', 3);
-  static dstOver = new BlendMode('dstOver', 4);
-  static srcIn = new BlendMode('srcIn', 5);
-  static dstIn = new BlendMode('dstIn', 6);
-  static srcOut = new BlendMode('srcOut', 7);
-  static dstOut = new BlendMode('dstOut', 8);
-  static srcATop = new BlendMode('srcATop', 9);
-  static dstATop = new BlendMode('dstATop', 10);
-  static xor = new BlendMode('xor', 11);
-  static plus = new BlendMode('plus', 12);
-  static modulate = new BlendMode('modulate', 13);
-  static screen = new BlendMode('screen', 14);
-  static overlay = new BlendMode('overlay', 15);
-  static darken = new BlendMode('darken', 16);
-  static lighten = new BlendMode('lighten', 17);
-  static colorDodge = new BlendMode('colorDodge', 18);
-  static colorBurn = new BlendMode('colorBurn', 19);
-  static hardLight = new BlendMode('hardLight', 20);
-  static softLight = new BlendMode('softLight', 21);
-  static difference = new BlendMode('difference', 22);
-  static exclusion = new BlendMode('exclusion', 23);
-  static multiply = new BlendMode('multiply', 24);
-  static hue = new BlendMode('hue', 25);
-  static saturation = new BlendMode('saturation', 26);
-  static color = new BlendMode('color', 27);
-  static luminosity = new BlendMode('luminosity', 28);
 }
+BlendMode.clear = new BlendMode('clear', 0);
+BlendMode.src = new BlendMode('src', 1);
+BlendMode.dst = new BlendMode('dst', 2);
+BlendMode.srcOver = new BlendMode('srcOver', 3);
+BlendMode.dstOver = new BlendMode('dstOver', 4);
+BlendMode.srcIn = new BlendMode('srcIn', 5);
+BlendMode.dstIn = new BlendMode('dstIn', 6);
+BlendMode.srcOut = new BlendMode('srcOut', 7);
+BlendMode.dstOut = new BlendMode('dstOut', 8);
+BlendMode.srcATop = new BlendMode('srcATop', 9);
+BlendMode.dstATop = new BlendMode('dstATop', 10);
+BlendMode.xor = new BlendMode('xor', 11);
+BlendMode.plus = new BlendMode('plus', 12);
+BlendMode.modulate = new BlendMode('modulate', 13);
+BlendMode.screen = new BlendMode('screen', 14);
+BlendMode.overlay = new BlendMode('overlay', 15);
+BlendMode.darken = new BlendMode('darken', 16);
+BlendMode.lighten = new BlendMode('lighten', 17);
+BlendMode.colorDodge = new BlendMode('colorDodge', 18);
+BlendMode.colorBurn = new BlendMode('colorBurn', 19);
+BlendMode.hardLight = new BlendMode('hardLight', 20);
+BlendMode.softLight = new BlendMode('softLight', 21);
+BlendMode.difference = new BlendMode('difference', 22);
+BlendMode.exclusion = new BlendMode('exclusion', 23);
+BlendMode.multiply = new BlendMode('multiply', 24);
+BlendMode.hue = new BlendMode('hue', 25);
+BlendMode.saturation = new BlendMode('saturation', 26);
+BlendMode.color = new BlendMode('color', 27);
+BlendMode.luminosity = new BlendMode('luminosity', 28);
 BlendMode.values = [BlendMode.clear, BlendMode.src, BlendMode.dst, BlendMode.srcOver, BlendMode.dstOver, BlendMode.srcIn, BlendMode.dstIn, BlendMode.srcOut, BlendMode.dstOut, BlendMode.srcATop, BlendMode.dstATop, BlendMode.xor, BlendMode.plus, BlendMode.modulate, BlendMode.screen, BlendMode.overlay, BlendMode.darken, BlendMode.lighten, BlendMode.colorDodge, BlendMode.colorBurn, BlendMode.hardLight, BlendMode.softLight, BlendMode.difference, BlendMode.exclusion, BlendMode.multiply, BlendMode.hue, BlendMode.saturation, BlendMode.color, BlendMode.luminosity];
 
 export class FilterQuality {
@@ -6889,11 +6891,11 @@ export class FilterQuality {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FilterQuality.' + this.name; }
-  static none = new FilterQuality('none', 0);
-  static low = new FilterQuality('low', 1);
-  static medium = new FilterQuality('medium', 2);
-  static high = new FilterQuality('high', 3);
 }
+FilterQuality.none = new FilterQuality('none', 0);
+FilterQuality.low = new FilterQuality('low', 1);
+FilterQuality.medium = new FilterQuality('medium', 2);
+FilterQuality.high = new FilterQuality('high', 3);
 FilterQuality.values = [FilterQuality.none, FilterQuality.low, FilterQuality.medium, FilterQuality.high];
 
 export class StrokeCap {
@@ -6904,10 +6906,10 @@ export class StrokeCap {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'StrokeCap.' + this.name; }
-  static butt = new StrokeCap('butt', 0);
-  static round = new StrokeCap('round', 1);
-  static square = new StrokeCap('square', 2);
 }
+StrokeCap.butt = new StrokeCap('butt', 0);
+StrokeCap.round = new StrokeCap('round', 1);
+StrokeCap.square = new StrokeCap('square', 2);
 StrokeCap.values = [StrokeCap.butt, StrokeCap.round, StrokeCap.square];
 
 export class StrokeJoin {
@@ -6918,10 +6920,10 @@ export class StrokeJoin {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'StrokeJoin.' + this.name; }
-  static miter = new StrokeJoin('miter', 0);
-  static round = new StrokeJoin('round', 1);
-  static bevel = new StrokeJoin('bevel', 2);
 }
+StrokeJoin.miter = new StrokeJoin('miter', 0);
+StrokeJoin.round = new StrokeJoin('round', 1);
+StrokeJoin.bevel = new StrokeJoin('bevel', 2);
 StrokeJoin.values = [StrokeJoin.miter, StrokeJoin.round, StrokeJoin.bevel];
 
 export class PaintingStyle {
@@ -6932,9 +6934,9 @@ export class PaintingStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PaintingStyle.' + this.name; }
-  static fill = new PaintingStyle('fill', 0);
-  static stroke = new PaintingStyle('stroke', 1);
 }
+PaintingStyle.fill = new PaintingStyle('fill', 0);
+PaintingStyle.stroke = new PaintingStyle('stroke', 1);
 PaintingStyle.values = [PaintingStyle.fill, PaintingStyle.stroke];
 
 export class Clip {
@@ -6945,11 +6947,11 @@ export class Clip {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'Clip.' + this.name; }
-  static none = new Clip('none', 0);
-  static hardEdge = new Clip('hardEdge', 1);
-  static antiAlias = new Clip('antiAlias', 2);
-  static antiAliasWithSaveLayer = new Clip('antiAliasWithSaveLayer', 3);
 }
+Clip.none = new Clip('none', 0);
+Clip.hardEdge = new Clip('hardEdge', 1);
+Clip.antiAlias = new Clip('antiAlias', 2);
+Clip.antiAliasWithSaveLayer = new Clip('antiAliasWithSaveLayer', 3);
 Clip.values = [Clip.none, Clip.hardEdge, Clip.antiAlias, Clip.antiAliasWithSaveLayer];
 
 export class ColorSpace {
@@ -6960,10 +6962,10 @@ export class ColorSpace {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ColorSpace.' + this.name; }
-  static sRGB = new ColorSpace('sRGB', 0);
-  static extendedSRGB = new ColorSpace('extendedSRGB', 1);
-  static displayP3 = new ColorSpace('displayP3', 2);
 }
+ColorSpace.sRGB = new ColorSpace('sRGB', 0);
+ColorSpace.extendedSRGB = new ColorSpace('extendedSRGB', 1);
+ColorSpace.displayP3 = new ColorSpace('displayP3', 2);
 ColorSpace.values = [ColorSpace.sRGB, ColorSpace.extendedSRGB, ColorSpace.displayP3];
 
 export class ImageByteFormat {
@@ -6974,12 +6976,12 @@ export class ImageByteFormat {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ImageByteFormat.' + this.name; }
-  static rawRgba = new ImageByteFormat('rawRgba', 0);
-  static rawStraightRgba = new ImageByteFormat('rawStraightRgba', 1);
-  static rawUnmodified = new ImageByteFormat('rawUnmodified', 2);
-  static rawExtendedRgba128 = new ImageByteFormat('rawExtendedRgba128', 3);
-  static png = new ImageByteFormat('png', 4);
 }
+ImageByteFormat.rawRgba = new ImageByteFormat('rawRgba', 0);
+ImageByteFormat.rawStraightRgba = new ImageByteFormat('rawStraightRgba', 1);
+ImageByteFormat.rawUnmodified = new ImageByteFormat('rawUnmodified', 2);
+ImageByteFormat.rawExtendedRgba128 = new ImageByteFormat('rawExtendedRgba128', 3);
+ImageByteFormat.png = new ImageByteFormat('png', 4);
 ImageByteFormat.values = [ImageByteFormat.rawRgba, ImageByteFormat.rawStraightRgba, ImageByteFormat.rawUnmodified, ImageByteFormat.rawExtendedRgba128, ImageByteFormat.png];
 
 export class PixelFormat {
@@ -6990,11 +6992,11 @@ export class PixelFormat {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PixelFormat.' + this.name; }
-  static rgba8888 = new PixelFormat('rgba8888', 0);
-  static bgra8888 = new PixelFormat('bgra8888', 1);
-  static rgbaFloat32 = new PixelFormat('rgbaFloat32', 2);
-  static rFloat32 = new PixelFormat('rFloat32', 3);
 }
+PixelFormat.rgba8888 = new PixelFormat('rgba8888', 0);
+PixelFormat.bgra8888 = new PixelFormat('bgra8888', 1);
+PixelFormat.rgbaFloat32 = new PixelFormat('rgbaFloat32', 2);
+PixelFormat.rFloat32 = new PixelFormat('rFloat32', 3);
 PixelFormat.values = [PixelFormat.rgba8888, PixelFormat.bgra8888, PixelFormat.rgbaFloat32, PixelFormat.rFloat32];
 
 export class TargetPixelFormat {
@@ -7005,10 +7007,10 @@ export class TargetPixelFormat {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TargetPixelFormat.' + this.name; }
-  static dontCare = new TargetPixelFormat('dontCare', 0);
-  static rgbaFloat32 = new TargetPixelFormat('rgbaFloat32', 1);
-  static rFloat32 = new TargetPixelFormat('rFloat32', 2);
 }
+TargetPixelFormat.dontCare = new TargetPixelFormat('dontCare', 0);
+TargetPixelFormat.rgbaFloat32 = new TargetPixelFormat('rgbaFloat32', 1);
+TargetPixelFormat.rFloat32 = new TargetPixelFormat('rFloat32', 2);
 TargetPixelFormat.values = [TargetPixelFormat.dontCare, TargetPixelFormat.rgbaFloat32, TargetPixelFormat.rFloat32];
 
 export class PathFillType {
@@ -7019,9 +7021,9 @@ export class PathFillType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PathFillType.' + this.name; }
-  static nonZero = new PathFillType('nonZero', 0);
-  static evenOdd = new PathFillType('evenOdd', 1);
 }
+PathFillType.nonZero = new PathFillType('nonZero', 0);
+PathFillType.evenOdd = new PathFillType('evenOdd', 1);
 PathFillType.values = [PathFillType.nonZero, PathFillType.evenOdd];
 
 export class PathOperation {
@@ -7032,12 +7034,12 @@ export class PathOperation {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PathOperation.' + this.name; }
-  static difference = new PathOperation('difference', 0);
-  static intersect = new PathOperation('intersect', 1);
-  static union = new PathOperation('union', 2);
-  static xor = new PathOperation('xor', 3);
-  static reverseDifference = new PathOperation('reverseDifference', 4);
 }
+PathOperation.difference = new PathOperation('difference', 0);
+PathOperation.intersect = new PathOperation('intersect', 1);
+PathOperation.union = new PathOperation('union', 2);
+PathOperation.xor = new PathOperation('xor', 3);
+PathOperation.reverseDifference = new PathOperation('reverseDifference', 4);
 PathOperation.values = [PathOperation.difference, PathOperation.intersect, PathOperation.union, PathOperation.xor, PathOperation.reverseDifference];
 
 export class BlurStyle {
@@ -7048,11 +7050,11 @@ export class BlurStyle {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BlurStyle.' + this.name; }
-  static normal = new BlurStyle('normal', 0);
-  static solid = new BlurStyle('solid', 1);
-  static outer = new BlurStyle('outer', 2);
-  static inner = new BlurStyle('inner', 3);
 }
+BlurStyle.normal = new BlurStyle('normal', 0);
+BlurStyle.solid = new BlurStyle('solid', 1);
+BlurStyle.outer = new BlurStyle('outer', 2);
+BlurStyle.inner = new BlurStyle('inner', 3);
 BlurStyle.values = [BlurStyle.normal, BlurStyle.solid, BlurStyle.outer, BlurStyle.inner];
 
 export class TileMode {
@@ -7063,11 +7065,11 @@ export class TileMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TileMode.' + this.name; }
-  static clamp = new TileMode('clamp', 0);
-  static repeated = new TileMode('repeated', 1);
-  static mirror = new TileMode('mirror', 2);
-  static decal = new TileMode('decal', 3);
 }
+TileMode.clamp = new TileMode('clamp', 0);
+TileMode.repeated = new TileMode('repeated', 1);
+TileMode.mirror = new TileMode('mirror', 2);
+TileMode.decal = new TileMode('decal', 3);
 TileMode.values = [TileMode.clamp, TileMode.repeated, TileMode.mirror, TileMode.decal];
 
 export class VertexMode {
@@ -7078,10 +7080,10 @@ export class VertexMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'VertexMode.' + this.name; }
-  static triangles = new VertexMode('triangles', 0);
-  static triangleStrip = new VertexMode('triangleStrip', 1);
-  static triangleFan = new VertexMode('triangleFan', 2);
 }
+VertexMode.triangles = new VertexMode('triangles', 0);
+VertexMode.triangleStrip = new VertexMode('triangleStrip', 1);
+VertexMode.triangleFan = new VertexMode('triangleFan', 2);
 VertexMode.values = [VertexMode.triangles, VertexMode.triangleStrip, VertexMode.triangleFan];
 
 export class PointMode {
@@ -7092,10 +7094,10 @@ export class PointMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'PointMode.' + this.name; }
-  static points = new PointMode('points', 0);
-  static lines = new PointMode('lines', 1);
-  static polygon = new PointMode('polygon', 2);
 }
+PointMode.points = new PointMode('points', 0);
+PointMode.lines = new PointMode('lines', 1);
+PointMode.polygon = new PointMode('polygon', 2);
 PointMode.values = [PointMode.points, PointMode.lines, PointMode.polygon];
 
 export class ClipOp {
@@ -7106,9 +7108,9 @@ export class ClipOp {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ClipOp.' + this.name; }
-  static difference = new ClipOp('difference', 0);
-  static intersect = new ClipOp('intersect', 1);
 }
+ClipOp.difference = new ClipOp('difference', 0);
+ClipOp.intersect = new ClipOp('intersect', 1);
 ClipOp.values = [ClipOp.difference, ClipOp.intersect];
 
 export class SemanticsRole {
@@ -7119,40 +7121,40 @@ export class SemanticsRole {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SemanticsRole.' + this.name; }
-  static none = new SemanticsRole('none', 0);
-  static tab = new SemanticsRole('tab', 1);
-  static tabBar = new SemanticsRole('tabBar', 2);
-  static tabPanel = new SemanticsRole('tabPanel', 3);
-  static dialog = new SemanticsRole('dialog', 4);
-  static alertDialog = new SemanticsRole('alertDialog', 5);
-  static table = new SemanticsRole('table', 6);
-  static cell = new SemanticsRole('cell', 7);
-  static row = new SemanticsRole('row', 8);
-  static columnHeader = new SemanticsRole('columnHeader', 9);
-  static dragHandle = new SemanticsRole('dragHandle', 10);
-  static spinButton = new SemanticsRole('spinButton', 11);
-  static comboBox = new SemanticsRole('comboBox', 12);
-  static menuBar = new SemanticsRole('menuBar', 13);
-  static menu = new SemanticsRole('menu', 14);
-  static menuItem = new SemanticsRole('menuItem', 15);
-  static menuItemCheckbox = new SemanticsRole('menuItemCheckbox', 16);
-  static menuItemRadio = new SemanticsRole('menuItemRadio', 17);
-  static list = new SemanticsRole('list', 18);
-  static listItem = new SemanticsRole('listItem', 19);
-  static form = new SemanticsRole('form', 20);
-  static tooltip = new SemanticsRole('tooltip', 21);
-  static loadingSpinner = new SemanticsRole('loadingSpinner', 22);
-  static progressBar = new SemanticsRole('progressBar', 23);
-  static hotKey = new SemanticsRole('hotKey', 24);
-  static radioGroup = new SemanticsRole('radioGroup', 25);
-  static status = new SemanticsRole('status', 26);
-  static alert = new SemanticsRole('alert', 27);
-  static complementary = new SemanticsRole('complementary', 28);
-  static contentInfo = new SemanticsRole('contentInfo', 29);
-  static main = new SemanticsRole('main', 30);
-  static navigation = new SemanticsRole('navigation', 31);
-  static region = new SemanticsRole('region', 32);
 }
+SemanticsRole.none = new SemanticsRole('none', 0);
+SemanticsRole.tab = new SemanticsRole('tab', 1);
+SemanticsRole.tabBar = new SemanticsRole('tabBar', 2);
+SemanticsRole.tabPanel = new SemanticsRole('tabPanel', 3);
+SemanticsRole.dialog = new SemanticsRole('dialog', 4);
+SemanticsRole.alertDialog = new SemanticsRole('alertDialog', 5);
+SemanticsRole.table = new SemanticsRole('table', 6);
+SemanticsRole.cell = new SemanticsRole('cell', 7);
+SemanticsRole.row = new SemanticsRole('row', 8);
+SemanticsRole.columnHeader = new SemanticsRole('columnHeader', 9);
+SemanticsRole.dragHandle = new SemanticsRole('dragHandle', 10);
+SemanticsRole.spinButton = new SemanticsRole('spinButton', 11);
+SemanticsRole.comboBox = new SemanticsRole('comboBox', 12);
+SemanticsRole.menuBar = new SemanticsRole('menuBar', 13);
+SemanticsRole.menu = new SemanticsRole('menu', 14);
+SemanticsRole.menuItem = new SemanticsRole('menuItem', 15);
+SemanticsRole.menuItemCheckbox = new SemanticsRole('menuItemCheckbox', 16);
+SemanticsRole.menuItemRadio = new SemanticsRole('menuItemRadio', 17);
+SemanticsRole.list = new SemanticsRole('list', 18);
+SemanticsRole.listItem = new SemanticsRole('listItem', 19);
+SemanticsRole.form = new SemanticsRole('form', 20);
+SemanticsRole.tooltip = new SemanticsRole('tooltip', 21);
+SemanticsRole.loadingSpinner = new SemanticsRole('loadingSpinner', 22);
+SemanticsRole.progressBar = new SemanticsRole('progressBar', 23);
+SemanticsRole.hotKey = new SemanticsRole('hotKey', 24);
+SemanticsRole.radioGroup = new SemanticsRole('radioGroup', 25);
+SemanticsRole.status = new SemanticsRole('status', 26);
+SemanticsRole.alert = new SemanticsRole('alert', 27);
+SemanticsRole.complementary = new SemanticsRole('complementary', 28);
+SemanticsRole.contentInfo = new SemanticsRole('contentInfo', 29);
+SemanticsRole.main = new SemanticsRole('main', 30);
+SemanticsRole.navigation = new SemanticsRole('navigation', 31);
+SemanticsRole.region = new SemanticsRole('region', 32);
 SemanticsRole.values = [SemanticsRole.none, SemanticsRole.tab, SemanticsRole.tabBar, SemanticsRole.tabPanel, SemanticsRole.dialog, SemanticsRole.alertDialog, SemanticsRole.table, SemanticsRole.cell, SemanticsRole.row, SemanticsRole.columnHeader, SemanticsRole.dragHandle, SemanticsRole.spinButton, SemanticsRole.comboBox, SemanticsRole.menuBar, SemanticsRole.menu, SemanticsRole.menuItem, SemanticsRole.menuItemCheckbox, SemanticsRole.menuItemRadio, SemanticsRole.list, SemanticsRole.listItem, SemanticsRole.form, SemanticsRole.tooltip, SemanticsRole.loadingSpinner, SemanticsRole.progressBar, SemanticsRole.hotKey, SemanticsRole.radioGroup, SemanticsRole.status, SemanticsRole.alert, SemanticsRole.complementary, SemanticsRole.contentInfo, SemanticsRole.main, SemanticsRole.navigation, SemanticsRole.region];
 
 export class SemanticsInputType {
@@ -7163,13 +7165,13 @@ export class SemanticsInputType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SemanticsInputType.' + this.name; }
-  static none = new SemanticsInputType('none', 0);
-  static text = new SemanticsInputType('text', 1);
-  static url = new SemanticsInputType('url', 2);
-  static phone = new SemanticsInputType('phone', 3);
-  static search = new SemanticsInputType('search', 4);
-  static email = new SemanticsInputType('email', 5);
 }
+SemanticsInputType.none = new SemanticsInputType('none', 0);
+SemanticsInputType.text = new SemanticsInputType('text', 1);
+SemanticsInputType.url = new SemanticsInputType('url', 2);
+SemanticsInputType.phone = new SemanticsInputType('phone', 3);
+SemanticsInputType.search = new SemanticsInputType('search', 4);
+SemanticsInputType.email = new SemanticsInputType('email', 5);
 SemanticsInputType.values = [SemanticsInputType.none, SemanticsInputType.text, SemanticsInputType.url, SemanticsInputType.phone, SemanticsInputType.search, SemanticsInputType.email];
 
 export class SemanticsHitTestBehavior {
@@ -7180,10 +7182,10 @@ export class SemanticsHitTestBehavior {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SemanticsHitTestBehavior.' + this.name; }
-  static defer = new SemanticsHitTestBehavior('defer', 0);
-  static opaque = new SemanticsHitTestBehavior('opaque', 1);
-  static transparent = new SemanticsHitTestBehavior('transparent', 2);
 }
+SemanticsHitTestBehavior.defer = new SemanticsHitTestBehavior('defer', 0);
+SemanticsHitTestBehavior.opaque = new SemanticsHitTestBehavior('opaque', 1);
+SemanticsHitTestBehavior.transparent = new SemanticsHitTestBehavior('transparent', 2);
 SemanticsHitTestBehavior.values = [SemanticsHitTestBehavior.defer, SemanticsHitTestBehavior.opaque, SemanticsHitTestBehavior.transparent];
 
 export class SemanticsValidationResult {
@@ -7194,10 +7196,10 @@ export class SemanticsValidationResult {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'SemanticsValidationResult.' + this.name; }
-  static none = new SemanticsValidationResult('none', 0);
-  static valid = new SemanticsValidationResult('valid', 1);
-  static invalid = new SemanticsValidationResult('invalid', 2);
 }
+SemanticsValidationResult.none = new SemanticsValidationResult('none', 0);
+SemanticsValidationResult.valid = new SemanticsValidationResult('valid', 1);
+SemanticsValidationResult.invalid = new SemanticsValidationResult('invalid', 2);
 SemanticsValidationResult.values = [SemanticsValidationResult.none, SemanticsValidationResult.valid, SemanticsValidationResult.invalid];
 
 export class FramePhase {
@@ -7208,13 +7210,13 @@ export class FramePhase {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'FramePhase.' + this.name; }
-  static vsyncStart = new FramePhase('vsyncStart', 0);
-  static buildStart = new FramePhase('buildStart', 1);
-  static buildFinish = new FramePhase('buildFinish', 2);
-  static rasterStart = new FramePhase('rasterStart', 3);
-  static rasterFinish = new FramePhase('rasterFinish', 4);
-  static rasterFinishWallTime = new FramePhase('rasterFinishWallTime', 5);
 }
+FramePhase.vsyncStart = new FramePhase('vsyncStart', 0);
+FramePhase.buildStart = new FramePhase('buildStart', 1);
+FramePhase.buildFinish = new FramePhase('buildFinish', 2);
+FramePhase.rasterStart = new FramePhase('rasterStart', 3);
+FramePhase.rasterFinish = new FramePhase('rasterFinish', 4);
+FramePhase.rasterFinishWallTime = new FramePhase('rasterFinishWallTime', 5);
 FramePhase.values = [FramePhase.vsyncStart, FramePhase.buildStart, FramePhase.buildFinish, FramePhase.rasterStart, FramePhase.rasterFinish, FramePhase.rasterFinishWallTime];
 
 export class AppLifecycleState {
@@ -7225,12 +7227,12 @@ export class AppLifecycleState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AppLifecycleState.' + this.name; }
-  static detached = new AppLifecycleState('detached', 0);
-  static resumed = new AppLifecycleState('resumed', 1);
-  static inactive = new AppLifecycleState('inactive', 2);
-  static hidden = new AppLifecycleState('hidden', 3);
-  static paused = new AppLifecycleState('paused', 4);
 }
+AppLifecycleState.detached = new AppLifecycleState('detached', 0);
+AppLifecycleState.resumed = new AppLifecycleState('resumed', 1);
+AppLifecycleState.inactive = new AppLifecycleState('inactive', 2);
+AppLifecycleState.hidden = new AppLifecycleState('hidden', 3);
+AppLifecycleState.paused = new AppLifecycleState('paused', 4);
 AppLifecycleState.values = [AppLifecycleState.detached, AppLifecycleState.resumed, AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused];
 
 export class AppExitResponse {
@@ -7241,9 +7243,9 @@ export class AppExitResponse {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AppExitResponse.' + this.name; }
-  static exit = new AppExitResponse('exit', 0);
-  static cancel = new AppExitResponse('cancel', 1);
 }
+AppExitResponse.exit = new AppExitResponse('exit', 0);
+AppExitResponse.cancel = new AppExitResponse('cancel', 1);
 AppExitResponse.values = [AppExitResponse.exit, AppExitResponse.cancel];
 
 export class AppExitType {
@@ -7254,9 +7256,9 @@ export class AppExitType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'AppExitType.' + this.name; }
-  static cancelable = new AppExitType('cancelable', 0);
-  static required = new AppExitType('required', 1);
 }
+AppExitType.cancelable = new AppExitType('cancelable', 0);
+AppExitType.required = new AppExitType('required', 1);
 AppExitType.values = [AppExitType.cancelable, AppExitType.required];
 
 export class DisplayFeatureType {
@@ -7267,11 +7269,11 @@ export class DisplayFeatureType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DisplayFeatureType.' + this.name; }
-  static unknown = new DisplayFeatureType('unknown', 0);
-  static fold = new DisplayFeatureType('fold', 1);
-  static hinge = new DisplayFeatureType('hinge', 2);
-  static cutout = new DisplayFeatureType('cutout', 3);
 }
+DisplayFeatureType.unknown = new DisplayFeatureType('unknown', 0);
+DisplayFeatureType.fold = new DisplayFeatureType('fold', 1);
+DisplayFeatureType.hinge = new DisplayFeatureType('hinge', 2);
+DisplayFeatureType.cutout = new DisplayFeatureType('cutout', 3);
 DisplayFeatureType.values = [DisplayFeatureType.unknown, DisplayFeatureType.fold, DisplayFeatureType.hinge, DisplayFeatureType.cutout];
 
 export class DisplayFeatureState {
@@ -7282,10 +7284,10 @@ export class DisplayFeatureState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DisplayFeatureState.' + this.name; }
-  static unknown = new DisplayFeatureState('unknown', 0);
-  static postureFlat = new DisplayFeatureState('postureFlat', 1);
-  static postureHalfOpened = new DisplayFeatureState('postureHalfOpened', 2);
 }
+DisplayFeatureState.unknown = new DisplayFeatureState('unknown', 0);
+DisplayFeatureState.postureFlat = new DisplayFeatureState('postureFlat', 1);
+DisplayFeatureState.postureHalfOpened = new DisplayFeatureState('postureHalfOpened', 2);
 DisplayFeatureState.values = [DisplayFeatureState.unknown, DisplayFeatureState.postureFlat, DisplayFeatureState.postureHalfOpened];
 
 export class DartPerformanceMode {
@@ -7296,11 +7298,11 @@ export class DartPerformanceMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'DartPerformanceMode.' + this.name; }
-  static balanced = new DartPerformanceMode('balanced', 0);
-  static latency = new DartPerformanceMode('latency', 1);
-  static throughput = new DartPerformanceMode('throughput', 2);
-  static memory = new DartPerformanceMode('memory', 3);
 }
+DartPerformanceMode.balanced = new DartPerformanceMode('balanced', 0);
+DartPerformanceMode.latency = new DartPerformanceMode('latency', 1);
+DartPerformanceMode.throughput = new DartPerformanceMode('throughput', 2);
+DartPerformanceMode.memory = new DartPerformanceMode('memory', 3);
 DartPerformanceMode.values = [DartPerformanceMode.balanced, DartPerformanceMode.latency, DartPerformanceMode.throughput, DartPerformanceMode.memory];
 
 export class ViewFocusState {
@@ -7311,9 +7313,9 @@ export class ViewFocusState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ViewFocusState.' + this.name; }
-  static unfocused = new ViewFocusState('unfocused', 0);
-  static focused = new ViewFocusState('focused', 1);
 }
+ViewFocusState.unfocused = new ViewFocusState('unfocused', 0);
+ViewFocusState.focused = new ViewFocusState('focused', 1);
 ViewFocusState.values = [ViewFocusState.unfocused, ViewFocusState.focused];
 
 export class ViewFocusDirection {
@@ -7324,10 +7326,10 @@ export class ViewFocusDirection {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'ViewFocusDirection.' + this.name; }
-  static undefined = new ViewFocusDirection('undefined', 0);
-  static forward = new ViewFocusDirection('forward', 1);
-  static backward = new ViewFocusDirection('backward', 2);
 }
+ViewFocusDirection.undefined = new ViewFocusDirection('undefined', 0);
+ViewFocusDirection.forward = new ViewFocusDirection('forward', 1);
+ViewFocusDirection.backward = new ViewFocusDirection('backward', 2);
 ViewFocusDirection.values = [ViewFocusDirection.undefined, ViewFocusDirection.forward, ViewFocusDirection.backward];
 
 export class KeyEventType {
@@ -7338,10 +7340,10 @@ export class KeyEventType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'KeyEventType.' + this.name; }
-  static down = new KeyEventType('down', 0);
-  static up = new KeyEventType('up', 1);
-  static repeat = new KeyEventType('repeat', 2);
 }
+KeyEventType.down = new KeyEventType('down', 0);
+KeyEventType.up = new KeyEventType('up', 1);
+KeyEventType.repeat = new KeyEventType('repeat', 2);
 KeyEventType.values = [KeyEventType.down, KeyEventType.up, KeyEventType.repeat];
 
 export class KeyEventDeviceType {
@@ -7352,12 +7354,12 @@ export class KeyEventDeviceType {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'KeyEventDeviceType.' + this.name; }
-  static keyboard = new KeyEventDeviceType('keyboard', 0);
-  static directionalPad = new KeyEventDeviceType('directionalPad', 1);
-  static gamepad = new KeyEventDeviceType('gamepad', 2);
-  static joystick = new KeyEventDeviceType('joystick', 3);
-  static hdmi = new KeyEventDeviceType('hdmi', 4);
 }
+KeyEventDeviceType.keyboard = new KeyEventDeviceType('keyboard', 0);
+KeyEventDeviceType.directionalPad = new KeyEventDeviceType('directionalPad', 1);
+KeyEventDeviceType.gamepad = new KeyEventDeviceType('gamepad', 2);
+KeyEventDeviceType.joystick = new KeyEventDeviceType('joystick', 3);
+KeyEventDeviceType.hdmi = new KeyEventDeviceType('hdmi', 4);
 KeyEventDeviceType.values = [KeyEventDeviceType.keyboard, KeyEventDeviceType.directionalPad, KeyEventDeviceType.gamepad, KeyEventDeviceType.joystick, KeyEventDeviceType.hdmi];
 
 export class TimelineRecorder {
@@ -7368,10 +7370,10 @@ export class TimelineRecorder {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TimelineRecorder.' + this.name; }
-  static perfetto = new TimelineRecorder('perfetto', 0);
-  static chrome = new TimelineRecorder('chrome', 1);
-  static systrace = new TimelineRecorder('systrace', 2);
 }
+TimelineRecorder.perfetto = new TimelineRecorder('perfetto', 0);
+TimelineRecorder.chrome = new TimelineRecorder('chrome', 1);
+TimelineRecorder.systrace = new TimelineRecorder('systrace', 2);
 TimelineRecorder.values = [TimelineRecorder.perfetto, TimelineRecorder.chrome, TimelineRecorder.systrace];
 
 export class TimelineStream {
@@ -7382,17 +7384,17 @@ export class TimelineStream {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'TimelineStream.' + this.name; }
-  static api = new TimelineStream('api', 0);
-  static compiler = new TimelineStream('compiler', 1);
-  static compilerVerbose = new TimelineStream('compilerVerbose', 2);
-  static dart = new TimelineStream('dart', 3);
-  static debugger = new TimelineStream('debugger', 4);
-  static embedder = new TimelineStream('embedder', 5);
-  static gc = new TimelineStream('gc', 6);
-  static isolate = new TimelineStream('isolate', 7);
-  static microtask = new TimelineStream('microtask', 8);
-  static vm = new TimelineStream('vm', 9);
 }
+TimelineStream.api = new TimelineStream('api', 0);
+TimelineStream.compiler = new TimelineStream('compiler', 1);
+TimelineStream.compilerVerbose = new TimelineStream('compilerVerbose', 2);
+TimelineStream.dart = new TimelineStream('dart', 3);
+TimelineStream.debugger = new TimelineStream('debugger', 4);
+TimelineStream.embedder = new TimelineStream('embedder', 5);
+TimelineStream.gc = new TimelineStream('gc', 6);
+TimelineStream.isolate = new TimelineStream('isolate', 7);
+TimelineStream.microtask = new TimelineStream('microtask', 8);
+TimelineStream.vm = new TimelineStream('vm', 9);
 TimelineStream.values = [TimelineStream.api, TimelineStream.compiler, TimelineStream.compilerVerbose, TimelineStream.dart, TimelineStream.debugger, TimelineStream.embedder, TimelineStream.gc, TimelineStream.isolate, TimelineStream.microtask, TimelineStream.vm];
 
 export class BrowserEngine {
@@ -7403,10 +7405,10 @@ export class BrowserEngine {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'BrowserEngine.' + this.name; }
-  static blink = new BrowserEngine('blink', 0);
-  static webkit = new BrowserEngine('webkit', 1);
-  static firefox = new BrowserEngine('firefox', 2);
 }
+BrowserEngine.blink = new BrowserEngine('blink', 0);
+BrowserEngine.webkit = new BrowserEngine('webkit', 1);
+BrowserEngine.firefox = new BrowserEngine('firefox', 2);
 BrowserEngine.values = [BrowserEngine.blink, BrowserEngine.webkit, BrowserEngine.firefox];
 
 export class OperatingSystem {
@@ -7417,13 +7419,13 @@ export class OperatingSystem {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'OperatingSystem.' + this.name; }
-  static iOs = new OperatingSystem('iOs', 0);
-  static android = new OperatingSystem('android', 1);
-  static linux = new OperatingSystem('linux', 2);
-  static windows = new OperatingSystem('windows', 3);
-  static macOs = new OperatingSystem('macOs', 4);
-  static unknown = new OperatingSystem('unknown', 5);
 }
+OperatingSystem.iOs = new OperatingSystem('iOs', 0);
+OperatingSystem.android = new OperatingSystem('android', 1);
+OperatingSystem.linux = new OperatingSystem('linux', 2);
+OperatingSystem.windows = new OperatingSystem('windows', 3);
+OperatingSystem.macOs = new OperatingSystem('macOs', 4);
+OperatingSystem.unknown = new OperatingSystem('unknown', 5);
 OperatingSystem.values = [OperatingSystem.iOs, OperatingSystem.android, OperatingSystem.linux, OperatingSystem.windows, OperatingSystem.macOs, OperatingSystem.unknown];
 
 export class HttpClientResponseCompressionState {
@@ -7434,10 +7436,10 @@ export class HttpClientResponseCompressionState {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'HttpClientResponseCompressionState.' + this.name; }
-  static notCompressed = new HttpClientResponseCompressionState('notCompressed', 0);
-  static decompressed = new HttpClientResponseCompressionState('decompressed', 1);
-  static compressed = new HttpClientResponseCompressionState('compressed', 2);
 }
+HttpClientResponseCompressionState.notCompressed = new HttpClientResponseCompressionState('notCompressed', 0);
+HttpClientResponseCompressionState.decompressed = new HttpClientResponseCompressionState('decompressed', 1);
+HttpClientResponseCompressionState.compressed = new HttpClientResponseCompressionState('compressed', 2);
 HttpClientResponseCompressionState.values = [HttpClientResponseCompressionState.notCompressed, HttpClientResponseCompressionState.decompressed, HttpClientResponseCompressionState.compressed];
 
 
@@ -7522,7 +7524,6 @@ export class EdgeInsets {
   toJSON() {
     return { left: this.left, top: this.top, right: this.right, bottom: this.bottom };
   }
-  static zero = new EdgeInsets({});
   static all(props) {
     var v = __singleValue(props);
     return new EdgeInsets({ left: v, top: v, right: v, bottom: v });
@@ -7547,6 +7548,8 @@ export class EdgeInsets {
     });
   }
 }
+// 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+EdgeInsets.zero = new EdgeInsets({});
 
 // ----- 圆角 / 边框 -----------------------------------------------------------
 // 宿主协议：BorderRadius → {radius} 或四角数字；Border → {all} 或四边 side。
@@ -7571,7 +7574,6 @@ export class BorderRadius {
   }
   get horizontal() { return this.topLeft.x + this.bottomLeft.x; }
   get vertical() { return this.topLeft.x + this.bottomLeft.x; }
-  static zero = new BorderRadius({});
   static all(props) {
     var r = BorderRadius.__radius(props.radius);
     return new BorderRadius({ topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
@@ -7587,6 +7589,8 @@ export class BorderRadius {
     return new BorderRadius({ topLeft: r, bottomLeft: r });
   }
 }
+// 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+BorderRadius.zero = new BorderRadius({});
 
 export class BorderSide {
   constructor(props) {
@@ -7599,8 +7603,9 @@ export class BorderSide {
   toJSON() {
     return { color: this.color, width: this.width, style: this.style };
   }
-  static none = new BorderSide({ width: 0, style: 'none' });
 }
+// 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+BorderSide.none = new BorderSide({ width: 0, style: 'none' });
 
 export class Border {
   constructor(props) {
@@ -7672,11 +7677,12 @@ export class TextDecoration {
   toJSON() { return this.name; }
   // 同枚举：跨桥值是成员名，`==` 直译为 JS `==`，靠 valueOf 归一成同一比较基准。
   valueOf() { return this.name; }
-  static none = new TextDecoration('none');
-  static underline = new TextDecoration('underline');
-  static overline = new TextDecoration('overline');
-  static lineThrough = new TextDecoration('lineThrough');
 }
+// 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+TextDecoration.none = new TextDecoration('none');
+TextDecoration.underline = new TextDecoration('underline');
+TextDecoration.overline = new TextDecoration('overline');
+TextDecoration.lineThrough = new TextDecoration('lineThrough');
 
 export class FontWeight {
   constructor(props) { this.value = __singleValue(__positionalArgs(props, ['index'])); }
@@ -7685,18 +7691,19 @@ export class FontWeight {
     if (this.value === 700) { return 'bold'; }
     return 'w' + this.value;
   }
-  static w100 = new FontWeight(100);
-  static w200 = new FontWeight(200);
-  static w300 = new FontWeight(300);
-  static w400 = new FontWeight(400);
-  static w500 = new FontWeight(500);
-  static w600 = new FontWeight(600);
-  static w700 = new FontWeight(700);
-  static w800 = new FontWeight(800);
-  static w900 = new FontWeight(900);
-  static normal = FontWeight.w400;
-  static bold = FontWeight.w700;
 }
+// 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+FontWeight.w100 = new FontWeight(100);
+FontWeight.w200 = new FontWeight(200);
+FontWeight.w300 = new FontWeight(300);
+FontWeight.w400 = new FontWeight(400);
+FontWeight.w500 = new FontWeight(500);
+FontWeight.w600 = new FontWeight(600);
+FontWeight.w700 = new FontWeight(700);
+FontWeight.w800 = new FontWeight(800);
+FontWeight.w900 = new FontWeight(900);
+FontWeight.normal = FontWeight.w400;
+FontWeight.bold = FontWeight.w700;
 
 export class TextScaler {
   constructor(props) {
@@ -7707,13 +7714,14 @@ export class TextScaler {
   scale(x) {
     return this.__none ? x : this.factor * x;
   }
-  static noScaling = new TextScaler(null);
   static linear(props) {
     props = __positionalArgs(props, ['textScaleFactor']);
     return new TextScaler(
     props.textScaleFactor != null ? props.textScaleFactor : __singleValue(props));
   }
 }
+// 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+TextScaler.noScaling = new TextScaler(null);
 
 export class TextStyle {
   constructor(props) {
@@ -9852,57 +9860,57 @@ export class Colors {
     }
     return m;
   }
-  static red = Colors.__palette(0xFFF44336, {'50': 0xFFFFEBEE, '100': 0xFFFFCDD2, '200': 0xFFEF9A9A, '300': 0xFFE57373, '400': 0xFFEF5350, '500': 0xFFF44336, '600': 0xFFE53935, '700': 0xFFD32F2F, '800': 0xFFC62828, '900': 0xFFB71C1C});
-  static pink = Colors.__palette(0xFFE91E63, {'50': 0xFFFCE4EC, '100': 0xFFF8BBD0, '200': 0xFFF48FB1, '300': 0xFFF06292, '400': 0xFFEC407A, '500': 0xFFE91E63, '600': 0xFFD81B60, '700': 0xFFC2185B, '800': 0xFFAD1457, '900': 0xFF880E4F});
-  static purple = Colors.__palette(0xFF9C27B0, {'50': 0xFFF3E5F5, '100': 0xFFE1BEE7, '200': 0xFFCE93D8, '300': 0xFFBA68C8, '400': 0xFFAB47BC, '500': 0xFF9C27B0, '600': 0xFF8E24AA, '700': 0xFF7B1FA2, '800': 0xFF6A1B9A, '900': 0xFF4A148C});
-  static deepPurple = Colors.__palette(0xFF673AB7, {'50': 0xFFEDE7F6, '100': 0xFFD1C4E9, '200': 0xFFB39DDB, '300': 0xFF9575CD, '400': 0xFF7E57C2, '500': 0xFF673AB7, '600': 0xFF5E35B1, '700': 0xFF512DA8, '800': 0xFF4527A0, '900': 0xFF311B92});
-  static indigo = Colors.__palette(0xFF3F51B5, {'50': 0xFFE8EAF6, '100': 0xFFC5CAE9, '200': 0xFF9FA8DA, '300': 0xFF7986CB, '400': 0xFF5C6BC0, '500': 0xFF3F51B5, '600': 0xFF3949AB, '700': 0xFF303F9F, '800': 0xFF283593, '900': 0xFF1A237E});
-  static blue = Colors.__palette(0xFF2196F3, {'50': 0xFFE3F2FD, '100': 0xFFBBDEFB, '200': 0xFF90CAF9, '300': 0xFF64B5F6, '400': 0xFF42A5F5, '500': 0xFF2196F3, '600': 0xFF1E88E5, '700': 0xFF1976D2, '800': 0xFF1565C0, '900': 0xFF0D47A1});
-  static lightBlue = Colors.__palette(0xFF03A9F4, {'50': 0xFFE1F5FE, '100': 0xFFB3E5FC, '200': 0xFF81D4FA, '300': 0xFF4FC3F7, '400': 0xFF29B6F6, '500': 0xFF03A9F4, '600': 0xFF039BE5, '700': 0xFF0288D1, '800': 0xFF0277BD, '900': 0xFF01579B});
-  static cyan = Colors.__palette(0xFF00BCD4, {'50': 0xFFE0F7FA, '100': 0xFFB2EBF2, '200': 0xFF80DEEA, '300': 0xFF4DD0E1, '400': 0xFF26C6DA, '500': 0xFF00BCD4, '600': 0xFF00ACC1, '700': 0xFF0097A7, '800': 0xFF00838F, '900': 0xFF006064});
-  static teal = Colors.__palette(0xFF009688, {'50': 0xFFE0F2F1, '100': 0xFFB2DFDB, '200': 0xFF80CBC4, '300': 0xFF4DB6AC, '400': 0xFF26A69A, '500': 0xFF009688, '600': 0xFF00897B, '700': 0xFF00796B, '800': 0xFF00695C, '900': 0xFF004D40});
-  static green = Colors.__palette(0xFF4CAF50, {'50': 0xFFE8F5E9, '100': 0xFFC8E6C9, '200': 0xFFA5D6A7, '300': 0xFF81C784, '400': 0xFF66BB6A, '500': 0xFF4CAF50, '600': 0xFF43A047, '700': 0xFF388E3C, '800': 0xFF2E7D32, '900': 0xFF1B5E20});
-  static lightGreen = Colors.__palette(0xFF8BC34A, {'50': 0xFFF1F8E9, '100': 0xFFDCEDC8, '200': 0xFFC5E1A5, '300': 0xFFAED581, '400': 0xFF9CCC65, '500': 0xFF8BC34A, '600': 0xFF7CB342, '700': 0xFF689F38, '800': 0xFF558B2F, '900': 0xFF33691E});
-  static lime = Colors.__palette(0xFFCDDC39, {'50': 0xFFF9FBE7, '100': 0xFFF0F4C3, '200': 0xFFE6EE9C, '300': 0xFFDCE775, '400': 0xFFD4E157, '500': 0xFFCDDC39, '600': 0xFFC0CA33, '700': 0xFFAFB42B, '800': 0xFF9E9D24, '900': 0xFF827717});
-  static yellow = Colors.__palette(0xFFFFEB3B, {'50': 0xFFFFFDE7, '100': 0xFFFFF9C4, '200': 0xFFFFF59D, '300': 0xFFFFF176, '400': 0xFFFFEE58, '500': 0xFFFFEB3B, '600': 0xFFFDD835, '700': 0xFFFBC02D, '800': 0xFFF9A825, '900': 0xFFF57F17});
-  static amber = Colors.__palette(0xFFFFC107, {'50': 0xFFFFF8E1, '100': 0xFFFFECB3, '200': 0xFFFFE082, '300': 0xFFFFD54F, '400': 0xFFFFCA28, '500': 0xFFFFC107, '600': 0xFFFFB300, '700': 0xFFFFA000, '800': 0xFFFF8F00, '900': 0xFFFF6F00});
-  static orange = Colors.__palette(0xFFFF9800, {'50': 0xFFFFF3E0, '100': 0xFFFFE0B2, '200': 0xFFFFCC80, '300': 0xFFFFB74D, '400': 0xFFFFA726, '500': 0xFFFF9800, '600': 0xFFFB8C00, '700': 0xFFF57C00, '800': 0xFFEF6C00, '900': 0xFFE65100});
-  static deepOrange = Colors.__palette(0xFFFF5722, {'50': 0xFFFBE9E7, '100': 0xFFFFCCBC, '200': 0xFFFFAB91, '300': 0xFFFF8A65, '400': 0xFFFF7043, '500': 0xFFFF5722, '600': 0xFFF4511E, '700': 0xFFE64A19, '800': 0xFFD84315, '900': 0xFFBF360C});
-  static brown = Colors.__palette(0xFF795548, {'50': 0xFFEFEBE9, '100': 0xFFD7CCC8, '200': 0xFFBCAAA4, '300': 0xFFA1887F, '400': 0xFF8D6E63, '500': 0xFF795548, '600': 0xFF6D4C41, '700': 0xFF5D4037, '800': 0xFF4E342E, '900': 0xFF3E2723});
-  static grey = Colors.__palette(0xFF9E9E9E, {'50': 0xFFFAFAFA, '100': 0xFFF5F5F5, '200': 0xFFEEEEEE, '300': 0xFFE0E0E0, '350': 0xFFD6D6D6, '400': 0xFFBDBDBD, '500': 0xFF9E9E9E, '600': 0xFF757575, '700': 0xFF616161, '800': 0xFF424242, '850': 0xFF303030, '900': 0xFF212121});
-  static blueGrey = Colors.__palette(0xFF607D8B, {'50': 0xFFECEFF1, '100': 0xFFCFD8DC, '200': 0xFFB0BEC5, '300': 0xFF90A4AE, '400': 0xFF78909C, '500': 0xFF607D8B, '600': 0xFF546E7A, '700': 0xFF455A64, '800': 0xFF37474F, '900': 0xFF263238});
-  static redAccent = Colors.__accent(0xFFFF5252, {'100': 0xFFFF8A80, '200': 0xFFFF5252, '400': 0xFFFF1744, '700': 0xFFD50000});
-  static pinkAccent = Colors.__accent(0xFFFF4081, {'100': 0xFFFF80AB, '200': 0xFFFF4081, '400': 0xFFF50057, '700': 0xFFC51162});
-  static purpleAccent = Colors.__accent(0xFFE040FB, {'100': 0xFFEA80FC, '200': 0xFFE040FB, '400': 0xFFD500F9, '700': 0xFFAA00FF});
-  static deepPurpleAccent = Colors.__accent(0xFF7C4DFF, {'100': 0xFFB388FF, '200': 0xFF7C4DFF, '400': 0xFF651FFF, '700': 0xFF6200EA});
-  static indigoAccent = Colors.__accent(0xFF536DFE, {'100': 0xFF8C9EFF, '200': 0xFF536DFE, '400': 0xFF3D5AFE, '700': 0xFF304FFE});
-  static blueAccent = Colors.__accent(0xFF448AFF, {'100': 0xFF82B1FF, '200': 0xFF448AFF, '400': 0xFF2979FF, '700': 0xFF2962FF});
-  static lightBlueAccent = Colors.__accent(0xFF40C4FF, {'100': 0xFF80D8FF, '200': 0xFF40C4FF, '400': 0xFF00B0FF, '700': 0xFF0091EA});
-  static cyanAccent = Colors.__accent(0xFF18FFFF, {'100': 0xFF84FFFF, '200': 0xFF18FFFF, '400': 0xFF00E5FF, '700': 0xFF00B8D4});
-  static tealAccent = Colors.__accent(0xFF64FFDA, {'100': 0xFFA7FFEB, '200': 0xFF64FFDA, '400': 0xFF1DE9B6, '700': 0xFF00BFA5});
-  static greenAccent = Colors.__accent(0xFF69F0AE, {'100': 0xFFB9F6CA, '200': 0xFF69F0AE, '400': 0xFF00E676, '700': 0xFF00C853});
-  static lightGreenAccent = Colors.__accent(0xFFB2FF59, {'100': 0xFFCCFF90, '200': 0xFFB2FF59, '400': 0xFF76FF03, '700': 0xFF64DD17});
-  static limeAccent = Colors.__accent(0xFFEEFF41, {'100': 0xFFF4FF81, '200': 0xFFEEFF41, '400': 0xFFC6FF00, '700': 0xFFAEEA00});
-  static yellowAccent = Colors.__accent(0xFFFFFF00, {'100': 0xFFFFFF8D, '200': 0xFFFFFF00, '400': 0xFFFFEA00, '700': 0xFFFFD600});
-  static amberAccent = Colors.__accent(0xFFFFD740, {'100': 0xFFFFE57F, '200': 0xFFFFD740, '400': 0xFFFFC400, '700': 0xFFFFAB00});
-  static orangeAccent = Colors.__accent(0xFFFFAB40, {'100': 0xFFFFD180, '200': 0xFFFFAB40, '400': 0xFFFF9100, '700': 0xFFFF6D00});
-  static deepOrangeAccent = Colors.__accent(0xFFFF6E40, {'100': 0xFFFF9E80, '200': 0xFFFF6E40, '400': 0xFFFF3D00, '700': 0xFFDD2C00});
-  static transparent = Colors.__color(0x00000000);
-  static black = Colors.__color(0xFF000000);
-  static black87 = Colors.__color(0xDD000000);
-  static black54 = Colors.__color(0x8A000000);
-  static black45 = Colors.__color(0x73000000);
-  static black38 = Colors.__color(0x61000000);
-  static black26 = Colors.__color(0x42000000);
-  static black12 = Colors.__color(0x1F000000);
-  static white = Colors.__color(0xFFFFFFFF);
-  static white70 = Colors.__color(0xB3FFFFFF);
-  static white60 = Colors.__color(0x99FFFFFF);
-  static white54 = Colors.__color(0x8AFFFFFF);
-  static white38 = Colors.__color(0x62FFFFFF);
-  static white30 = Colors.__color(0x4DFFFFFF);
-  static white24 = Colors.__color(0x3DFFFFFF);
-  static white12 = Colors.__color(0x1FFFFFFF);
-  static white10 = Colors.__color(0x1AFFFFFF);
 }
+Colors.red = Colors.__palette(0xFFF44336, {'50': 0xFFFFEBEE, '100': 0xFFFFCDD2, '200': 0xFFEF9A9A, '300': 0xFFE57373, '400': 0xFFEF5350, '500': 0xFFF44336, '600': 0xFFE53935, '700': 0xFFD32F2F, '800': 0xFFC62828, '900': 0xFFB71C1C});
+Colors.pink = Colors.__palette(0xFFE91E63, {'50': 0xFFFCE4EC, '100': 0xFFF8BBD0, '200': 0xFFF48FB1, '300': 0xFFF06292, '400': 0xFFEC407A, '500': 0xFFE91E63, '600': 0xFFD81B60, '700': 0xFFC2185B, '800': 0xFFAD1457, '900': 0xFF880E4F});
+Colors.purple = Colors.__palette(0xFF9C27B0, {'50': 0xFFF3E5F5, '100': 0xFFE1BEE7, '200': 0xFFCE93D8, '300': 0xFFBA68C8, '400': 0xFFAB47BC, '500': 0xFF9C27B0, '600': 0xFF8E24AA, '700': 0xFF7B1FA2, '800': 0xFF6A1B9A, '900': 0xFF4A148C});
+Colors.deepPurple = Colors.__palette(0xFF673AB7, {'50': 0xFFEDE7F6, '100': 0xFFD1C4E9, '200': 0xFFB39DDB, '300': 0xFF9575CD, '400': 0xFF7E57C2, '500': 0xFF673AB7, '600': 0xFF5E35B1, '700': 0xFF512DA8, '800': 0xFF4527A0, '900': 0xFF311B92});
+Colors.indigo = Colors.__palette(0xFF3F51B5, {'50': 0xFFE8EAF6, '100': 0xFFC5CAE9, '200': 0xFF9FA8DA, '300': 0xFF7986CB, '400': 0xFF5C6BC0, '500': 0xFF3F51B5, '600': 0xFF3949AB, '700': 0xFF303F9F, '800': 0xFF283593, '900': 0xFF1A237E});
+Colors.blue = Colors.__palette(0xFF2196F3, {'50': 0xFFE3F2FD, '100': 0xFFBBDEFB, '200': 0xFF90CAF9, '300': 0xFF64B5F6, '400': 0xFF42A5F5, '500': 0xFF2196F3, '600': 0xFF1E88E5, '700': 0xFF1976D2, '800': 0xFF1565C0, '900': 0xFF0D47A1});
+Colors.lightBlue = Colors.__palette(0xFF03A9F4, {'50': 0xFFE1F5FE, '100': 0xFFB3E5FC, '200': 0xFF81D4FA, '300': 0xFF4FC3F7, '400': 0xFF29B6F6, '500': 0xFF03A9F4, '600': 0xFF039BE5, '700': 0xFF0288D1, '800': 0xFF0277BD, '900': 0xFF01579B});
+Colors.cyan = Colors.__palette(0xFF00BCD4, {'50': 0xFFE0F7FA, '100': 0xFFB2EBF2, '200': 0xFF80DEEA, '300': 0xFF4DD0E1, '400': 0xFF26C6DA, '500': 0xFF00BCD4, '600': 0xFF00ACC1, '700': 0xFF0097A7, '800': 0xFF00838F, '900': 0xFF006064});
+Colors.teal = Colors.__palette(0xFF009688, {'50': 0xFFE0F2F1, '100': 0xFFB2DFDB, '200': 0xFF80CBC4, '300': 0xFF4DB6AC, '400': 0xFF26A69A, '500': 0xFF009688, '600': 0xFF00897B, '700': 0xFF00796B, '800': 0xFF00695C, '900': 0xFF004D40});
+Colors.green = Colors.__palette(0xFF4CAF50, {'50': 0xFFE8F5E9, '100': 0xFFC8E6C9, '200': 0xFFA5D6A7, '300': 0xFF81C784, '400': 0xFF66BB6A, '500': 0xFF4CAF50, '600': 0xFF43A047, '700': 0xFF388E3C, '800': 0xFF2E7D32, '900': 0xFF1B5E20});
+Colors.lightGreen = Colors.__palette(0xFF8BC34A, {'50': 0xFFF1F8E9, '100': 0xFFDCEDC8, '200': 0xFFC5E1A5, '300': 0xFFAED581, '400': 0xFF9CCC65, '500': 0xFF8BC34A, '600': 0xFF7CB342, '700': 0xFF689F38, '800': 0xFF558B2F, '900': 0xFF33691E});
+Colors.lime = Colors.__palette(0xFFCDDC39, {'50': 0xFFF9FBE7, '100': 0xFFF0F4C3, '200': 0xFFE6EE9C, '300': 0xFFDCE775, '400': 0xFFD4E157, '500': 0xFFCDDC39, '600': 0xFFC0CA33, '700': 0xFFAFB42B, '800': 0xFF9E9D24, '900': 0xFF827717});
+Colors.yellow = Colors.__palette(0xFFFFEB3B, {'50': 0xFFFFFDE7, '100': 0xFFFFF9C4, '200': 0xFFFFF59D, '300': 0xFFFFF176, '400': 0xFFFFEE58, '500': 0xFFFFEB3B, '600': 0xFFFDD835, '700': 0xFFFBC02D, '800': 0xFFF9A825, '900': 0xFFF57F17});
+Colors.amber = Colors.__palette(0xFFFFC107, {'50': 0xFFFFF8E1, '100': 0xFFFFECB3, '200': 0xFFFFE082, '300': 0xFFFFD54F, '400': 0xFFFFCA28, '500': 0xFFFFC107, '600': 0xFFFFB300, '700': 0xFFFFA000, '800': 0xFFFF8F00, '900': 0xFFFF6F00});
+Colors.orange = Colors.__palette(0xFFFF9800, {'50': 0xFFFFF3E0, '100': 0xFFFFE0B2, '200': 0xFFFFCC80, '300': 0xFFFFB74D, '400': 0xFFFFA726, '500': 0xFFFF9800, '600': 0xFFFB8C00, '700': 0xFFF57C00, '800': 0xFFEF6C00, '900': 0xFFE65100});
+Colors.deepOrange = Colors.__palette(0xFFFF5722, {'50': 0xFFFBE9E7, '100': 0xFFFFCCBC, '200': 0xFFFFAB91, '300': 0xFFFF8A65, '400': 0xFFFF7043, '500': 0xFFFF5722, '600': 0xFFF4511E, '700': 0xFFE64A19, '800': 0xFFD84315, '900': 0xFFBF360C});
+Colors.brown = Colors.__palette(0xFF795548, {'50': 0xFFEFEBE9, '100': 0xFFD7CCC8, '200': 0xFFBCAAA4, '300': 0xFFA1887F, '400': 0xFF8D6E63, '500': 0xFF795548, '600': 0xFF6D4C41, '700': 0xFF5D4037, '800': 0xFF4E342E, '900': 0xFF3E2723});
+Colors.grey = Colors.__palette(0xFF9E9E9E, {'50': 0xFFFAFAFA, '100': 0xFFF5F5F5, '200': 0xFFEEEEEE, '300': 0xFFE0E0E0, '350': 0xFFD6D6D6, '400': 0xFFBDBDBD, '500': 0xFF9E9E9E, '600': 0xFF757575, '700': 0xFF616161, '800': 0xFF424242, '850': 0xFF303030, '900': 0xFF212121});
+Colors.blueGrey = Colors.__palette(0xFF607D8B, {'50': 0xFFECEFF1, '100': 0xFFCFD8DC, '200': 0xFFB0BEC5, '300': 0xFF90A4AE, '400': 0xFF78909C, '500': 0xFF607D8B, '600': 0xFF546E7A, '700': 0xFF455A64, '800': 0xFF37474F, '900': 0xFF263238});
+Colors.redAccent = Colors.__accent(0xFFFF5252, {'100': 0xFFFF8A80, '200': 0xFFFF5252, '400': 0xFFFF1744, '700': 0xFFD50000});
+Colors.pinkAccent = Colors.__accent(0xFFFF4081, {'100': 0xFFFF80AB, '200': 0xFFFF4081, '400': 0xFFF50057, '700': 0xFFC51162});
+Colors.purpleAccent = Colors.__accent(0xFFE040FB, {'100': 0xFFEA80FC, '200': 0xFFE040FB, '400': 0xFFD500F9, '700': 0xFFAA00FF});
+Colors.deepPurpleAccent = Colors.__accent(0xFF7C4DFF, {'100': 0xFFB388FF, '200': 0xFF7C4DFF, '400': 0xFF651FFF, '700': 0xFF6200EA});
+Colors.indigoAccent = Colors.__accent(0xFF536DFE, {'100': 0xFF8C9EFF, '200': 0xFF536DFE, '400': 0xFF3D5AFE, '700': 0xFF304FFE});
+Colors.blueAccent = Colors.__accent(0xFF448AFF, {'100': 0xFF82B1FF, '200': 0xFF448AFF, '400': 0xFF2979FF, '700': 0xFF2962FF});
+Colors.lightBlueAccent = Colors.__accent(0xFF40C4FF, {'100': 0xFF80D8FF, '200': 0xFF40C4FF, '400': 0xFF00B0FF, '700': 0xFF0091EA});
+Colors.cyanAccent = Colors.__accent(0xFF18FFFF, {'100': 0xFF84FFFF, '200': 0xFF18FFFF, '400': 0xFF00E5FF, '700': 0xFF00B8D4});
+Colors.tealAccent = Colors.__accent(0xFF64FFDA, {'100': 0xFFA7FFEB, '200': 0xFF64FFDA, '400': 0xFF1DE9B6, '700': 0xFF00BFA5});
+Colors.greenAccent = Colors.__accent(0xFF69F0AE, {'100': 0xFFB9F6CA, '200': 0xFF69F0AE, '400': 0xFF00E676, '700': 0xFF00C853});
+Colors.lightGreenAccent = Colors.__accent(0xFFB2FF59, {'100': 0xFFCCFF90, '200': 0xFFB2FF59, '400': 0xFF76FF03, '700': 0xFF64DD17});
+Colors.limeAccent = Colors.__accent(0xFFEEFF41, {'100': 0xFFF4FF81, '200': 0xFFEEFF41, '400': 0xFFC6FF00, '700': 0xFFAEEA00});
+Colors.yellowAccent = Colors.__accent(0xFFFFFF00, {'100': 0xFFFFFF8D, '200': 0xFFFFFF00, '400': 0xFFFFEA00, '700': 0xFFFFD600});
+Colors.amberAccent = Colors.__accent(0xFFFFD740, {'100': 0xFFFFE57F, '200': 0xFFFFD740, '400': 0xFFFFC400, '700': 0xFFFFAB00});
+Colors.orangeAccent = Colors.__accent(0xFFFFAB40, {'100': 0xFFFFD180, '200': 0xFFFFAB40, '400': 0xFFFF9100, '700': 0xFFFF6D00});
+Colors.deepOrangeAccent = Colors.__accent(0xFFFF6E40, {'100': 0xFFFF9E80, '200': 0xFFFF6E40, '400': 0xFFFF3D00, '700': 0xFFDD2C00});
+Colors.transparent = Colors.__color(0x00000000);
+Colors.black = Colors.__color(0xFF000000);
+Colors.black87 = Colors.__color(0xDD000000);
+Colors.black54 = Colors.__color(0x8A000000);
+Colors.black45 = Colors.__color(0x73000000);
+Colors.black38 = Colors.__color(0x61000000);
+Colors.black26 = Colors.__color(0x42000000);
+Colors.black12 = Colors.__color(0x1F000000);
+Colors.white = Colors.__color(0xFFFFFFFF);
+Colors.white70 = Colors.__color(0xB3FFFFFF);
+Colors.white60 = Colors.__color(0x99FFFFFF);
+Colors.white54 = Colors.__color(0x8AFFFFFF);
+Colors.white38 = Colors.__color(0x62FFFFFF);
+Colors.white30 = Colors.__color(0x4DFFFFFF);
+Colors.white24 = Colors.__color(0x3DFFFFFF);
+Colors.white12 = Colors.__color(0x1FFFFFFF);
+Colors.white10 = Colors.__color(0x1AFFFFFF);
 

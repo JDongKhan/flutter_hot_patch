@@ -82,10 +82,11 @@ const String dartValuesJsSource = r'''
     props = __positionalArgs(props, ['source']);
     return new Size({ width: props.source.width, height: props.source.height });
     }
-    /** Dart 的 static const：零尺寸 / 无穷尺寸。 */
-    static zero = new Size({ width: 0, height: 0 });
-    static infinite = new Size({ width: Infinity, height: Infinity });
   }
+  // 常量在类外赋值：Android 旧版 QuickJS 在静态字段初始化期间引用自身类名
+  // 会误报 TDZ（`Size is not initialized`）。
+  Size.zero = new Size({ width: 0, height: 0 });
+  Size.infinite = new Size({ width: Infinity, height: Infinity });
   // Dart `Size` 的命名构造 / 静态常量（产物按统一规则发射 `Size.fromHeight({…})`）。
   // **无界维度是 +∞**：跨桥时 `JSON.stringify(Infinity)` 得到 null，宿主侧按 ∞
   // 还原（见 js_widget_registry 的 PreferredSize / layout 约束的 null 约定）。

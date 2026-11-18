@@ -9,13 +9,13 @@ import { Color, Colors, Column, Duration, ElevatedButton, FontWeight, Future, St
 
 // 模型 PanelColors
 export class PanelColors {
-  static background = new Color({value: 0xFFFF0000});
-  static adult = new Color({value: 0xFF4CAF50});
-  static primary = new Color({value: 0xFF6750A4});
-  static tagline = "demo";
   constructor() {
   }
 }
+PanelColors.background = new Color({value: 0xFFFF0000});
+PanelColors.adult = new Color({value: 0xFF4CAF50});
+PanelColors.primary = new Color({value: 0xFF6750A4});
+PanelColors.tagline = "demo";
 
 // 模型 _HelloCard_StatefulWidget_TestMixin
 class _HelloCard_StatefulWidget_TestMixin extends StatefulWidget {

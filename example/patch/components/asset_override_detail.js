@@ -6,8 +6,6 @@ import { BorderRadius, BoxDecoration, BoxFit, ClipRRect, Color, Column, Containe
 
 // 组件 AssetOverrideDetail
 export class AssetOverrideDetail extends StatefulWidget {
-  static _imageAsset = "assets/images/photo-1519681393784-d120267933ba.jpg";
-  static _jsonAsset = "assets/data/asset_override_demo.json";
   constructor(args) {
     super(args);
     this._jsonText = "加载中…";
@@ -120,4 +118,6 @@ export class AssetOverrideDetail extends StatefulWidget {
     });
   }
 }
+AssetOverrideDetail._imageAsset = "assets/images/photo-1519681393784-d120267933ba.jpg";
+AssetOverrideDetail._jsonAsset = "assets/data/asset_override_demo.json";
 

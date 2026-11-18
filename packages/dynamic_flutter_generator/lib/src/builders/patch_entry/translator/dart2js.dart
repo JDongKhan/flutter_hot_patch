@@ -31,10 +31,12 @@ String renderClassDecl(
   if (base != null) b.write(' extends $base');
   b.write(' {\n');
 
-  // static 字段 → 类体内 `static f = <init>;`（与 Dart 源码同一形态）。
-  // 求值时机由引擎保证：类定义时按源码声明序初始化，晚于方法定义，故字段
-  // 初始化器里可以引用同类的静态方法。
-  _writeStaticFields(b, info);
+  // static 字段：有初始化器的字段**在类声明之后**赋值，而不是写成类体内的
+  // `static f = <init>`。原因：Android 侧 QuickJS 版本较旧，静态字段初始化期间
+  // 引用自身类名（`static a = new Self()` / `Self.other`）会误报 TDZ
+  // 「Self is not initialized」；JSC（iOS/macOS）没有该问题。放到类外赋值可在
+  // 所有引擎上保持同一求值语义与源码声明顺序。无初始化器的字段仍类内声明。
+  _writeStaticFieldDecls(b, info);
 
   // constructor：有无 this.x 构造形参决定形态（组件与普通类同一规则）：
   // 无参 → `constructor()`（JS 侧多传实参无害）；有参 → `constructor(args)`，
@@ -167,17 +169,30 @@ String renderClassDecl(
   }
 
   b.write('}');
+  _writeStaticFieldAssignments(b, info);
   return b.toString();
 }
 
-/// 静态字段 → 类体内 `static f = <init>;`。
+/// 无初始化器的 static 字段：仍在类体内声明 `static f;`（值为 undefined）。
 ///
-/// 与实例字段同一个默认值口径（[ClassField.jsInitial] 已预渲染）：无初始化器
-/// 时发射 `static f;`（Dart 里也等价于 null/零值，JS 侧为 undefined）。
-void _writeStaticFields(StringBuffer b, ClassInfo info) {
+/// 有初始化器的字段由 [_writeStaticFieldAssignments] 在类声明后赋值。
+void _writeStaticFieldDecls(StringBuffer b, ClassInfo info) {
   for (final f in info.staticFields) {
-    final v = f.jsInitial ?? (f.initializer == null ? null : literalToJs(f.initializer));
-    b.write('  static ${f.name}${v == null ? '' : ' = $v'};\n');
+    if (_staticInitialJs(f) == null) b.write('  static ${f.name};\n');
+  }
+}
+
+/// 静态字段初始化器（已渲染的 JS 与源码字面量同一口径）。
+String? _staticInitialJs(ClassField f) =>
+    f.jsInitial ??
+    (f.initializer == null ? null : literalToJs(f.initializer));
+
+/// 类声明之后的静态字段赋值：`X.f = <init>;`，按源码声明顺序。
+void _writeStaticFieldAssignments(StringBuffer b, ClassInfo info) {
+  for (final f in info.staticFields) {
+    final v = _staticInitialJs(f);
+    if (v == null) continue;
+    b.write('\n${info.name}.${f.name} = $v;');
   }
 }
 

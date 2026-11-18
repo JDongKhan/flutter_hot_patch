@@ -18,7 +18,6 @@ const _agreementLinkStyle = new TextStyle({fontSize: 11, height: 1.7, color: kBr
 
 // 组件 SearchPage
 export class SearchPage extends StatefulWidget {
-  static _service = new AppService();
   constructor(args) {
     super(args);
     this._controller = new TextEditingController();
@@ -240,6 +239,7 @@ export class SearchPage extends StatefulWidget {
     });
   }
 }
+SearchPage._service = new AppService();
 
 // 组件 MiniButton
 export class MiniButton extends StatelessWidget {

@@ -6,12 +6,6 @@ import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors,
 
 // 组件 GuideBubbleWidget
 export class GuideBubbleWidget extends StatefulWidget {
-  static _fadeDuration = new Duration({milliseconds: 200});
-  static _arrowWidth = 24;
-  static _arrowHeight = 9;
-  static _arrowInset = 20;
-  static _arrowSide = (GuideBubbleWidget._arrowHeight * 1.4142);
-  static _arrowAngle = 0.7853981633974483;
   constructor(args) {
     super(args);
     this.__applyProps(args);
@@ -174,3 +168,9 @@ export class GuideBubbleWidget extends StatefulWidget {
     });
   }
 }
+GuideBubbleWidget._fadeDuration = new Duration({milliseconds: 200});
+GuideBubbleWidget._arrowWidth = 24;
+GuideBubbleWidget._arrowHeight = 9;
+GuideBubbleWidget._arrowInset = 20;
+GuideBubbleWidget._arrowSide = (GuideBubbleWidget._arrowHeight * 1.4142);
+GuideBubbleWidget._arrowAngle = 0.7853981633974483;

@@ -8,8 +8,6 @@ import { Alignment, BorderRadius, BoxDecoration, BoxFit, ClipRRect, Color, Colum
 
 // 组件 BannerCarousel
 export class BannerCarousel extends StatefulWidget {
-  static _interval = new Duration({seconds: 5});
-  static _animate = new Duration({milliseconds: 350});
   constructor(args) {
     super(args);
     this.__applyProps(args);
@@ -132,6 +130,8 @@ export class BannerCarousel extends StatefulWidget {
     });
   }
 }
+BannerCarousel._interval = new Duration({seconds: 5});
+BannerCarousel._animate = new Duration({milliseconds: 350});
 
 // 组件 BannerSlide
 export class BannerSlide extends StatelessWidget {

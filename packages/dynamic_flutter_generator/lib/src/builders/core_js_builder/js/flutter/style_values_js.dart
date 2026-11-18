@@ -42,7 +42,6 @@ const String styleValuesJsSource = r'''
     toJSON() {
       return { left: this.left, top: this.top, right: this.right, bottom: this.bottom };
     }
-    static zero = new EdgeInsets({});
     static all(props) {
       var v = __singleValue(props);
       return new EdgeInsets({ left: v, top: v, right: v, bottom: v });
@@ -67,6 +66,8 @@ const String styleValuesJsSource = r'''
       });
     }
   }
+  // 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+  EdgeInsets.zero = new EdgeInsets({});
 
   // ----- 圆角 / 边框 -----------------------------------------------------------
   // 宿主协议：BorderRadius → {radius} 或四角数字；Border → {all} 或四边 side。
@@ -91,7 +92,6 @@ const String styleValuesJsSource = r'''
     }
     get horizontal() { return this.topLeft.x + this.bottomLeft.x; }
     get vertical() { return this.topLeft.x + this.bottomLeft.x; }
-    static zero = new BorderRadius({});
     static all(props) {
       var r = BorderRadius.__radius(props.radius);
       return new BorderRadius({ topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
@@ -107,6 +107,8 @@ const String styleValuesJsSource = r'''
       return new BorderRadius({ topLeft: r, bottomLeft: r });
     }
   }
+  // 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+  BorderRadius.zero = new BorderRadius({});
 
   export class BorderSide {
     constructor(props) {
@@ -119,8 +121,9 @@ const String styleValuesJsSource = r'''
     toJSON() {
       return { color: this.color, width: this.width, style: this.style };
     }
-    static none = new BorderSide({ width: 0, style: 'none' });
   }
+  // 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+  BorderSide.none = new BorderSide({ width: 0, style: 'none' });
 
   export class Border {
     constructor(props) {
@@ -192,11 +195,12 @@ const String styleValuesJsSource = r'''
     toJSON() { return this.name; }
     // 同枚举：跨桥值是成员名，`==` 直译为 JS `==`，靠 valueOf 归一成同一比较基准。
     valueOf() { return this.name; }
-    static none = new TextDecoration('none');
-    static underline = new TextDecoration('underline');
-    static overline = new TextDecoration('overline');
-    static lineThrough = new TextDecoration('lineThrough');
   }
+  // 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+  TextDecoration.none = new TextDecoration('none');
+  TextDecoration.underline = new TextDecoration('underline');
+  TextDecoration.overline = new TextDecoration('overline');
+  TextDecoration.lineThrough = new TextDecoration('lineThrough');
 
   export class FontWeight {
     constructor(props) { this.value = __singleValue(__positionalArgs(props, ['index'])); }
@@ -205,18 +209,19 @@ const String styleValuesJsSource = r'''
       if (this.value === 700) { return 'bold'; }
       return 'w' + this.value;
     }
-    static w100 = new FontWeight(100);
-    static w200 = new FontWeight(200);
-    static w300 = new FontWeight(300);
-    static w400 = new FontWeight(400);
-    static w500 = new FontWeight(500);
-    static w600 = new FontWeight(600);
-    static w700 = new FontWeight(700);
-    static w800 = new FontWeight(800);
-    static w900 = new FontWeight(900);
-    static normal = FontWeight.w400;
-    static bold = FontWeight.w700;
   }
+  // 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+  FontWeight.w100 = new FontWeight(100);
+  FontWeight.w200 = new FontWeight(200);
+  FontWeight.w300 = new FontWeight(300);
+  FontWeight.w400 = new FontWeight(400);
+  FontWeight.w500 = new FontWeight(500);
+  FontWeight.w600 = new FontWeight(600);
+  FontWeight.w700 = new FontWeight(700);
+  FontWeight.w800 = new FontWeight(800);
+  FontWeight.w900 = new FontWeight(900);
+  FontWeight.normal = FontWeight.w400;
+  FontWeight.bold = FontWeight.w700;
 
   export class TextScaler {
     constructor(props) {
@@ -227,13 +232,14 @@ const String styleValuesJsSource = r'''
     scale(x) {
       return this.__none ? x : this.factor * x;
     }
-    static noScaling = new TextScaler(null);
     static linear(props) {
       props = __positionalArgs(props, ['textScaleFactor']);
       return new TextScaler(
         props.textScaleFactor != null ? props.textScaleFactor : __singleValue(props));
     }
   }
+  // 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+  TextScaler.noScaling = new TextScaler(null);
 
   export class TextStyle {
     constructor(props) {

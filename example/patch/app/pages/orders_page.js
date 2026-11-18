@@ -178,7 +178,6 @@ export class OrdersView extends StatefulWidget {
 
 // 组件 _OrderCard
 export class _OrderCard extends StatelessWidget {
-  static _stageLabels = ["提交订单", "支付成功", "商家发货", "已完成"];
   constructor(args) {
     super(args);
     this.__applyProps(args);
@@ -636,6 +635,7 @@ export class _OrderCard extends StatelessWidget {
       })];
   }
 }
+_OrderCard._stageLabels = ["提交订单", "支付成功", "商家发货", "已完成"];
 
 // 组件 _StageNode
 export class _StageNode extends StatelessWidget {

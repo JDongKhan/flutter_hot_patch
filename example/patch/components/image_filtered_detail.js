@@ -6,7 +6,6 @@ import { Alignment, BoxDecoration, Colors, Column, Container, CrossAxisAlignment
 
 // 组件 ImageFilteredDetail
 export class ImageFilteredDetail extends StatelessWidget {
-  static _gradient = new LinearGradient({begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple, Colors.pinkAccent, Colors.orangeAccent]});
   constructor(args) {
     super(args);
   }
@@ -124,4 +123,5 @@ export class ImageFilteredDetail extends StatelessWidget {
     });
   }
 }
+ImageFilteredDetail._gradient = new LinearGradient({begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple, Colors.pinkAccent, Colors.orangeAccent]});
 

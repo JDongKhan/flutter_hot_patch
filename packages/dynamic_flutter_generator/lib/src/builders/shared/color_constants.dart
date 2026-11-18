@@ -87,21 +87,24 @@ String? colorsJsSource() {
     ..writeln('    }')
     ..writeln('    return m;')
     ..writeln('  }');
-  final entries = <String>[];
+  // 常量实例在**类声明之后**赋值（`Colors.red = Colors.__palette(...)`）。
+  // Android 旧版 QuickJS 在类静态字段初始化期间引用自身类名会误报
+  // `Colors is not initialized`；类外赋值在所有引擎上语义一致。
+  final assignments = <String>[];
   for (final e in palettes.entries) {
-    entries.add('  static ${e.key} = Colors.__palette(${_hex(e.value.primary)}, '
+    assignments.add('  Colors.${e.key} = Colors.__palette(${_hex(e.value.primary)}, '
         '{${_shadesLiteral(e.value.shades)}});');
   }
   for (final e in accents.entries) {
-    entries.add('  static ${e.key} = Colors.__accent(${_hex(e.value.primary)}, '
+    assignments.add('  Colors.${e.key} = Colors.__accent(${_hex(e.value.primary)}, '
         '{${_shadesLiteral(e.value.shades)}});');
   }
   for (final e in plain.entries) {
-    entries.add('  static ${e.key} = Colors.__color(${_hex(e.value)});');
+    assignments.add('  Colors.${e.key} = Colors.__color(${_hex(e.value)});');
   }
   b
-    ..writeln(entries.join('\n'))
-    ..writeln('}');
+    ..writeln('}')
+    ..writeln(assignments.join('\n'));
   return b.toString();
 }
 

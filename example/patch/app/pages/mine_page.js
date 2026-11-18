@@ -27,7 +27,6 @@ export class MinePage extends StatelessWidget {
 
 // 组件 MineView
 export class MineView extends StatelessWidget {
-  static _menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
   constructor(args) {
     super(args);
   }
@@ -374,6 +373,7 @@ export class MineView extends StatelessWidget {
     });
   }
 }
+MineView._menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
 
 // 组件 _DevRow
 export class _DevRow extends StatelessWidget {

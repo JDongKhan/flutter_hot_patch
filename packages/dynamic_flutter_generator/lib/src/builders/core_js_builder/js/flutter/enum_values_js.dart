@@ -32,14 +32,15 @@ String enumValuesJsSource() {
       // DismissDirection.endToStart` 成立——枚举实例与宿主回传值因此可直接比较，
       // 不需要翻译层为枚举做任何字符串特判。
       ..writeln('    valueOf() { return this.name; }')
-      ..writeln("    toString() { return '$n.' + this.name; }");
+      ..writeln("    toString() { return '$n.' + this.name; }")
+      ..writeln('  }');
+    // 成员实例**在类声明之后**赋值：Android 旧版 QuickJS 在类静态字段初始化
+    // 期间引用自身类名会误报 TDZ（`X is not initialized`），类外赋值可绕开。
     for (var i = 0; i < e.members.length; i++) {
       final m = e.members[i];
-      b.writeln("    static $m = new $n('$m', $i);");
+      b.writeln("  $n.$m = new $n('$m', $i);");
     }
-    b
-      ..writeln('  }')
-      ..writeln('  $n.values = [${e.members.map((m) => '$n.$m').join(', ')}];');
+    b.writeln('  $n.values = [${e.members.map((m) => '$n.$m').join(', ')}];');
   }
   return b.toString();
 }

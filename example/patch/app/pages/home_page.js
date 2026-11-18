@@ -33,7 +33,6 @@ export class HomePage extends StatelessWidget {
 
 // 组件 HomeView
 export class HomeView extends StatefulWidget {
-  static _navFadeDistance = 120;
   constructor(args) {
     super(args);
     this._refreshController = new EasyRefreshController();
@@ -130,6 +129,7 @@ export class HomeView extends StatefulWidget {
     });
   }
 }
+HomeView._navFadeDistance = 120;
 
 // 组件 FloorSlot
 export class FloorSlot extends StatelessWidget {

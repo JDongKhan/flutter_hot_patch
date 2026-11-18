@@ -6,8 +6,6 @@ import { AnimatedList, Card, CircleAvatar, Colors, Column, CrossAxisAlignment, D
 
 // 组件 AnimatedListDetail
 export class AnimatedListDetail extends StatefulWidget {
-  static _insertDuration = new Duration({milliseconds: 350});
-  static _removeDuration = new Duration({milliseconds: 300});
   constructor(args) {
     super(args);
     this._listKey = new GlobalKey({typeArguments: {"T": "AnimatedListState"}});
@@ -130,4 +128,6 @@ export class AnimatedListDetail extends StatefulWidget {
     });
   }
 }
+AnimatedListDetail._insertDuration = new Duration({milliseconds: 350});
+AnimatedListDetail._removeDuration = new Duration({milliseconds: 300});
 

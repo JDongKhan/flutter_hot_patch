@@ -1,5 +1,13 @@
 > 注：本文件是历史版本记录，早期协议名称可能与当前实现不同；当前协议见 `docs/项目架构文档.md`。
 
+## 未发布
+
+**修复 Android（旧版 QuickJS）加载 `flutter.js` 报 `ReferenceError: X is not initialized`；无协议变更。**
+
+- 有初始化器的类静态字段改为**类声明之后赋值**（`class C {…}` + `C.f = init;`），不再发类体内的 `static f = init;`。Android 侧 flutter_js 内置的 QuickJS 版本较旧，在静态字段初始化期间引用自身类名（`static zero = new Size(...)`、`C.other`、枚举成员等）会误报 TDZ；JSC（iOS/macOS）不受影响。类外赋值在所有引擎上语义一致，仍按源码声明序执行。
+- 同步修改内建产物：`Size` / `Rect` / `EdgeInsets` / `BorderRadius` / `BorderSide` / `TextDecoration` / `FontWeight` / `TextScaler`、`Colors` 常量、SDK 枚举值类，以及三方 `js/easy_refresh.js` 的枚举成员。
+- `_writeStaticFields` 拆为 `_writeStaticFieldDecls`（无初始化器的 `static f;`）与 `_writeStaticFieldAssignments`（类外赋值）；规则已同步到语法翻译手册「构造、字段、方法、static」章节。
+
 ## 0.14.2
 
 **仅文档修正（无代码变更）**：README 安装示例中的依赖版本号由 `^0.13.0` 更正为 `^0.14.2`，并同步 README 中当前 `protocol` 的取值说明。`protocol` 随包版本变为 `0.14.2`（主版本仍为 0，运行时校验不受影响）。

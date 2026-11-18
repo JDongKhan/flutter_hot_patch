@@ -6,8 +6,6 @@ import { MethodChannel } from '../../flutter.js';
 
 // 模型 HotPluginCounter
 export class HotPluginCounter {
-  static _channel = new MethodChannel({name: "dynamic_flutter/demo/counter"});
-  static _bound = false;
   constructor() {
   }
   static _bindHandler() {
@@ -35,3 +33,5 @@ export class HotPluginCounter {
     return ((__nn(value) == null) ? "" : value.toString());
   }
 }
+HotPluginCounter._channel = new MethodChannel({name: "dynamic_flutter/demo/counter"});
+HotPluginCounter._bound = false;

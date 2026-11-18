@@ -9,7 +9,6 @@ const _todayLabel = () => { return "今天"; };
 
 // 组件 TimetableDatePicker
 export class TimetableDatePicker extends StatefulWidget {
-  static _weekdayCycleCount = 3;
   constructor(args) {
     super(args);
     this.__applyProps(args);
@@ -178,6 +177,7 @@ export class TimetableDatePicker extends StatefulWidget {
     });
   }
 }
+TimetableDatePicker._weekdayCycleCount = 3;
 
 // 组件 TimetableWheelColumn
 export class TimetableWheelColumn extends StatefulWidget {

@@ -38,18 +38,19 @@ export class IndicatorMode {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'IndicatorMode.' + this.name; }
-  static inactive = new IndicatorMode('inactive', 0);
-  static drag = new IndicatorMode('drag', 1);
-  static armed = new IndicatorMode('armed', 2);
-  static ready = new IndicatorMode('ready', 3);
-  static processing = new IndicatorMode('processing', 4);
-  static processed = new IndicatorMode('processed', 5);
-  static secondaryArmed = new IndicatorMode('secondaryArmed', 6);
-  static secondaryReady = new IndicatorMode('secondaryReady', 7);
-  static secondaryOpen = new IndicatorMode('secondaryOpen', 8);
-  static secondaryClosing = new IndicatorMode('secondaryClosing', 9);
-  static done = new IndicatorMode('done', 10);
 }
+// 成员在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+IndicatorMode.inactive = new IndicatorMode('inactive', 0);
+IndicatorMode.drag = new IndicatorMode('drag', 1);
+IndicatorMode.armed = new IndicatorMode('armed', 2);
+IndicatorMode.ready = new IndicatorMode('ready', 3);
+IndicatorMode.processing = new IndicatorMode('processing', 4);
+IndicatorMode.processed = new IndicatorMode('processed', 5);
+IndicatorMode.secondaryArmed = new IndicatorMode('secondaryArmed', 6);
+IndicatorMode.secondaryReady = new IndicatorMode('secondaryReady', 7);
+IndicatorMode.secondaryOpen = new IndicatorMode('secondaryOpen', 8);
+IndicatorMode.secondaryClosing = new IndicatorMode('secondaryClosing', 9);
+IndicatorMode.done = new IndicatorMode('done', 10);
 
 export class IndicatorResult {
   constructor(name, index) {
@@ -59,11 +60,12 @@ export class IndicatorResult {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'IndicatorResult.' + this.name; }
-  static none = new IndicatorResult('none', 0);
-  static success = new IndicatorResult('success', 1);
-  static fail = new IndicatorResult('fail', 2);
-  static noMore = new IndicatorResult('noMore', 3);
 }
+// 成员在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+IndicatorResult.none = new IndicatorResult('none', 0);
+IndicatorResult.success = new IndicatorResult('success', 1);
+IndicatorResult.fail = new IndicatorResult('fail', 2);
+IndicatorResult.noMore = new IndicatorResult('noMore', 3);
 
 export class IndicatorPosition {
   constructor(name, index) {
@@ -73,11 +75,12 @@ export class IndicatorPosition {
   toJSON() { return this.name; }
   valueOf() { return this.name; }
   toString() { return 'IndicatorPosition.' + this.name; }
-  static above = new IndicatorPosition('above', 0);
-  static behind = new IndicatorPosition('behind', 1);
-  static locator = new IndicatorPosition('locator', 2);
-  static custom = new IndicatorPosition('custom', 3);
 }
+// 成员在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+IndicatorPosition.above = new IndicatorPosition('above', 0);
+IndicatorPosition.behind = new IndicatorPosition('behind', 1);
+IndicatorPosition.locator = new IndicatorPosition('locator', 2);
+IndicatorPosition.custom = new IndicatorPosition('custom', 3);
 
 // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
 // props 由基类构造期统一拆分。

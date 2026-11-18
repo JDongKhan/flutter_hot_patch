@@ -6,9 +6,6 @@ import { BasicMessageChannel, EventChannel, MethodChannel, StandardMessageCodec 
 
 // 模型 HotPluginDeviceInfo
 export class HotPluginDeviceInfo {
-  static _channel = new MethodChannel({name: "dynamic_flutter/demo/device_info"});
-  static _messageChannel = new BasicMessageChannel({name: "dynamic_flutter/demo/device_info_msg", codec: new StandardMessageCodec(), typeArguments: {"T": "dynamic"}});
-  static _messageBound = false;
   constructor() {
   }
   static ticks(tag) {
@@ -42,3 +39,6 @@ export class HotPluginDeviceInfo {
     return ((__nn(reply) == null) ? "" : reply.toString());
   }
 }
+HotPluginDeviceInfo._channel = new MethodChannel({name: "dynamic_flutter/demo/device_info"});
+HotPluginDeviceInfo._messageChannel = new BasicMessageChannel({name: "dynamic_flutter/demo/device_info_msg", codec: new StandardMessageCodec(), typeArguments: {"T": "dynamic"}});
+HotPluginDeviceInfo._messageBound = false;

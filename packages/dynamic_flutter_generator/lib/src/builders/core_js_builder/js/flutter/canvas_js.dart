@@ -68,8 +68,9 @@ const String canvasJsSource = r'''
         right: c.dx + w / 2, bottom: c.dy + h / 2
       });
     }
-    static zero = new Rect({});
   }
+  // 常量在类外赋值：Android 旧版 QuickJS 的静态字段 TDZ 限制。
+  Rect.zero = new Rect({});
 
   // ---------------------------------------------------------------------------
   // RRect：四角圆角半径按 Dart 的 Radius 值对象读取（Radius.circular 已有镜像）。

@@ -6,19 +6,6 @@ import '../flutter.js';
 
 // 模型 AppRoutes
 export class AppRoutes {
-  static demoList = "/demo-list";
-  static heroTarget = "/hero-target";
-  static search = "/search";
-  static spot = "/spot";
-  static post = "/post";
-  static resource = "/resource";
-  static order = "/order";
-  static channel = "/channel";
-  static notifications = "/notifications";
-  static orders = "/orders";
-  static widgetShowcase = "/widget-showcase";
-  static userCenter = "/user-center";
-  static login = "/login";
   constructor() {
   }
   // 命名构造 AppRoutes._
@@ -27,6 +14,19 @@ export class AppRoutes {
     return __o;
   }
 }
+AppRoutes.demoList = "/demo-list";
+AppRoutes.heroTarget = "/hero-target";
+AppRoutes.search = "/search";
+AppRoutes.spot = "/spot";
+AppRoutes.post = "/post";
+AppRoutes.resource = "/resource";
+AppRoutes.order = "/order";
+AppRoutes.channel = "/channel";
+AppRoutes.notifications = "/notifications";
+AppRoutes.orders = "/orders";
+AppRoutes.widgetShowcase = "/widget-showcase";
+AppRoutes.userCenter = "/user-center";
+AppRoutes.login = "/login";
 
 // 模型 AppRouter
 export class AppRouter {

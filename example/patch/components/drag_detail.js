@@ -16,7 +16,6 @@ export class Fruit {
 
 // 组件 DragDetail
 export class DragDetail extends StatefulWidget {
-  static _fruits = [new Fruit({name: "苹果"}), new Fruit({name: "香蕉"}), new Fruit({name: "橙子"})];
   constructor(args) {
     super(args);
     this._drops = 0;
@@ -310,4 +309,5 @@ export class DragDetail extends StatefulWidget {
     });
   }
 }
+DragDetail._fruits = [new Fruit({name: "苹果"}), new Fruit({name: "香蕉"}), new Fruit({name: "橙子"})];
 
