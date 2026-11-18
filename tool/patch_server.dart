@@ -28,7 +28,9 @@ Future<void> main(List<String> args) async {
 
   // 绑定 0.0.0.0：本机（127.0.0.1）与真机（电脑局域网 IP）都能访问，
   // 服务端不再维护具体 IP；客户端地址统一在 example/lib/base/dev_server.dart。
-  final server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
+  // InternetAddress ip = InternetAddress.anyIPv4;
+  String ip = "127.0.0.1";
+  final server = await HttpServer.bind(ip, _port);
   stdout.writeln('[patch_server] 已启动 http://localhost:$_port/（监听 0.0.0.0）');
   stdout.writeln('[patch_server] patch 根：${router.patchRoot.path}');
   stdout.writeln('[patch_server] mock 根：${router.mockRoot.path}');
