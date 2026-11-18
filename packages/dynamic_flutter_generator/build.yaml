@@ -2,7 +2,7 @@ builders:
   # 组件/模型 builder：lib/ 下的 .dart → 同名 .js。按内容分流（与目录无关）：
   # 含 @PatchEntry 的出组件产物，否则出模型/单例产物；文件名与 dart 源文件一致。
   patch_entry:
-    import: "package:dynamic_flutter_generator/builder.dart"
+    import: "package:dynamic_flutter_generator/dynamic_flutter_generator.dart"
     builder_factories: ["componentBuilder"]
     build_extensions:
       "^lib/{{}}.dart":
@@ -20,7 +20,7 @@ builders:
   # 无需任何种子文件）；包清单/类型清单由 builder 的 registeredWidgetPackages()
   # 静态推导。
   ui_widget:
-    import: "package:dynamic_flutter_generator/builder.dart"
+    import: "package:dynamic_flutter_generator/dynamic_flutter_generator.dart"
     builder_factories: ["widgetModuleBuilder"]
     # 注意：build_runner 计算产物时用的是**实例化 Builder 的 buildExtensions
     # getter**（本 builder 由 _registeredWidgetPackages 推导出 patch/<package>.js
@@ -47,7 +47,7 @@ builders:
   # build_config 要求的占位键（输出清单为空），**不列任何具体包**——新增三方
   # 库只需往宿主 `js/` 放文件，生成器与配置都不用改。
   ui_third_party_js:
-    import: "package:dynamic_flutter_generator/builder.dart"
+    import: "package:dynamic_flutter_generator/dynamic_flutter_generator.dart"
     builder_factories: ["thirdPartyJsBuilder"]
     build_extensions:
       "$package$": []
@@ -60,7 +60,7 @@ builders:
   # 内容需要「被引用」判定 → 走 componentTranslationScope 扫描，输出清单由
   # localTranslationPackages() 静态推导（无本地依赖包时零产物）。
   ui_project_module:
-    import: "package:dynamic_flutter_generator/builder.dart"
+    import: "package:dynamic_flutter_generator/dynamic_flutter_generator.dart"
     builder_factories: ["projectModuleBuilder"]
     # 同 ui_widget：产物清单由 Builder 实例的 buildExtensions getter 推导，
     # 这里只填一条占位输入键（build_config 要求非空）。
@@ -80,7 +80,7 @@ builders:
   # 存量迁移说明：这些 JS 源码原本内嵌在 dynamic_flutter 的 Dart 文件里（启动时
   # evaluate），Bug 修复必须发版；迁到生成器后与其它产物同生命周期。
   ui_runtime:
-    import: "package:dynamic_flutter_generator/builder.dart"
+    import: "package:dynamic_flutter_generator/dynamic_flutter_generator.dart"
     builder_factories: ["coreJsBuilder"]
     build_extensions:
       "$package$":
@@ -99,7 +99,7 @@ builders:
   # 输入是包根伪资产 $package$（build_runner 支持的「整包」输入键，无需种子
   # 文件）；产物路径固定，不随发现的注解动态变化。
   ui_host_register:
-    import: "package:dynamic_flutter_generator/builder.dart"
+    import: "package:dynamic_flutter_generator/dynamic_flutter_generator.dart"
     builder_factories: ["hostRegisterBuilder"]
     build_extensions:
       "$package$":
@@ -116,7 +116,7 @@ builders:
   # 读不到彼此产物，更早阶段可以。于是本 builder 能用 findAssets('patch/**.js')
   # 列出全部已生成 JS 并逐个读取计算 hash；新增产物自动进清单，无需维护列表。
   ui_patch_manifest:
-    import: "package:dynamic_flutter_generator/builder.dart"
+    import: "package:dynamic_flutter_generator/dynamic_flutter_generator.dart"
     builder_factories: ["patchManifestBuilder"]
     build_extensions:
       "$package$":
@@ -132,7 +132,7 @@ builders:
   # 彼此产物、更早阶段可以），zip 里带的是最新清单；产物清单用
   # findAssets('patch/**') 列全，新增产物 / 静态资源自动进包，无需维护列表。
   ui_patch_archive:
-    import: "package:dynamic_flutter_generator/builder.dart"
+    import: "package:dynamic_flutter_generator/dynamic_flutter_generator.dart"
     builder_factories: ["patchArchiveBuilder"]
     build_extensions:
       "$package$":
