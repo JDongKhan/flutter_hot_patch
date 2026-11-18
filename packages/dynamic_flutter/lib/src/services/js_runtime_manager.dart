@@ -502,7 +502,7 @@ class JsRuntimeManager {
   /// 注入失败会被静默吞掉——之后所有调用都是 undefined，却看不到任何报错。
   /// [where] 标明出错的是哪段注入/调用，便于定位。
   JsEvalResult _eval(String code, String where) {
-    final result = _runtime.evaluate(code);
+    final result = _evaluateAndDrainJobs(code);
     if (result.isError) {
       final preview = code.replaceAll('\n', ' ').trim();
       final brief = preview.length > 80
@@ -511,6 +511,22 @@ class JsRuntimeManager {
       JsLog.error(
         'JS eval failed [$where]: ${result.stringResult} | code: $brief',
       );
+    }
+    return result;
+  }
+
+  /// 求值并**排空微任务队列**。
+  ///
+  /// QuickJS（Android）的 `evaluate` 只执行脚本，不会自动跑 Promise 微任务：
+  /// 宿主把 `_app_host_.resolve(...)` 回填后，JS 侧 `await` 的续体会一直停在
+  /// 队列里（表现为 `Network.post` 之后界面一直转圈、也没有报错）。JSC
+  /// （iOS/macOS）的 `executePendingJob` 本身是空实现，调用无副作用。
+  JsEvalResult _evaluateAndDrainJobs(String code) {
+    final result = _runtime.evaluate(code);
+    try {
+      _runtime.executePendingJob();
+    } catch (e) {
+      JsLog.warn('executePendingJob 失败：$e');
     }
     return result;
   }
@@ -688,7 +704,7 @@ class JsRuntimeManager {
       // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）
       //    后求值
       final processed = _preprocessModule(source, jsAsset, base);
-      final evalResult = _runtime.evaluate(processed);
+      final evalResult = _evaluateAndDrainJobs(processed);
       // 模块被包进 IIFE，完成值恒为 undefined（真正的作用是 __modules
       // 注册这一副作用），因此返回值只在**出错**时有诊断价值——正常路径
       // 不再打印，成功由下面的 `module loaded` 体现。

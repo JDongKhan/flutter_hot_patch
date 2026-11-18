@@ -1,5 +1,11 @@
 > 注：本文件是历史版本记录，早期协议名称可能与当前实现不同；当前协议见 `docs/项目架构文档.md`。
 
+## 未发布
+
+**修复 Android（QuickJS）上 JS 侧 `await` 宿主调用后不恢复，界面一直 loading；无协议变更。**
+
+- `JsRuntimeManager` 的求值统一走 `_evaluateAndDrainJobs`：`evaluate` 之后调用 `runtime.executePendingJob()` 排空 Promise 微任务。QuickJS（Android）的 `evaluate` 不会自动执行微任务，宿主 `_app_host_.resolve(...)` 回填后 `await` 的续体停在队列里（如 `Network.post` 成功后 `AppShellVm.load()` 永不返回、也无报错）；JSC（iOS/macOS）的 `executePendingJob` 是空实现，无副作用。
+
 ## 0.6.2
 
 **仅文档修正（无代码变更）**：README 安装示例中的依赖版本号由 `^0.4.0` 更正为 `^0.6.2`（首次以新包名发布 0.6.1 时，安装示例仍沿用旧包 README 的版本号，`^0.4.0` 在新包上无法解析）。
