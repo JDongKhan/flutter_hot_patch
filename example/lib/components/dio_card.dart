@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
+import '../base/dev_server.dart';
+
 /// dio 对比 demo（左原生 / 右 JS 热更）。
 ///
 /// **两侧源码是同一份 Dart**：`final Dio _dio = Dio();` +
@@ -32,7 +34,7 @@ class _DioCardState extends State<DioCard> {
   Future<void> _callHello() async {
     setState(() => _hello = '请求中…');
     try {
-      final res = await _dio.get('http://127.0.0.1:8765/hello');
+      final res = await _dio.get('$devServerBaseUrl/hello');
       final body = res.data;
       final message = body == null ? '' : '${body['message']}';
       final name = body == null ? '' : '${body['data']['name']}';
@@ -50,7 +52,7 @@ class _DioCardState extends State<DioCard> {
     try {
       // 带 query 参数：`queryParameters` 与 Dart 同名同样传。
       final res = await _dio.get(
-        'http://127.0.0.1:8765/app/community',
+        '$devServerBaseUrl/app/community',
         queryParameters: {'tab': 'recommend', 'page': 2},
       );
       final uri = '${res.requestOptions.uri}';

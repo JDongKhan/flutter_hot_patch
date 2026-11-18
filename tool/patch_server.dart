@@ -12,7 +12,6 @@ import 'dart:io';
 
 import 'server/router.dart';
 
-const String _host = '127.0.0.1';
 const int _port = 8765;
 
 Future<void> main(List<String> args) async {
@@ -27,12 +26,14 @@ Future<void> main(List<String> args) async {
     stderr.writeln('[patch_server] mock 目录不存在：${router.mockRoot.path}（普通接口会全部 404）');
   }
 
-  final server = await HttpServer.bind(_host, _port);
-  stdout.writeln('[patch_server] 已启动 http://$_host:$_port/');
+  // 绑定 0.0.0.0：本机（127.0.0.1）与真机（电脑局域网 IP）都能访问，
+  // 服务端不再维护具体 IP；客户端地址统一在 example/lib/base/dev_server.dart。
+  final server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
+  stdout.writeln('[patch_server] 已启动 http://localhost:$_port/（监听 0.0.0.0）');
   stdout.writeln('[patch_server] patch 根：${router.patchRoot.path}');
   stdout.writeln('[patch_server] mock 根：${router.mockRoot.path}');
-  stdout.writeln('[patch_server] 试访问：http://$_host:$_port/patch/patch.zip');
-  stdout.writeln('[patch_server] 试访问：http://$_host:$_port/app/home');
+  stdout.writeln('[patch_server] 试访问：http://localhost:$_port/patch/patch.zip');
+  stdout.writeln('[patch_server] 试访问：http://localhost:$_port/app/home');
 
   await for (final request in server) {
     unawaited(router.handle(request));

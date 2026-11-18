@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
+import '../base/dev_server.dart';
 import '../base/host_http.dart';
 import '../base/platform_tools.dart';
 
@@ -48,7 +49,7 @@ class _ThirdPartyToolsCardState extends State<ThirdPartyToolsCard> {
 
   Future<void> _callHttp() async {
     try {
-      final res = await HostHttp.get('http://127.0.0.1:8765/hello');
+      final res = await HostHttp.get('$devServerBaseUrl/hello');
       setState(() {
         _http = 'HTTP ${res['statusCode']} · ${res['statusMessage'] ?? ''}';
       });

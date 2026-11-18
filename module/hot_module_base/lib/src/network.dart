@@ -16,7 +16,10 @@ import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 /// `_app_host_.invoke('post', ...)`；调用点与 Dart 一比一（`Network.post(...)`），
 /// 由宿主执行这里的真实 http 请求。
 class Network {
-  static const String _baseUrl = 'http://127.0.0.1:8765';
+  /// 本地 mock 服务地址：**由宿主在启动时注入**（example 的 `main()` 从
+  /// `base/dev_server.dart` 取值），与补丁 zip 的地址同一处维护。
+  /// 未注入时回退到本机默认地址，便于单测 / 独立运行。
+  static String baseUrl = 'http://127.0.0.1:8765';
 
   /// mock 接口的离线副本目录（`example/assets/mock/`，构建时打包进 assets）。
   static const String _localMockRoot = 'assets/mock';
@@ -29,11 +32,11 @@ class Network {
       debugPrint("release 模式：读取本地 mock $url");
       return _loadLocalMock(url);
     }
-    debugPrint("开始网络请求：$url");
     final path = url.startsWith('/') ? url : '/$url';
+    debugPrint("开始网络请求：$baseUrl$path");
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
     try {
-      final request = await client.openUrl('POST', Uri.parse('$_baseUrl$path'));
+      final request = await client.openUrl('POST', Uri.parse('$baseUrl$path'));
       request.headers.contentType = ContentType.json;
       final body = params == null ? '' : jsonEncode(params);
       request.write(body);

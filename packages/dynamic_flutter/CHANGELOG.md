@@ -5,6 +5,7 @@
 **修复 Android（QuickJS）上 JS 侧 `await` 宿主调用后不恢复，界面一直 loading；无协议变更。**
 
 - `JsRuntimeManager` 的求值统一走 `_evaluateAndDrainJobs`：`evaluate` 之后调用 `runtime.executePendingJob()` 排空 Promise 微任务。QuickJS（Android）的 `evaluate` 不会自动执行微任务，宿主 `_app_host_.resolve(...)` 回填后 `await` 的续体停在队列里（如 `Network.post` 成功后 `AppShellVm.load()` 永不返回、也无报错）；JSC（iOS/macOS）的 `executePendingJob` 是空实现，无副作用。
+- 引擎**内部**执行的回调同样要排空：flutter_js 自己实现的 `setTimeout`（`Future.delayed` / `Timer` 走它）在回调里 resolve Promise 后也不会跑续体。Android 上包一层 flutter_js 的 `SetTimeout` 通道，**每次 JS 注册定时器时**在相同延迟之后再排空一次微任务（按需触发，无常驻轮询、没有定时器就零开销）；JSC 不处理。修复异步 demo 一直停「等待 complete…」、`Future.delayed` 不恢复的问题。
 
 ## 0.6.2
 

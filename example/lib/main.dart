@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:dynamic_flutter/dynamic_flutter.dart';
+import 'package:hot_module_base/hot_module_base.dart';
 
 import 'app/app.dart';
 import 'base/app_log_console.dart';
 import 'base/app_routes.dart';
+import 'base/dev_server.dart';
 import 'base/patch_config.dart';
 import 'components/compare_pane.dart';
 import 'components/composite_component.dart';
@@ -29,6 +31,8 @@ void main() {
   runZoned(() {
     // binding 与 runApp 必须在同一个 zone 内初始化（否则触发 Zone mismatch）。
     WidgetsFlutterBinding.ensureInitialized();
+    // 本地服务地址统一从 base/dev_server.dart 取：mock 接口与补丁 zip 共用一处。
+    Network.baseUrl = devServerBaseUrl;
     // UI 能力装配唯一入口，一次完成四件事：
     //   1. 注册自定义能力（lib/custom/**，清单见 custom_capabilities.dart：
     //      VisibilityDetector / EasyRefresh / WaterfallFlow）；

@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'dev_server.dart';
+
 /// 补丁包地址的唯一来源（demo 里所有 JsUiWidget 都从这里取）。
 ///
 /// ⚠ 只允许被**宿主侧**代码引用（main.dart 等没有 @PatchEntry 的文件）。
@@ -9,7 +11,8 @@ import 'package:flutter/foundation.dart';
 /// "Unable to load asset: base/patch_config.js"。需要地址的 @PatchEntry 组件
 /// 请把 URL 作为构造参数由宿主传入（参考 AppShellJsPage）。
 ///
-/// - debug：本地 patch 服务（`bash start_patch_server.sh` 启动的 127.0.0.1:8765）；
+/// - debug：本地 patch 服务（地址见 `base/dev_server.dart` 的
+///   [devServerBaseUrl]，由 `bash start_patch_server.sh` 启动）；
 /// - release：GitHub Pages 上的静态包（由 start_patch_server.sh 同步到
 ///   `docs/blog/patch.zip`，随仓库发布到
 ///   https://jdongkhan.github.io/flutter_hot_patch/blog/ ）——别人装包后不需要
@@ -18,7 +21,7 @@ import 'package:flutter/foundation.dart';
 ///   `fvm flutter build apk --dart-define=PATCH_ZIP=https://example.com/patch.zip`
 const String _patchZipOverride = String.fromEnvironment('PATCH_ZIP');
 
-const String _patchZipLocal = 'http://127.0.0.1:8765/patch/patch.zip';
+const String _patchZipLocal = '$devServerBaseUrl/patch/patch.zip';
 
 const String _patchZipPublished =
     'https://jdongkhan.github.io/flutter_hot_patch/blog/patch.zip';
