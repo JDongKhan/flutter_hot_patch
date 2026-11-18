@@ -445,8 +445,7 @@ class FieldScope {
   final Map<String, ExtensionScope> extensionNames;
 
   /// 局部变量别名：`final list = _list;` → `list → this._list`。
-  /// 抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用被捕获的
-  /// 局部变量时必须落到真实字段引用，否则是未定义的自由变量。
+  /// 树 / 闭包里引用该名字时统一落成字段引用（`this._list`），与字段读取同源。
   final Map<String, String> localAliases;
 
   /// 本类 JS 类名（静态成员引用的落点前缀）。null = 不在类方法体里
@@ -505,7 +504,7 @@ class FieldScope {
   ///
   /// **只供后续「变量声明的初始化器」折算**（[forInitializer]）——这样才能闭合
   /// 链式别名：`final spots = feed.spots;` 里的 `feed` 先折成 `this._feed`，
-  /// `spots` 于是也成了字段别名，被抽进懒加载 builder 方法后仍能落字段引用。
+  /// `spots` 于是也成了字段别名，后续在树 / 闭包里引用时同样落成字段引用。
   ///
   /// 刻意不并进 [localAliases]：那会让方法体里**所有**语句中的引用都变成
   /// 「按引用重求值」，副作用初始化器（`_items.removeAt(i)`、`GlobalKey
@@ -714,9 +713,8 @@ abstract class ExprRenderer {
   /// 成员映射（Map 的 `_keys` / `m[k]` 等）时要用它，缺省表示不可判定。
   void registerLocal(String name, {String? type});
 
-  /// 把「字段/ getter 的局部别名」（`final list = _list;` → `this._list`）登记
-  /// 进 widget 层：抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用该
-  /// 名字时必须落成 `this._list`，否则方法体内是未定义的自由变量（ReferenceError）。
+  /// 把「字段 / getter 的局部别名」（`final list = _list;` → `this._list`）登记
+  /// 进 widget 层：树 / 闭包里的同名引用统一落成 `this._list`，与字段读取同源。
   void registerLocalAlias(String name, String jsExpr);
 
   /// 方法形参：翻译**该方法体期间**登记进 widget 层作用域（`_group(String title,

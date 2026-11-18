@@ -484,84 +484,24 @@ class ElementTranslateContext implements ExprRenderer {
   final Set<String> _loopVars = {};
   void pushLoopVar(String name) => _loopVars.add(name);
 
-  /// build() return 前的局部变量（`final isAdult = ...;`）：树里直接引用。
+  /// 方法体 / builder 闭包里的局部变量与闭包形参（`final isAdult = ...;`、
+  /// `(context, index)`）：同一 JS 作用域内直接引用（闭包捕获）。
   final Set<String> _locals = {};
 
   /// 方法体局部的**源码类型**：widget 层按接收者类型做成员映射时要用。
   final Map<String, String> _localTypes = {};
   void addLocal(String name) => _locals.add(name);
 
-  /// **方法体局部变量**（来自 [registerLocal]，即各方法体里 `var/final x = ...`）。
-  ///
-  /// 它们只在**本方法**内可见：懒加载 builder 被抽成实例方法
-  /// （`_listViewBuilderN` / `_sliverBuilderN`）后看不到这些名字——只有被折算成
-  /// 字段引用（[registerLocalAlias]）才安全，否则产物里就是未定义自由变量。
-  final Set<String> _methodBodyLocals = {};
-
-  /// 抽取出的 builder 方法里**真实可见**的名字（闭包形参 context/index +
-  /// 块体前置语句声明的局部，见 [addBuilderLocal]）。判「捕获了方法体局部变量」
-  /// 时用来排除。
-  final Set<String> _extractedVisible = {};
-
-  /// 懒加载 builder 自己的名字：闭包形参（context / index）与块体前置语句声明的
-  /// 局部——它们会成为抽取方法的前置语句，方法体里天然可见。
-  void addBuilderLocal(String name) {
-    _locals.add(name);
-    _extractedVisible.add(name);
-  }
-
   /// [ExprRenderer.registerLocal] 实现：方法体翻译器声明局部变量时
   /// 同步登记，保证同一方法体里返回的 widget 树能解析这些名字。
-  ///
-  /// 同时记为「方法体局部变量」：被抽走的 builder 子树里引用了它就必须告警
-  /// （见 [warnCapturedLocals]）。
   @override
   void registerLocal(String name, {String? type}) {
     _locals.add(name);
-    _methodBodyLocals.add(name);
     if (type != null) _localTypes[name] = type;
   }
 
-  /// 抽查懒加载 builder 闭包捕获的名字（构建期告警，不静默）。
-  ///
-  /// 会被抽成独立实例方法的子树里，只有**闭包形参与前置语句局部**、类成员
-  /// （字段 / getter / 方法）、顶层常量可见；`build` 的方法体局部变量与循环变量
-  /// 都不在其中——折算不出字段引用时产物就是未定义自由变量，运行时
-  /// `ReferenceError`（子结点展开失败 → 页面停在 loading，且错误被求值层吞掉，
-  /// 现场几乎无法定位）。
-  ///
-  /// 正常路径（`final spots = _feed.spots;` 这类字段派生的 final 局部）会先被
-  /// [registerLocalAlias] 折算成 `this._feed.spots`，不会命中本告警。
-  void warnCapturedLocals(Expression body) {
-    final used = <String, SimpleIdentifier>{};
-    body.accept(_SimpleIdentifierCollector(used));
-    for (final e in used.entries) {
-      final name = e.key;
-      if (!_methodBodyLocals.contains(name) && !_loopVars.contains(name)) {
-        continue;
-      }
-      if (_extractedVisible.contains(name) ||
-          _localAliases.containsKey(name) ||
-          propByField.containsKey(name) ||
-          methodNames.contains(name) ||
-          getterNames.contains(name) ||
-          staticFieldNames.contains(name) ||
-          staticMethodNames.contains(name) ||
-          globalConsts.contains(name)) {
-        continue;
-      }
-      log.warning(
-        '[dynamic_flutter_generator] ${sourceAt(sourcePath, e.value)}: "$name" 被懒加载 builder '
-        '捕获，却折算不成字段引用（字段 / getter / 顶层常量）：抽取成实例方法'
-        '后 JS 侧是未定义自由变量（运行时 ReferenceError，页面会停在 loading）。'
-        '请把该值放到字段 / getter 上，或改用「字段派生的 final 局部」'
-        '（如 `final spots = _feed.spots;`）。',
-      );
-    }
-  }
-
-  /// 局部别名（`final list = _list;` → `list → this._list`）。被抽成实例方法的
-  /// 懒加载 builder 引用该名字时，必须落成真实字段引用（见 [jsDataExpr]）。
+  /// 局部别名（`final list = _list;` → `list → this._list`）：树 / 闭包里
+  /// 引用该名字时落成真实字段引用（见 [jsDataExpr]）。
   final Map<String, String> _localAliases = {};
   @override
   void registerLocalAlias(String name, String jsExpr) =>
@@ -1674,8 +1614,8 @@ class ElementTranslateContext implements ExprRenderer {
   /// 宿主注入方法表 + 局部别名。
   ///
   /// 有别名（`final list = _list;` → `list → this._list`）的局部从形参表剔除：
-  /// [FieldScope.fieldRef] 先查形参，若不剔除就会把 `list` 原样透传成未定义的
-  /// 自由变量（懒加载 builder 抽成实例方法后尤其致命）。
+  /// [FieldScope.fieldRef] 先查形参，若不剔除就会把 `list` 原样透传成局部名，
+  /// 而不是字段引用。
   FieldScope _dataScope() => FieldScope(
     sourcePath: sourcePath,
     propByField: propByField,
@@ -1982,48 +1922,4 @@ bool isClassName(String name) {
     n = n.substring(1);
   }
   return n.isNotEmpty && n[0] == n[0].toUpperCase();
-}
-
-/// 收集表达式里出现的简单标识符名——[ElementTranslateContext.warnCapturedLocals]
-/// 的构建期抽查用。
-///
-/// 成员名（`a.b` 里的 `b`）也会被收进来，误报面由「名字必须是**本类**的方法体
-/// 局部变量 / 循环变量」这条过滤限制住；`Label`（具名实参名 / 语句标签）不是
-/// 变量引用，单独排除。
-class _SimpleIdentifierCollector extends RecursiveAstVisitor<void> {
-  _SimpleIdentifierCollector(this.names);
-
-  /// 名字 → 首次出现的结点（构建期告警定位用）。
-  final Map<String, SimpleIdentifier> names;
-
-  @override
-  void visitSimpleIdentifier(SimpleIdentifier node) {
-    // 只收**变量引用**。名字位置的标识符不是变量：具名实参 / 语句标签
-    //（`Divider(height: 1)` 的 `height`）、成员名（`Icons.height` 的 `height`）、
-    // 命名构造名（`Foo.named` 的 `named`）、带接收者的方法名（`a.build()`）。
-    // 把它们当变量收集会误报「builder 捕获了方法体局部变量」——只要同名局部
-    // 变量在别的方法里出现过（如 `_measureFixed` 的 `height`）。
-    if (_isNamePosition(node)) return;
-    names.putIfAbsent(node.name, () => node);
-  }
-
-  /// [node] 是否处于「名字」位置而非「变量引用」位置。
-  static bool _isNamePosition(SimpleIdentifier node) {
-    final parent = node.parent;
-    if (parent is Label) return true;
-    if (parent is PrefixedIdentifier) {
-      return identical(parent.identifier, node);
-    }
-    if (parent is PropertyAccess) {
-      return identical(parent.propertyName, node);
-    }
-    if (parent is ConstructorName) {
-      return identical(parent.name, node);
-    }
-    // `a.foo()` 的 `foo` 是成员名；无接收者的 `foo()` 仍可能是局部闭包变量。
-    if (parent is MethodInvocation) {
-      return identical(parent.methodName, node) && parent.target != null;
-    }
-    return false;
-  }
 }

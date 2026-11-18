@@ -3514,14 +3514,13 @@ String translateStmtList(
         if (inferred != null) scope.localTypes[name] = inferred;
         renderer?.registerLocal(name, type: inferred);
         // 该局部只是「字段 / getter 的别名」（`final list = _list;` →
-        // `this._list`）：登记进 widget 层，懒加载 builder 抽成实例方法后引用它
-        // 时才能落到 `this._list`，而不是未定义的自由变量（`ReferenceError`）。
+        // `this._list`）：登记进 widget 层，树 / 闭包里引用它时统一落成
+        // `this._list`，与字段读取同源。
         //
         // 同时记进 [FieldScope.declAliases]，供**后续声明的初始化器**折算——
         // 链式别名靠这一步闭合：`final spots = feed.spots;` 里的 `feed` 先折成
         // `this._feed`，`spots` 于是也成了字段别名。缺这一步，二级别名会以裸名
-        // 进产物（`spots[index]`），被抽进 builder 方法后就是
-        // `ReferenceError: Can't find variable: spots`。
+        // 进产物（`spots[index]`）。
         //
         // 仅限 **纯字段路径**（见 [_fieldPath]）与 final / const：别名语义是
         // 「按引用重求值」，带调用的初始化器（`this._items.removeAt(0)`）一旦

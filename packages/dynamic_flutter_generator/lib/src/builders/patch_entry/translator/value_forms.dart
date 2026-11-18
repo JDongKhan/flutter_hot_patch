@@ -84,7 +84,7 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
   }
   if (ctor != null) {
     // 构造统一按**构造翻译**处理（组件 / 值对象 / 控制器同一套）：
-    // 先走属性管线（builder 闭包抽成方法、集合推导展开、delegate、位置实参
+    // 先走属性管线（builder 闭包内联、集合推导展开、delegate、位置实参
     // 按源码签名映射），再渲染成 `new X({...})` / `X.b({...})`。
     // 翻译器不判断它是组件还是普通类——同名 JS 类由运行时注入或包装类承接。
     // 翻译/渲染失败 → null（该键由 [nonNull] 丢弃），绝不产出占位值。
@@ -137,7 +137,7 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
 ///
 /// 产物形态（均不带 `element: true`，由宿主包装类构造期的 `__splitHost` 归入 `__children`）：
 ///   - `{__delegate: 'list', children: [元素…]}`；
-///   - `{__delegate: 'builder', builder: '<方法名>', childCount: <jsExpr>}`。
+///   - `{__delegate: 'builder', builder: <内联闭包>, childCount: <jsExpr>}`。
 ///
 /// 两种都不匹配 → null（调用方按普通值形态继续翻译）。
 Object? _delegateValue(Expression e, ElementTranslateContext ctx) {
@@ -283,7 +283,7 @@ String? builderClosureJs(
 
   final names = [for (var i = 0; i < params.length; i++) nameAt(i)];
   for (final n in names) {
-    ctx.addBuilderLocal(n);
+    ctx.addLocal(n);
   }
   Expression? retExpr;
   final preludes = <String>[];
@@ -298,16 +298,15 @@ String? builderClosureJs(
       }
       if (st is VariableDeclarationStatement) {
         for (final v in st.variables.variables) {
-          ctx.addBuilderLocal(v.name.lexeme);
+          ctx.addLocal(v.name.lexeme);
           final init = v.initializer;
           if (init == null) {
             preludes.add('var ${v.name.lexeme};');
             continue;
           }
-          // `final model = context.watch<MyModel>()`：只登记为 builder 局部名。
+          // `final model = context.watch<MyModel>()`：登记为 builder 局部名。
           // 子树里若出现 `() => model.inc()`，事件句柄会因「引用了构建期局部名」
           // 改走**构建期闭包**，闭包与本闭包同作用域、直接捕获 `model`。
-          ctx.warnCapturedLocals(init);
           preludes.add('var ${v.name.lexeme} = ${ctx.jsDataExpr(init)};');
         }
         continue;
@@ -319,7 +318,6 @@ String? builderClosureJs(
     }
   }
   if (retExpr == null) return null;
-  ctx.warnCapturedLocals(retExpr);
   // 子树翻译/渲染失败 → 整个 builder 闭包不产出（调用方丢该键），绝不产出
   // `() => null` 之类的假闭包——那会让运行时以为拿到了 builder，实际每次
   // 调用返回空元素（与 SizedBox 占位同一类静默错误）。
