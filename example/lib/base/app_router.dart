@@ -55,9 +55,9 @@ class AppRouter {
   /// 例如调用方按 `kInJsRuntime` 决定是否在参数里带上 `component` / `entry`，
   /// 路由表据此渲染 JS 版页面或原生页面。
   @HostInjected()
-  static void pushNamed(String name, [Object? arguments]) {
+  static void pushNamed(String name, [Object? routeArgs]) {
     assert(_navigator != null, 'Navigator 未初始化');
-    _navigator?.pushNamed(name, arguments: arguments);
+    _navigator?.pushNamed(name, arguments: routeArgs);
   }
 
   /// 宿主路由的统一失败处理：请求/跳转失败时把异常原样 toast 出去，

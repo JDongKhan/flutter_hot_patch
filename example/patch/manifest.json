@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.2",
-  "buildTime": "2026-11-18T15:51:40.615821",
+  "buildTime": "2026-11-18T15:54:43.149956",
   "resources": {
     "flutter.js": "697598458f086263d3019bdd047f501466c924df76264810dc524d712e8387e7",
     "packages/NoteObject.js": "2c32d68a5e767060c383c5dd7afde137f528e6cc2728fa2e40e5083b71f1a723",
@@ -156,7 +156,7 @@
     "model/getx_counter_vm.js": "4dffad24046866c5d2283070c887c55181144ec149f913b60b7cdb87efd8798a",
     "base/host_http.js": "f127639fad755ff0d72aac38bd4cd25e1b2a840eeb8b305b2b41192aec023eff",
     "base/canvas_image.js": "d487cd3a3352103f0ad404322a7843981f1f6729115bd8625623fe8c6dc265b2",
-    "base/app_router.js": "0723cd79ef82ba12ab470a7050b7afa8b4258e6226944847c1b7237696a67137",
+    "base/app_router.js": "fbf29f63f7483d4bfcf4a0e7f528a49bd528357f1fd87790df7a8828ae4966cc",
     "base/tracker.js": "f4594b857632b2f5f233ed0dc3fcc025767daf4b1699dd69dbe77ac3b9f6805b",
     "base/web_view.js": "b37f0061564f47f17af2f8353f09190a84d3668afd60bb9650451637baf26492",
     "base/platform_tools.js": "609ea4d8bea55edd84abf38e99aaa8979762c329bd21c5b3a9bb07bbd9910841"

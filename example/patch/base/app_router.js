@@ -32,7 +32,7 @@ export class AppRoutes {
 export class AppRouter {
   constructor() {
   }
-  static pushNamed(name, arguments) {
+  static pushNamed(name, routeArgs) {
     return _app_host_.invoke("pushNamed", Array.prototype.slice.call(arguments));
   }
   static openHeroTarget(tag, label) {
