@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/overlay_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/overlay_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { BorderRadius, BoxDecoration, Builder, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Radius, SizedBox, StatefulWidget, Text, TextStyle, Wrap, WrapAlignment } from '../flutter.js';

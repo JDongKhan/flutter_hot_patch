@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// @author jd
 ///

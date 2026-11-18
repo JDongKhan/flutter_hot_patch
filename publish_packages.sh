@@ -15,9 +15,9 @@ cd "$(dirname "$0")"
 export PUB_HOSTED_URL="https://pub.dev"
 
 PACKAGES=(
-  hot_patch_annotations
-  hot_patch_generator
-  hot_patch
+  dynamic_flutter_annotations
+  dynamic_flutter_generator
+  dynamic_flutter
 )
 
 DRY_RUN=0

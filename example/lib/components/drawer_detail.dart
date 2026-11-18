@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// Drawer / endDrawer 详情：drawer 接进真实 Scaffold 后 AppBar 左侧自动出现
 /// 汉堡按钮，右侧为 endDrawer 入口；点菜单项回写选中项。

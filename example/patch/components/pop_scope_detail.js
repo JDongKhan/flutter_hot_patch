@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/pop_scope_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/pop_scope_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, PopScope, Radius, Row, SizedBox, StatefulWidget, Switch, Text, TextStyle, double } from '../flutter.js';

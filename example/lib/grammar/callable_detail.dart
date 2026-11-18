@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 可调用对象 / 函数调用语法 demo：
 ///   - 实例方法 `call` → JS 侧改名 `invoke`，`add(1)` / `add.call(2)` 都落到

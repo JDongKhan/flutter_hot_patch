@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// Stream 能力 demo：`async*` 惰性流、`listen` 订阅、`await for`、
 /// `StreamController`（单订阅 / broadcast）、转换与终止操作。

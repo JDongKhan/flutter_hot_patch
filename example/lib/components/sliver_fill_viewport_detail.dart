@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// SliverFillViewport 演示：按「视口高度 × viewportFraction」给每项定高。
 ///

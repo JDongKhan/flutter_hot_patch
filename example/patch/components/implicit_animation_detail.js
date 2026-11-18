@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/implicit_animation_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/implicit_animation_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Alignment, AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Border, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CrossFadeState, Curves, Divider, Duration, EdgeInsets, Expanded, FontWeight, MainAxisAlignment, Offset, Row, SizedBox, StatefulWidget, Text, TextButton, TextStyle, ValueKey } from '../flutter.js';

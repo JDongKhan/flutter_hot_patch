@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch/hot_patch.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 import '../app/pages/detail_pages.dart';
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 import 'package:uuid/uuid.dart';
 
 /// 「必须先构造才能用」的三方库 demo（左原生 / 右 JS 热更）。

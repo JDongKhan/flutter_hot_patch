@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/layout_more_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/layout_more_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Alignment, BorderRadius, BoxDecoration, BoxFit, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FilledButton, FittedBox, FontWeight, IgnorePointer, InteractiveViewer, IntrinsicHeight, Positioned, Radius, RepaintBoundary, RotatedBox, Row, SizedBox, Stack, StatefulWidget, Text, TextBaseline, TextStyle, Tooltip } from '../flutter.js';

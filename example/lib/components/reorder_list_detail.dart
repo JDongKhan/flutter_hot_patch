@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// ReorderableListView（长按拖拽重排）详情。
 ///

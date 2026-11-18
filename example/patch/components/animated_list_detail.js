@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/animated_list_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/animated_list_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { AnimatedList, Card, CircleAvatar, Colors, Column, CrossAxisAlignment, Duration, EdgeInsets, Expanded, FontWeight, GlobalKey, ListTile, Row, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';

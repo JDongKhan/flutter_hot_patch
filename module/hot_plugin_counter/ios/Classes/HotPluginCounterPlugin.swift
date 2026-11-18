@@ -8,7 +8,7 @@ public class HotPluginCounterPlugin: NSObject, FlutterPlugin {
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
-      name: "hot_patch/demo/counter",
+      name: "dynamic_flutter/demo/counter",
       binaryMessenger: registrar.messenger())
     let instance = HotPluginCounterPlugin()
     instance.channel = channel

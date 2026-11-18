@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/image_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/image_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { BorderRadius, BoxFit, CachedNetworkImage, CircleAvatar, ClipRRect, Colors, Column, CrossAxisAlignment, FontWeight, Icon, Icons, Image, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';

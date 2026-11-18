@@ -52,7 +52,7 @@
     <ul>
       <li><strong>三方可翻译的部分</strong>：业务写在工程根 <code>js/&lt;package&gt;.js</code>，构建期原样拷贝，<strong>不改一行</strong>；</li>
       <li><strong>三方库自己的运行期登记</strong>（继承结点、原型补丁、枚举常量）也写在同一个模块里；</li>
-      <li><strong>三方库需要的宿主能力</strong>（真实 widget、Controller、平台通道）经 <code>JsUiLibrary</code> 注册，hot_patch 核心零改动。</li>
+      <li><strong>三方库需要的宿主能力</strong>（真实 widget、Controller、平台通道）经 <code>JsUiLibrary</code> 注册，dynamic_flutter 核心零改动。</li>
     </ul>
     <div class="callout tip">
       <span class="ico">i</span>
@@ -229,7 +229,7 @@ import 'package:visibility_detector/visibility_detector.dart';</code></pre>
     <p>宿主发起、需要等 JS 完成任务的事件（如 EasyRefresh 的 <code>onRefresh</code>）走通用 <code>JsRuntimeManager.invokeAwait(handler)</code>；JS 侧 await 完成后经 <code>jsuiEventResult</code> 回传 token 与结果。这是通用机制，不是某个库专属。</p>
 
     <h3>三方容器与懒加载</h3>
-    <p>三方组件的 JS 类由你在 <code>js/&lt;package&gt;.js</code> 里维护，懒加载也直接在类上声明，<strong>不需要改生成器或 hot_patch</strong>：</p>
+    <p>三方组件的 JS 类由你在 <code>js/&lt;package&gt;.js</code> 里维护，懒加载也直接在类上声明，<strong>不需要改生成器或 dynamic_flutter</strong>：</p>
     <pre><code>import { Component } from '../flutter.js';
 
 export class MyCarousel extends Component {

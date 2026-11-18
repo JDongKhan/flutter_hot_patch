@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 异步语法 demo：`async` / `await` + `Future.delayed`，以及 `Completer` 手动完成
 /// （`complete` / `completeError` / `isCompleted` / `future`）。

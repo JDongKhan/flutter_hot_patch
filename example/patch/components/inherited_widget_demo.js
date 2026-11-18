@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/inherited_widget_demo.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/inherited_widget_demo.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Builder, Card, Column, EdgeInsets, ElevatedButton, InheritedWidget, MainAxisSize, Padding, SizedBox, StatefulWidget, StatelessWidget, Text, Wrap, WrapAlignment } from '../flutter.js';

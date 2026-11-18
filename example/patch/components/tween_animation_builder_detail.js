@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/tween_animation_builder_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/tween_animation_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Alignment, BorderRadius, ClipRRect, Colors, Column, Container, CrossAxisAlignment, Curves, Duration, EdgeInsets, FontWeight, FractionallySizedBox, MainAxisSize, OutlinedButton, SizedBox, StatefulWidget, Text, TextStyle, Tween, TweenAnimationBuilder, Wrap, double } from '../flutter.js';

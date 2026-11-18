@@ -1,19 +1,19 @@
 // ===== 自定义组件能力：VisibilityDetector（可见性 / 曝光检测）=====
 //
 // 这是一个**示例级自定义能力**：VisibilityDetector 来自三方包
-// `visibility_detector`，不是所有 App 都会用到，因此不放进 `hot_patch` 内建
+// `visibility_detector`，不是所有 App 都会用到，因此不放进 `dynamic_flutter` 内建
 // 能力，而是由业务方在自己的工程里按同一套扩展点接入：
 //
 //   1. 继承 `JsUiLibrary`，在 `registerWidgets` 里注册 type → Flutter widget；
 //   2. 在 `main()`（runApp 之前）`registerJsUiLibrary(...)`；
 //   3. 生成器构建期扫描工程 `lib/**` 的 `r.register('X', …)`，把 `X` 补进
-//      `flutter.js` 的宿主包装类（与内建能力同一份清单，无需改 hot_patch 包）。
+//      `flutter.js` 的宿主包装类（与内建能力同一份清单，无需改 dynamic_flutter 包）。
 //
 // 可见性判定依赖宿主的 render object 与帧间通知，JS 侧只接收结果：
 //   - 子树：`child`；
 //   - 事件：`onVisibilityChanged(VisibilityInfo)`，可见比例变化时回传。
 import 'package:flutter/material.dart';
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 /// `VisibilityInfo` → JSON（JS 侧按普通对象读取：`info.visibleFraction` /

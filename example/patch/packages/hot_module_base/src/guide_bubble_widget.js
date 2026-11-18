@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 跨包产物（package: hot_module_base）：由 hot_patch_generator 生成
+// 跨包产物（package: hot_module_base）：由 dynamic_flutter_generator 生成
 // 源文件：package:hot_module_base/src/guide_bubble_widget.dart（一个源文件一份产物）
 
 import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors, Column, CompositedTransformFollower, CompositedTransformTarget, Container, CrossAxisAlignment, Duration, EdgeInsets, IgnorePointer, LayerLink, MainAxisSize, Offset, OverlayPortal, OverlayPortalController, Padding, Positioned, SizedBox, Stack, StatefulWidget, Text, TextStyle, Timer, Transform } from '../../../flutter.js';

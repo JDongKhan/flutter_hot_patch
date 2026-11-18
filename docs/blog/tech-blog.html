@@ -1018,7 +1018,7 @@ td code{font-size:11.5px}
             <!-- Generator -->
             <rect class="arch-band arch-band--gen" x="16" y="132" width="804" height="100" rx="14"/>
             <text class="arch-title" x="36" y="164">生成器 · 编译期</text>
-            <text class="arch-sub" x="36" y="183">hot_patch_generator</text>
+            <text class="arch-sub" x="36" y="183">dynamic_flutter_generator</text>
             <rect class="arch-node" x="300" y="148" width="150" height="52" rx="9"/>
             <text class="arch-node-title" x="314" y="169">收集</text>
             <text class="arch-node-sub" x="314" y="186">analysis/</text>
@@ -1200,11 +1200,11 @@ td code{font-size:11.5px}
       <p>运行时与注解进 <code>dependencies</code>，生成器与 build_runner 只进 <code>dev_dependencies</code>。</p>
       <div class="code-block" data-lang="yaml">
 <pre>dependencies:
-  hot_patch_annotations: <span class="s">^0.1.5</span>   <span class="c"># 注解</span>
-  hot_patch: <span class="s">^0.4.0</span>               <span class="c"># 运行时（JS 运行时 + 宿主渲染 + 能力桥）</span>
+  dynamic_flutter_annotations: <span class="s">^0.1.5</span>   <span class="c"># 注解</span>
+  dynamic_flutter: <span class="s">^0.4.0</span>               <span class="c"># 运行时（JS 运行时 + 宿主渲染 + 能力桥）</span>
 
 dev_dependencies:
-  hot_patch_generator: <span class="s">^0.13.0</span>   <span class="c"># 编译期翻译（不进入包体）</span>
+  dynamic_flutter_generator: <span class="s">^0.13.0</span>   <span class="c"># 编译期翻译（不进入包体）</span>
   build_runner: <span class="s">^2.4.13</span></pre>
       </div>
 
@@ -1212,7 +1212,7 @@ dev_dependencies:
       <p><code>@PatchEntry</code> 的收集口径是<strong>整个 widget</strong>：非 static 字段 → JS 状态；除 build / 生命周期外的方法 → JS 方法；<code>build()</code> → JS 渲染入口。没有字段级或方法级标注。</p>
       <div class="code-block" data-lang="dart">
 <pre><span class="k">import</span> <span class="s">'package:flutter/material.dart'</span>;
-<span class="k">import</span> <span class="s">'package:hot_patch_annotations/hot_patch_annotations.dart'</span>;
+<span class="k">import</span> <span class="s">'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart'</span>;
 
 <span class="p">@PatchEntry(</span><span class="s">'Counter'</span><span class="p">)</span>
 <span class="k">class</span> <span class="t">Counter</span> <span class="k">extends</span> <span class="t">StatefulWidget</span> {
@@ -1302,7 +1302,7 @@ bash start_patch_server.sh
       </div>
       <ul class="check-list">
         <li>只改业务 Dart：重跑 <code>start_patch_server.sh</code>，在 App 里重进该页面即可看到新产物。</li>
-        <li>改运行时 JS 源（<code>packages/hot_patch_generator/lib/src/builders/core_js_builder/js/runtime/**</code>）：重跑 build_runner，随 <code>patch/runtime.js</code> 发布，页面重进 / 重载生效，<strong>不需要重装 App</strong>。</li>
+        <li>改运行时 JS 源（<code>packages/dynamic_flutter_generator/lib/src/builders/core_js_builder/js/runtime/**</code>）：重跑 build_runner，随 <code>patch/runtime.js</code> 发布，页面重进 / 重载生效，<strong>不需要重装 App</strong>。</li>
         <li>改组件属性：生成侧与运行侧要同时更新，详见<a href="#ui">组件支持总览</a>。</li>
       </ul>
     </section>
@@ -1348,7 +1348,7 @@ bash start_patch_server.sh
         <table>
           <thead><tr><th style="width:18%">形态</th><th style="width:42%">场景</th><th>入口 / 约束</th></tr></thead>
           <tbody>
-            <tr><td>能力桥</td><td>ScrollController、TabController、GlobalKey、BuildContext 等有真实原生对应物的对象；CustomPainter 的绘制录制重放；Canvas 图片句柄</td><td><code>packages/hot_patch/lib/src/js_ui/capabilities/</code>；一个能力一个目录，核心零改动</td></tr>
+            <tr><td>能力桥</td><td>ScrollController、TabController、GlobalKey、BuildContext 等有真实原生对应物的对象；CustomPainter 的绘制录制重放；Canvas 图片句柄</td><td><code>packages/dynamic_flutter/lib/src/js_ui/capabilities/</code>；一个能力一个目录，核心零改动</td></tr>
             <tr><td><code>@HostInjected</code> 通道</td><td>网络、路由、WebView 等纯宿主方法调用</td><td>类照常产出 JS 类，被标注方法体改为 <code>_app_host_.invoke(通道名, 载荷)</code></td></tr>
             <tr><td>JS 内建原型补齐</td><td>Dart 标准库方法在 JS 内建类型上不存在（如 <code>List.clear</code>）</td><td>运行时同名同义补齐，<code>enumerable:false</code> + 存在性守卫，禁止挂 <code>Object.prototype</code></td></tr>
             <tr><td>原生组件注册</td><td>JS 无法 / 不应翻译的纯原生 widget</td><td><code>registerNativeComponent(name, build)</code>，全局一次注册，放在 <code>runApp</code> 之前</td></tr>
@@ -1394,10 +1394,10 @@ bash start_patch_server.sh
           <thead><tr><th style="width:15%">层</th><th style="width:43%">职责</th><th>关键实现</th></tr></thead>
           <tbody>
             <tr><td>源层</td><td>唯一真相：<code>@PatchEntry</code> 组件、模型、状态、<code>@HostInjected</code> 宿主方法</td><td><code>example/lib/</code>（或业务 App 的 <code>lib/</code>）</td></tr>
-            <tr><td>生成器层</td><td>静态收集 + 语法翻译 + 产物组装；不执行 Dart，不承载业务语义</td><td><code>packages/hot_patch_generator/</code></td></tr>
+            <tr><td>生成器层</td><td>静态收集 + 语法翻译 + 产物组装；不执行 Dart，不承载业务语义</td><td><code>packages/dynamic_flutter_generator/</code></td></tr>
             <tr><td>产物层</td><td>与 <code>lib/</code> 镜像的 JS 模块、运行时、manifest 与热更 zip</td><td><code>patch/</code>，全部标注 <code>GENERATED CODE</code></td></tr>
             <tr><td>JS 运行时层</td><td>element / reconciler / 组件基类 / 作用域订阅 / 脏调度 / 能力片段，随补丁发布</td><td><code>patch/runtime.js</code>（构建期由生成器产出）</td></tr>
-            <tr><td>宿主层</td><td>加载补丁、映射 type → widget、应用 patch、持有真实原生对象</td><td><code>packages/hot_patch/lib/src/js_ui/</code></td></tr>
+            <tr><td>宿主层</td><td>加载补丁、映射 type → widget、应用 patch、持有真实原生对象</td><td><code>packages/dynamic_flutter/lib/src/js_ui/</code></td></tr>
           </tbody>
         </table>
       </div>
@@ -1407,9 +1407,9 @@ bash start_patch_server.sh
         <table>
           <thead><tr><th style="width:24%">Package</th><th style="width:14%">版本</th><th>角色</th><th style="width:28%">关键约束</th></tr></thead>
           <tbody>
-            <tr><td><code>hot_patch_annotations</code></td><td>0.1.5</td><td>注解定义：<code>@PatchEntry</code> / <code>@PatchIgnore</code> / <code>@HostInjected</code></td><td>纯注解，零逻辑</td></tr>
-            <tr><td><code>hot_patch_generator</code></td><td>0.13.0</td><td>编译期：Dart → JS 翻译与产物组装</td><td>单包，禁止拆多 package；不含业务</td></tr>
-            <tr><td><code>hot_patch</code></td><td>0.4.0</td><td>运行期：JS 运行时注入 + 宿主渲染 + 能力桥</td><td>不含业务；不理解状态语义</td></tr>
+            <tr><td><code>dynamic_flutter_annotations</code></td><td>0.1.5</td><td>注解定义：<code>@PatchEntry</code> / <code>@PatchIgnore</code> / <code>@HostInjected</code></td><td>纯注解，零逻辑</td></tr>
+            <tr><td><code>dynamic_flutter_generator</code></td><td>0.13.0</td><td>编译期：Dart → JS 翻译与产物组装</td><td>单包，禁止拆多 package；不含业务</td></tr>
+            <tr><td><code>dynamic_flutter</code></td><td>0.4.0</td><td>运行期：JS 运行时注入 + 宿主渲染 + 能力桥</td><td>不含业务；不理解状态语义</td></tr>
           </tbody>
         </table>
       </div>
@@ -2263,10 +2263,10 @@ bash start_patch_server.sh
         <span><b>目录</b> capabilities/&lt;name&gt;/</span>
         <span><b>核心改动</b> 0</span>
       </div>
-      <p class="subtle">下列为能力域地图；完整注册表见 <code>packages/hot_patch/lib/src/js_ui/capabilities/js_ui_library.dart</code> 的 <code>_seedBuiltins</code>。</p>
+      <p class="subtle">下列为能力域地图；完整注册表见 <code>packages/dynamic_flutter/lib/src/js_ui/capabilities/js_ui_library.dart</code> 的 <code>_seedBuiltins</code>。</p>
 
       <h3>接入模板</h3>
-      <p>一个能力在宿主侧的落点分两类，模板各留一个可重写钩子。内建能力的 JS 已随 <code>patch/runtime.js</code> 发布；外部库也可以在 App 的 <code>main()</code> 里注册自己的 <code>JsUiLibrary</code>，完全不改 <code>hot_patch</code>。</p>
+      <p>一个能力在宿主侧的落点分两类，模板各留一个可重写钩子。内建能力的 JS 已随 <code>patch/runtime.js</code> 发布；外部库也可以在 App 的 <code>main()</code> 里注册自己的 <code>JsUiLibrary</code>，完全不改 <code>dynamic_flutter</code>。</p>
       <div class="code-block" data-lang="dart">
 <pre><span class="k">class</span> <span class="t">MyLibrary</span> <span class="k">extends</span> <span class="t">JsUiLibrary</span> {
   <span class="k">const</span> MyLibrary();
@@ -2711,7 +2711,7 @@ bash start_patch_server.sh
             <tr><td>新增 <code>.builder</code> / <code>.separated</code> 滚动容器</td><td><code>js_class_defs.dart</code> 的 <code>builderFormTypes</code> 登记类型 + 宿主 renderer 按 <code>children.__items</code> / <code>itemCount</code> 还原</td><td>运行时类型白名单（不存在）、mini-react 核心</td></tr>
             <tr><td>新增组件配置值对象</td><td>生成器 <code>style_values_js.dart</code> 写普通值类（构造 + <code>toJSON</code>，Widget 字段过 <code>__descriptorOf</code>）；宿主 renderer 读字段 JSON，用 <code>c.element(...)</code> 就地还原</td><td>运行时类型表、宿主包装类、reconciler</td></tr>
             <tr><td>新增宿主能力（如新的 Controller）</td><td><code>capabilities/&lt;name&gt;/</code>：Dart 桥 + kind 描述符 + <code>JsUiLibrary</code> 子类；通用机制写进生成器运行时片段</td><td>runtime.js 骨架、句柄注册表核心</td></tr>
-            <tr><td>接入三方状态管理库</td><td>宿主 <code>js/&lt;package&gt;.js</code> 写 JS 类与运行期登记；构建自动拷贝；JS 内可闭环的 context 扩展不注册宿主 op</td><td>生成器库 / 类型白名单、<code>hot_patch</code> 核心、runtime.js</td></tr>
+            <tr><td>接入三方状态管理库</td><td>宿主 <code>js/&lt;package&gt;.js</code> 写 JS 类与运行期登记；构建自动拷贝；JS 内可闭环的 context 扩展不注册宿主 op</td><td>生成器库 / 类型白名单、<code>dynamic_flutter</code> 核心、runtime.js</td></tr>
             <tr><td>新增 Flutter SDK 顶层函数（如 <code>showDialog</code>）</td><td>生成器 <code>dialogs_js.dart</code> 一类片段里写 <code>export function</code>，随 <code>patch/flutter.js</code> 发布；翻译层自动识别为全局函数</td><td>runtime.js、翻译层方法名映射</td></tr>
             <tr><td>JS 缺一个 Dart 标准库方法</td><td>运行时【1c】节向内建原型补同名同义方法（<code>defineProperty</code> + 不可枚举 + 存在性守卫）</td><td>生成器方法名映射、Dart 业务写法</td></tr>
             <tr><td>新增纯原生组件</td><td>App <code>main()</code> 里 <code>registerNativeComponent(name, build)</code> 全局一次注册</td><td>生成器、JS 运行时</td></tr>
@@ -2741,7 +2741,7 @@ bash start_patch_server.sh
 
       <h3>新增一个运行时能力</h3>
       <ol>
-        <li>在 <code>packages/hot_patch/lib/src/js_ui/capabilities/</code> 新建目录，写 Dart 桥与 <code>JsUiLibrary</code> 子类。</li>
+        <li>在 <code>packages/dynamic_flutter/lib/src/js_ui/capabilities/</code> 新建目录，写 Dart 桥与 <code>JsUiLibrary</code> 子类。</li>
         <li>在 <code>js_ui_library.dart</code> 的 <code>_seedBuiltins</code> 里加一行注册（外部库则让业务在 <code>main()</code> 调 <code>registerJsUiLibrary</code>）。</li>
         <li>JS 片段写进生成器 <code>builders/core_js_builder/js/runtime/</code>，随 <code>patch/runtime.js</code> 发布；若只是库自己的 API 面，放该库模块。</li>
         <li>确认 <code>reconciler</code> / <code>JsUiWidget</code> / <code>disposeRoot</code> / 桥 / 句柄注册表<strong>零改动</strong>。</li>
@@ -2851,21 +2851,21 @@ bash start_patch_server.sh
           <tbody>
             <tr><td>架构基线</td><td><span class="file-path">docs/项目架构文档.md</span> · <span class="file-path">docs/组件支持文档.md</span> · <span class="file-path">dart2js-syntax-reference/Dart转JS语法翻译手册.html</span></td></tr>
             <tr><td>接入指南</td><td><span class="file-path">docs/使用手册.md</span></td></tr>
-            <tr><td>宿主入口 / 生命周期</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/js_ui_widget.dart</span></td></tr>
-            <tr><td>type → widget 映射</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/js_widget_registry.dart</span></td></tr>
-            <tr><td>增量 patch 应用</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/js_ui_store.dart</span></td></tr>
-            <tr><td>能力聚合 / 模板</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/capabilities/js_ui_capabilities.dart</span> · <span class="file-path">.../js_ui_library.dart</span></td></tr>
-            <tr><td>跨语言句柄注册表</td><td><span class="file-path">packages/hot_patch/lib/src/js_ui/capabilities/core/handle_registry.dart</span></td></tr>
-            <tr><td>运行时引擎 / 补丁加载</td><td><span class="file-path">packages/hot_patch/lib/src/services/js_runtime_manager.dart</span></td></tr>
-            <tr><td>翻译唯一入口</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/patch_entry/analysis/analyze_dart_class.dart</span></td></tr>
-            <tr><td>组件产物组装</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/patch_entry/component_builder.dart</span></td></tr>
+            <tr><td>宿主入口 / 生命周期</td><td><span class="file-path">packages/dynamic_flutter/lib/src/js_ui/js_ui_widget.dart</span></td></tr>
+            <tr><td>type → widget 映射</td><td><span class="file-path">packages/dynamic_flutter/lib/src/js_ui/js_widget_registry.dart</span></td></tr>
+            <tr><td>增量 patch 应用</td><td><span class="file-path">packages/dynamic_flutter/lib/src/js_ui/js_ui_store.dart</span></td></tr>
+            <tr><td>能力聚合 / 模板</td><td><span class="file-path">packages/dynamic_flutter/lib/src/js_ui/capabilities/js_ui_capabilities.dart</span> · <span class="file-path">.../js_ui_library.dart</span></td></tr>
+            <tr><td>跨语言句柄注册表</td><td><span class="file-path">packages/dynamic_flutter/lib/src/js_ui/capabilities/core/handle_registry.dart</span></td></tr>
+            <tr><td>运行时引擎 / 补丁加载</td><td><span class="file-path">packages/dynamic_flutter/lib/src/services/js_runtime_manager.dart</span></td></tr>
+            <tr><td>翻译唯一入口</td><td><span class="file-path">packages/dynamic_flutter_generator/lib/src/builders/patch_entry/analysis/analyze_dart_class.dart</span></td></tr>
+            <tr><td>组件产物组装</td><td><span class="file-path">packages/dynamic_flutter_generator/lib/src/builders/patch_entry/component_builder.dart</span></td></tr>
             <tr><td>widget 统一翻译</td><td><span class="file-path">.../translator/element_json.dart</span> · <span class="file-path">.../translator/value_forms.dart</span> · <span class="file-path">.../runtime/js/style_values_js.dart</span></td></tr>
             <tr><td>语言层翻译</td><td><span class="file-path">.../translator/js_translator.dart</span> · <span class="file-path">.../translator/dart2js.dart</span></td></tr>
-            <tr><td>构建期登记表</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/shared/js_class_defs.dart</span> · <span class="file-path">.../shared/ctor_signatures.dart</span></td></tr>
-            <tr><td>JS 运行时骨架</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/core_js_builder/js/runtime/runtime_js.dart</span></td></tr>
-            <tr><td>mini-react</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/core_js_builder/js/runtime/mini_react_js.dart</span></td></tr>
+            <tr><td>构建期登记表</td><td><span class="file-path">packages/dynamic_flutter_generator/lib/src/builders/shared/js_class_defs.dart</span> · <span class="file-path">.../shared/ctor_signatures.dart</span></td></tr>
+            <tr><td>JS 运行时骨架</td><td><span class="file-path">packages/dynamic_flutter_generator/lib/src/builders/core_js_builder/js/runtime/runtime_js.dart</span></td></tr>
+            <tr><td>mini-react</td><td><span class="file-path">packages/dynamic_flutter_generator/lib/src/builders/core_js_builder/js/runtime/mini_react_js.dart</span></td></tr>
             <tr><td>Flutter SDK 面子层</td><td><span class="file-path">.../runtime/js/dialogs_js.dart</span> · <span class="file-path">.../runtime/js/navigator_js.dart</span> · <span class="file-path">.../runtime/js/canvas_js.dart</span></td></tr>
-            <tr><td>builder 入口 / 配置</td><td><span class="file-path">packages/hot_patch_generator/lib/builder.dart</span> · <span class="file-path">packages/hot_patch_generator/build.yaml</span></td></tr>
+            <tr><td>builder 入口 / 配置</td><td><span class="file-path">packages/dynamic_flutter_generator/lib/builder.dart</span> · <span class="file-path">packages/dynamic_flutter_generator/build.yaml</span></td></tr>
             <tr><td>示例 App 源码 / 产物</td><td><span class="file-path">example/lib/</span> · <span class="file-path">example/patch/</span></td></tr>
             <tr><td>三方库 JS 示例</td><td><span class="file-path">example/js/provider.js</span></td></tr>
             <tr><td>本地补丁服务</td><td><span class="file-path">tool/patch_server.dart</span> · <span class="file-path">start_patch_server.sh</span></td></tr>

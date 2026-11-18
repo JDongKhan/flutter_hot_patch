@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hot_module_base/hot_module_base.dart';
 import 'dart:io';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 本文件演示两个能力：
 ///   1. HelloCard —— 一个**完全正常的 Flutter StatefulWidget**（原生可直接用）
@@ -17,7 +17,7 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 ///   - SnackBar 形式的方法 → 自动 native 通道（nativeToast）
 ///   - build() 原封不动翻译成 JS build()
 ///
-/// 构建期由 hot_patch_generator 静态翻译出：
+/// 构建期由 dynamic_flutter_generator 静态翻译出：
 ///   hello_component.js（注册 HelloCard）
 /// 线上出 bug 时，运行时把组件切换为 JsUiWidget 加载 JS 版本即可热修复，
 /// 组件本体永远保持可正常使用。

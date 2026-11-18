@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/app/pages/orders_page.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/app/pages/orders_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { OrdersVm } from '../vm/orders_vm.js';

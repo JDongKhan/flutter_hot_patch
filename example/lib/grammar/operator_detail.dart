@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 运算符语法 demo：自定义运算符重载（`+` / 一元 `-` / `==`）、setter，
 /// 声明侧改写为 `__op$…` 成员 / JS 属性写访问器。

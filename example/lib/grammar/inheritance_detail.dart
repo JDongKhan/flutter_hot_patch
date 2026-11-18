@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// `extends` 语法 demo：普通类单继承（父类字段 / 覆盖方法 / `super` 调用 / 多态）。
 ///

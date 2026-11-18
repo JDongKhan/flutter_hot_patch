@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/sliver_fill_viewport_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/sliver_fill_viewport_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Alignment, AppBar, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Scaffold, SizedBox, SliverFillViewport, StatefulWidget, Text, TextStyle, Wrap, double } from '../flutter.js';

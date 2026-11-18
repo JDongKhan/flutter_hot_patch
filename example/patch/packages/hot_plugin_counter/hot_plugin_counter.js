@@ -1,12 +1,12 @@
 // GENERATED CODE - DO NOT EDIT
-// 跨包产物（package: hot_plugin_counter）：由 hot_patch_generator 生成
+// 跨包产物（package: hot_plugin_counter）：由 dynamic_flutter_generator 生成
 // 源文件：package:hot_plugin_counter/hot_plugin_counter.dart（一个源文件一份产物）
 
 import { MethodChannel } from '../../flutter.js';
 
 // 模型 HotPluginCounter
 export class HotPluginCounter {
-  static _channel = new MethodChannel({name: "hot_patch/demo/counter"});
+  static _channel = new MethodChannel({name: "dynamic_flutter/demo/counter"});
   static _bound = false;
   constructor() {
   }

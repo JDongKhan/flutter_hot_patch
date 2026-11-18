@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 数组 / List 语法 demo（「基础语法 · 列表」页点击进入）：
 /// 原生与 JS 热更并排对比，覆盖运行时补齐的同名成员与构建期成员映射表。

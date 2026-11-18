@@ -2,10 +2,10 @@
 //
 // 能力实现放在 `lib/custom/<能力名>/` 下（`JsUiLibrary` 子类 + 宿主桥接），
 // 这里只维护**清单本身**。注入由 `main()` 里的 `initJsUi(libraries: ...)` 一次
-// 完成（注册 + 通道就位 + 宿主组件建表 + 内建宿主方法），hot_patch 包零改动。
+// 完成（注册 + 通道就位 + 宿主组件建表 + 内建宿主方法），dynamic_flutter 包零改动。
 //
 // 新增能力：写一个 `JsUiLibrary` 子类，追加到下面的清单末尾即可。
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 
 import 'easy_refresh/easy_refresh_library.dart';
 import 'note_object/note_object_library.dart';

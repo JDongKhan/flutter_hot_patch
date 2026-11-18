@@ -17,10 +17,10 @@ and its JS version is loaded only when it actually needs fixing.
 
 ## How it works
 
-1. Annotate a component with `@PatchEntry` (from `hot_patch_annotations`);
-2. At build time `hot_patch_generator` **statically translates** it into an equivalent JS module
+1. Annotate a component with `@PatchEntry` (from `dynamic_flutter_annotations`);
+2. At build time `dynamic_flutter_generator` **statically translates** it into an equivalent JS module
    (no Dart code is executed);
-3. At runtime `hot_patch`'s `JsUiWidget` loads that JS patch: **logic runs in JS**, node rendering
+3. At runtime `dynamic_flutter`'s `JsUiWidget` loads that JS patch: **logic runs in JS**, node rendering
    falls back to native Flutter.
 
 ## Repository layout
@@ -30,9 +30,9 @@ are split into packages:
 
 | Directory | Description |
 |---|---|
-| `packages/hot_patch_annotations` | Declarative annotations (`@PatchEntry` / `@PatchIgnore` / `@HostInjected`) |
-| `packages/hot_patch_generator` | Build-time: Dart widget → JS translation and artifact assembly (build_runner builders) |
-| `packages/hot_patch` | Runtime: JS engine + host rendering + capability bridge |
+| `packages/dynamic_flutter_annotations` | Declarative annotations (`@PatchEntry` / `@PatchIgnore` / `@HostInjected`) |
+| `packages/dynamic_flutter_generator` | Build-time: Dart widget → JS translation and artifact assembly (build_runner builders) |
+| `packages/dynamic_flutter` | Runtime: JS engine + host rendering + capability bridge |
 | `example/` | Example app: native vs JS hot-patch comparison demo (business Dart sources in `example/lib/`, generated JS artifacts in [example/patch/](example/patch/)) |
 | `tool/patch_server.dart`、`tool/server/`、`start_patch_server.sh` | Local server: `/patch/*` static artifact routes + plain API routes (reads `tool/mock/<path>.json` by URL path) |
 
@@ -62,6 +62,6 @@ cd example && flutter run
 | [TODO.md](TODO.md) | Pending tasks, implementation order, detailed TODOs and deferred items |
 | [Blog Center (Chinese)](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/index.html) | Tech blog, Dart → JS syntax comparison, interactive app prototype |
 | [App Prototype (Chinese)](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/app-prototype.html) | High-fidelity interactive prototype of the example app (HTML) |
-| [hot_patch_annotations](packages/hot_patch_annotations/README.md) | Annotations package: `@PatchEntry` / `@PatchIgnore` |
-| [hot_patch_generator](packages/hot_patch_generator/README.md) | Generator: artifact layout, options, translation design principles, adding widget support |
-| [hot_patch](packages/hot_patch/README.md) | Runtime: patch loading, host capability bridge, logging |
+| [dynamic_flutter_annotations](packages/dynamic_flutter_annotations/README.md) | Annotations package: `@PatchEntry` / `@PatchIgnore` |
+| [dynamic_flutter_generator](packages/dynamic_flutter_generator/README.md) | Generator: artifact layout, options, translation design principles, adding widget support |
+| [dynamic_flutter](packages/dynamic_flutter/README.md) | Runtime: patch loading, host capability bridge, logging |

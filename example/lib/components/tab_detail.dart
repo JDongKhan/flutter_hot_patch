@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// Tab 家族详情，两段：
 ///   1) DefaultTabController 官方惯用法——TabBar / TabBarView 不传 controller，

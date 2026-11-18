@@ -108,7 +108,7 @@ class DashboardCard extends StatelessWidget {
     <h2 id="native">纯原生组件注册</h2>
     <p>当某个组件不适合翻译、或需要在 JS 热更树里渲染一个纯原生实现时，用 <code>jsWidgetRegistry.register</code> 按<strong>类型名</strong>注册一次：</p>
     <pre><code>import 'package:flutter/material.dart';
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 
 void registerAllNativeComponent() {
   jsWidgetRegistry.register(
@@ -147,7 +147,7 @@ void main() {
     <p>未注册时的行为是<strong>可见且可补救</strong>的：产物保留具体类型名（不降级为统一的 <code>Component</code>），debug 下渲染可见占位并上报 <code>error</code>，release 下为零尺寸。后续补注册<strong>同一份产物无需重新生成</strong>。</p>
 
     <h2 id="custom-widget">自定义视觉组件（带 JS）</h2>
-    <p>如果组件需要出现在 JS 逻辑树里，且宿主侧有真实实现（三方包或业务组件），按下面三块接入。以示例工程里的 <code>VisibilityDetector</code> 为例，<strong>hot_patch 包零改动</strong>。</p>
+    <p>如果组件需要出现在 JS 逻辑树里，且宿主侧有真实实现（三方包或业务组件），按下面三块接入。以示例工程里的 <code>VisibilityDetector</code> 为例，<strong>dynamic_flutter 包零改动</strong>。</p>
 
     <h3 id="js-class">1. JS 包装类：工程根 <code>js/&lt;package&gt;.js</code></h3>
     <p>文件名即 Dart 包名。类继承 <code>Component</code>，构造即宿主结点；只有需要跨桥换成句柄的函数形参才列进 <code>__fnProps</code>，其余 props 原样下发。</p>

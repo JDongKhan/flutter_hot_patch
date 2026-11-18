@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 枚举语法 demo：Dart enum → JS 常量对象
 /// （`E.member` / `E.values` / `e.name` / `e.index` / `byName` / `toString`），

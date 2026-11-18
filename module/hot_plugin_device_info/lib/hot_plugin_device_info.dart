@@ -6,12 +6,12 @@ import 'package:flutter/services.dart';
 /// 宿主再按 `(name, codec)` 转回真正的 Flutter MethodChannel。
 class HotPluginDeviceInfo {
   static const MethodChannel _channel =
-      MethodChannel('hot_patch/demo/device_info');
+      MethodChannel('dynamic_flutter/demo/device_info');
 
   /// 同一插件里的第二种通道：BasicMessageChannel（独立名字，互不影响）。
   static const BasicMessageChannel<dynamic> _messageChannel =
       BasicMessageChannel<dynamic>(
-    'hot_patch/demo/device_info_msg',
+    'dynamic_flutter/demo/device_info_msg',
     StandardMessageCodec(),
   );
 
@@ -20,7 +20,7 @@ class HotPluginDeviceInfo {
   /// [tag] 是 channel 名后缀：同名平台通道只能有一个活跃流，同一进程里原生 /
   /// JS 两栏对比时各传一个 tag，避免两个实例互相顶掉订阅。
   static Stream<dynamic> ticks(String tag) =>
-      EventChannel('hot_patch/demo/device_info_events' + tag)
+      EventChannel('dynamic_flutter/demo/device_info_events' + tag)
           .receiveBroadcastStream();
 
   static bool _messageBound = false;

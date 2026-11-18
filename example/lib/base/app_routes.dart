@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 
 import '../app/model/app_models.dart';
 import '../app/pages/detail_pages.dart';

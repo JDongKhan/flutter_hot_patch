@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/media_query_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/media_query_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MediaQuery, Orientation, OutlinedButton, Padding, Radius, Row, SizedBox, StatefulWidget, StatelessWidget, Text, TextScaler, TextStyle, double } from '../flutter.js';

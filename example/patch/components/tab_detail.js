@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/tab_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/tab_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Align, Alignment, Center, Colors, Column, CrossAxisAlignment, DefaultTabController, Expanded, FontWeight, SizedBox, StatefulWidget, Tab, TabBar, TabBarView, TabController, Text, TextButton, TextStyle } from '../flutter.js';

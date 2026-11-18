@@ -35,7 +35,7 @@
   - `component_scope`：把跨包依赖文件纳入依赖图（`parseUnitFile` 直接读盘，非本包资产）。
 - **验收**：新建 `module/hot_module_base`，迁移 `Network`（网络请求）、`AccountCenter`（账号能力，均为 `@HostInjected`）与 `User`（普通模型类）；`example` 改为 `package:hot_module_base/...` 引用。产物可见：`host_methods.dart` 跨包 import 并注册 `getUserName` / `post`；`hello_component.js` 内 `import { User } from '../hot_module_base.js'` 且 `_app_host_.invoke("getUserName")` / `("post")` 调用点保持正确；`patch/hot_module_base.js` 含 `export class User`。macOS 端运行无报错。
 - **未覆盖**：本地依赖包里的顶层常量与静态单例类产物（构建期出声）；跨包文件的增量失效未接入 build_runner 依赖图（改动跨包源码后需 `--delete-conflicting-outputs` 或触碰使用方文件）。
-- **入口**：`packages/hot_patch_generator/lib/src/builders/shared/{package_sources,source_index,paths}.dart`、`patch_entry/project_module_builder.dart`、`ui_host_register/host_register_builder.dart`。
+- **入口**：`packages/dynamic_flutter_generator/lib/src/builders/shared/{package_sources,source_index,paths}.dart`、`patch_entry/project_module_builder.dart`、`ui_host_register/host_register_builder.dart`。
 
 ### 2.2 resolved AST 迁移（架构级，暂不排期）
 

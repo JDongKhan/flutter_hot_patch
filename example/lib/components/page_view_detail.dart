@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// PageView 详情：分页切换 + 指示点。页切换经 onPageChanged 回传页码
 /// （值事件），JS 侧据此更新指示点。

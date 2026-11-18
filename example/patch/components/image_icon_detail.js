@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/image_icon_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/image_icon_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { AssetImage, Center, Colors, Column, CrossAxisAlignment, EdgeInsets, FontWeight, Icon, Icons, ImageIcon, Padding, Row, SizedBox, StatelessWidget, Text, TextAlign, TextStyle } from '../flutter.js';

@@ -2,7 +2,7 @@
 //
 // 登记本能力 id 并把组件渲染函数挂到 [JsWidgetRegistry]；桥接细节见
 // `waterfall_flow_bridge.dart`。
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 
 import 'waterfall_flow_bridge.dart';
 

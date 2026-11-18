@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// SliverPersistentHeader 演示：把「会随滚动折叠 / 浮出」的头部钉在视口边缘。
 ///

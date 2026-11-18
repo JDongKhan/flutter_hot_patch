@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// StatelessWidget 详情：无 State、无 createState，build 在 widget 类自身
 /// （生成器自动识别：有 createState 用 State 类承载 build，否则用 widget

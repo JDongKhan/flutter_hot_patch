@@ -9,12 +9,12 @@ public class HotPluginDeviceInfoPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
     let instance = HotPluginDeviceInfoPlugin()
     let channel = FlutterMethodChannel(
-      name: "hot_patch/demo/device_info",
+      name: "dynamic_flutter/demo/device_info",
       binaryMessenger: registrar.messenger)
     registrar.addMethodCallDelegate(instance, channel: channel)
 
     let messageChannel = FlutterBasicMessageChannel(
-      name: "hot_patch/demo/device_info_msg",
+      name: "dynamic_flutter/demo/device_info_msg",
       binaryMessenger: registrar.messenger,
       codec: FlutterStandardMessageCodec.sharedInstance())
     instance.messageChannel = messageChannel
@@ -39,7 +39,7 @@ public class HotPluginDeviceInfoPlugin: NSObject, FlutterPlugin {
     // 原生 / JS 两栏对比各用独立 channel 名。
     for suffix in ["", "_native", "_js"] {
       let eventChannel = FlutterEventChannel(
-        name: "hot_patch/demo/device_info_events" + suffix,
+        name: "dynamic_flutter/demo/device_info_events" + suffix,
         binaryMessenger: registrar.messenger)
       eventChannel.setStreamHandler(DeviceInfoStreamHandler())
     }

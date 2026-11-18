@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/grammar/statement_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/grammar/statement_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Column, CrossAxisAlignment, FontWeight, FormatException, SizedBox, StatelessWidget, Text, TextStyle, int } from '../flutter.js';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 
 import '../base/patch_config.dart';
 import '../components/compare_pane.dart';

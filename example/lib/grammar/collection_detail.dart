@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 集合字面量语法 demo：`if` 元素 / `for` 元素 / `...` 展开、三段式 `for` 元素。
 @PatchEntry('CollectionDetail')

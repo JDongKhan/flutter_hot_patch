@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 
 import 'app/app.dart';
 import 'base/app_log_console.dart';
@@ -23,7 +23,7 @@ import 'grammar/grammar_showcase.dart';
 import 'third_party/third_party_showcase.dart';
 
 void main() {
-  // 日志捕获：print / debugPrint（含 Flutter 框架与 hot_patch 的 JsLog，
+  // 日志捕获：print / debugPrint（含 Flutter 框架与 dynamic_flutter 的 JsLog，
   // JS 侧 print 最终也走这里）全部收进 AppLogCenter，供右侧日志控制台展示。
   installLogCapture();
   runZoned(() {

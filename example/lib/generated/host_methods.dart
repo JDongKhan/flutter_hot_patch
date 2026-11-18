@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 //
-// 由 hot_patch_generator 的 hostRegisterBuilder 扫描全包
+// 由 dynamic_flutter_generator 的 hostRegisterBuilder 扫描全包
 // `@HostInjected` 方法生成。用法（main() 里交给 initJsUi 统一装配）：
 //
 //   initJsUi(libraries: [...], hostMethods: hostMethods);

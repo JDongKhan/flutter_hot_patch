@@ -1,0 +1,369 @@
+// ===== 能力：Canvas 绘制协议 → dart:ui 值（JSON 还原）=====
+//
+// JS 侧 `Canvas` 把每次调用录制为数组 op，本文件负责把这些 JSON 还原成
+// dart:ui 的 Rect / RRect / Path / Paint / Shader，供宿主逐条重放。
+//
+// **禁止静默**：无法解析的值、未知 Paint 属性、未知 Path 指令一律
+// `JsLog.error`（调用方据此跳过该条，而不是猜一个默认值）。
+import 'dart:ui' show ClipOp;
+
+import 'package:flutter/material.dart';
+
+import '../../../utils/dynamic_flutter_log.dart';
+import '../../js_widget_registry.dart';
+import '../base_widget/text_from_json.dart';
+import '../core/from_json/dart_values_from_json.dart';
+import '../core/from_json/painting_from_json.dart';
+import '../core/from_json/widget_enum_from_json.dart';
+
+/// 对外注册 API：绘制录制值从 [JsRenderContext] 的 props 按键还原。
+///
+/// `textPainter` 的 span / options 来自绘制指令的两个独立负载，不属于单键
+/// props，故保留原始函数供重放路径直接调用。
+extension JsRenderContextCanvas on JsRenderContext {
+  Rect? rect(String key) => rectFromJson(props[key]);
+  RRect? rrect(String key) => rrectFromJson(props[key]);
+  ClipOp clipOp(String key) => clipOpFromJson(props[key]);
+  PaintingStyle paintingStyle(String key) => paintingStyleFromJson(props[key]);
+  StrokeCap strokeCap(String key) => strokeCapFromJson(props[key]);
+  StrokeJoin strokeJoin(String key) => strokeJoinFromJson(props[key]);
+  Shader? shader(String key) => shaderFromJson(props[key]);
+  Paint? paint(String key) => paintFromJson(props[key]);
+  Path? path(String key) => pathFromJson(props[key]);
+}
+
+/// JSON 数字（number / 数字字符串）→ double；无法解析返回 null。
+double? _d(Object? v) {
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v);
+  return null;
+}
+
+/// JSON → Rect（JS `Rect.toJSON` 输出 `[left, top, right, bottom]`）。
+Rect? rectFromJson(Object? v) {
+  if (v is! List || v.length != 4) return null;
+  final l = _d(v[0]);
+  final t = _d(v[1]);
+  final r = _d(v[2]);
+  final b = _d(v[3]);
+  if (l == null || t == null || r == null || b == null) return null;
+  return Rect.fromLTRB(l, t, r, b);
+}
+
+/// JSON → RRect（JS `RRect.toJSON` 输出 12 项：矩形 + 四角半径）。
+RRect? rrectFromJson(Object? v) {
+  if (v is! List || v.length != 12) return null;
+  final rect = rectFromJson([
+    v[0], v[1], v[2], v[3],
+  ]);
+  if (rect == null) return null;
+  Radius radius(int i) => Radius.elliptical(_d(v[i]) ?? 0, _d(v[i + 1]) ?? 0);
+  return RRect.fromRectAndCorners(
+    rect,
+    topLeft: radius(4),
+    topRight: radius(6),
+    bottomRight: radius(8),
+    bottomLeft: radius(10),
+  );
+}
+
+/// JSON → ClipOp（缺省/无法识别时由调用方按 Flutter 默认 `intersect` 处理）。
+ClipOp clipOpFromJson(Object? v) => v == 'difference' ? ClipOp.difference : ClipOp.intersect;
+
+/// JSON → PaintingStyle（缺省 `fill`）。
+PaintingStyle paintingStyleFromJson(Object? v) =>
+    v == 'stroke' ? PaintingStyle.stroke : PaintingStyle.fill;
+
+/// JSON → StrokeCap（缺省 `butt`）。
+StrokeCap strokeCapFromJson(Object? v) => switch ('$v') {
+  'round' => StrokeCap.round,
+  'square' => StrokeCap.square,
+  _ => StrokeCap.butt,
+};
+
+/// JSON → StrokeJoin（缺省 `miter`）。
+StrokeJoin strokeJoinFromJson(Object? v) => switch ('$v') {
+  'round' => StrokeJoin.round,
+  'bevel' => StrokeJoin.bevel,
+  _ => StrokeJoin.miter,
+};
+
+/// JSON → Shader。
+///
+/// 目前唯一的跨桥形态是 `Gradient.createShader(rect)`：
+/// `{__gradient: {kind, colors, …}, rect: [left, top, right, bottom]}`。
+Shader? shaderFromJson(Object? v) {
+  if (v is! Map) return null;
+  final gradientJson = v['__gradient'];
+  if (gradientJson is! Map) {
+    JsLog.error('CustomPaint: Paint.shader 暂只支持 Gradient.createShader（收到 $v）');
+    return null;
+  }
+  final rect = rectFromJson(v['rect']);
+  final gradient = gradientFromJson(gradientJson.cast<String, dynamic>());
+  if (rect == null || gradient == null) {
+    JsLog.error('CustomPaint: 渐变 shader 还原失败（rect=$rect）');
+    return null;
+  }
+  return gradient.createShader(rect);
+}
+
+/// Paint 已支持的属性名（其余非空键一律报错）。
+const Set<String> _paintKeys = {
+  'color',
+  'style',
+  'strokeWidth',
+  'strokeCap',
+  'strokeJoin',
+  'strokeMiterLimit',
+  'isAntiAlias',
+  'antiAlias',
+  'blendMode',
+  'shader',
+};
+
+/// JSON → Paint。缺省属性保持 Flutter 默认值。
+Paint? paintFromJson(Object? v) {
+  if (v is! Map) return null;
+  final paint = Paint();
+  for (final entry in v.entries) {
+    final key = '${entry.key}';
+    final value = entry.value;
+    if (value == null) continue;
+    switch (key) {
+      case 'color':
+        final color = colorFromJson(value);
+        if (color != null) {
+          paint.color = color;
+        } else {
+          JsLog.error('CustomPaint: Paint.color 无法解析: $value');
+        }
+      case 'style':
+        paint.style = paintingStyleFromJson(value);
+      case 'strokeWidth':
+        final w = _d(value);
+        if (w != null) {
+          paint.strokeWidth = w;
+        } else {
+          JsLog.error('CustomPaint: Paint.strokeWidth 无法解析: $value');
+        }
+      case 'strokeCap':
+        paint.strokeCap = strokeCapFromJson(value);
+      case 'strokeJoin':
+        paint.strokeJoin = strokeJoinFromJson(value);
+      case 'strokeMiterLimit':
+        final m = _d(value);
+        if (m != null) {
+          paint.strokeMiterLimit = m;
+        } else {
+          JsLog.error('CustomPaint: Paint.strokeMiterLimit 无法解析: $value');
+        }
+      case 'isAntiAlias':
+      case 'antiAlias':
+        paint.isAntiAlias = value == true;
+      case 'blendMode':
+        final mode = blendModeFromJson(value);
+        if (mode != null) {
+          paint.blendMode = mode;
+        } else {
+          JsLog.error('CustomPaint: Paint.blendMode 无法解析: $value');
+        }
+      case 'shader':
+        final shader = shaderFromJson(value);
+        if (shader != null) paint.shader = shader;
+      default:
+        if (!_paintKeys.contains(key)) {
+          JsLog.error('CustomPaint: Paint 属性 "$key" 暂不支持');
+        }
+    }
+  }
+  return paint;
+}
+
+/// JSON → Path（JS `Path.toJSON` 输出 `{ops: [[指令, …实参], …]}`）。
+Path? pathFromJson(Object? v) {
+  if (v is! Map) return null;
+  final ops = v['ops'];
+  if (ops is! List) return null;
+  final path = Path();
+  for (final raw in ops) {
+    if (raw is! List || raw.isEmpty) {
+      JsLog.error('CustomPaint: Path 指令形态非法: $raw');
+      continue;
+    }
+    final name = '${raw[0]}';
+    switch (name) {
+      case 'moveTo':
+        final x = _d(raw[1]);
+        final y = _d(raw[2]);
+        if (x == null || y == null) {
+          JsLog.error('CustomPaint: Path.moveTo 实参非法: $raw');
+        } else {
+          path.moveTo(x, y);
+        }
+      case 'lineTo':
+        final x = _d(raw[1]);
+        final y = _d(raw[2]);
+        if (x == null || y == null) {
+          JsLog.error('CustomPaint: Path.lineTo 实参非法: $raw');
+        } else {
+          path.lineTo(x, y);
+        }
+      case 'relativeMoveTo':
+        final dx = _d(raw[1]);
+        final dy = _d(raw[2]);
+        if (dx == null || dy == null) {
+          JsLog.error('CustomPaint: Path.relativeMoveTo 实参非法: $raw');
+        } else {
+          path.relativeMoveTo(dx, dy);
+        }
+      case 'relativeLineTo':
+        final dx = _d(raw[1]);
+        final dy = _d(raw[2]);
+        if (dx == null || dy == null) {
+          JsLog.error('CustomPaint: Path.relativeLineTo 实参非法: $raw');
+        } else {
+          path.relativeLineTo(dx, dy);
+        }
+      case 'quadraticBezierTo':
+        final a = [
+          for (var i = 1; i <= 4; i++) _d(raw[i]),
+        ];
+        if (a.contains(null)) {
+          JsLog.error('CustomPaint: Path.quadraticBezierTo 实参非法: $raw');
+        } else {
+          path.quadraticBezierTo(a[0]!, a[1]!, a[2]!, a[3]!);
+        }
+      case 'cubicTo':
+        final a = [
+          for (var i = 1; i <= 6; i++) _d(raw[i]),
+        ];
+        if (a.contains(null)) {
+          JsLog.error('CustomPaint: Path.cubicTo 实参非法: $raw');
+        } else {
+          path.cubicTo(a[0]!, a[1]!, a[2]!, a[3]!, a[4]!, a[5]!);
+        }
+      case 'arcTo':
+        final rect = rectFromJson(raw[1]);
+        final start = _d(raw[2]);
+        final sweep = _d(raw[3]);
+        if (rect == null || start == null || sweep == null) {
+          JsLog.error('CustomPaint: Path.arcTo 实参非法: $raw');
+        } else {
+          path.arcTo(rect, start, sweep, raw[4] == true);
+        }
+      case 'close':
+        path.close();
+      case 'addRect':
+        final rect = rectFromJson(raw[1]);
+        if (rect == null) {
+          JsLog.error('CustomPaint: Path.addRect 矩形非法: $raw');
+        } else {
+          if (raw[2] == false) {
+            JsLog.error('CustomPaint: Path.addRect 暂不支持 clockwise=false');
+          }
+          path.addRect(rect);
+        }
+      case 'addOval':
+        final rect = rectFromJson(raw[1]);
+        if (rect == null) {
+          JsLog.error('CustomPaint: Path.addOval 矩形非法: $raw');
+        } else {
+          if (raw[2] == false) {
+            JsLog.error('CustomPaint: Path.addOval 暂不支持 clockwise=false');
+          }
+          path.addOval(rect);
+        }
+      case 'addRRect':
+        final rrect = rrectFromJson(raw[1]);
+        if (rrect == null) {
+          JsLog.error('CustomPaint: Path.addRRect 圆角矩形非法: $raw');
+        } else {
+          if (raw[2] == false) {
+            JsLog.error('CustomPaint: Path.addRRect 暂不支持 clockwise=false');
+          }
+          path.addRRect(rrect);
+        }
+      case 'addPolygon':
+        final points = raw[1];
+        if (points is! List) {
+          JsLog.error('CustomPaint: Path.addPolygon 点集非法: $raw');
+        } else {
+          final offsets = <Offset>[];
+          for (final p in points) {
+            final o = offsetFromJson(p);
+            if (o == null) {
+              JsLog.error('CustomPaint: Path.addPolygon 点非法: $p');
+              continue;
+            }
+            offsets.add(o);
+          }
+          path.addPolygon(offsets, raw[2] == true);
+        }
+      default:
+        JsLog.error('CustomPaint: 未知 Path 指令 "$name"');
+    }
+  }
+  return path;
+}
+
+/// TextPainter 已支持的排版选项（其余键一律报错，不静默忽略）。
+const Set<String> _textPainterKeys = {
+  'textDirection',
+  'textAlign',
+  'maxLines',
+  'ellipsis',
+  'minWidth',
+  'maxWidth',
+};
+
+/// JS `TextPainter.paint(canvas, offset)` 录制的 `text` + 选项 → 已排版的
+/// 真实 [TextPainter]。
+///
+/// JS 侧只录制构造实参与 `layout` 约束，字体、换行、省略全部由宿主完成，
+/// 与原生 `CustomPainter` 里的 TextPainter 结果一致。调用方绘制完需 `dispose()`。
+///
+/// 不支持的构造实参（`textScaler` / `strutStyle` / `locale` …）会报错并返回
+/// null（调用方跳过该条指令），不做「悄悄用默认值」的降级。
+TextPainter? textPainterFromJson(Object? spanJson, Object? optionsJson) {
+  final span = textSpanFromJson(spanJson);
+  if (span == null) {
+    JsLog.error('CustomPaint: TextPainter.text 无法还原: $spanJson');
+    return null;
+  }
+  final opts = optionsJson is Map ? optionsJson : const {};
+  for (final key in opts.keys) {
+    if (!_textPainterKeys.contains('$key')) {
+      JsLog.error('CustomPaint: TextPainter 属性 "$key" 暂不支持');
+      return null;
+    }
+  }
+  final direction = textDirectionFromJson(opts['textDirection']);
+  if (direction == null) {
+    JsLog.error('CustomPaint: TextPainter.textDirection 必须提供（ltr / rtl）');
+    return null;
+  }
+  final rawMaxLines = opts['maxLines'];
+  if (rawMaxLines != null && rawMaxLines is! num) {
+    JsLog.error('CustomPaint: TextPainter.maxLines 必须是数字: $rawMaxLines');
+    return null;
+  }
+  final rawEllipsis = opts['ellipsis'];
+  if (rawEllipsis != null && rawEllipsis is! String) {
+    JsLog.error('CustomPaint: TextPainter.ellipsis 必须是字符串: $rawEllipsis');
+    return null;
+  }
+  final painter = TextPainter(
+    text: span,
+    textDirection: direction,
+    // 与 `TextPainter({textAlign = TextAlign.start})` 的官方默认一致。
+    textAlign: textAlignFromJson(opts['textAlign']) ?? TextAlign.start,
+    maxLines: (rawMaxLines as num?)?.toInt(),
+    ellipsis: rawEllipsis as String?,
+  );
+  painter.layout(
+    minWidth: _d(opts['minWidth']) ?? 0,
+    maxWidth: _d(opts['maxWidth']) ?? double.infinity,
+  );
+  return painter;
+}

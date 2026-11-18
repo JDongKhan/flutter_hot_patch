@@ -23,12 +23,12 @@ class HotPluginDeviceInfoPlugin :
     private lateinit var messageChannel: BasicMessageChannel<Any?>
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        channel = MethodChannel(binding.binaryMessenger, "hot_patch/demo/device_info")
+        channel = MethodChannel(binding.binaryMessenger, "dynamic_flutter/demo/device_info")
         channel.setMethodCallHandler(this)
 
         messageChannel = BasicMessageChannel(
             binding.binaryMessenger,
-            "hot_patch/demo/device_info_msg",
+            "dynamic_flutter/demo/device_info_msg",
             StandardMessageCodec.INSTANCE)
         messageChannel.setMessageHandler { message, reply ->
             val text = message as? String
@@ -50,7 +50,7 @@ class HotPluginDeviceInfoPlugin :
         for (suffix in listOf("", "_native", "_js")) {
             val eventChannel = EventChannel(
                 binding.binaryMessenger,
-                "hot_patch/demo/device_info_events" + suffix)
+                "dynamic_flutter/demo/device_info_events" + suffix)
             eventChannel.setStreamHandler(DeviceInfoEventStreamHandler())
         }
     }

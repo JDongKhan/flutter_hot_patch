@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 列表行：状态**只有** `_count` 一个字段——正因如此，key 校准的作用可以直接
 /// 量出来：计数跟着「行」还是跟着「位置」。

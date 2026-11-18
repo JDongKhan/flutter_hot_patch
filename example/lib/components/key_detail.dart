@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch/hot_patch.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 import 'key_tile.dart';
 
@@ -21,7 +21,7 @@ class _KeyDetailState extends State<KeyDetail> {
   // ---- ValueKey：列表按值匹配 ----
   /// 行标签序列。`final` + `clear()` 是 Dart 的惯用写法：clear 是**原地**清空
   /// （保持同一数组实例），JS 侧的 `Array.prototype.clear` 由运行时补齐
-  /// （见 hot_patch runtime_js.dart【1c】），故产物原样调用即可。
+  /// （见 dynamic_flutter runtime_js.dart【1c】），故产物原样调用即可。
   final List<String> _names = ['A', 'B', 'C', 'D'];
 
   // ---- ObjectKey：按对象身份相等 ----

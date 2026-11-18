@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/container_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/container_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Alignment, Border, BorderRadius, BorderSide, BoxDecoration, BoxShadow, Card, Clip, Color, Colors, Column, Container, CrossAxisAlignment, DecoratedBox, Divider, EdgeInsets, FontWeight, LinearGradient, Offset, Padding, Radius, RoundedRectangleBorder, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';

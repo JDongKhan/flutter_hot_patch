@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 网络请求（真实 dio）→ 宿主通道。
 ///

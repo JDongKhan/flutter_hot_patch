@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 跨包产物（package: hot_module_base）：由 hot_patch_generator 生成
+// 跨包产物（package: hot_module_base）：由 dynamic_flutter_generator 生成
 // 源文件：package:hot_module_base/src/widgets/timetable_date_picker.dart（一个源文件一份产物）
 
 import { Border, BorderRadius, BorderSide, BoxDecoration, BoxShadow, Center, Color, Colors, Column, Container, CrossAxisAlignment, CupertinoPicker, DateTime, Duration, EdgeInsets, Expanded, FilledButton, FixedExtentScrollController, FontWeight, Future, GestureDetector, GlobalKey, HitTestBehavior, IgnorePointer, MainAxisSize, Navigator, Offset, Padding, Radius, RoundedRectangleBorder, Row, SafeArea, Size, SizedBox, StatefulWidget, Text, TextAlign, TextOverflow, TextStyle, ValueKey, showModalBottomSheet } from '../../../../flutter.js';

@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 
 import 'components/composite_component.dart';
 

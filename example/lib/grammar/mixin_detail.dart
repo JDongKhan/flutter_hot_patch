@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hot_module_base/hot_module_base.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// mixin 语法 demo：
 ///   - State 混入跨包 `package:hot_module_base` 的 [StateLogMixin]；

@@ -1,18 +1,18 @@
 // GENERATED CODE - DO NOT EDIT
-// 跨包产物（package: hot_plugin_device_info）：由 hot_patch_generator 生成
+// 跨包产物（package: hot_plugin_device_info）：由 dynamic_flutter_generator 生成
 // 源文件：package:hot_plugin_device_info/hot_plugin_device_info.dart（一个源文件一份产物）
 
 import { BasicMessageChannel, EventChannel, MethodChannel, StandardMessageCodec } from '../../flutter.js';
 
 // 模型 HotPluginDeviceInfo
 export class HotPluginDeviceInfo {
-  static _channel = new MethodChannel({name: "hot_patch/demo/device_info"});
-  static _messageChannel = new BasicMessageChannel({name: "hot_patch/demo/device_info_msg", codec: new StandardMessageCodec(), typeArguments: {"T": "dynamic"}});
+  static _channel = new MethodChannel({name: "dynamic_flutter/demo/device_info"});
+  static _messageChannel = new BasicMessageChannel({name: "dynamic_flutter/demo/device_info_msg", codec: new StandardMessageCodec(), typeArguments: {"T": "dynamic"}});
   static _messageBound = false;
   constructor() {
   }
   static ticks(tag) {
-    return new EventChannel({name: ("hot_patch/demo/device_info_events" + tag)}).receiveBroadcastStream();
+    return new EventChannel({name: ("dynamic_flutter/demo/device_info_events" + tag)}).receiveBroadcastStream();
   }
   static _bindMessageHandler() {
     if (HotPluginDeviceInfo._messageBound) {

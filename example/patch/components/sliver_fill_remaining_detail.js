@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/sliver_fill_remaining_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/sliver_fill_remaining_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Align, Alignment, AppBar, BouncingScrollPhysics, Center, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, Expanded, FontWeight, MainAxisAlignment, OutlinedButton, Row, Scaffold, SizedBox, SliverFillRemaining, SliverToBoxAdapter, StatefulWidget, Switch, Text, TextAlign, TextStyle, double } from '../flutter.js';

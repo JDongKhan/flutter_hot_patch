@@ -51,9 +51,9 @@
     <table>
       <thead><tr><th>包</th><th>阶段</th><th>职责</th></tr></thead>
       <tbody>
-        <tr><td><code>hot_patch_annotations</code></td><td>编译期</td><td>声明式注解：<code>@PatchEntry</code> / <code>@PatchIgnore</code> / <code>@HostInjected</code></td></tr>
-        <tr><td><code>hot_patch_generator</code></td><td>编译期</td><td>按语法规则把 Dart 源码翻译成等价 JS 产物，并组装补丁包</td></tr>
-        <tr><td><code>hot_patch</code></td><td>运行期</td><td>JS 运行时 + 宿主渲染 + 能力桥；<code>JsUiWidget</code> 是唯一页面入口</td></tr>
+        <tr><td><code>dynamic_flutter_annotations</code></td><td>编译期</td><td>声明式注解：<code>@PatchEntry</code> / <code>@PatchIgnore</code> / <code>@HostInjected</code></td></tr>
+        <tr><td><code>dynamic_flutter_generator</code></td><td>编译期</td><td>按语法规则把 Dart 源码翻译成等价 JS 产物，并组装补丁包</td></tr>
+        <tr><td><code>dynamic_flutter</code></td><td>运行期</td><td>JS 运行时 + 宿主渲染 + 能力桥；<code>JsUiWidget</code> 是唯一页面入口</td></tr>
       </tbody>
     </table>
     <div class="callout tip">
@@ -69,11 +69,11 @@
         <h3>加依赖</h3>
         <p>业务 App 的 <code>pubspec.yaml</code>：</p>
         <pre><code>dependencies:
-  hot_patch_annotations: ^0.1.5   # 注解
-  hot_patch: ^0.4.2               # 运行时
+  dynamic_flutter_annotations: ^0.1.5   # 注解
+  dynamic_flutter: ^0.4.2               # 运行时
 
 dev_dependencies:
-  hot_patch_generator: ^0.13.0    # 构建期翻译（dev 依赖，不进包体）
+  dynamic_flutter_generator: ^0.13.0    # 构建期翻译（dev 依赖，不进包体）
   build_runner: ^2.4.13</code></pre>
         <pre><code>flutter pub get</code></pre>
         <div class="callout">
@@ -88,7 +88,7 @@ dev_dependencies:
       <div>
         <h3>给组件打注解</h3>
         <pre><code>import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 @PatchEntry('Counter')            // name 可省略，缺省取类名
 class Counter extends StatefulWidget {
@@ -130,7 +130,7 @@ class _CounterState extends State&lt;Counter&gt; {
         <p>线上一般把 <code>patch.zip</code> 放到 CDN / 静态服务，让 <code>jsAsset</code> 直接指向 zip；运行时下载解压后，按与本地 asset 相同的规则加载入口模块。</p>
         <pre><code>JsUiWidget(
   jsAsset:
-      'https://cdn.example.com/hot_patch/patch.zip'
+      'https://cdn.example.com/dynamic_flutter/patch.zip'
       '?component=Counter'                // 必填：入口模块里注册的组件类名
       '&amp;entry=components/counter.js'     // 可选：zip 内入口 JS 的相对路径
       '&amp;lang=zh_CN',                     // 运营配置：进入业务 props
@@ -239,7 +239,7 @@ cd example &amp;&amp; flutter run</code></pre>
     <table>
       <thead><tr><th>现象</th><th>原因 / 处理</th></tr></thead>
       <tbody>
-        <tr><td><code>patch/&lt;package&gt;.js</code> 没产出</td><td>该包没把 <code>hot_patch_generator</code> 加进 <code>dev_dependencies</code>；确认依赖后重跑构建</td></tr>
+        <tr><td><code>patch/&lt;package&gt;.js</code> 没产出</td><td>该包没把 <code>dynamic_flutter_generator</code> 加进 <code>dev_dependencies</code>；确认依赖后重跑构建</td></tr>
         <tr><td>运行时加载不到产物</td><td>目录 asset 声明不递归，需逐目录 / 逐文件在 <code>assets:</code> 中列出</td></tr>
         <tr><td>组件结点渲染成红底占位</td><td>该组件被 <code>@PatchIgnore</code> 或跨库不可见，运行时未注册宿主实现；在 <code>main()</code> 用 <code>jsWidgetRegistry.register</code> 注册，见 <a href="custom-components.html">自定义组件</a></td></tr>
         <tr><td>debug 下出现 <code>&lt;ui fallback: …&gt;</code></td><td>渲染兜底统一出口；按括号里的原因定位（结点丢失、子元素解析失败、builder 下标越界等）</td></tr>

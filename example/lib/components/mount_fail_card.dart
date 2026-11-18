@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 挂载失败回滚 demo（仅用于验证生命周期，不参与常规页面）。
 ///

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 布局 / 交互补充组件演示：
 /// `Tooltip` / `FittedBox` / `RotatedBox` / `IntrinsicHeight` / `IgnorePointer` /

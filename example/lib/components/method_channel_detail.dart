@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 import 'package:hot_plugin_counter/hot_plugin_counter.dart';
 import 'package:hot_plugin_device_info/hot_plugin_device_info.dart';
 
 /// 两个「三方库」插件各自持有独立 channel：
 ///
-/// - `hot_plugin_device_info` → `hot_patch/demo/device_info`
-/// - `hot_plugin_counter`     → `hot_patch/demo/counter`
+/// - `hot_plugin_device_info` → `dynamic_flutter/demo/device_info`
+/// - `hot_plugin_counter`     → `dynamic_flutter/demo/counter`
 ///
 /// 原生模式：插件 Dart → Flutter MethodChannel → 原生。
 /// JS 热更模式：翻译产物 → `flutter.js` 的 MethodChannel 镜像 → 宿主
@@ -237,7 +237,7 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
           const SizedBox(height: 16),
           _card(
             title: '插件 A · hot_plugin_device_info',
-            channel: 'hot_patch/demo/device_info',
+            channel: 'dynamic_flutter/demo/device_info',
             result: _deviceInfo,
             actions: [
               ElevatedButton(
@@ -251,7 +251,7 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
           ),
           _card(
             title: '插件 A · BasicMessageChannel',
-            channel: 'hot_patch/demo/device_info_msg（send / setMessageHandler）',
+            channel: 'dynamic_flutter/demo/device_info_msg（send / setMessageHandler）',
             result: _messageResult,
             actions: [
               ElevatedButton(
@@ -272,7 +272,7 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
           ),
           _card(
             title: '插件 A · EventChannel',
-            channel: 'hot_patch/demo/device_info_events' +
+            channel: 'dynamic_flutter/demo/device_info_events' +
                 widget.channelTag +
                 '（原生推送）',
             result: _tickState + ' · tick=' + _tick.toString(),
@@ -293,7 +293,7 @@ class _MethodChannelDetailState extends State<MethodChannelDetail> {
           ),
           _card(
             title: '插件 B · hot_plugin_counter',
-            channel: 'hot_patch/demo/counter',
+            channel: 'dynamic_flutter/demo/counter',
             result: _counter,
             actions: [
               ElevatedButton(

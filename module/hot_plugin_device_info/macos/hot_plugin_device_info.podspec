@@ -3,9 +3,9 @@ Pod::Spec.new do |s|
   s.version          = '1.0.0'
   s.summary          = 'Hot patch demo plugin A (device info).'
   s.description      = 'MethodChannel demo plugin: reads device info from native.'
-  s.homepage         = 'https://example.com/hot_patch'
+  s.homepage         = 'https://example.com/dynamic_flutter'
   s.license          = { :type => 'MIT' }
-  s.author           = { 'hot_patch' => 'hot_patch@example.com' }
+  s.author           = { 'dynamic_flutter' => 'dynamic_flutter@example.com' }
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
   s.dependency 'FlutterMacOS'

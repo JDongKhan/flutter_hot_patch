@@ -19,10 +19,10 @@ dependencies:
   # example/lib/custom/easy_refresh/，JS 见 js/easy_refresh.js。
   easy_refresh: ^3.4.0
   # 磁盘缓存网络图（cached_network_image 能力）：宿主侧桥接见
-  # hot_patch/lib/src/js_ui/capabilities/cached_network_image/。
+  # dynamic_flutter/lib/src/js_ui/capabilities/cached_network_image/。
   cached_network_image: ^3.4.1
   # 曝光/可见性检测：自定义能力示例（example/lib/custom/visibility_detector/），
-  # 不在 hot_patch 内建能力里。
+  # 不在 dynamic_flutter 内建能力里。
   visibility_detector: ^0.4.0+2
   # 模块化基座包（网络请求 / 工具类）：独立 Dart 包，跨包引用用于验证跨包翻译。
   hot_module_base:
@@ -32,10 +32,10 @@ dependencies:
     path: ../module/hot_plugin_device_info
   hot_plugin_counter:
     path: ../module/hot_plugin_counter
-  hot_patch:
-    path: ../packages/hot_patch
-  hot_patch_annotations:
-    path: ../packages/hot_patch_annotations
+  dynamic_flutter:
+    path: ../packages/dynamic_flutter
+  dynamic_flutter_annotations:
+    path: ../packages/dynamic_flutter_annotations
   path_provider: ^2.1.6
   permission_handler: ^12.0.1
   dio: ^5.11.1
@@ -49,8 +49,8 @@ dev_dependencies:
   flutter_driver:
     sdk: flutter
   build_runner: ^2.4.13
-  hot_patch_generator:
-    path: ../packages/hot_patch_generator
+  dynamic_flutter_generator:
+    path: ../packages/dynamic_flutter_generator
   flutter_lints: ^6.0.0
 
 flutter:

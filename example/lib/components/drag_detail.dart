@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 拖拽演示：`Draggable` / `LongPressDraggable` / `DragTarget`。
 ///
-/// 关键点（实现见 packages/hot_patch/lib/src/js_ui/capabilities/drag/ 与生成器
+/// 关键点（实现见 packages/dynamic_flutter/lib/src/js_ui/capabilities/drag/ 与生成器
 /// 的 runtime/js/drag_js.dart）：
 ///   - `data` 是**任意 JS 值**（这里是 `Fruit` 实例）。跨桥不传内容，只传按身份
 ///     索引的 id；事件回到 JS 时 id 换回原引用，所以 `details.data` 与构造时

@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/sliver_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/sliver_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Alignment, BorderRadius, BouncingScrollPhysics, BoxDecoration, Center, Colors, Container, CustomScrollView, Divider, EdgeInsets, FloatingActionButton, FontWeight, GlobalKey, Icon, IconButton, Icons, ListTile, Offset, Scaffold, ScrollController, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, StatefulWidget, Text, TextStyle } from '../flutter.js';

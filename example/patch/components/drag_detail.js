@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/drag_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/drag_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, DragTarget, Draggable, Duration, EdgeInsets, FontWeight, LongPressDraggable, MainAxisSize, Opacity, Radius, Row, SizedBox, StatefulWidget, Text, TextStyle, double } from '../flutter.js';

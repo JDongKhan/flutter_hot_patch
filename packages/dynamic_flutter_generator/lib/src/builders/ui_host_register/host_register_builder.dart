@@ -1,0 +1,190 @@
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:build/build.dart';
+import 'package:glob/glob.dart';
+
+import '../shared/host_injected.dart';
+import '../shared/source_index.dart';
+
+/// 宿主注入清单 builder：扫描全包的 `@HostInjected` static 方法，把「通道名 →
+/// 宿主实现」集中生成到**一个 Dart 文件**里，业务方把它交给装配入口即可：
+///
+/// ```dart
+/// initJsUi(libraries: [...], hostMethods: hostMethods);
+/// ```
+///
+/// 产物是**纯数据**（`List<Map<String, Object?>>`，每项 `{'name', 'handler'}`），
+/// 不持有注册 API、不 import 运行时包——注册策略归运行时，生成器只产出清单。
+///
+/// # 与另外两个 builder 的区别
+///
+/// 另外两个 builder（`patch_entry` / `ui_widget`）的产物是 **patch/ 下的 JS**
+/// （运行期被 JS 引擎加载），本 builder 的产物是**参与编译的 Dart 源码**，
+/// 因此单独成一个 builder：输入是包根伪资产（无种子文件）、产物落在 lib/ 下。
+///
+/// # 输出稳定性
+///
+/// 产物路径固定（不随发现的注解动态变化），build_extensions 里静态声明即可；
+/// 即使一个注解都没有也照常产出（空方法体）——它被 `main()` import，缺文件会
+/// 直接断编译，与可跳过的 JS 资产不同。
+class HostRegisterBuilder implements Builder {
+  const HostRegisterBuilder();
+
+  /// 产物路径（相对包根）：被 main() import 的 Dart 源码。
+  static const String outputPath = 'lib/generated/host_methods.dart';
+
+  /// 扫描范围：包内全部 Dart 源码。
+  static final Glob _dartSources = Glob('lib/**.dart');
+
+  @override
+  Map<String, List<String>> get buildExtensions => const {
+        // `$package$`：build_runner 的包根伪资产输入键，用于「输入是整包」的
+        // builder——无需为每个包准备种子文件。
+        r'$package$': [outputPath],
+      };
+
+  @override
+  Future<void> build(BuildStep buildStep) async {
+    final entries = <_HostEntry>[];
+    final queue = <(String, CompilationUnit)>[];
+    final visited = <String>{};
+    await for (final id in buildStep.findAssets(_dartSources)) {
+      // 跳过自己的产物：它没有注解，读了还会给本步骤凭空添一条自依赖。
+      if (id.path == outputPath) continue;
+      // readAsString 同时登记依赖：该文件改动会触发本步骤重跑。
+      final content = await buildStep.readAsString(id);
+      final unit = parseString(
+        content: content,
+        throwIfDiagnostics: false,
+        path: id.path,
+      ).unit;
+      visited.add(id.path);
+      _scan(unit, id.path, entries);
+      queue.add((id.path, unit));
+    }
+
+    // 跨包（本地依赖包，见 [resolveImportFiles] 的身份约定）：从本包文件的
+    // import 出发逐层解析，把依赖包里声明的 `@HostInjected` 方法一并注册。
+    // 实现留在依赖包，注册点仍然只有这一处；只沿**本地包**展开，三方宿主包与
+    // 框架包不参与（其类型走宿主注册表 / 原生注入）。
+    while (queue.isNotEmpty) {
+      final (path, unit) = queue.removeLast();
+      for (final dep in resolveImportFiles(unit, path)) {
+        if (!isPackageIdentity(dep) || !visited.add(dep)) continue;
+        final depUnit = parseUnitFile(dep);
+        if (depUnit == null) {
+          log.warning('[dynamic_flutter_generator] 无法解析跨包源文件 $dep'
+              '（被 $path 引用）：该文件里的 @HostInjected 不会注册');
+          continue;
+        }
+        _scan(depUnit, dep, entries);
+        queue.add((dep, depUnit));
+      }
+    }
+
+    await buildStep.writeAsString(
+      AssetId(buildStep.inputId.package, outputPath),
+      _render(entries),
+    );
+  }
+
+  /// 扫描一份源码里的 `@HostInjected` 声明（不支持的目标出声但不静默丢弃）。
+  void _scan(CompilationUnit unit, String sourcePath, List<_HostEntry> entries) {
+    scanHostMethods(unit, (h) {
+      if (!h.usable) {
+        // 与翻译口径一致（都不支持），但不能静默：让使用方看到原因。
+        log.warning('[dynamic_flutter_generator] 跳过 @HostInjected '
+            '${h.targetExpr}（$sourcePath）：'
+            '${h.isPrivate ? '私有声明跨库不可见' : '实例方法无法定位宿主实例'}——'
+            '宿主注入只支持 static 方法 / 顶层函数');
+        return;
+      }
+      entries.add(_HostEntry(
+        targetExpr: h.targetExpr,
+        channel: h.channel,
+        sourcePath: sourcePath,
+      ));
+    });
+  }
+
+  /// 装配产物：import 各声明文件 + 一张「通道名 → 宿主实现」清单。
+  String _render(List<_HostEntry> entries) {
+    final sorted = [...entries]..sort((a, b) => a.sortKey.compareTo(b.sortKey));
+    final deduped = <String, _HostEntry>{
+      for (final e in sorted) '${e.sourcePath}|${e.targetExpr}': e,
+    }.values.toList();
+
+    final imports = <String>{
+      for (final e in deduped) _relativeImport(e.sourcePath),
+    }.toList()
+      ..sort();
+
+    final b = StringBuffer()
+      ..writeln('// GENERATED CODE - DO NOT MODIFY BY HAND')
+      ..writeln('//')
+      ..writeln('// 由 dynamic_flutter_generator 的 hostRegisterBuilder 扫描全包')
+      ..writeln('// `@HostInjected` 方法生成。用法（main() 里交给 initJsUi 统一装配）：')
+      ..writeln('//')
+      ..writeln('//   initJsUi(libraries: [...], hostMethods: hostMethods);')
+      ..writeln('//')
+      ..writeln('// 每项形状固定：{name: 通道名, handler: 宿主实现}。');
+    if (imports.isNotEmpty) {
+      b.writeln();
+      for (final i in imports) {
+        b.writeln("import '$i';");
+      }
+    }
+    b
+      ..writeln()
+      ..writeln('/// 本包全部 `@HostInjected` 宿主方法：`{name: 通道名, handler: 实现}`。')
+      ..writeln('/// 交给 `initJsUi(hostMethods: hostMethods)` 一次注册。');
+    if (deduped.isEmpty) {
+      b
+        ..writeln('/// 本包没有 `@HostInjected` 方法，清单为空。')
+        ..writeln('List<Map<String, Object?>> get hostMethods => const [];');
+      return b.toString();
+    }
+    b.writeln('List<Map<String, Object?>> get hostMethods => [');
+    for (final e in deduped) {
+      // 只登记「通道名 → 函数引用」：参数绑定（位置/具名、个数、返回类型）由
+      // 运行时用 Function.apply 统一处理，清单无需关心调用形态。
+      b.writeln("  {'name': '${e.channel}', 'handler': ${e.targetExpr}},");
+    }
+    b.writeln('];');
+    return b.toString();
+  }
+}
+
+/// 一条宿主注入注册：宿主侧目标表达式（`Class.method` / `顶层函数名`）
+/// + 通道名 + 声明它的源文件。
+class _HostEntry {
+  final String targetExpr;
+  final String channel;
+  final String sourcePath;
+  const _HostEntry({
+    required this.targetExpr,
+    required this.channel,
+    required this.sourcePath,
+  });
+
+  /// 稳定排序键（产物内容与扫描顺序无关）。
+  String get sortKey => '$sourcePath|$targetExpr';
+}
+
+/// 从产物所在目录（`lib/generated/`）指向 [sourcePath] 的 import URI：
+/// 本项目包内的源文件走相对路径；跨包身份（`package:foo/x.dart`）直接用
+/// package URI（跨包文件不在本包 lib 目录下，相对路径无意义）。
+String _relativeImport(String sourcePath) {
+  if (isPackageIdentity(sourcePath)) return sourcePath;
+  final from = HostRegisterBuilder.outputPath.split('/')..removeLast();
+  final to = sourcePath.split('/');
+  var common = 0;
+  while (common < from.length &&
+      common < to.length - 1 &&
+      from[common] == to[common]) {
+    common++;
+  }
+  final up = List.filled(from.length - common, '..');
+  return [...up, ...to.sublist(common)].join('/');
+}
+

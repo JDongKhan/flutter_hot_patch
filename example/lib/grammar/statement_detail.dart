@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 语句语法 demo：多 catch 子句 + `on Type` 过滤、`rethrow`、label + `break`。
 @PatchEntry('StatementDetail')

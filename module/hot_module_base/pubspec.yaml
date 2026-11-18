@@ -12,5 +12,5 @@ dependencies:
   flutter:
     sdk: flutter
   visibility_detector: ^0.4.0+2
-  hot_patch_annotations:
-    path: ../../packages/hot_patch_annotations
+  dynamic_flutter_annotations:
+    path: ../../packages/dynamic_flutter_annotations

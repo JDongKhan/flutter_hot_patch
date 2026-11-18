@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/method_channel_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/method_channel_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { HotPluginDeviceInfo } from '../packages/hot_plugin_device_info/hot_plugin_device_info.js';
@@ -262,7 +262,7 @@ export class MethodChannelDetail extends StatefulWidget {
           (this.__k7 || (this.__k7 = new SizedBox({
             "height": 16
           }))),
-          this._card({ "title": "插件 A · hot_plugin_device_info", "channel": "hot_patch/demo/device_info", "result": this._deviceInfo, "actions": [new ElevatedButton({
+          this._card({ "title": "插件 A · hot_plugin_device_info", "channel": "dynamic_flutter/demo/device_info", "result": this._deviceInfo, "actions": [new ElevatedButton({
                 "onPressed": () => { if (this._busy) {
                     return;
                   }
@@ -271,7 +271,7 @@ export class MethodChannelDetail extends StatefulWidget {
                   "data": "读取设备信息"
                 })))
               })] }),
-          this._card({ "title": "插件 A · BasicMessageChannel", "channel": "hot_patch/demo/device_info_msg（send / setMessageHandler）", "result": this._messageResult, "actions": [new ElevatedButton({
+          this._card({ "title": "插件 A · BasicMessageChannel", "channel": "dynamic_flutter/demo/device_info_msg（send / setMessageHandler）", "result": this._messageResult, "actions": [new ElevatedButton({
                 "onPressed": () => { if (this._busy) {
                     return;
                   }
@@ -288,7 +288,7 @@ export class MethodChannelDetail extends StatefulWidget {
                   "data": "原生回调 JS"
                 })))
               })] }),
-          this._card({ "title": "插件 A · EventChannel", "channel": (("hot_patch/demo/device_info_events" + this.channelTag) + "（原生推送）"), "result": ((this._tickState + " · tick=") + this._tick.toString()), "actions": [new ElevatedButton({
+          this._card({ "title": "插件 A · EventChannel", "channel": (("dynamic_flutter/demo/device_info_events" + this.channelTag) + "（原生推送）"), "result": ((this._tickState + " · tick=") + this._tick.toString()), "actions": [new ElevatedButton({
                 "onPressed": () => { this._startTicks(); },
                 "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "订阅"
@@ -299,7 +299,7 @@ export class MethodChannelDetail extends StatefulWidget {
                   "data": "取消"
                 })))
               })] }),
-          this._card({ "title": "插件 B · hot_plugin_counter", "channel": "hot_patch/demo/counter", "result": this._counter, "actions": [new ElevatedButton({
+          this._card({ "title": "插件 B · hot_plugin_counter", "channel": "dynamic_flutter/demo/counter", "result": this._counter, "actions": [new ElevatedButton({
                 "onPressed": () => { if (this._busy) {
                     return;
                   }

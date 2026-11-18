@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// RadioGroup 演示：由 RadioGroup 统一提供选中值与回调，子级 Radio 不再传
 /// `groupValue` / `onChanged`（两者是被 `RadioGroup` 取代的旧 API）。

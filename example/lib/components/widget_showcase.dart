@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 import 'animated_list_detail.dart';
 import 'asset_override_detail.dart';
 import 'automatic_keep_alive_detail.dart';

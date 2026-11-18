@@ -7,7 +7,7 @@ import 'package:hot_module_base/hot_module_base.dart'
 import 'package:hot_module_base/src/module_internal.dart' show moduleHiddenTag;
 // ignore: implementation_imports
 import 'package:hot_module_base/src/module_symbols.dart' show moduleBaseHigh;
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 import 'package:provider/provider.dart' as p;
 
 import '../model/counter_vm.dart' as vm;

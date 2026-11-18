@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hot_module_base/hot_module_base.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// OverlayPortal 三件套演示：
 /// `OverlayPortal` + `CompositedTransformTarget` + `CompositedTransformFollower`。

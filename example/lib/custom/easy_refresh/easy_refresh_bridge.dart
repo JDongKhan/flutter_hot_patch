@@ -4,7 +4,7 @@
 //
 // EasyRefresh 来自三方包 `easy_refresh`，不是运行时内建能力：宿主桥接放在本
 // 工程 `lib/custom/easy_refresh/`，JS 类放在工程根 `js/easy_refresh.js`（构建
-// 期拷贝为 `patch/packages/easy_refresh.js`），hot_patch 包零改动。
+// 期拷贝为 `patch/packages/easy_refresh.js`），dynamic_flutter 包零改动。
 //
 // EasyRefresh（三方包 easy_refresh）的**手势 / 物理 / 指示器**全在宿主
 // 侧，回调 onRefresh / onLoad 由 JS 补丁实现，所以需要一次「宿主发起 → JS 异步
@@ -22,7 +22,7 @@ import 'dart:async';
 
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/widgets.dart';
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 
 bool _channelsRegistered = false;
 

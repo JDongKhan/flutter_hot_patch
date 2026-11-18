@@ -24,7 +24,7 @@ class AppLogRecord {
 ///
 /// 采集口径（两路都汇到这里）：
 ///   - Dart 侧 `print`：由 [installLogCapture] 中的 zone `print` 钩子捕获；
-///   - Dart 侧 `debugPrint`（Flutter 框架 / hot_patch 的 JsLog 都走它）：
+///   - Dart 侧 `debugPrint`（Flutter 框架 / dynamic_flutter 的 JsLog 都走它）：
 ///     由 [installLogCapture] 统一改写成 `print`，进入同一条通道；
 ///   - JS 侧 `print` / `debugPrint`：经运行时 `log` 通道 → JsLog → `debugPrint`，
 ///     同样落到上面的通道，无需额外接线。
@@ -70,7 +70,7 @@ class AppLogCenter extends ChangeNotifier {
     WidgetsBinding.instance.scheduleFrame();
   }
 
-  /// 从日志文本推导级别：hot_patch 的 warn/error 前缀可直接识别，其余按 info。
+  /// 从日志文本推导级别：dynamic_flutter 的 warn/error 前缀可直接识别，其余按 info。
   static AppLogLevel _levelOf(String text) {
     if (text.contains('[ERROR]')) return AppLogLevel.error;
     if (text.contains('[WARN]') || text.contains('[WARNING]')) return AppLogLevel.warn;

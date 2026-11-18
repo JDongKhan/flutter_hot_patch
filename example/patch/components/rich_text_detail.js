@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/rich_text_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/rich_text_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Colors, Column, CrossAxisAlignment, Divider, Expanded, FontWeight, RichText, Row, SizedBox, StatefulWidget, Text, TextAlign, TextButton, TextDecoration, TextDecorationStyle, TextDirection, TextOverflow, TextSpan, TextStyle } from '../flutter.js';

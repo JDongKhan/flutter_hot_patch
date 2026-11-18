@@ -16,9 +16,9 @@ Flutter 的 AOT 编译产物无法热更，线上缺陷只能等应用商店审�
 
 ## 工作方式
 
-1. 给组件加 `@PatchEntry` 注解（注解来自 `hot_patch_annotations`）；
-2. 构建期由 `hot_patch_generator` 把它**静态翻译**为等价的 JS 模块（不执行 Dart 代码）；
-3. 运行时由 `hot_patch` 的 `JsUiWidget` 加载这份 JS 补丁：**逻辑在 JS 中执行**，
+1. 给组件加 `@PatchEntry` 注解（注解来自 `dynamic_flutter_annotations`）；
+2. 构建期由 `dynamic_flutter_generator` 把它**静态翻译**为等价的 JS 模块（不执行 Dart 代码）；
+3. 运行时由 `dynamic_flutter` 的 `JsUiWidget` 加载这份 JS 补丁：**逻辑在 JS 中执行**，
    结点渲染回落到原生 Flutter。
 
 ## 仓库结构
@@ -27,9 +27,9 @@ Flutter 的 AOT 编译产物无法热更，线上缺陷只能等应用商店审�
 
 | 目录 | 说明 |
 |---|---|
-| `packages/hot_patch_annotations` | 声明式注解（`@PatchEntry` / `@PatchIgnore` / `@HostInjected`） |
-| `packages/hot_patch_generator` | 编译期：Dart widget → JS 翻译与产物组装（build_runner builders） |
-| `packages/hot_patch` | 运行期：JS 运行时 + 宿主渲染 + 能力桥 |
+| `packages/dynamic_flutter_annotations` | 声明式注解（`@PatchEntry` / `@PatchIgnore` / `@HostInjected`） |
+| `packages/dynamic_flutter_generator` | 编译期：Dart widget → JS 翻译与产物组装（build_runner builders） |
+| `packages/dynamic_flutter` | 运行期：JS 运行时 + 宿主渲染 + 能力桥 |
 | `example/` | 示例 App：原生 vs JS 热更对比 Demo（业务 Dart 单源在 `example/lib/`，生成的 JS 产物在 [example/patch/](example/patch/)） |
 | `tool/patch_server.dart`、`tool/server/`、`start_patch_server.sh` | 本地服务：`/patch/*` 静态产物路由 + 普通接口路由（按 URL 路径读 `tool/mock/<路径>.json`） |
 
@@ -59,6 +59,6 @@ cd example && flutter run
 | [TODO.md](TODO.md) | 待办任务、实施顺序、详细 TODO 与暂缓项 |
 | [文档中心](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/index.html) | 技术博客、Dart → JS 语法对照、App 交互原型 |
 | [App 交互原型](https://html-preview.github.io/?url=https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/blog/app-prototype.html) | 示例 App 的高保真交互原型（HTML，可直接在浏览器中体验） |
-| [hot_patch_annotations](packages/hot_patch_annotations/README_ZH.md) | 注解包：`@PatchEntry` / `@PatchIgnore` |
-| [hot_patch_generator](packages/hot_patch_generator/README_ZH.md) | 生成器：产物布局、配置项、翻译设计原则、新增 widget 支持 |
-| [hot_patch](packages/hot_patch/README_ZH.md) | 运行时：补丁加载、宿主能力桥、日志 |
+| [dynamic_flutter_annotations](packages/dynamic_flutter_annotations/README_ZH.md) | 注解包：`@PatchEntry` / `@PatchIgnore` |
+| [dynamic_flutter_generator](packages/dynamic_flutter_generator/README_ZH.md) | 生成器：产物布局、配置项、翻译设计原则、新增 widget 支持 |
+| [dynamic_flutter](packages/dynamic_flutter/README_ZH.md) | 运行时：补丁加载、宿主能力桥、日志 |

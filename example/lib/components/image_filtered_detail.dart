@@ -2,7 +2,7 @@ import 'dart:typed_data' show Float64List;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// ImageFiltered 演示：对子树整体做图片级滤镜（不是给单色上滤镜）。
 ///

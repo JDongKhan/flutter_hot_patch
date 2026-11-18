@@ -8,7 +8,7 @@
 //        → 本桥 onOp → `dispatchJsMember` → `NoteObject.jsMember`。
 //
 // 命名也去掉了 controller 味：kind 用 `obj/<类名>`，桥是 `JsObjectBridge`。
-import 'package:hot_patch/hot_patch.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
 
 import '../../base/note_object.dart';
 

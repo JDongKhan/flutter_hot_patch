@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/layout_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/layout_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Align, Alignment, AspectRatio, Axis, BoxConstraints, Center, Chip, Clip, Colors, Column, ConstrainedBox, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, FractionallySizedBox, Opacity, Padding, Positioned, Row, SizedBox, Spacer, Stack, StackFit, StatefulWidget, Text, TextAlign, TextStyle, Wrap, WrapAlignment, WrapCrossAlignment } from '../flutter.js';

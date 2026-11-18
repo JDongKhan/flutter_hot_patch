@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// MediaQuery 演示：完整打印 `MediaQuery.of(context)` 的每个字段，
 /// 方便在「原生渲染」与「JS 热更」两种模式下逐项对比取值是否一致；

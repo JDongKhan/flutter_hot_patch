@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 /// 同一个 JS MethodChannel 镜像与同一个宿主入口。
 class HotPluginCounter {
   static const MethodChannel _channel =
-      MethodChannel('hot_patch/demo/counter');
+      MethodChannel('dynamic_flutter/demo/counter');
 
   /// handler 只绑定一次（与 Dart 侧「同名 channel 一个 handler」一致）。
   static bool _bound = false;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch/hot_patch.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// CustomScrollView 完整页面 demo：SliverAppBar（导航）+ SliverToBoxAdapter
 /// （普通盒子）+ SliverPadding + SliverList（列表）+ SliverGrid（九宫格）+

@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/grammar/stream_detail.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/grammar/stream_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Column, CrossAxisAlignment, Duration, ElevatedButton, FontWeight, Future, OutlinedButton, SizedBox, StatefulWidget, Stream, StreamController, Text, TextStyle, Wrap, int } from '../flutter.js';

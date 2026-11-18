@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
-import 'package:hot_patch/hot_patch.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter/dynamic_flutter.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 宿主图片加载能力：把 url（http(s) 或 assets 路径）解析成 `ui.Image`。
 ///

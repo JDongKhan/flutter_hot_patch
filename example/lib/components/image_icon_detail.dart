@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// ImageIcon 演示：把**图片**当图标画（`ImageProvider` + size / color / semanticLabel）。
 ///

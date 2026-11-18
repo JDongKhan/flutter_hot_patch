@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// SafeArea 演示：按系统安全区（刘海 / 状态栏 / 手势条）自动加内边距。
 ///

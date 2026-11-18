@@ -14,7 +14,7 @@ class HotPluginCounterPlugin :
     private var count = 0
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        channel = MethodChannel(binding.binaryMessenger, "hot_patch/demo/counter")
+        channel = MethodChannel(binding.binaryMessenger, "dynamic_flutter/demo/counter")
         channel.setMethodCallHandler(this)
     }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hot_module_base/hot_module_base.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// 时刻表日期选择器：年 / 月 / 日 / 周 四列联动滚轮。
 ///

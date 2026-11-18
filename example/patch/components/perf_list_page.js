@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/perf_list_page.dart 自动生成
+// 由 dynamic_flutter_generator 从 lib/components/perf_list_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Alignment, AnimatedContainer, AnimatedOpacity, AnimatedScale, Border, BorderRadius, BoxDecoration, BoxFit, Center, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Curves, DecoratedBox, Duration, EdgeInsets, Expanded, FontWeight, Icon, Icons, Image, LinearGradient, ListView, Padding, Positioned, Row, SizedBox, Spacer, Stack, StackFit, StatefulWidget, Text, TextOverflow, TextStyle, Timer, Wrap } from '../flutter.js';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:dynamic_flutter_annotations/dynamic_flutter_annotations.dart';
 
 /// ColorFiltered 演示：同一份彩色内容套不同 ColorFilter，直观对比颜色变化。
 ///
