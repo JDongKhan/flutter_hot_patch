@@ -759,7 +759,8 @@ class JsRuntimeManager {
 
   /// 解析模块源码里的 import 语句：`import { A, B } from 'rel';` 与
   /// 副作用形态 `import 'rel';` -> [(名字列表, 'rel')]（副作用形态名字为空）。
-  /// 只匹配生成器产物的单行 import 形态。
+  /// 匹配生成器产物的 import 形态；**不依赖换行/缩进**（压缩混淆后的产物
+  /// 所有语句挤在同一行，按行首行尾锚定会漏匹配）。
   ///
   /// **注释行先剔除**：宿主维护的模块（`js/<pkg>.js`）头注释里常有
   /// `//   import { X } from '../packages/<pkg>.js';` 这种用法示例，它不是依赖；
@@ -771,27 +772,24 @@ class JsRuntimeManager {
         .where((l) => !l.trimLeft().startsWith('//'))
         .join('\n');
     final re = RegExp(
-      r"import\s*\{([^}]+)\}\s*from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
+      r"import\s*\{([^}]+)\}\s*from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]",
     );
     // 副作用 import：生成器为「源文件 import 了 package:X」的包模块补的依赖
     // （如 `import '../packages/provider.js';`），只需要加载、不需要绑定任何名字。
     final sideEffectRe = RegExp(
-      r"^[ \t]*import\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
-      multiLine: true,
+      r"import\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
     );
     // 命名空间 import：`import * as p from 'rel';`（Dart 的 import 前缀在产物
     // 里就是模块命名空间，用于消解同名类），同样只需要加载依赖。
     final namespaceRe = RegExp(
-      r"^[ \t]*import\s*\*\s*as\s+[A-Za-z_$][\w$]*\s*from\s*"
-      r"[\x27\x22][^\x27\x22]+[\x27\x22]\s*;[ \t]*$",
-      multiLine: true,
+      r"import\s*\*\s*as\s+[A-Za-z_$][\w$]*\s*from\s*"
+      r"[\x27\x22][^\x27\x22]+[\x27\x22]\s*;",
     );
     // barrel 的转发：`export { A, B } from 'rel';`（本地依赖包入口产物）。
     // 目标模块必须先求值，本模块才能从 __modules 里取到这些名字再转发。
     final reExportRe = RegExp(
-      r"^[ \t]*export\s*\{[^}]+\}\s*from\s*"
-      r"[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
-      multiLine: true,
+      r"export\s*\{[^}]+\}\s*from\s*"
+      r"[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
     );
     return [
       for (final m in re.allMatches(code))
@@ -829,39 +827,32 @@ class JsRuntimeManager {
     // 扩展支持共享单例产物（export const X = {...}，如静态颜色类）与 export function。
     // 分类型替换，避免 'const' 被误换成 'class'。
     //
-    // 允许行首缩进：产物里的值类区（flutter.js）沿用片段源码的缩进，
-    // `export` 不在第 0 列；只认 `^export` 会把它们漏成非法语法（Unexpected
-    // keyword 'export'）。缩进原样保留，替换只吃关键字。
-    final exportReClass = RegExp(
-      r"^([ \t]*)export\s+class\s+(\w+)",
-      multiLine: true,
-    );
-    final exportReVar = RegExp(
-      r"^([ \t]*)export\s+(const|function)\s+(\w+)",
-      multiLine: true,
-    );
+    // **不依赖行首锚定**：产物里的值类区（flutter.js）`export` 不在第 0 列；
+    // 压缩混淆后的产物所有语句挤在同一行，按 `^export` 会漏成非法语法
+    // （Unexpected keyword 'export'）。匹配只吃 `export` 关键字本身。
+    final exportReClass = RegExp(r"export\s+class\s+(\w+)");
+    final exportReVar = RegExp(r"export\s+(const|function)\s+(\w+)");
     final exportNames = <String>[
-      for (final m in exportReClass.allMatches(out)) m.group(2)!,
-      for (final m in exportReVar.allMatches(out)) m.group(3)!,
+      for (final m in exportReClass.allMatches(out)) m.group(1)!,
+      for (final m in exportReVar.allMatches(out)) m.group(2)!,
     ];
     out = out.replaceAllMapped(
       exportReClass,
-      (m) => '${m.group(1)}class ${m.group(2)}',
+      (m) => 'class ${m.group(1)}',
     );
     out = out.replaceAllMapped(
       exportReVar,
-      (m) => '${m.group(1)}${m.group(2)} ${m.group(3)}',
+      (m) => '${m.group(1)} ${m.group(2)}',
     );
 
     // barrel 转发：`export { A, B } from 'rel';`（本地依赖包入口产物）。
     // 依赖已由 [loadModule] 先求值；这里解构成局部绑定并计入本模块导出，
     // 完成「原样透出」——否则 `export ... from` 在脚本模式下是非法语法。
     final reExportRe = RegExp(
-      r"^([ \t]*)export\s*\{([^}]+)\}\s*from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
-      multiLine: true,
+      r"export\s*\{([^}]+)\}\s*from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
     );
     List<String> reExportNames(Match m) => m
-        .group(2)!
+        .group(1)!
         .split(',')
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
@@ -870,8 +861,8 @@ class JsRuntimeManager {
       exportNames.addAll(reExportNames(m));
     }
     out = out.replaceAllMapped(reExportRe, (m) {
-      final abs = JsAssetResolver.resolve(base, m.group(3)!);
-      return "${m.group(1)}const { ${reExportNames(m).join(', ')} } = "
+      final abs = JsAssetResolver.resolve(base, m.group(2)!);
+      return "const { ${reExportNames(m).join(', ')} } = "
           "__modules['$abs'];";
     });
 
@@ -899,26 +890,22 @@ class JsRuntimeManager {
     // 对象——Dart 的 import 前缀在产物里靠它承接（同名类因此天然分开）。
     out = out.replaceAllMapped(
       RegExp(
-        r"^([ \t]*)import\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*"
-        r"[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
-        multiLine: true,
+        r"import\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*"
+        r"[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
       ),
       (m) {
-        final abs = JsAssetResolver.resolve(base, m.group(3)!);
-        return "${m.group(1)}const ${m.group(2)} = __modules['$abs'];";
+        final abs = JsAssetResolver.resolve(base, m.group(2)!);
+        return "const ${m.group(1)} = __modules['$abs'];";
       },
     );
 
-    // 副作用 import（`import 'rel';`）：依赖已由 [loadModule] 先求值，这里只
-    // 把它改写成注释——产物是脚本模式求值，原生 import 语句会直接语法错误。
+    // 副作用 import（`import 'rel';`）：依赖已由 [loadModule] 先求值，这里直接
+    // 删除——产物是脚本模式求值，原生 import 语句会直接语法错误。
+    // 不能改写成 `//` 注释：压缩产物里语句挤在同一行，注释会把后续代码吞掉。
     final sideEffectRe = RegExp(
-      r"^([ \t]*)import\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
-      multiLine: true,
+      r"import\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
     );
-    out = out.replaceAllMapped(
-      sideEffectRe,
-      (m) => '${m.group(1)}// 已加载 ${m.group(2)}',
-    );
+    out = out.replaceAll(sideEffectRe, '');
 
     // 模块尾部注册导出：__modules['jsAsset'] = { A, B };
     if (exportNames.isNotEmpty) {

@@ -34,6 +34,9 @@ migrate_working_dir/
 **/build/
 /coverage/
 
+# 压缩混淆后的 patch 产物（由 tool/minify_patch.sh 生成）
+example/patch_minified/
+
 # Symbolication related
 app.*.symbols
 
