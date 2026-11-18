@@ -12,7 +12,7 @@ component: the translated class stays a completely ordinary Flutter widget.
 
 ```yaml
 dev_dependencies:
-  dynamic_flutter_generator: ^0.13.0
+  dynamic_flutter_generator: ^0.14.2
   build_runner: ^2.4.13
 ```
 
@@ -34,7 +34,7 @@ source file names:
 | (package-root pseudo asset `$package$`) | `patch/flutter.js` | Package module: `Component` base + host-widget wrapper classes + value classes + JS logic-component / builder-proxy classes, **one file per package** |
 | `js/<package>.js` (host-maintained third-party JS) | `patch/packages/<package>.js` | Third-party library JS lives in the host project's `js/` directory (file name = Dart package name) and is copied verbatim by `ui_third_party_js` (filesystem scan, no `build.yaml` changes needed). Business outputs import it as `../packages/<package>.js` |
 | (package-root pseudo asset `$package$`) | `patch/runtime.js` | The whole JS runtime (mini-react, handle registry, capability fragments) as one file, sections separated by `// ===== 【n】… =====`. Shipped with the patch, so JS fixes never need an app release. Its content hash is baked into `G.__jsuiVersion`; a new hash rebuilds the runtime in place |
-| (package-root pseudo asset `$package$`) | `patch/manifest.json` | Patch manifest: basic info + **artifact protocol version** (`protocol`, currently `0.13.0`) + build time + content hash of every JS asset. The runtime refuses bundles whose protocol **major** differs from what the app supports |
+| (package-root pseudo asset `$package$`) | `patch/manifest.json` | Patch manifest: basic info + **artifact protocol version** (`protocol`, currently `0.14.2`) + build time + content hash of every JS asset. The runtime refuses bundles whose protocol **major** differs from what the app supports |
 | (package-root pseudo asset `$package$`) | `patch/patch.zip` | Patch bundle: everything under `patch/` (generated JS + `manifest.json` + hand-placed static assets such as `patch/assets/...`); repacked after `ui_patch_manifest`, so the zip always carries the latest manifest |
 
 - Splitting is driven by **file content + reference reachability** (not by directory): a file containing

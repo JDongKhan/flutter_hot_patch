@@ -13,7 +13,7 @@ loaded only when something goes wrong.
 
 ```yaml
 dependencies:
-  dynamic_flutter: ^0.4.0
+  dynamic_flutter: ^0.6.2
 ```
 
 ### Requirements & limitations

@@ -12,7 +12,7 @@
 
 ```yaml
 dev_dependencies:
-  dynamic_flutter_generator: ^0.13.0
+  dynamic_flutter_generator: ^0.14.2
   build_runner: ^2.4.13
 ```
 
@@ -33,7 +33,7 @@ dart run build_runner build --delete-conflicting-outputs
 | （包根伪资产 `$package$`） | `patch/flutter.js` | package 模块：`Component` 基类 + 宿主 widget 包装类 + 值类 + JS 逻辑组件 / builder 代理类，**每个 package 一个文件** |
 | `js/<package>.js`（宿主维护的三方 JS） | `patch/packages/<package>.js` | 三方库 JS 由宿主放在工程根 `js/` 下（文件名 = Dart 包名），`ui_third_party_js` 按文件系统扫描原样拷贝（无需改 `build.yaml`）；业务产物按 `../packages/<package>.js` import |
 | （包根伪资产 `$package$`） | `patch/runtime.js` | 整个 JS 运行时（mini-react / 句柄表 / 各能力片段）**一个文件**，分区用 `// ===== 【n】… =====` 注释隔开。随补丁发布，JS 修复无需发版；内容哈希写进 `G.__jsuiVersion`，哈希变化即原地重建运行时 |
-| （包根伪资产 `$package$`） | `patch/manifest.json` | patch 清单：基本信息 + **产物协议版本**（`protocol`，当前 `0.13.0`）+ 打包时间 + 各 JS 资源的内容 hash。运行时拒绝载荷**主版本**与应用不匹配的包 |
+| （包根伪资产 `$package$`） | `patch/manifest.json` | patch 清单：基本信息 + **产物协议版本**（`protocol`，当前 `0.14.2`）+ 打包时间 + 各 JS 资源的内容 hash。运行时拒绝载荷**主版本**与应用不匹配的包 |
 | （包根伪资产 `$package$`） | `patch/patch.zip` | 补丁归档：`patch/` 下全部文件（生成的 JS + `manifest.json` + 手工放置的静态资源，如 `patch/assets/...`）；排在 `ui_patch_manifest` 之后打包，zip 里始终是最新清单 |
 
 - 按**文件内容 + 引用可达性**分流（与目录无关）：含 `@PatchEntry` 的文件是根文件，产出这些组件；

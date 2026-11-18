@@ -1,6 +1,6 @@
 name: dynamic_flutter_generator
 description: "Build-time generator that statically translates @PatchEntry-annotated Flutter widgets into matching JS modules (widget factories + component classes) for the dynamic_flutter runtime."
-version: 0.14.1
+version: 0.14.2
 # 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
 resolution: workspace
 # pub.dev 溯源信息。

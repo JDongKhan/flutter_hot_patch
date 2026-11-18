@@ -11,7 +11,7 @@
 
 ```yaml
 dependencies:
-  dynamic_flutter: ^0.4.0
+  dynamic_flutter: ^0.6.2
 ```
 
 ## 支持范围与使用限制
