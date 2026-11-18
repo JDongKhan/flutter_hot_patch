@@ -3,4 +3,4 @@
 // 重新生成：dart run build_runner build
 
 
-export const devServerBaseUrl = "http://10.42.40.18:8765";
+export const devServerBaseUrl = "http://127.0.0.1:8765";

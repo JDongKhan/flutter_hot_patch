@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.2",
-  "buildTime": "2026-11-18T17:21:51.726198",
+  "buildTime": "2026-11-18T17:33:13.436917",
   "resources": {
     "flutter.js": "e5bd819540bc177d1b1c4c07cbc585b982bc6dce0693ef5f5a029d00b2a04361",
     "packages/NoteObject.js": "2c32d68a5e767060c383c5dd7afde137f528e6cc2728fa2e40e5083b71f1a723",
@@ -160,6 +160,6 @@
     "base/tracker.js": "f4594b857632b2f5f233ed0dc3fcc025767daf4b1699dd69dbe77ac3b9f6805b",
     "base/web_view.js": "b37f0061564f47f17af2f8353f09190a84d3668afd60bb9650451637baf26492",
     "base/platform_tools.js": "609ea4d8bea55edd84abf38e99aaa8979762c329bd21c5b3a9bb07bbd9910841",
-    "base/dev_server.js": "03652ebe2d435a16bb0562dd03b3eeae4504f7db44a8223a5736ff99a375759e"
+    "base/dev_server.js": "e259f37228410bc19839508985fc01d0e38efcc11e03a87839eba4c6fb85b742"
   }
 }
