@@ -77,7 +77,10 @@ minify_one() {
   fi
 
   # keep_fargs：保留形参个数（回调可能依赖 arity）；keep_fnames：保留函数名。
-  local args=(-c keep_fargs=true,keep_fnames=true)
+  # if_return：禁止把「if (...) return; 后续语句」折叠进 if 块——class 是块级
+  # 作用域，被折叠进块后块外引用会变成 Can't find variable（runtime.js 的
+  # `class JsBuildContext` 就会这样丢作用域）。
+  local args=(-c keep_fargs=true,keep_fnames=true,if_return=false)
   if [ "$mode" = "mangle" ]; then
     # 只混淆方法体：顶层（全局变量 / 模块绑定）、类名、函数名、属性名都不动。
     args+=(-m toplevel=false,module=false,keep_classnames=true,keep_fnames=true)
