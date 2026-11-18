@@ -85,7 +85,8 @@ class AppRouter {
 
   /// 打开搜索页（热搜词 + 猜你想去随接口下发）。
   /// [isJs] 随路由参数下发（`arguments: {'isJs': true}`）：路由表据此选
-  /// **JS 版** SearchPage 还是原生版。首页由 `jsMode` 透传（JS 外壳里为 true）。
+  /// **JS 版** SearchPage 还是原生版。调用方按 `kInJsRuntime` 判断自己是否
+  /// 跑在 JS 里，不需要逐层透传壳标记。
   @HostInjected()
   static Future<void> openSearch({bool isJs = false}) =>
       _guard('打开搜索页', () async {
