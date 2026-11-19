@@ -41,6 +41,7 @@ import '../grammar/basic_api_detail.dart';
 import '../grammar/callable_detail.dart';
 import '../grammar/collection_detail.dart';
 import '../grammar/constructor_detail.dart';
+import '../grammar/cycle_import_detail.dart';
 import '../grammar/enum_detail.dart';
 import '../grammar/expression_detail.dart';
 import '../grammar/extension_detail.dart';
@@ -558,6 +559,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'StreamDetail': 'grammar/stream_detail.js',
     'GenericDetail': 'grammar/generic_detail.js',
     'AliasDetail': 'grammar/alias_detail.js',
+    'CycleImportDetail': 'grammar/cycle_import_detail.js',
     'ArrayDetail': 'grammar/array_detail.js',
     'MapDetail': 'grammar/map_detail.js',
   };
@@ -648,6 +650,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'StreamDetail' => const StreamDetail(),
       'GenericDetail' => const GenericDetail(),
       'AliasDetail' => const AliasDetail(),
+      'CycleImportDetail' => const CycleImportDetail(),
       'ArrayDetail' => const ArrayDetail(),
       'MapDetail' => const MapDetail(),
       _ => const Text('未知组件'),

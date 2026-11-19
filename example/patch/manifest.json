@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.2",
-  "buildTime": "2026-11-19T09:34:45.794564",
+  "buildTime": "2026-11-19T09:42:49.932089",
   "resources": {
     "flutter.js": "e5bd819540bc177d1b1c4c07cbc585b982bc6dce0693ef5f5a029d00b2a04361",
     "packages/NoteObject.js": "2c32d68a5e767060c383c5dd7afde137f528e6cc2728fa2e40e5083b71f1a723",
@@ -28,6 +28,7 @@
     "packages/hot_plugin_device_info/hot_plugin_device_info.js": "6208003592d2e7d26421a7a3c18fa8e1c9803efbe770c7ae90641c1e05672651",
     "grammar/statement_detail.js": "22c57421765d14a60822a003f283a8fd5ff6bbce172da0bb0b9183d4f4eedf93",
     "grammar/import_show_helper.js": "6618a1ca64505afc9f4d0dd0dc7b7ab02afd9f0d243b97e1ae936f72d25b764c",
+    "grammar/cycle_import_a.js": "10cd8bd5187911efba6951e31137a555d2088dde30493e1a786c4bbf7ed368e6",
     "grammar/operator_detail.js": "2e33b264604e9220b6c77d93bef781e4f7d6c6e4f726cb77351639962687bd91",
     "grammar/null_safety_detail.js": "2d942aae7535d3b2501b07ff76a657bc96303d1bf96206c74f3d1e7b4b2bdd2d",
     "grammar/function_detail.js": "a081500e70ea18f261f1e15f0c120f8ec2822dbc5197fdab75d264d066834cf6",
@@ -38,6 +39,7 @@
     "grammar/callable_detail.js": "a0624314fea339efcb2f914ea001932fa7a88c5440b59609330b4c7ec5175ce2",
     "grammar/alias_detail.js": "c88f600855d96ff9816b96d56eb5a8f79d318e59bfeaaaec877f81f789df3a59",
     "grammar/map_detail.js": "58b7a019169a9b93addb9a6992075179db4f939563d90c36f13d7b7c57f3e04e",
+    "grammar/cycle_import_detail.js": "0b77036bf6692689aa3cb902f2d05df83f72181b56d4ad26101d20d04cc3b5b7",
     "grammar/generator_detail.js": "b4d3a886286d39ed011ba4821520ca9ebb3ba65e7ec8fd9c84b1e16e16215e30",
     "grammar/inheritance_detail.js": "1b5b4869fa845410b6d56d32ae8e64781a1bd068cc2baf0fe9af6849f97929e7",
     "grammar/top_level_helper.js": "e43762780b36a7adcd978dc7097bdedc2ab0413026519cb95a2b8d562a3c62c4",
@@ -54,6 +56,7 @@
     "grammar/constructor_detail.js": "9daef3781deb967bbe3bd8132bc1b94f21d0ca0c19e9208aa14f7c4d90820e2e",
     "grammar/record_detail.js": "d6f3d2e5f1e1a48760630dd7939dee122c554d0cdc992213522925277864ae8c",
     "grammar/part_library.js": "fdc8fb336e11fe445ea9617cd922c952e1d70d75ee95fa4a00dace13c71d51ee",
+    "grammar/cycle_import_b.js": "a7c62ba2dbd9efbc5eb0ddad68d94ac4280728579a966a1666019a20f238952a",
     "grammar/collection_detail.js": "31c94c0b459b785f5431a3ee08400c997031da98ffad035887dde8060ba564bf",
     "app/vm/user_center_vm.js": "7f5f53a20d3358b192cd0b7ceb80851f1a128704e27a6027a5a5089bf165d30d",
     "app/vm/app_shell_vm.js": "d983b3600b638fd93b3fd070c3e7bb62d1243cec0c19bfdf1e4e16aa1ff11eb3",

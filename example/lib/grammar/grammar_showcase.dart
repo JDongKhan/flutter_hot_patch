@@ -31,6 +31,7 @@ class GrammarShowcase extends StatelessWidget {
     _Entry('Stream · 异步流', 'async* / listen / await for / StreamController / broadcast', 'StreamDetail'),
     _Entry('泛型 · 类 / 方法泛型', 'GenericBox<T> / Pair<K,V> 与 context.watch<T>()：typeArguments 元信息', 'GenericDetail'),
     _Entry('import 别名 · as', '同名类与包模块类靠前缀区分：base.User / p.ChangeNotifierProvider', 'AliasDetail'),
+    _Entry('循环 import · A ↔ B', '两个模块互相 import，只在方法体调用对方：占位导出 + 绑定回填', 'CycleImportDetail'),
     _Entry('数组 · List 语义', 'sort / join / indexOf / fold / any / expand / take / skip / length 写等', 'ArrayDetail'),
     _Entry('映射 · Map 语义', 'length / keys / values / entries / forEach / remove / putIfAbsent / update / addAll 等', 'MapDetail'),
   ];
