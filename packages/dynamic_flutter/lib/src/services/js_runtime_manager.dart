@@ -693,9 +693,7 @@ class JsRuntimeManager {
       final from = chain.indexOf(jsAsset);
       final cycle = <String>[...chain.sublist(from), jsAsset].join(' -> ');
       if (_reportedCycles.add(cycle)) {
-        JsLog.warn(
-          '模块循环 import：$cycle；已按占位导出继续加载（仅支持方法体等延迟引用）',
-        );
+        JsLog.warn('模块循环 import：$cycle；已按占位导出继续加载（仅支持方法体等延迟引用）');
       }
       if (chain.isNotEmpty) _cycleModules.add(chain.last);
       _cycleModules.add(jsAsset);
@@ -703,11 +701,11 @@ class JsRuntimeManager {
       // （依赖先于自身加载），因此不依赖 __ensureModule，直接建全局表。
       _eval(
         "(function () {"
-        " var g = typeof globalThis !== 'undefined'"
-        " ? globalThis : Function('return this')();"
-        " if (typeof g.__modules === 'undefined') { g.__modules = {}; }"
-        " if (!g.__modules['$jsAsset']) { g.__modules['$jsAsset'] = {}; }"
-        " })();",
+            " var g = typeof globalThis !== 'undefined'"
+            " ? globalThis : Function('return this')();"
+            " if (typeof g.__modules === 'undefined') { g.__modules = {}; }"
+            " if (!g.__modules['$jsAsset']) { g.__modules['$jsAsset'] = {}; }"
+            " })();",
         'cyclePlaceholder',
       );
       return;
@@ -910,10 +908,7 @@ class JsRuntimeManager {
       for (final m in exportReClass.allMatches(out)) m.group(1)!,
       for (final m in exportReVar.allMatches(out)) m.group(2)!,
     ];
-    out = out.replaceAllMapped(
-      exportReClass,
-      (m) => 'class ${m.group(1)}',
-    );
+    out = out.replaceAllMapped(exportReClass, (m) => 'class ${m.group(1)}');
     out = out.replaceAllMapped(
       exportReVar,
       (m) => '${m.group(1)} ${m.group(2)}',

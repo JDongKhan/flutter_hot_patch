@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.2",
-  "buildTime": "2026-11-18T17:33:13.436917",
+  "buildTime": "2026-11-19T09:34:45.794564",
   "resources": {
     "flutter.js": "e5bd819540bc177d1b1c4c07cbc585b982bc6dce0693ef5f5a029d00b2a04361",
     "packages/NoteObject.js": "2c32d68a5e767060c383c5dd7afde137f528e6cc2728fa2e40e5083b71f1a723",
@@ -12,7 +12,7 @@
     "packages/uuid.js": "315bfa1aecc89c4c253d5aded272e9fa7f072c7902878c68ebbb084a60ebf57b",
     "packages/visibility_detector.js": "5d72eb9a82628596cc50038e34f475ba1aeb4b531cf93d7353f6728319670d7a",
     "packages/waterfall_flow.js": "440cefdb6f9cedf6c5d9deff7ce3cb704b0ce072e72c012c9c08edf9a4ac78d8",
-    "runtime.js": "c509e7083f38e1b2121edf4bd406541f3a552b909a7c9db66ca7e7ac835f2b50",
+    "runtime.js": "d2203adda5b0f68ab4e3e883169aaae9ccc7ca9469e3fb7a898d07100e4353eb",
     "packages/hot_module_base/hot_module_base.js": "72e15e5786207bd31d96b10ae46f26c950b6653f5f40493fd64019b4be9ddcb7",
     "packages/hot_module_base/src/account_center.js": "967d10f528151fc007cb6cc8ca52293cb4e4b586af1d7bf31f671b09ee23eddc",
     "packages/hot_module_base/src/guide_bubble_widget.js": "0ac82daa56e267edc0784f14b398cb63a537ce18950572650b1ff545c7c066b3",
@@ -154,12 +154,12 @@
     "model/network_vm.js": "f3a3f22925c5e6af9c00bd7411adcfcb1c85188fffcb33fa6301e35681c5289e",
     "model/counter_vm.js": "0fcd5f5ff7fe378d810fdaef3cc8fdfb8c28f875662aef4b3db476e4292f3f1d",
     "model/getx_counter_vm.js": "4dffad24046866c5d2283070c887c55181144ec149f913b60b7cdb87efd8798a",
+    "base/dev_server.js": "e259f37228410bc19839508985fc01d0e38efcc11e03a87839eba4c6fb85b742",
     "base/host_http.js": "f127639fad755ff0d72aac38bd4cd25e1b2a840eeb8b305b2b41192aec023eff",
     "base/canvas_image.js": "d487cd3a3352103f0ad404322a7843981f1f6729115bd8625623fe8c6dc265b2",
     "base/app_router.js": "13cae4d075f8e1c115df5c607c6b4265fb47acf74ccdd8e0196c5f9fc747d20d",
     "base/tracker.js": "f4594b857632b2f5f233ed0dc3fcc025767daf4b1699dd69dbe77ac3b9f6805b",
     "base/web_view.js": "b37f0061564f47f17af2f8353f09190a84d3668afd60bb9650451637baf26492",
-    "base/platform_tools.js": "609ea4d8bea55edd84abf38e99aaa8979762c329bd21c5b3a9bb07bbd9910841",
-    "base/dev_server.js": "e259f37228410bc19839508985fc01d0e38efcc11e03a87839eba4c6fb85b742"
+    "base/platform_tools.js": "609ea4d8bea55edd84abf38e99aaa8979762c329bd21c5b3a9bb07bbd9910841"
   }
 }

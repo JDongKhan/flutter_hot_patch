@@ -12,6 +12,40 @@
 if (typeof G.__modules === 'undefined') {
   G.__modules = {};
 }
+// 模块循环 import 支持：**命名绑定的回填队列**。
+// 宿主预处理把 `import { A } from 'x'` 改写成
+//   const __imp0 = __modules['x'];
+//   let { A } = __imp0;
+//   G.__onImportReady('x', function () { A = __imp0.A; });
+// 提供方模块稍后求值完成时，尾部 `__flushImportFixups('x')` 把 A 补齐。
+// 只支持**延迟引用**（方法体 / build 内）：模块顶层 extends / 静态字段 / new
+// 使用环对面时，绑定此时仍是 undefined，求值必然失败（与原生 ESM 一致）。
+if (typeof G.__moduleReady === 'undefined') {
+  G.__moduleReady = {};
+}
+if (typeof G.__importFixups === 'undefined') {
+  G.__importFixups = {};
+}
+G.__ensureModule = function (key) {
+  var m = G.__modules[key];
+  if (!m) { m = G.__modules[key] = {}; }
+  return m;
+};
+G.__onImportReady = function (dep, fn) {
+  if (G.__moduleReady[dep]) { fn(); return; }
+  var list = G.__importFixups[dep];
+  if (!list) { list = G.__importFixups[dep] = []; }
+  list.push(fn);
+};
+G.__flushImportFixups = function (dep) {
+  G.__moduleReady[dep] = true;
+  var list = G.__importFixups[dep];
+  if (!list) { return; }
+  delete G.__importFixups[dep];
+  for (var i = 0; i < list.length; i++) {
+    try { list[i](); } catch (e) { /* 单个回填失败不影响模块加载 */ }
+  }
+};
 // 编译/运行期标志（kDebugMode / kReleaseMode / Platform）**由宿主在求值本
 // 文件之前注入**（见 JsRuntimeManager._jsUiEnvSource）：这些值取决于 App 的
 // 编译模式与目标平台，构建期（build_runner）无从得知，故不写进产物。

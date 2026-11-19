@@ -76,20 +76,23 @@ class PatchManifestBuilder implements Builder {
 
   @override
   Map<String, List<String>> get buildExtensions => const {
-        // `$package$`：整包伪资产，输入一个包、产出一份清单（无种子文件）。
-        r'$package$': [outputPath],
-      };
+    // `$package$`：整包伪资产，输入一个包、产出一份清单（无种子文件）。
+    r'$package$': [outputPath],
+  };
 
   @override
   Future<void> build(BuildStep buildStep) async {
     // findAssets 只返回「更早阶段且真正产出成功」的产物；逐个读取得内容 hash。
     // readAsString 同时登记为输入依赖：任一 JS 内容变化都会让本步骤重跑。
     final resources = <String, String>{};
+    final sources = <String, String>{};
     await for (final id in buildStep.findAssets(_jsResources)) {
       final content = await buildStep.readAsString(id);
       final rel = id.path.substring(_patchPrefix.length);
+      sources[rel] = content;
       resources[rel] = sha256.convert(utf8.encode(content)).toString();
     }
+    _reportImportCycles(sources);
 
     final manifest = <String, Object?>{
       'name': name ?? buildStep.inputId.package,
@@ -105,4 +108,81 @@ class PatchManifestBuilder implements Builder {
       const JsonEncoder.withIndent('  ').convert(manifest),
     );
   }
+
+  /// 构建期扫描产物 import 图，循环依赖只告警、不阻断构建。
+  ///
+  /// 运行期已支持「方法体 / build 内」的延迟引用（占位导出 + 命名绑定回填，
+  /// 见 `JsRuntimeManager._preprocessModule`）；但模块顶层 `extends` / 静态
+  /// 字段 / `new` 使用环对面仍然无法在求值期解析。这里提前把环打印出来，
+  /// 便于作者在编码阶段拆分共用模块。
+  void _reportImportCycles(Map<String, String> sources) {
+    final edges = <String, List<String>>{};
+    for (final entry in sources.entries) {
+      final deps = <String>[];
+      for (final m in _importFromRe.allMatches(entry.value)) {
+        deps.add(_normalize(entry.key, m.group(1)!));
+      }
+      for (final m in _sideEffectImportRe.allMatches(entry.value)) {
+        deps.add(_normalize(entry.key, m.group(1)!));
+      }
+      edges[entry.key] = deps;
+    }
+
+    const unvisited = 0, visiting = 1, done = 2;
+    final state = <String, int>{};
+    final stack = <String>[];
+    final reported = <String>{};
+
+    void dfs(String node) {
+      state[node] = visiting;
+      stack.add(node);
+      for (final dep in edges[node] ?? const <String>[]) {
+        if (!sources.containsKey(dep)) continue;
+        final s = state[dep] ?? unvisited;
+        if (s == visiting) {
+          final from = stack.indexOf(dep);
+          final cycle = <String>[...stack.sublist(from), dep].join(' -> ');
+          if (reported.add(cycle)) {
+            log.warning(
+              '循环 import（运行期仅支持方法体等延迟引用，'
+              '模块顶层 extends / 静态字段 / new 会失败）：$cycle',
+            );
+          }
+        } else if (s == unvisited) {
+          dfs(dep);
+        }
+      }
+      stack.removeLast();
+      state[node] = done;
+    }
+
+    for (final node in sources.keys) {
+      if ((state[node] ?? unvisited) == unvisited) dfs(node);
+    }
+  }
+
+  /// 把产物内的相对 import 解析成 patch 根下的相对路径。
+  String _normalize(String from, String rel) {
+    final segs = from.split('/');
+    if (segs.isNotEmpty) segs.removeLast();
+    for (final part in rel.split('/')) {
+      if (part.isEmpty || part == '.') continue;
+      if (part == '..') {
+        if (segs.isNotEmpty) segs.removeLast();
+      } else {
+        segs.add(part);
+      }
+    }
+    return segs.join('/');
+  }
+
+  /// `import { A } from 'x'` / `export { A } from 'x'`（含 namespace 形式）。
+  static final RegExp _importFromRe = RegExp(
+    r"""(?:import|export)\s*[^;]{0,300}?\bfrom\s*['"]([^'"]+)['"]\s*;""",
+  );
+
+  /// 副作用 import：`import 'x';`。
+  static final RegExp _sideEffectImportRe = RegExp(
+    r"""import\s*['"]([^'"]+)['"]\s*;""",
+  );
 }
