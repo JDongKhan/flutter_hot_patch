@@ -25,12 +25,12 @@ dependencies:
 | Dart SDK | `^3.11.5` |
 | Flutter | `>=3.38.4` (developed & verified on `3.41.8`, see `.fvmrc`) |
 | Android | Supported. Engine: QuickJS (bundled, `minSdk 21`; the app itself uses `flutter.minSdkVersion`). ABI (flutter_js `abiFilters`): `armeabi-v7a` / `arm64-v8a` / `x86` / `x86_64` |
-| iOS | Supported. JavaScriptCore; ES2020 output syntax requires **iOS 15+** as the effective minimum (flutter_js podspec itself declares iOS 8.0) |
-| macOS | Supported for development / debugging (JavaScriptCore; example sets `10.15`) |
+| iOS | Supported. JavaScriptCore; the output contains static class fields, so **iOS 14.5+** is the minimum (example sets `14.5`; the flutter_js podspec itself declares iOS 8.0) |
+| macOS | Supported for development / debugging (JavaScriptCore; example sets `11.0`) |
 | Windows / Linux | Not verified (flutter_js declares these platforms, but this package has not validated them) |
 | Web | **Not supported** (flutter_js is a native FFI engine; the host uses `dart:io` for downloads / files) |
 
-JS engine baseline: ES2020 + partial ES2021 (iOS 15+ JSC / Android QuickJS 2021-03-27).
+JS engine baseline: ES2020 + partial ES2021 (iOS 14.5+ / macOS 11+ JSC / Android QuickJS 2021-03-27).
 `Object.hasOwn`, `.at`, `findLast`, `static {}` blocks, top-level `await`, `structuredClone`,
 `WeakRef` are **unavailable** in the engines. See
 [Widget Support Reference §7 (Chinese)](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/组件支持文档.md) for the full baseline.

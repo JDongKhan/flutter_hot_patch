@@ -7,6 +7,8 @@
 - 有初始化器的类静态字段改为**类声明之后赋值**（`class C {…}` + `C.f = init;`），不再发类体内的 `static f = init;`。Android 侧 flutter_js 内置的 QuickJS 版本较旧，在静态字段初始化期间引用自身类名（`static zero = new Size(...)`、`C.other`、枚举成员等）会误报 TDZ；JSC（iOS/macOS）不受影响。类外赋值在所有引擎上语义一致，仍按源码声明序执行。
 - 同步修改内建产物：`Size` / `Rect` / `EdgeInsets` / `BorderRadius` / `BorderSide` / `TextDecoration` / `FontWeight` / `TextScaler`、`Colors` 常量、SDK 枚举值类，以及三方 `js/easy_refresh.js` 的枚举成员。
 - `_writeStaticFields` 拆为 `_writeStaticFieldDecls`（无初始化器的 `static f;`）与 `_writeStaticFieldAssignments`（类外赋值）；规则已同步到语法翻译手册「构造、字段、方法、static」章节。
+- 新增语法手册第 19 章「运行引擎与平台约束」：登记 Android QuickJS 2021-03-27 与 iOS / macOS JSC 的最低系统版本（iOS 14.5+ / macOS 11+，约束来自静态类字段与 ES2020 语法）、两端禁用 API 清单、微任务入口规则（所有求值走 `_eval` / `_evaluateAndDrainJobs`，`SetTimeout` 通道按需排空）。example 的 `IPHONEOS_DEPLOYMENT_TARGET` / `MACOSX_DEPLOYMENT_TARGET` 同步改为 `14.5` / `11.0`。仅文档与示例配置，无代码与协议变更。
+- **构建期循环 import 告警**：`ui_patch_manifest` 在计算资源 hash 的同时扫描全部 `patch/**.js` 的 import 图，按 DFS 检出环并 `log.warning`（不阻断构建），提示「运行期仅支持方法体等延迟引用」。规则已写入手册第 13 章。
 
 ## 0.14.2
 

@@ -684,12 +684,33 @@ class JsRuntimeManager {
     if (_loadedModules.contains(jsAsset)) {
       return;
     }
-    // 循环 import：本模块已在自己的依赖链上 → 两边互等，永远不会完成。
+    // 循环 import：本模块已在自己的依赖链上 → 不能等待 inflight（环上两边
+    // 互等，永远不会完成）。改为**告警 + 占位导出**：importer 继续求值，
+    // 命名绑定由 __onImportReady 在提供方求值完成后回填。
+    // 求值期就要用（extends / 静态字段 / 顶层 new）的环在任何引擎上都无法
+    // 成立，该模块会在 eval 阶段失败并留下拆分提示。
     if (chain.contains(jsAsset)) {
       final from = chain.indexOf(jsAsset);
       final cycle = <String>[...chain.sublist(from), jsAsset].join(' -> ');
-      JsLog.error('模块循环 import（互相等待会永久挂起，已中止）：$cycle');
-      throw StateError('模块循环 import：$cycle');
+      if (_reportedCycles.add(cycle)) {
+        JsLog.warn(
+          '模块循环 import：$cycle；已按占位导出继续加载（仅支持方法体等延迟引用）',
+        );
+      }
+      if (chain.isNotEmpty) _cycleModules.add(chain.last);
+      _cycleModules.add(jsAsset);
+      // 占位必须在 importer 求值前就位。此处 runtime.js 可能尚未注入
+      // （依赖先于自身加载），因此不依赖 __ensureModule，直接建全局表。
+      _eval(
+        "(function () {"
+        " var g = typeof globalThis !== 'undefined'"
+        " ? globalThis : Function('return this')();"
+        " if (typeof g.__modules === 'undefined') { g.__modules = {}; }"
+        " if (!g.__modules['$jsAsset']) { g.__modules['$jsAsset'] = {}; }"
+        " })();",
+        'cyclePlaceholder',
+      );
+      return;
     }
     // 加载中（防依赖环 + 防并发竞争）→ 复用首个加载的 completer，等它完成
     // 后再继续。同屏多个 JsUiWidget 用同一 manager 时，会并发调用 loadModule，
@@ -743,6 +764,12 @@ class JsRuntimeManager {
           text.startsWith('ERROR:') ||
           text.contains('\nERROR:')) {
         JsLog.error('module eval failed: $jsAsset: $text');
+        if (_cycleModules.contains(jsAsset)) {
+          JsLog.warn(
+            '提示：$jsAsset 处于循环 import 中；模块顶层使用循环依赖'
+            '（extends / 静态字段 / new）无法在求值期解析，请把共用部分拆到独立模块',
+          );
+        }
         // evaluate 把异常序列化进返回值 → 视为加载失败，不进
         // _loadedModules，下次可重试。
         throw StateError('module evaluate failed: $text');
@@ -862,8 +889,9 @@ class JsRuntimeManager {
     r"from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]",
   ).firstMatch(line)!.group(1)!;
 
-  /// 文本级预处理：export class -> class + 尾部 __modules 注册；
-  /// import 语句 -> `const { A, B } = __modules['<解析后绝对路径>'];`。
+  /// 文本级预处理：export class -> class + 尾部 __modules 原地填充；
+  /// import 语句 -> `const __impN = __modules['<abs>']` + `let { A } = __impN`
+  /// + `__onImportReady('<abs>', () => A = __impN.A)`（支持循环 import 回填）。
   /// 模块注册 key 与实例化寻址都用**绝对资产路径**（assets/...），
   /// 与 JsUiWidget 的 jsAsset 一致。
   static String _preprocessModule(String source, String jsAsset, String base) {
@@ -903,16 +931,29 @@ class JsRuntimeManager {
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toList();
+
+    // 命名绑定统一形态：先取模块对象 → 解构 → 登记回填。
+    // 直接 `const { A } = __modules[...]` 在循环 import 时拿到 undefined 且
+    // 永不更新；改成 let + 回填后，提供方求值完成时由 __flushImportFixups
+    // 补齐（见 runtime.js 的 __onImportReady / __flushImportFixups）。
+    var impSeq = 0;
+    String bindImports(String abs, List<String> names) {
+      final tmp = '__imp${impSeq++}';
+      final assign = names.map((n) => '$n = $tmp.$n;').join(' ');
+      return "const $tmp = __modules['$abs'];\n"
+          "let { ${names.join(', ')} } = $tmp;\n"
+          "__onImportReady('$abs', function () { $assign });";
+    }
+
     for (final m in reExportRe.allMatches(out)) {
       exportNames.addAll(reExportNames(m));
     }
     out = out.replaceAllMapped(reExportRe, (m) {
       final abs = JsAssetResolver.resolve(base, m.group(2)!);
-      return "const { ${reExportNames(m).join(', ')} } = "
-          "__modules['$abs'];";
+      return bindImports(abs, reExportNames(m));
     });
 
-    // import { A, B } from 'rel' -> const { A, B } = __modules['abs'];
+    // import { A, B } from 'rel' -> 解构 + 回填（见 [bindImports]）。
     final importRe = RegExp(
       r"import\s*\{[^}]+\}\s*from\s*[\x27\x22][^\x27\x22]+[\x27\x22]\s*;",
     );
@@ -929,7 +970,7 @@ class JsRuntimeManager {
           .where((e) => e.isNotEmpty)
           .toList();
       final abs = JsAssetResolver.resolve(base, relMatch.group(1)!);
-      return "const { ${names.join(', ')} } = __modules['$abs'];";
+      return bindImports(abs, names);
     });
 
     // 命名空间 import（`import * as p from 'rel';`）：`p` 就是目标模块的导出
@@ -953,10 +994,13 @@ class JsRuntimeManager {
     );
     out = out.replaceAll(sideEffectRe, '');
 
-    // 模块尾部注册导出：__modules['jsAsset'] = { A, B };
+    // 模块尾部注册导出：**原地填充**占位对象（命名空间 import 与循环依赖
+    // 拿到的是同一个引用，不能整体替换），再回填环上先求值一方的命名绑定。
+    out += "\nvar __moduleSelf = __ensureModule('$jsAsset');";
     if (exportNames.isNotEmpty) {
-      out += "\n__modules['$jsAsset'] = { ${exportNames.join(', ')} };";
+      out += "\nObject.assign(__moduleSelf, { ${exportNames.join(', ')} });";
     }
+    out += "\n__flushImportFixups('$jsAsset');";
 
     // 整体包进 IIFE：class / const 声明局部化。flutter_js（iOS
     // JavaScriptCore）多次 evaluate 共享**全局词法环境**——顶层 class、
@@ -972,6 +1016,12 @@ $out
 
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
   final Set<String> _loadedModules = {};
+
+  /// 已告警过的循环路径（同一环只提示一次，避免同屏多次加载刷屏）。
+  final Set<String> _reportedCycles = {};
+
+  /// 参与循环 import 的模块：求值失败时补一条「拆分共用模块」提示。
+  final Set<String> _cycleModules = {};
 
   /// 最近一批新加载成功的模块路径（顺序即加载顺序：依赖先于自身）。
   ///
@@ -1016,8 +1066,18 @@ $out
           var keys = Object.keys(__modules);
           for (var i = 0; i < keys.length; i++) { delete __modules[keys[i]]; }
         }
+        if (typeof __importFixups === 'object' && __importFixups) {
+          var fkeys = Object.keys(__importFixups);
+          for (var j = 0; j < fkeys.length; j++) { delete __importFixups[fkeys[j]]; }
+        }
+        if (typeof __moduleReady === 'object' && __moduleReady) {
+          var rkeys = Object.keys(__moduleReady);
+          for (var k = 0; k < rkeys.length; k++) { delete __moduleReady[rkeys[k]]; }
+        }
       })();
     ''', 'invalidateModules');
+    _reportedCycles.clear();
+    _cycleModules.clear();
     JsLog.log('已清空内存中的 JS 模块与运行时标记（$count 个模块）');
   }
 

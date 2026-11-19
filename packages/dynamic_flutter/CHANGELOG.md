@@ -6,6 +6,8 @@
 
 - `JsRuntimeManager` 的求值统一走 `_evaluateAndDrainJobs`：`evaluate` 之后调用 `runtime.executePendingJob()` 排空 Promise 微任务。QuickJS（Android）的 `evaluate` 不会自动执行微任务，宿主 `_app_host_.resolve(...)` 回填后 `await` 的续体停在队列里（如 `Network.post` 成功后 `AppShellVm.load()` 永不返回、也无报错）；JSC（iOS/macOS）的 `executePendingJob` 是空实现，无副作用。
 - 引擎**内部**执行的回调同样要排空：flutter_js 自己实现的 `setTimeout`（`Future.delayed` / `Timer` 走它）在回调里 resolve Promise 后也不会跑续体。Android 上包一层 flutter_js 的 `SetTimeout` 通道，**每次 JS 注册定时器时**在相同延迟之后再排空一次微任务（按需触发，无常驻轮询、没有定时器就零开销）；JSC 不处理。修复异步 demo 一直停「等待 complete…」、`Future.delayed` 不恢复的问题。
+- 文档：最低系统版本更正为 **iOS 14.5+ / macOS 11.0+**（产物含静态类字段，Safari 14.1 起支持）；example 的 `IPHONEOS_DEPLOYMENT_TARGET` / `MACOSX_DEPLOYMENT_TARGET` 与 Podfile 同步改为 `14.5` / `11.0`。无代码与协议变更。
+- **循环 import 不再中止加载**：`_loadModule` 命中依赖链上的模块时改为告警 + 占位导出（`__modules[key] = {}`）并返回，不再抛 `StateError`；命名 import 从 `const { A } = __modules[...]` 改为 `let` + `__onImportReady` 回填，模块尾部用 `Object.assign` 原地填充并 `__flushImportFixups`。方法体 / `build` 内的互相引用可正常执行；模块顶层 `extends` / 静态字段 / `new` 使用环对面仍会失败，并追加「拆分共用模块」提示。`invalidateModules` 同步清理回填队列与就绪标记。无协议变更。
 
 ## 0.6.2
 

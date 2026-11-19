@@ -23,12 +23,12 @@ dependencies:
 | Dart SDK | `^3.11.5` |
 | Flutter | `>=3.38.4`（开发与验证环境为 `3.41.8`，见 `.fvmrc`） |
 | Android | 支持。引擎：QuickJS（内置，`minSdk 21`；应用本身用 `flutter.minSdkVersion`）。ABI（flutter_js `abiFilters`）：`armeabi-v7a` / `arm64-v8a` / `x86` / `x86_64` |
-| iOS | 支持。引擎：JavaScriptCore；产物为 ES2020 语法，**有效最低 iOS 15+**（flutter_js podspec 自身声明 iOS 8.0） |
-| macOS | 支持（开发 / 调试；引擎 JavaScriptCore，example 设为 `10.15`） |
+| iOS | 支持。引擎：JavaScriptCore；产物含静态类字段，**最低 iOS 14.5**（example 部署目标 `14.5`；flutter_js podspec 自身声明 iOS 8.0） |
+| macOS | 支持（开发 / 调试；引擎 JavaScriptCore，example 部署目标 `11.0`） |
 | Windows / Linux | 未验证（flutter_js 声明了这两个平台，但本包未实测） |
 | Web | **不支持**（flutter_js 是原生 FFI 引擎；宿主下载 / 文件走 `dart:io`） |
 
-JS 引擎基线：ES2020 + 部分 ES2021（iOS 15+ JSC / Android QuickJS 2021-03-27）。
+JS 引擎基线：ES2020 + 部分 ES2021（iOS 14.5+ / macOS 11+ JSC / Android QuickJS 2021-03-27）。
 引擎**未实现** `Object.hasOwn`、`.at`、`findLast`、`static {}` 块、top-level `await`、
 `structuredClone`、`WeakRef`，产物与运行时均禁止使用。
 完整基线见 [组件支持文档 §7](https://github.com/JDongKhan/flutter_hot_patch/blob/main/docs/组件支持文档.md)。

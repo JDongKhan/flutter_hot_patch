@@ -130,6 +130,7 @@ td code{font-size:12px}
     <li><a href="#streams"><span class="n">16</span>Stream 流</a></li>
     <li><a href="#isolates"><span class="n">17</span>并发与 Isolate</a></li>
     <li><a href="#helpers"><span class="n">18</span>运行时补齐与辅助能力</a></li>
+    <li><a href="#engines"><span class="n">19</span>运行引擎与平台约束</a></li>
   </ol>
 </aside>
 
@@ -145,9 +146,9 @@ td code{font-size:12px}
   </div>
   <dl class="meta">
     <div><dt>适用源语言</dt><dd>Dart 3.x（空安全 / record / 模式匹配）</dd></div>
-    <div><dt>适用目标</dt><dd>ES2020 + 部分 ES2021；QuickJS 2021-03-27 / JSC iOS 15+</dd></div>
+    <div><dt>适用目标</dt><dd>ES2020 + 部分 ES2021；QuickJS 2021-03-27 / JSC iOS 14.5+ / macOS 11+</dd></div>
     <div><dt>实测环境</dt><dd>Dart 3.11.5 stable，macOS arm64</dd></div>
-    <div><dt>文档版本</dt><dd>v2.9</dd></div>
+    <div><dt>文档版本</dt><dd>v3.1</dd></div>
   </dl>
 </header>
 
@@ -194,7 +195,7 @@ td code{font-size:12px}
 
 <div class="note">
   <span class="t">引擎能力边界（硬约束）</span>
-  产物运行在 Android QuickJS 2021-03-27（<code>flutter_js</code> 0.8.7）与 iOS 15+ JavaScriptCore，基线为 <b>ES2020 + 部分 ES2021</b>（<code>??=</code> / <code>||=</code> / <code>&amp;&amp;=</code>、<code>Promise.any</code>、<code>AggregateError</code>、<code>String.replaceAll</code>）。<b>禁止使用两端未实现的 API</b>：<code>Object.hasOwn</code>、<code>at</code>、<code>findLast</code> / <code>findLastIndex</code>、class static block、top-level await、<code>structuredClone</code>、<code>WeakRef</code> / <code>FinalizationRegistry</code>。需要同等能力时在运行时补同名实现或改用 ES2020 写法。
+  产物运行在 Android QuickJS 2021-03-27（<code>flutter_js</code> 0.8.7）与 iOS / macOS 系统 JavaScriptCore 上，基线为 <b>ES2020 + 部分 ES2021</b>。两端最低系统版本、禁用 API 清单与微任务入口规则见第 19 章；新增语法 / 内建 API 前必须先核对第 19 章，两端都支持才可使用。
 </div>
 </section>
 
@@ -669,8 +670,14 @@ class Registry {
     <tr><td>三方包<b>枚举</b>常量引用（<code>IndicatorResult.success</code>）</td><td><code>IndicatorResult.success</code>（import 自 <code>'../packages/&lt;package&gt;.js'</code>）</td><td>枚举不进类索引（<code>declaringPackagesOf</code> 只索引 <code>class</code>），值位置的 <code>X.member</code> 也不经过类引用钩子（那只覆盖 <code>X.m(...)</code>）；因此在<b>真实引用点</b>登记 import（<code>js_translator</code> 的 <code>symbolRefHook</code> → <code>element2js._symbolRefJs</code>），归属按 <code>importedOwnerPackageOf</code>：「声明所在包 ∩ 当前文件（库根，含 part）<code>import</code> 的包集合」唯一命中才用（类 / 枚举 / 顶层值同一规则），再要求该包有宿主模块且模块**实际导出**（<code>thirdPartyJsExports</code>）；多个已 import 的包同名时 Dart 源码本身必须靠前缀 / show-hide 才能编译，出声回退、不猜；缺失导出时保留裸引用并告警，绝不 import 不存在的导出。<b>禁止</b>按产物文本里出现的同名子串补 import（字符串 / 注释会误命中）。JS 类由宿主模块以 SDK 同款枚举值类形态导出（<code>.name/.index</code> / <code>toJSON()</code> 发成员名 / <code>valueOf()</code> 返回成员名）。</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>part</code> / <code>part of</code></td><td>同库根 + part 合并为一个 JS 模块</td><td><code>source_index</code> 的 <code>libraryRootPathOf</code> / <code>libraryUnitsOf</code>（<code>part of</code> 支持 URI 与库名）；<code>resolveImportFiles</code> 只返回跨库文件，同库文件按 sameFile 口径扫描（含私有名）；<code>component_builder</code> / <code>ui_project_module</code> 合并到库根产物，part 输入不产出独立模块。</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>library</code> 指令</td><td>无</td><td>未解析；不影响产物，库级元数据 / 注解不承接。</td><td><span class="st st-skip">不适用</span></td></tr>
+    <tr><td>跨文件<b>循环 import</b>（A ↔ B）</td><td>占位导出 + 命名绑定回填</td><td>宿主 <code>_loadModule</code> 遇到环不再抛错：告警一次并给未求值模块建占位 <code>__modules[key] = {}</code>；命名 import 改写为 <code>const __impN = __modules[key]; let { A } = __impN; __onImportReady(key, () =&gt; A = __impN.A)</code>；模块尾部 <code>Object.assign(__ensureModule(key), exports)</code> + <code>__flushImportFixups(key)</code>。命名空间 import 依赖同一对象原地填充。构建期 <code>ui_patch_manifest</code> 扫描 import 图并告警。</td><td><span class="st st-acc">接受差异</span></td></tr>
   </tbody>
 </table>
+</div>
+
+<div class="note risk">
+  <span class="t">循环 import 只在延迟引用下成立</span>
+  方法体 / <code>build</code> 内的互相引用靠绑定回填可正常执行；模块顶层 <code>extends</code>、静态字段初始化、顶层 <code>new</code> 使用环对面时绑定尚未就绪，任何引擎都无法解析（与原生 ESM 一致），该模块求值失败并提示拆分共用模块。构建期 <code>ui_patch_manifest</code> 会打印环路径。
 </div>
 </section>
 
@@ -813,6 +820,44 @@ class Registry {
     <tr><td>跨库同名 extension</td><td>不同库在同一目标声明同名成员时，隐式调用无法按 import 可见性分派；运行期 <code>@conflict</code> 双方都不安装</td><td>原型是全局的，import 可见性是编译期概念</td><td>接受；改用显式 <code>E(x).m()</code></td></tr>
   </tbody>
 </table>
+</div>
+</section>
+
+<!-- ================= 19 运行引擎与平台约束 ================= -->
+<section id="engines">
+<h2><span class="sec-no">19</span>运行引擎与平台约束</h2>
+<p class="h2-sub">产物与手写运行时代码受同一套引擎约束；新增语法 / API 前先核对本章，两端都支持才可使用。</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th style="width:12%">平台</th><th style="width:26%">引擎</th><th style="width:18%">最低系统版本</th><th>依据</th></tr></thead>
+  <tbody>
+    <tr><td>Android</td><td>QuickJS 2021-03-27（<code>flutter_js</code> 0.8.7 + <code>fastdev-jsruntimes-quickjs</code> 0.3.6，Dart FFI）</td><td><code>minSdk 21</code></td><td>ES2020 + 部分 ES2021；静态字段初始化器不得自引用（第 07 章）</td></tr>
+    <tr><td>iOS</td><td>系统 JavaScriptCore</td><td>iOS 14.5+（example <code>IPHONEOS_DEPLOYMENT_TARGET = 14.5</code>）</td><td>产物含静态类字段（Safari 14.1 / iOS 14.5 起支持）；<code>?.</code> / <code>??</code> / <code>String.replaceAll</code> 需 13.4，逻辑赋值需 14.0</td></tr>
+    <tr><td>macOS</td><td>系统 JavaScriptCore</td><td>macOS 11.0+（example <code>MACOSX_DEPLOYMENT_TARGET = 11.0</code>）</td><td>同上；macOS 的 JSC 随 Safari 更新，要求 Safari 14.1+</td></tr>
+    <tr><td>HarmonyOS</td><td>无</td><td>—</td><td><code>flutter_js</code> 不支持 ohos；社区 fork <code>flutter_js_ohos</code> 停在旧版 API，接入前需先抽引擎适配层</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note risk">
+  <span class="t">两端都未实现的 API（禁用）</span>
+  产物、<code>runtime.js</code> / <code>flutter.js</code>、<code>packages/*.js</code> 与能力模块片段一律禁止使用：<code>WeakRef</code>、<code>FinalizationRegistry</code>、<code>structuredClone</code>、<code>queueMicrotask</code>、<code>Array.prototype.at</code> / <code>findLast</code> / <code>findLastIndex</code>、<code>Object.hasOwn</code> / <code>groupBy</code>、<code>Promise.withResolvers</code> / <code>Promise.try</code>、class <code>static {}</code> 块、top-level <code>await</code>、动态 <code>import()</code>、正则 lookbehind / <code>d</code> 标志 / <code>RegExp.escape</code>。<br>
+  宿主环境不提供（不得直接调用）：<code>atob</code> / <code>btoa</code>、<code>TextEncoder</code> / <code>TextDecoder</code>、<code>URL</code> / <code>URLSearchParams</code>、<code>fetch</code> / <code>XMLHttpRequest</code>、<code>localStorage</code> / <code>performance</code>；定时器只有 flutter_js 注入的一次性 <code>setTimeout</code>（<code>setInterval</code> / <code>clearTimeout</code> 不可依赖），统一走运行时 <code>Timer</code>（<code>timer_js.dart</code>）。<br>
+  <code>Intl</code> 在 Android QuickJS 上可能不存在：使用前必须 <code>typeof Intl !== 'undefined'</code> 守卫并给出纯 JS 兜底（参 <code>DateTime.timeZoneName</code>）。
+</div>
+
+<div class="note risk">
+  <span class="t">微任务入口规则（硬约束）</span>
+  ① 宿主所有 JS 求值统一走 <code>JsRuntimeManager._eval</code> ⇐ <code>_evaluateAndDrainJobs</code>（<code>js_runtime_manager.dart</code>），求值后调用 <code>executePendingJob()</code>；禁止新增直接 <code>_runtime.evaluate</code> 的平行入口。<br>
+  ② flutter_js 自己实现的 <code>setTimeout</code> 回调走引擎内部求值，不经过 ①：Android 端由 <code>_installTimerMicrotaskDrain</code> 包装 <code>SetTimeout</code> 通道，在相同延迟后再排空一次；替换引擎或新增定时器通道时必须保留等价包装。<br>
+  ③ JSC（iOS / macOS）会自动执行微任务，<code>executePendingJob</code> 为空实现、调用无副作用；不得按平台跳过 ①。<br>
+  ④ 手写片段禁止用 <code>queueMicrotask</code> / 自建 Promise 轮询代替上述入口。
+</div>
+
+<div class="note">
+  <span class="t">静态字段与旧 QuickJS</span>
+  静态字段初始化器里引用自身类名（<code>static zero = new Size(...)</code>、<code>static values = [...]</code> 等）会在 Android QuickJS 上报 <code>X is not initialized</code>。生成器已统一改为类声明之后赋值（第 07 章）；手写 <code>js/*.js</code> 与能力片段同样必须遵守，<b>新增静态字段不得在类体内自引用</b>。
 </div>
 </section>
 
