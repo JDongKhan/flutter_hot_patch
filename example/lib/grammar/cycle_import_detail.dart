@@ -17,8 +17,10 @@ class CycleImportDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    // 详情页外层已经是 SingleChildScrollView（见 WidgetDetailPage），这里用
+    // Column；再套 ListView 会拿到无界高度，触发 viewport 断言。
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
           '循环 import · A ↔ B',

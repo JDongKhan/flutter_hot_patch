@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.14.2",
-  "buildTime": "2026-11-19T09:44:49.107246",
+  "buildTime": "2026-11-19T09:48:38.262273",
   "resources": {
     "flutter.js": "e5bd819540bc177d1b1c4c07cbc585b982bc6dce0693ef5f5a029d00b2a04361",
     "packages/NoteObject.js": "2c32d68a5e767060c383c5dd7afde137f528e6cc2728fa2e40e5083b71f1a723",
@@ -39,7 +39,7 @@
     "grammar/callable_detail.js": "a0624314fea339efcb2f914ea001932fa7a88c5440b59609330b4c7ec5175ce2",
     "grammar/alias_detail.js": "c88f600855d96ff9816b96d56eb5a8f79d318e59bfeaaaec877f81f789df3a59",
     "grammar/map_detail.js": "58b7a019169a9b93addb9a6992075179db4f939563d90c36f13d7b7c57f3e04e",
-    "grammar/cycle_import_detail.js": "0b77036bf6692689aa3cb902f2d05df83f72181b56d4ad26101d20d04cc3b5b7",
+    "grammar/cycle_import_detail.js": "a2e3cd93058e50ec6bfca15c9b2b391266f05ee3d9c7e6381c6aa35a05754c96",
     "grammar/generator_detail.js": "b4d3a886286d39ed011ba4821520ca9ebb3ba65e7ec8fd9c84b1e16e16215e30",
     "grammar/inheritance_detail.js": "1b5b4869fa845410b6d56d32ae8e64781a1bd068cc2baf0fe9af6849f97929e7",
     "grammar/top_level_helper.js": "e43762780b36a7adcd978dc7097bdedc2ab0413026519cb95a2b8d562a3c62c4",
